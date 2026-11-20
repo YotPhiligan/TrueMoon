@@ -45,11 +45,9 @@ public partial class EditorInspectorViewModel
         var imported = mesh.HasValue ? _sceneAssets!.DefaultDefinition(mesh.Value) : null;
         var resolved = references.Definition;
         var defaultBinding = mesh.HasValue ? _sceneAssets!.DefaultBinding(mesh.Value) : null;
-        var overrideSlot = resolved?.Bindings.FirstOrDefault(slot =>
-            imported?.Bindings.Any(item => item.SlotId == slot.SlotId && item.Material != slot.Material) == true).SlotId;
         var slots = imported is { Bindings.Length: > 1 }
             ? imported.Bindings.Select((slot, index) => new InspectorRenderSlot(slot.SlotId, _sceneAssets!.SlotName(slot.SlotId),
-                resolved?.Bindings[index].Material.AssetId, enabled && (overrideSlot is null || overrideSlot == Guid.Empty || overrideSlot == slot.SlotId))).ToArray()
+                resolved?.Bindings[index].Material.AssetId, enabled && resolved != null)).ToArray()
             : [];
         var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [],
             mesh, resolved is { Bindings.Length: 1 } ? resolved.Bindings[0].Material.AssetId : null, enabled)
@@ -74,8 +72,6 @@ public partial class EditorInspectorViewModel
             yield return diagnostic;
         else if (_sceneAssets == null)
             yield return "Для выбора меша и материала отметьте импорт модели в каталоге сцены.";
-        else if (_renderAssets.Slots.Count > 0 && _renderAssets.Slots.Any(slot => !slot.CanSelect) && _renderAssets.Enabled)
-            yield return "Можно переопределить один слот. Верните материал меша, чтобы изменить другой слот.";
     }
 
     /// <inheritdoc />
@@ -122,10 +118,10 @@ public partial class EditorInspectorViewModel
         if (!ReferenceEquals(_renderAssets, selection) || !selection.Enabled || selection.Mesh is not { } mesh ||
             _sceneAssets is not { } assets || _renderBinding == null ||
             selection.Slots.FirstOrDefault(item => item.Id == slot) is not { CanSelect: true } selected || selected.Material == material ||
-            assets.BindingForMaterial(mesh, slot, material) is not { } binding) return;
+            assets.BindingWithSlotMaterial(mesh, _renderBinding.Value, slot, material) is not { } binding) return;
 
         _renderDraftAssets = assets;
-        _renderBinding.Value = binding.ToString("D");
+        _renderBinding.Value = binding;
     }
 
     /// <inheritdoc />

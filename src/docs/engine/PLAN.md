@@ -26,6 +26,10 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [ARCH1g.2p](#arch1g2p-initial-model-import) добавил первичный импорт из Editor,
 размещение и проверку восстановления каталога и ID слотов после перезапуска.
 
+[Два независимых переопределения ED4i](EDITOR_PLAN.md#ed4i-independent-slot-overrides)
+проверены в версии `1.2611.20.3-alpha` с Undo и перезапуском Editor.
+[Открытые задачи инспектора](EDITOR_PLAN.md#ed4i-next) ведутся в плане Editor.
+
 **Согласованный порядок 2026-11-12:**
 
 1. [ARCH3.0](#arch3-0) — карта типов/зависимостей/совместимости **завершена статически**:

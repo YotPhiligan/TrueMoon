@@ -20,7 +20,7 @@ public static class RenderResourceComponents
         {
             scope.CheckAdmission(); var value = MeshRenderingComponents.Renderer(context, scope.Manifest);
             context.Acquire(_ => scope.Retain()); return value;
-        }, [new("mesh", ComponentReferenceKind.Asset), new("bindings", ComponentReferenceKind.Asset)],
+        }, [new("mesh", ComponentReferenceKind.Asset)],
             context => { scope.CheckAdmission(); MeshRenderingComponents.Renderer(context, scope.Manifest); });
         builder.Register<PerspectiveCamera>(MeshRenderingComponents.CameraSchema, context =>
         {

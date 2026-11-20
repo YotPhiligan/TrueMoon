@@ -37,7 +37,7 @@ public static class MeshRenderingComponents
         ArgumentNullException.ThrowIfNull(builder); ArgumentNullException.ThrowIfNull(content);
         builder.WithAssetValidator(content.ValidateAsset);
         builder.Register<MeshRenderer>(MeshRendererSchema, context => Renderer(context, content),
-            [new("mesh", ComponentReferenceKind.Asset), new("bindings", ComponentReferenceKind.Asset)],
+            [new("mesh", ComponentReferenceKind.Asset)],
             context => { Renderer(context, content); });
         builder.Register<PerspectiveCamera>(CameraSchema, context => Camera(context), validate: context => { Camera(context); });
         return builder;
@@ -48,10 +48,21 @@ public static class MeshRenderingComponents
         ContentValidation.Require(!context.SourceEntity.Components.Values.Any(static component => component.TypeId == BuiltInComponents.AppearanceId),
             RenderContentError.InvalidComponent, "Appearance and MeshRenderer are ambiguous on one entity.");
         var mesh = content.Resolve(Guid.ParseExact(context.GetString("mesh"), "D"), RenderContentProfile.MeshKindId).Key;
-        var bindings = content.Resolve(Guid.ParseExact(context.GetString("bindings"), "D"), RenderContentProfile.BindingSetKindId).Key;
+        if (!SceneMaterialBindingReference.TryParse(mesh.AssetId, context.GetString("bindings"), out var bindingId, out var overrides))
+            throw BindingError("Invalid material binding reference.");
+        try { content.ValidateAsset(bindingId, context.CancellationToken); }
+        catch (RenderContentException error) { throw BindingError("Asset reference validation failed.", error); }
+        var entry = content.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
+        var definition = (MaterialBindingSetDefinition)entry.Definition;
+        if (overrides.Any(item => !definition.Bindings.Any(slot => slot.SlotId == item.SlotId && slot.Material.AssetId == item.MaterialId)))
+            throw BindingError("Material binding does not match the declared slot overrides.");
+        var bindings = entry.Key;
         var result = new MeshRenderer(mesh, bindings, context.GetBoolean("enabled"), Layers(context), context.GetBoolean("tintEnabled"),
             new(context.GetSingle("tintR", 0, 1), context.GetSingle("tintG", 0, 1), context.GetSingle("tintB", 0, 1)));
         result.Validate(content); return result;
+
+        SceneWorldLoadException BindingError(string message, Exception? inner = null) =>
+            new(SceneWorldLoadError.InvalidReference, message, context.Scene.Id, context.SourceEntity.Id, context.Component.Id, "bindings", inner);
     }
     internal static PerspectiveCamera Camera(ComponentValidationContext context)
     {

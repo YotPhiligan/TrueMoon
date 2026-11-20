@@ -25,9 +25,11 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-render-material-slot-overrides" or "--editor-render-material-slot-overrides-undo" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
 var playerTexture = args.Length == 8 && args[7] == "--imported-texture";
-var restartSlotOverride = args.Length == 8 && args[7] == "--editor-render-material-slots-restart";
+var saveAfterSlotUndo = args.Length == 8 && args[7] == "--editor-render-material-slot-overrides-undo";
+var restartMultipleOverrides = saveAfterSlotUndo || args.Length == 8 && args[7] == "--editor-render-material-slot-overrides";
+var restartSlotOverride = restartMultipleOverrides || args.Length == 8 && args[7] == "--editor-render-material-slots-restart";
 var restartImportedTexture = args.Length == 8 && args[7] == "--editor-imported-texture-restart";
 var textureWorkflow = args.Length == 8 && args[7] == "--editor-playing-texture-workflow";
 var replaceTexture = textureWorkflow || args.Length == 8 && args[7] == "--editor-imported-texture-replace";
@@ -232,9 +234,10 @@ if (editorInitialImport)
         return 0;
     }
     var saveMode = restartImportedTexture ? "--initial-import-save-texture" :
-        restartSlotOverride ? "--initial-import-save-slot" : "--initial-import-save";
+        saveAfterSlotUndo ? "--initial-import-save-overrides-after-undo" :
+        restartMultipleOverrides ? "--initial-import-save-overrides" : restartSlotOverride ? "--initial-import-save-slot" : "--initial-import-save";
     var reopenMode = restartImportedTexture ? "--initial-import-reopen-texture" :
-        restartSlotOverride ? "--initial-import-reopen-slot" : "--initial-import-reopen";
+        restartMultipleOverrides && !saveAfterSlotUndo ? "--initial-import-reopen-overrides" : restartSlotOverride ? "--initial-import-reopen-slot" : "--initial-import-reopen";
     var saved = await RunChild("import-saved", [.. arguments, saveMode], TimeSpan.FromSeconds(120));
     Check(saved.ExitCode == 0, saved.Error);
     var reopened = await RunChild("import-reopened", [.. arguments, reopenMode], TimeSpan.FromSeconds(120));

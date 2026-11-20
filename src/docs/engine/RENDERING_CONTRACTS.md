@@ -108,7 +108,7 @@ revision требует нового проверенного binding-set, да�
 | Property ID | Kind / default | Семантика |
 | --- | --- | --- |
 | mesh | String / GUID suffix1401 | Nonnullable mesh asset reference |
-| bindings | String / GUID suffix1403 | Nonnullable binding-set asset reference |
+| bindings | String / GUID suffix1403 | ID привязки или [переопределения слотов](#scene-material-binding-reference) |
 | enabled | Boolean / true | Только render visibility |
 | layers | Integer / 4294967295 | UInt32 mask, inclusive0..4294967295 |
 | tintEnabled | Boolean / false | Применять instance multiplier |
@@ -117,7 +117,7 @@ revision требует нового проверенного binding-set, да�
 References разрешаются в exact keys frozen manifest. Bindings.MeshKey обязан
 равняться MeshRenderer.MeshKey. Все значения/references проверяются и при disabled/
 masked renderer; invalid tint не скрывается tintEnabled=false. V1 tint один для всех
-slots renderer. Per-slot overrides требуют следующего явного schema/layout profile.
+slots renderer.
 Несколько частей с разными instance tint представлены дочерними entities.
 
 Reset tint отключает override (`tintEnabled=false`), effective multiplier=(1,1,1).
@@ -126,6 +126,21 @@ Stored tint values могут сохраняться в draft/document; reset в
 entity не меняет material/binding set другой. Shared material edit создаёт новую
 revision; отдельная catalog transaction публикует согласованный manifest и bindings.
 Runtime tint — World state; документ не переписывается, checkpoint support только f.6.
+
+<a id="scene-material-binding-reference"></a>
+### Привязка материалов в документе сцены
+
+GUID в `bindings` указывает на исходную или ранее поддержанную производную
+привязку одного слота. Для двух и более переопределений поле хранит `slots/1:`
+и пары `<slotId>=<materialId>`, разделённые `;`. Каждый ID содержит 32 строчных
+шестнадцатеричных символа без дефисов. Пары упорядочены по ID слота. Допускаются до
+восьми уникальных слотов меша, каждый с непустым ID материала.
+
+Build вычисляет стабильный ID производной привязки из ID меша и списка пар.
+Остальные слоты получают материалы из исходной привязки выбранной ревизии
+меша. Build публикует binding-set v1 с точными ключами всех слотов в порядке
+меша. Runtime разрешает вычисленный ID в manifest и проверяет, что объявленные
+пары совпадают с материалами опубликованной привязки.
 
 <a id="color"></a>
 ## Цветовой конвейер

@@ -16626,3 +16626,52 @@ SHA256 `761D9129640F32CE8AAE41740C89F76D78C27B13EC1D45CE90325F3A21BFE341`.
 при открытии повреждённого Build. Отчёт сохранён в `geometry-regression/report.json`
 рядом с основным отчётом.
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#play-two-revisions-of-an-imported-png-offline).
+
+<a id="ed4i-independent-slot-overrides-2026-11-20"></a>
+### ED4i — два независимых переопределения материалов, 20.11.2026
+
+На `1.2611.20.3-alpha` Editor импортировал двухслотовую glTF, разместил
+её в сцене и двумя Apply назначил белый материал левому слоту и красный
+правому. Undo вернул зелёный материал правого слота. Пиксели левой половины
+viewport, ключ левого материала и ключ меша совпали до и после Undo.
+
+Сценарий сохранял сцену сразу после Undo и отдельно после Redo. В каждом
+случае новый процесс Editor показал сохранённые материалы в инспекторе.
+Совпали ID слотов, точные ключи меша, материалов и привязки, SHA документа
+сцены, каталога, ledger и выбора импортов. Editor построил новую сборку в
+отдельном каталоге. Хеши RGBA области viewport размером 686×925 совпали во
+всех профилях для соответствующего состояния.
+
+| Состояние | Левый слот | Правый слот | SHA256 RGBA |
+| --- | --- | --- | --- |
+| Два Apply, сохранение после Redo и перезапуск | Белый | Красный | `B1AF1D5ABAC47D3D9A276E81FFD2557BE96E86916D402358EC5E33DE50967805` |
+| Undo, сохранение сразу после Undo и перезапуск | Белый | Зелёный | `CD604C1465E2A99B7AC0997075347F40A71EA24D42BCAF58C82B3DC8B90347DE` |
+
+Source Debug, published Release и Release из закрытого feed с 20 пакетами
+TrueMoon прошли на Cobalt и Microsoft DI для каждого состояния. Во всех 48
+запусках Runtime Vulkan validation была включена и сообщила 0 ошибок и
+предупреждений. Профиль использует Windows x64, SDK 11.0.100 и
+маршрутизованный ввод в окне Editor.
+
+| Отчёт в `TestResults` | SHA256 |
+| --- | --- |
+| `ED4i-material-slot-overrides-20261120-01/verification.json` | `B74F570B7CBB8F77F2E926043A36BF1ED97A8F0A9C3888CE787FD0F0987B2DED` |
+| `ED4i-material-slot-overrides-20261120-fresh-01/verification.json` | `2D70B67598DF97FD01E8E60B62BF4BAFE8BD46238A462D9A478E36128FAA250E` |
+| `ED4i-material-slot-undo-restart-20261120-01/verification.json` | `9C6F8102D5901D236A97626A873251FE1256AD61F0A58531C4421C4E16C218A0` |
+| `ED4i-material-slot-undo-restart-20261120-fresh-01/verification.json` | `7A416ACAAAE5AAFCADFA94969780F38D92CE4C33B79A694C6D97090AEDFFA8B7` |
+
+Сверены SHA входящих в отчёты JSON и PNG, результаты Vulkan validation и
+хеши обеих половин viewport.
+
+В каждом из Debug и Release прошли 1 051 выбранный тест `TrueMoon.Aether.Tests`
+по рендеру, импорту и ECS-загрузке и все 1 513 тестов
+`TrueMoon.Aether.Editor.Tests`. Ошибок и пропусков нет. TRX сохранены в
+`TestResults/ED4i-material-slot-overrides-20261120-tests-02`.
+
+| Проверка `SceneMaterialBindingReferenceTests` | Debug и Release |
+| --- | --- |
+| `CombinedReference_PreservesBothPairsAndIsIndependentOfEditOrder` | Пройдена |
+| `LegacyGuid_RemainsTheExactBindingId` | Пройдена |
+| `CombinedReference_RejectsDuplicateEmptyAndOverBudgetSlots` | Пройдена |
+
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#persist-independent-overrides-for-two-material-slots).

@@ -16,6 +16,8 @@ param(
     [switch]$RenderMaterialSlots,
     [switch]$InitialModelImport,
     [switch]$RenderMaterialSlotsRestart,
+    [switch]$RenderMaterialSlotOverrides,
+    [switch]$SaveAfterSlotUndo,
     [switch]$ImportedTextureRestart,
     [switch]$ImportedTextureReimport,
     [switch]$ImportedTextureReplace,
@@ -24,6 +26,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($SaveAfterSlotUndo -and !$RenderMaterialSlotOverrides) { throw '-SaveAfterSlotUndo requires -RenderMaterialSlotOverrides.' }
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $evidence = [IO.Path]::GetFullPath($EvidenceDirectory, $workspace)
@@ -38,14 +41,14 @@ $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
 $textureReplaceProbe = $ImportedTextureReplace -or $PlayingTextureWorkflow
 $textureReimportProbe = $ImportedTextureReimport -or $textureReplaceProbe
-$initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart -or $ImportedTextureRestart -or $textureReimportProbe
+$initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $ImportedTextureRestart -or $textureReimportProbe
 $renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $initialImportProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotOverrides) { 'ED4i-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -66,7 +69,8 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotOverrides) { '--editor-render-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        if ($mode -eq '--editor-render-material-slot-overrides' -and $SaveAfterSlotUndo) { $mode += '-undo' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
@@ -125,7 +129,8 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                 $reopened = Get-Content -LiteralPath $reopenedPath -Raw | ConvertFrom-Json
                 $savedChildren = @(Get-ChildItem -LiteralPath "$fixture/import-saved" -Filter 'runtime-*.json' -File)
                 $reopenedChildren = @(Get-ChildItem -LiteralPath "$fixture/import-reopened" -Filter 'runtime-*.json' -File)
-                if (!$saved.Completed -or !$reopened.Completed -or !$saved.RegistrationRetry -or $savedChildren.Count -ne 1 -or $reopenedChildren.Count -ne 1 -or
+                $savedFrames = if ($RenderMaterialSlotOverrides) { 3 } else { 1 }
+                if (!$saved.Completed -or !$reopened.Completed -or !$saved.RegistrationRetry -or $savedChildren.Count -ne $savedFrames -or $reopenedChildren.Count -ne 1 -or
                     $saved.EditorPid -eq $reopened.EditorPid -or $saved.SourceId -ne $reopened.SourceId -or $saved.CatalogSha256 -ne $reopened.CatalogSha256 -or
                     $saved.LedgerSha256 -ne $reopened.LedgerSha256 -or $saved.Slots.Count -ne 2 -or $reopened.Slots.Count -ne 2 -or
                     $saved.Slots[0].Id -ne $reopened.Slots[0].Id -or $saved.Slots[1].Id -ne $reopened.Slots[1].Id -or
@@ -149,6 +154,28 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                 $run.Saved = @{ Path = $savedPath; Sha256 = (Get-FileHash -LiteralPath $savedPath).Hash }
                 $run.Reopened = @{ Path = $reopenedPath; Sha256 = (Get-FileHash -LiteralPath $reopenedPath).Hash }
                 $images = @("$fixture/import-saved/initial-model.png", "$fixture/import-reopened/initial-model.png")
+                if ($RenderMaterialSlotOverrides) {
+                    $historyPath = "$output/editor-slot-override-history.json"
+                    Copy-Item -LiteralPath "$fixture/import-saved/editor-slot-override-history.json" -Destination $historyPath
+                    $history = Get-Content -LiteralPath $historyPath -Raw | ConvertFrom-Json
+                    $applied = $history.Applied
+                    $undone = $history.Undone
+                    $expected = if ($SaveAfterSlotUndo) { $undone } else { $applied }
+                    if (!$applied.BindingReference.StartsWith('slots/1:') -or
+                        $saved.BindingReference -ne $expected.BindingReference -or $saved.BindingReference -ne $reopened.BindingReference -or
+                        $saved.Binding.AssetId -ne $reopened.Binding.AssetId -or $saved.Binding.Revision -ne $reopened.Binding.Revision -or
+                        $saved.Slots[0].Material.AssetId -ne $reopened.Slots[0].Material.AssetId -or
+                        $saved.Slots[1].Material.AssetId -ne $reopened.Slots[1].Material.AssetId -or
+                        $applied.Slots[0].Material.AssetId -ne $undone.Slots[0].Material.AssetId -or
+                        $applied.Slots[1].Material.AssetId -eq $undone.Slots[1].Material.AssetId -or
+                        $applied.Frame.Pixels.Slots.LeftRgba -ne $undone.Frame.Pixels.Slots.LeftRgba -or
+                        $applied.Frame.Pixels.Slots.RightRgba -eq $undone.Frame.Pixels.Slots.RightRgba -or
+                        $expected.Frame.Pixels.Sha256 -ne $saved.Frame.Pixels.Sha256) {
+                        throw "Incomplete double override, independent Undo or restart evidence for $name-$provider"
+                    }
+                    $run.History = @{ Path = $historyPath; Sha256 = (Get-FileHash -LiteralPath $historyPath).Hash }
+                    $images += @("$fixture/import-saved/both-applied.png", "$fixture/import-saved/second-undone.png")
+                }
             } elseif ($RenderMaterialSlots) {
                 $path = "$output/editor-render-material-slots.json"
                 $importPath = "$output/import-render-material-slots.json"

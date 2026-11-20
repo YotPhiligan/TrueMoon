@@ -396,10 +396,12 @@ internal static class EditorModelBuildSmoke
         var textureWorkflow = initialMode == "--initial-import-playing-texture-workflow";
         var replaceTexture = textureWorkflow || initialMode == "--initial-import-replace-texture";
         var reimportTexture = replaceTexture || initialMode == "--initial-import-reimport-texture";
-        var saveInitialImport = reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture";
-        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture";
+        var saveAfterSlotUndo = initialMode == "--initial-import-save-overrides-after-undo";
+        var saveInitialImport = saveAfterSlotUndo || reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides";
+        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture" or "--initial-import-reopen-overrides";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
-        var persistSlotOverride = initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
+        var persistMultipleOverrides = saveAfterSlotUndo || initialMode is "--initial-import-save-overrides" or "--initial-import-reopen-overrides";
+        var persistSlotOverride = persistMultipleOverrides || initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
         var initialImport = saveInitialImport || reopenInitialImport;
         var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
         var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
@@ -799,6 +801,12 @@ internal static class EditorModelBuildSmoke
                 var leftMaterial = persistSlotOverride
                     ? published.Bindings.Single(item => item.Key.Locator == "builtin/material/default").Id
                     : mesh.Slots[0].MaterialId;
+                var originalRight = mesh.Slots[1].MaterialId;
+                var changedRight = mesh.Slots[0].MaterialId;
+                var finalRight = persistMultipleOverrides && !saveAfterSlotUndo ? changedRight : originalRight;
+                var rightMaterial = saveInitialImport ? originalRight : finalRight;
+                var checkpoint = Path.Combine(session.Project.ContentDirectory, ".aether-model-imports", content.Document.Id.Value.ToString("N") + ".tmimports");
+                InitialImportProof? applied = null, undone = null;
                 if (persistSlotOverride) await VerifyOverrideInInspector();
                 if (saveInitialImport)
                 {
@@ -810,17 +818,25 @@ internal static class EditorModelBuildSmoke
                 content = before.Content!;
                 sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
                 var renderer = content.Resolved.Entities[new(entityId)].Components.Values.Single(value => value.TypeId == MeshRenderingComponents.MeshRendererId);
-                var bindingId = Guid.ParseExact(renderer.Properties["bindings"].Value.GetString(), "D");
+                var reference = renderer.Properties["bindings"].Value.GetString();
                 Check(content.Document.Entities.Length == 2 && published.Generation == 1 &&
                     document.ReadModelImports(before.OpeningId).Single(item => item.SourceId == row.SourceId).Generation == published.Generation &&
                     renderer.Properties["mesh"].Value.GetString() == mesh.AssetId.ToString("D") &&
-                    (bindingId != mesh.BindingSetId) == persistSlotOverride &&
+                    (reference != mesh.BindingSetId.ToString("D")) == persistSlotOverride &&
                     mesh.Slots.Length == 2 && mesh.Slots[0].SlotId != mesh.Slots[1].SlotId &&
                     mesh.Geometry.Slots.Select(slot => slot.SlotId).SequenceEqual(mesh.Slots.Select(slot => slot.SlotId)),
                     "The scene and restored import do not agree on the published mesh, slots and placement.");
 
-                var checkpoint = Path.Combine(session.Project.ContentDirectory, ".aether-model-imports", content.Document.Id.Value.ToString("N") + ".tmimports");
                 var result = await BuildAndCapture(published, "initial-model");
+                if (persistMultipleOverrides && saveInitialImport)
+                {
+                    var expected = (saveAfterSlotUndo ? undone : applied)!;
+                    Check(expected.Binding == result.Binding && expected.BindingReference == result.BindingReference &&
+                        expected.Slots.SequenceEqual(result.Slots) && expected.Frame.Pixels == result.Frame.Pixels,
+                        "Save did not preserve the selected overrides and the exact GPU frame.");
+                    await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-slot-override-history.json"),
+                        JsonSerializer.Serialize(new { Applied = applied, Undone = undone }), token);
+                }
                 if (reimportTexture)
                 {
                     await VerifyTextureReimport(result);
@@ -834,6 +850,7 @@ internal static class EditorModelBuildSmoke
                         prior.Generation == result.Generation && prior.SceneSha256 == result.SceneSha256 && prior.CatalogSha256 == result.CatalogSha256 &&
                         prior.LedgerSha256 == result.LedgerSha256 && prior.SelectionSha256 == result.SelectionSha256 &&
                         prior.OverrideVerified == result.OverrideVerified && prior.Mesh == result.Mesh && prior.Binding == result.Binding &&
+                        prior.BindingReference == result.BindingReference &&
                         prior.Texture == result.Texture && prior.Slots.SequenceEqual(result.Slots) && prior.Frame.Mask == result.Frame.Mask &&
                         prior.Frame.Pixels != null && prior.Frame.Pixels == result.Frame.Pixels,
                         "The restarted Editor did not restore the exact catalog, scene, slot IDs and GPU frame.");
@@ -852,6 +869,8 @@ internal static class EditorModelBuildSmoke
                 async Task<InitialImportProof> BuildAndCapture(PublishedModelImport publication, string name, uint? topLeft = null,
                     GameBuildArtifact? replacement = null, ulong minimumTick = 0)
                 {
+                    before = document.Read();
+                    content = before.Content!;
                     if (replacement == null)
                     {
                         await StartBuild();
@@ -861,15 +880,19 @@ internal static class EditorModelBuildSmoke
                         ?? throw new InvalidOperationException("New Editor Build is missing.");
                     Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "The Editor used a preexisting build.");
                     var manifest = artifact.RenderContent!;
-                    var binding = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
+                    var bindingReference = ReadBindingReference();
+                    var binding = Guid.TryParseExact(bindingReference, "D", out var direct)
+                        ? manifest.Resolve(direct, RenderContentProfile.BindingSetKindId)
+                        : manifest.Entries.Single(entry => entry.Key.KindId == RenderContentProfile.BindingSetKindId && entry.Key.AssetId != mesh.BindingSetId);
+                    var bindingId = binding.Key.AssetId;
                     var exact = (MaterialBindingSetDefinition)binding.Definition;
                     var imported = (MaterialBindingSetDefinition)manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId).Definition;
                     var slots = exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray();
                     var geometry = (MeshDefinition)manifest.Resolve(exact.Mesh).Definition;
                     Check(exact.Mesh == imported.Mesh && exact.Mesh.AssetId == mesh.AssetId && geometry.Slots.SequenceEqual(mesh.Geometry.Slots) &&
                         exact.Bindings.Length == 2 && exact.Bindings[0].SlotId == mesh.Slots[0].SlotId && exact.Bindings[0].Material.AssetId == leftMaterial &&
-                        exact.Bindings[1] == imported.Bindings[1] && exact.Bindings[1].SlotId == mesh.Slots[1].SlotId &&
-                        exact.Bindings[1].Material.AssetId == mesh.Slots[1].MaterialId &&
+                        exact.Bindings[1].SlotId == mesh.Slots[1].SlotId && exact.Bindings[1].Material.AssetId == rightMaterial &&
+                        (rightMaterial != originalRight || exact.Bindings[1] == imported.Bindings[1]) &&
                         exact.Bindings.All(slot => manifest.Resolve(slot.Material).Key == slot.Material),
                         "Build lost the slot IDs or their exact material keys.");
                     var textureKey = VerifyImportedTextureKey(verifyImportedTexture, publication, manifest, exact, publication.Meshes.Single());
@@ -891,17 +914,23 @@ internal static class EditorModelBuildSmoke
                     var frame = await CapturePlaying(name, artifact, minimumTick, topLeft);
                     if (!replaceTexture) await StopAndCheck(frame.Generation, textureKey);
                     if (persistSlotOverride)
-                        Check(frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 && frame.Pixels?.Slots is { WhitePixels: > 100 },
-                            "The rebuilt GPU frame did not show the white override and unchanged green material.");
+                        Check((rightMaterial == originalRight ? frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 :
+                            frame.Mask.RedPixels > 100 && frame.Mask.GreenPixels == 0 &&
+                            frame.Pixels?.Slots?.RedRightPixels == frame.Mask.RedPixels) &&
+                            frame.Pixels?.Slots is { WhitePixels: > 100 }, "The rebuilt GPU frame did not show the selected slot colors.");
                     return new(true, Environment.ProcessId, before.OpeningId, row.SourceId, row.SourcePath, entityId,
                         publication.Generation, sceneHash, Hash(await File.ReadAllBytesAsync(catalogFile, token)),
                         Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission)
                     {
-                        SelectionSha256 = Hash(await File.ReadAllBytesAsync(checkpoint, token)),
+                        SelectionSha256 = before.IsDirty && persistMultipleOverrides ? "" : Hash(await File.ReadAllBytesAsync(checkpoint, token)),
+                        BindingReference = bindingReference,
                         OverrideVerified = persistSlotOverride,
                         Texture = textureKey is { } key ? AssetProof.From(key) : null
                     };
                 }
+
+                string ReadBindingReference() => document.Read().Content!.Resolved.Entities[new(entityId)].Components.Values
+                    .Single(value => value.TypeId == MeshRenderingComponents.MeshRendererId).Properties["bindings"].Value.GetString();
 
                 async Task VerifyTextureReimport(InitialImportProof initial)
                 {
@@ -1082,28 +1111,66 @@ internal static class EditorModelBuildSmoke
                     await EditorHierarchySmoke.ClickItemAsync(ui, view, entityId.ToString("D"), token);
                     if (saveInitialImport)
                     {
-                        await SeeSlotMaterials(mesh.Slots[0].MaterialId);
-                        string? option = null;
-                        await ui.InvokeAsync(() => option = inspector.DataContext!.RenderAssets!.Materials.Single(item => item.Id == leftMaterial).Name)
-                            .WaitAsync(token);
-                        await ClickInspector(() => SlotButton("left"));
-                        await ClickInspector(() => SlotButton("left · " + option));
-                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
-                            draft.Slots.Count == 2 && draft.Slots[0].Material == leftMaterial &&
-                            draft.Slots[1].Material == mesh.Slots[1].MaterialId, token);
-                        Check(ReferenceEquals(document.Read().Content, unedited), "Slot selection leaked out of the draft before Apply.");
-                        await ClickInspector(() => inspector.Apply);
-                        Check(document.Read().Content!.UndoCount == unedited.UndoCount + 1, "Applying the override did not create one history entry.");
-                    }
-                    await SeeSlotMaterials(leftMaterial);
+                        await SeeSlotMaterials(mesh.Slots[0].MaterialId, originalRight);
+                        await ApplySlot("left", leftMaterial, leftMaterial, originalRight);
+                        if (persistMultipleOverrides)
+                        {
+                            await SeeSlotMaterials(leftMaterial, originalRight);
+                            var leftOnly = document.Read().Content!;
+                            await ApplySlot("right", changedRight, leftMaterial, changedRight);
+                            var combined = document.Read().Content!;
+                            Check(combined.UndoCount == unedited.UndoCount + 2, "Expected two independent Apply transactions.");
+                            await SeeSlotMaterials(leftMaterial, changedRight);
+                            rightMaterial = changedRight;
+                            applied = await BuildAndCapture(published, "both-applied");
 
-                    Task SeeSlotMaterials(Guid expectedLeft) => EditorHeaderSmoke.UntilAsync(ui, () =>
+                            await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                            Check(document.Read().Content!.ContentRevision == leftOnly.ContentRevision &&
+                                document.Read().Content!.RedoCount == 1, "Undo did not restore only the second Apply.");
+                            rightMaterial = originalRight;
+                            await SeeSlotMaterials(leftMaterial, originalRight);
+                            undone = await BuildAndCapture(published, "second-undone");
+                            var both = applied.Frame.Pixels!.Slots!;
+                            var afterUndo = undone.Frame.Pixels!.Slots!;
+                            Check(applied.Binding != undone.Binding && applied.Mesh == undone.Mesh &&
+                                applied.Slots[0] == undone.Slots[0] && applied.Slots[1].Id == undone.Slots[1].Id &&
+                                applied.Slots[1].Material != undone.Slots[1].Material &&
+                                both.LeftRgba == afterUndo.LeftRgba && both.RightRgba != afterUndo.RightRgba,
+                                "Undo changed the first material or its GPU pixels.");
+
+                            if (!saveAfterSlotUndo)
+                            {
+                                await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
+                                Check(document.Read().Content!.ContentRevision == combined.ContentRevision,
+                                    "Redo did not restore the combined override.");
+                                rightMaterial = changedRight;
+                            }
+                        }
+                    }
+                    await SeeSlotMaterials(leftMaterial, finalRight);
+
+                    async Task ApplySlot(string name, Guid material, Guid expectedLeft, Guid expectedRight)
+                    {
+                        var previous = document.Read().Content!;
+                        string? option = null;
+                        await ui.InvokeAsync(() => option = inspector.DataContext!.RenderAssets!.Materials.Single(item => item.Id == material).Name)
+                            .WaitAsync(token);
+                        await ClickInspector(() => SlotButton(name));
+                        await ClickInspector(() => SlotButton(name + " · " + option));
+                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
+                            draft.Slots.Count == 2 && draft.Slots[0].Material == expectedLeft && draft.Slots[1].Material == expectedRight, token);
+                        Check(ReferenceEquals(document.Read().Content, previous), "Slot selection leaked from the draft before Apply.");
+                        await ClickInspector(() => inspector.Apply);
+                        Check(document.Read().Content!.UndoCount == previous.UndoCount + 1, "Apply did not create exactly one history entry.");
+                    }
+
+                    Task SeeSlotMaterials(Guid expectedLeft, Guid expectedRight) => EditorHeaderSmoke.UntilAsync(ui, () =>
                         inspector.DataContext is { HasDraft: false, RenderAssets: { Enabled: true } selection } &&
                         selection.Component == component && selection.Mesh == mesh.AssetId && selection.Slots.Count == 2 &&
-                        Shows(selection, 0, "left", expectedLeft) && Shows(selection, 1, "right", mesh.Slots[1].MaterialId), token);
+                        Shows(selection, 0, "left", expectedLeft) && Shows(selection, 1, "right", expectedRight), token);
 
                     bool Shows(InspectorRenderAssetSelection selection, int index, string name, Guid material) =>
-                        selection.Slots[index].Id == mesh.Slots[index].SlotId && selection.Slots[index].Material == material &&
+                        selection.Slots[index].Id == mesh.Slots[index].SlotId && selection.Slots[index].Material == material && selection.Slots[index].CanSelect &&
                         SlotButton(name)?.Value == name + " · " + selection.Materials.Single(item => item.Id == material).Name;
 
                     Button? SlotButton(string name) => inspector.Properties.TryGetValue((component, "bindings"), out var field)
@@ -1424,7 +1491,7 @@ internal static class EditorModelBuildSmoke
                     await ClickInspector(() => FindSlotButton("Материал слота left · " + option));
                     await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
                         draft.Slots[0].Material == white && draft.Slots[1].Material == right.MaterialId &&
-                        FindSlotButton("Материал слота right") is { IsEnabled: false }, token);
+                        FindSlotButton("Материал слота right") is { IsEnabled: true }, token);
                     Check(ReferenceEquals(document.Read().Content, saved), "Choosing the slot material committed it before Apply.");
                     await ClickInspector(() => inspector.Apply);
                     var edited = document.Read().Content!;
@@ -1657,11 +1724,11 @@ internal static class EditorModelBuildSmoke
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
                     var compareSlots = materialSlots || persistSlotOverride || reimportTexture;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots);
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, persistMultipleOverrides);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
-                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null) : null;
+                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, persistMultipleOverrides) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1717,7 +1784,7 @@ internal static class EditorModelBuildSmoke
         return directory;
     }
 
-    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence, bool materialSlots = false)
+    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence, bool materialSlots = false, bool redSlot = false)
     {
         Check(clip.Left >= 0 && clip.Top >= 0 && clip.Right <= pixels.Width && clip.Bottom <= pixels.Height &&
             clip.Width > 0 && clip.Height > 0, "Invalid GPU image bounds.");
@@ -1744,13 +1811,13 @@ internal static class EditorModelBuildSmoke
             left = Math.Min(left, x);
             right = Math.Max(right, x);
         }
-        Check(materialSlots ? green > 100 : allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100,
+        Check(materialSlots ? green > 100 || redSlot && upper + lower > 100 : allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100,
             "Expected occurrences in the GPU viewport.");
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
     }
 
     private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask,
-        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, uint? textureTopLeft)
+        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, uint? textureTopLeft, bool redSlot)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -1763,7 +1830,7 @@ internal static class EditorModelBuildSmoke
             Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
             Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
             Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
-        var cropped = Measure(pixels, crop, allowSingleRedOccurrence, materialSlots);
+        var cropped = Measure(pixels, crop, allowSingleRedOccurrence, materialSlots, redSlot);
         Check(cropped.RedPixels == mask.RedPixels && cropped.GreenPixels == mask.GreenPixels,
             "The unobstructed viewport crop does not contain all visible model pixels.");
         var rgba = new byte[checked(crop.Width * crop.Height * 4)];
@@ -1820,13 +1887,16 @@ internal static class EditorModelBuildSmoke
     private static SlotPixelProof MeasureSlots(byte[] rgba, int width, int height, PixelMask cropped)
     {
         var split = width / 2;
+        var left = new byte[split * height * 4];
         var right = new byte[(width - split) * height * 4];
         var white = new byte[width * height];
         var whiteCount = 0;
         var greenCount = 0;
+        var redRight = 0;
         for (var y = 0; y < height; y++)
         {
             var row = y * width;
+            rgba.AsSpan(row * 4, split * 4).CopyTo(left.AsSpan(y * split * 4));
             rgba.AsSpan((row + split) * 4, (width - split) * 4).CopyTo(right.AsSpan(y * (width - split) * 4));
             for (var x = 0; x < width; x++)
             {
@@ -1835,6 +1905,7 @@ internal static class EditorModelBuildSmoke
                 var green = rgba[i + 1];
                 var blue = rgba[i + 2];
                 if (red < 25 && green > 200 && blue < 25 && x >= split) greenCount++;
+                if (red > 200 && green < 25 && blue < 25 && x >= split) redRight++;
                 if (red <= 200 || green <= 200 || blue <= 200) continue;
                 Check(x < split, "Replacement slot pixels escaped the left viewport region.");
                 white[row + x] = 1;
@@ -1842,7 +1913,7 @@ internal static class EditorModelBuildSmoke
             }
         }
         Check(greenCount == cropped.GreenPixels, "The preserved green slot is outside the compared region.");
-        return new(cropped.Sha256, whiteCount, Hash(white), Hash(right));
+        return new(cropped.Sha256, whiteCount, Hash(white), Hash(right), Hash(left), redRight);
     }
 
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
@@ -1858,7 +1929,7 @@ internal static class EditorModelBuildSmoke
         public SlotPixelProof? Slots { get; init; }
         public TextureTileProof? Texture { get; init; }
     }
-    private sealed record SlotPixelProof(string RedMask, int WhitePixels, string WhiteMask, string RightRgba);
+    private sealed record SlotPixelProof(string RedMask, int WhitePixels, string WhiteMask, string RightRgba, string LeftRgba, int RedRightPixels);
     private sealed record TextureTile(string Rgba, int Count, int X, int Y);
     private sealed record TextureTileProof(TextureTile TopLeft, TextureTile TopRight, TextureTile BottomLeft, TextureTile BottomRight);
     private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask)
@@ -1879,6 +1950,7 @@ internal static class EditorModelBuildSmoke
         ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry)
     {
         public string SelectionSha256 { get; init; } = "";
+        public string BindingReference { get; init; } = "";
         public bool OverrideVerified { get; init; }
         public AssetProof? Texture { get; init; }
     }

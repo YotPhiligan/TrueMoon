@@ -126,6 +126,9 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 [Первичный импорт ARCH1g.2p](engine/PLAN.md#arch1g2p-initial-model-import) добавил
 команду Editor от glTF с внешним BIN до каталога и размещённой сцены на Vulkan.
 
+[Независимые переопределения двух слотов ED4i](engine/EDITOR_PLAN.md#ed4i-independent-slot-overrides)
+проверены с Undo второго Apply и восстановлением материалов после перезапуска.
+
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
 слои/ECS → ARCH3.6–9 моды/reload**. [Единственная подробная очередь](engine/PLAN.md#current-engine-queue).

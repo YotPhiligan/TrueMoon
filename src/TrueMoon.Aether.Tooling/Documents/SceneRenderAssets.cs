@@ -53,15 +53,31 @@ internal sealed class SceneRenderAssets
         return _entries.ContainsKey(id) || id == Guid.Empty ? null : id;
     }
 
+    internal string? BindingWithSlotMaterial(Guid mesh, string current, Guid slot, Guid material)
+    {
+        if (DefaultDefinition(mesh) is not { } original ||
+            ResolveReferences(this, mesh.ToString("D"), current).Definition is not { } previous ||
+            _entries.GetValueOrDefault(material)?.Definition is not OpaqueUnlitMaterialDefinition) return null;
+
+        var overrides = previous.Bindings.Select(item =>
+                (item.SlotId, MaterialId: item.SlotId == slot ? material : item.Material.AssetId))
+            .Where((item, index) => item.MaterialId != original.Bindings[index].Material.AssetId).ToArray();
+        if (overrides.Length == 0) return _defaults[mesh].ToString("D");
+        if (overrides.Length == 1)
+            return BindingForMaterial(mesh, overrides[0].SlotId, overrides[0].MaterialId)?.ToString("D");
+        var value = SceneMaterialBindingReference.Format(overrides);
+        return SceneMaterialBindingReference.TryParse(mesh, value, out var binding, out _) && !_entries.ContainsKey(binding) ? value : null;
+    }
+
     internal static References ResolveReferences(SceneRenderAssets? assets, string meshReference, string bindingReference,
         bool allowMissingMesh = false, IReadOnlyDictionary<Guid, RenderAssetEntry>? generated = null)
     {
         if (!Guid.TryParseExact(meshReference, "D", out var mesh) || mesh == Guid.Empty)
             return new(null, default, null, "Ссылка на меш должна содержать непустой ID.");
-        var validBinding = Guid.TryParseExact(bindingReference, "D", out var binding) && binding != Guid.Empty;
+        var validBinding = SceneMaterialBindingReference.TryParse(mesh, bindingReference, out var binding, out var overrides);
         if (assets == null && mesh == RenderContentProfile.CubeAssetId)
         {
-            if (!validBinding) return new(null, binding, null, InvalidBinding(mesh));
+            if (!validBinding || overrides.Length != 0) return new(null, binding, null, InvalidBinding(mesh));
             return binding == RenderContentProfile.CubeBindingSetAssetId ? default : new(null, binding, null, MissingBinding(mesh, binding));
         }
         var geometry = assets?._entries.GetValueOrDefault(mesh);
@@ -75,6 +91,14 @@ internal sealed class SceneRenderAssets
         if (!validBinding)
             return new(mesh, binding, null, InvalidBinding(mesh));
 
+        if (overrides.Length != 0)
+        {
+            var combined = assets!.ResolveCombinedBinding(mesh, overrides);
+            if (combined == null || assets._entries.ContainsKey(binding) ||
+                generated?.GetValueOrDefault(binding) is { } existing && existing.Definition.Revision != combined.Revision)
+                return new(mesh, binding, null, MissingBinding(mesh, binding));
+            return new(mesh, binding, combined, null);
+        }
         var entry = assets!._entries.GetValueOrDefault(binding) ?? generated?.GetValueOrDefault(binding);
         if (entry != null)
         {
@@ -89,10 +113,23 @@ internal sealed class SceneRenderAssets
         return new(mesh, binding, null, MissingBinding(mesh, binding));
     }
 
-    private static string InvalidBinding(Guid mesh) => $"Ссылка на привязку материала меша {mesh:D} должна содержать непустой ID.";
+    private static string InvalidBinding(Guid mesh) => $"Ссылка на привязку материала меша {mesh:D} должна содержать ID или список переопределений слотов.";
 
     private static string MissingBinding(Guid mesh, Guid binding) =>
         $"Привязка материала {binding:D} для меша {mesh:D} отсутствует. Выберите импорт материала или назначьте материал заново.";
+
+    private MaterialBindingSetDefinition? ResolveCombinedBinding(Guid mesh, (Guid SlotId, Guid MaterialId)[] overrides)
+    {
+        if (DefaultDefinition(mesh) is not { } original) return null;
+        var bindings = original.Bindings.ToBuilder();
+        foreach (var (slot, material) in overrides)
+        {
+            var index = original.Bindings.IndexOf(original.Bindings.FirstOrDefault(item => item.SlotId == slot));
+            if (index < 0 || _entries.GetValueOrDefault(material) is not { Definition: OpaqueUnlitMaterialDefinition } entry) return null;
+            bindings[index] = new(slot, entry.Key);
+        }
+        return new(original.Mesh, bindings);
+    }
 
     private MaterialBindingSetDefinition? FindOverrideBinding(Guid mesh, Guid binding)
     {

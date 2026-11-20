@@ -378,6 +378,23 @@ and material keys, the saved scene and import hashes, and the exact viewport
 pixels with the white left slot and green right slot.
 `-FreshPackages` repeats the check from the closed feed.
 
+## Persist independent overrides for two material slots
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderMaterialSlotOverrides `
+  -EvidenceDirectory 'TestResults/EditorRenderMaterialSlotOverrides/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+Apply white to the left slot, then apply red to the right slot. Undo once
+and compare the Vulkan captures. The left half stays pixel-identical and
+the right slot returns to green. Redo and save both overrides. A new Editor
+opens the scene, checks both inspector values, builds it again and compares
+the exact mesh, slot, binding and material keys and viewport pixels with the
+saved scene. `-FreshPackages` repeats the check from the closed feed.
+`-SaveAfterSlotUndo` saves immediately after Undo and checks that the
+restarted Editor shows the white left slot and the original green right slot.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell
