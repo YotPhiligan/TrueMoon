@@ -16587,3 +16587,42 @@ Debug/Cobalt. Повреждённый артефакт отклонён до с
 `legacy-editor-replace-debug-cobalt.json` сохранён рядом с source-профилями.
 
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#reimport-build-and-replace-from-the-editor-during-play).
+
+<a id="arch1f5-player-imported-png-2026-11-20"></a>
+## 2026-11-20 — ARCH1f.5, импортированная PNG в отдельном Player
+
+Версия `1.2611.20.2-alpha`. Двухслотовая glTF с внешними BIN и PNG
+опубликована в Nom. После Build A изменился только SHA файла
+`textures/color.png`. Проверка свежести прошла Current → Stale → Current.
+Build B закрепил новую ревизию текстуры с тем же ID, неизменными ключом
+меша, DLL игры и байтами документа сцены.
+
+После закрытия авторинга исходники и Nom вынесены из исходных каталогов.
+В отдельном каталоге проигрывания находились только `placed.aetherscene`
+и опубликованные сборки. Три отдельных процесса Player открыли A → B → A.
+Показанные кадры совпали с точным BuildId, digest манифеста и SHA сцены.
+Загрузок сборок Nom, Tooling, Editor и AssimpNetter в Player не было.
+
+| Сборка | Ревизия фактической загрузки Vulkan | Верхний левый texel | SHA256 RGBA кадра 960×540 |
+| --- | --- | --- | --- |
+| A и повтор A | `44db5f765514d6d53bea2d8d7a5bf1a5db1f502e873b884e1ea21addf3473267` | `D51006FF` | `2A10056FDD279B9E102377F0F2453BAA25429BC6F257FB60F6E0F13A5D056AB8` |
+| B | `25b37b9935adb1ab5b591583a9b27a81879fadfd262f74ce1cb6d2ef85ea6227` | `2194D5FF` | `3F25F39E937D9BF292D1DD0826EBAA90E4E216E9DF968B9C147532F3AA73CFC9` |
+
+Остальные три цвета `E40911FF`, `F2160BFF`, `FC0316FF` и зелёный
+соседний слот совпали. После подстановки исходного цвета в изменившемся
+texel хеш всего кадра B совпал с A. PNG первого и последнего A также
+совпали побайтно во всех профилях.
+
+Source Debug, published Release и Release из закрытого feed (19 пакетов)
+прошли на Cobalt и Microsoft DI. Во всех 18 Player-процессах поверхность
+Vulkan validation сообщила 0 ошибок и предупреждений. Подтверждены один
+upload точной ревизии, освобождение image и sampler, нулевые остатки
+handles, slots и ревизий в каталоге. Сценарий запускался с SDK 11.0.100.
+
+Отчёт `TestResults/ARCH1f5-player-imported-png-20261120-02/verification.json`,
+SHA256 `761D9129640F32CE8AAE41740C89F76D78C27B13EC1D45CE90325F3A21BFE341`.
+Сверены хеши отчётов и кадров всех профилей.
+В Source Debug/Cobalt повторно прошли геометрический A → B → A и отказ
+при открытии повреждённого Build. Отчёт сохранён в `geometry-regression/report.json`
+рядом с основным отчётом.
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#play-two-revisions-of-an-imported-png-offline).

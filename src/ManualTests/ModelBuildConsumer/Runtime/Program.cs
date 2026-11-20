@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
@@ -14,12 +15,21 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 
-if (args.Length != 6) return 2;
+var textureProbe = args.Length == 7 && args[6] == "--texture";
+if (args.Length != 6 && !textureProbe) return 2;
 try
 {
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(55));
     var token = timeout.Token;
     Check(BuildIdentity.HostId == args[3], "Player host fingerprint changed.");
+    if (textureProbe)
+    {
+        var playback = Path.GetFullPath(Directory.GetCurrentDirectory());
+        var builds = Path.Combine(playback, "builds");
+        Check(args[5] == Path.Combine(playback, "placed.aetherscene") && args[1] == Path.Combine(builds, args[2]) &&
+            Directory.EnumerateFileSystemEntries(playback).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals([args[5], builds]),
+            "Texture Player must start with only the frozen scene and published artifacts.");
+    }
     var start = await PlayerStart.CaptureAsync(args[1], args[3], args[5], token: token);
     var manifest = start.Artifact.RenderContent ?? throw new InvalidDataException("Build did not deliver render resources.");
     var scene = start.World!.Scene;
@@ -45,6 +55,7 @@ try
     var session = app.Services.Resolve<PlayerSession>()!;
     var window = app.Services.Resolve<HostedUiWindow>()!;
     var catalog = app.Services.Resolve<IFactory<RenderManifestLease, RenderContentManifest>>()!;
+    RenderAssetKey? textureKey = null;
     object[] meshes;
     using (var lease = catalog.Create(manifest)!)
     {
@@ -54,10 +65,18 @@ try
         {
             var binding = (MaterialBindingSetDefinition)entry.Definition;
             var mesh = (MeshDefinition)lease.Manifest.Resolve(binding.Mesh).Definition;
-            var material = lease.Manifest.Resolve(binding.Bindings.Single().Material);
+            var material = lease.Manifest.Resolve((textureProbe ? binding.Bindings[0] : binding.Bindings.Single()).Material);
+            if (textureProbe)
+            {
+                var left = (OpaqueUnlitMaterialDefinition)material.Definition;
+                Check(textureKey == null && binding.Bindings.Length == 2 && mesh.Slots.Length == 2 &&
+                    left.BaseColorTexture is not null && left.Sampler == RenderTextureSampler.NearestClamp,
+                    "Texture Player expected one two-slot mesh using NearestClamp.");
+                textureKey = lease.Manifest.Resolve(left.BaseColorTexture!.Value).Key;
+            }
             return (object)new
             {
-                Id = binding.Mesh.AssetId, Slot = mesh.Slots.Single().SlotId, Binding = entry.Key.AssetId,
+                Id = binding.Mesh.AssetId, Slot = (textureProbe ? mesh.Slots[0] : mesh.Slots.Single()).SlotId, Binding = entry.Key.AssetId,
                 Material = material.Key.AssetId, Revision = binding.Mesh.Revision.ToString(),
                 MaximumX = mesh.Bounds.Maximum.X, VertexX = mesh.Vertices[1].X, VertexY = mesh.Vertices[1].Y,
                 Indices = mesh.Indices.ToArray()
@@ -98,7 +117,8 @@ try
                 using var data = image.Encode(SKEncodedImageFormat.Png, 100);
                 using (var file = File.Create(Path.ChangeExtension(args[4], ".png"))) data.SaveTo(file);
                 using var pixels = SKBitmap.FromImage(image);
-                result.TrySetResult(new(Measure(pixels), drawn.Metadata.FrameId, stamp.Tick, stamp.ManifestHash));
+                result.TrySetResult(new(textureProbe ? null : Measure(pixels), textureProbe ? MeasureTexture(pixels) : null,
+                    drawn.Metadata.FrameId, stamp.Tick, stamp.ManifestHash));
             }
             catch (Exception error) { result.TrySetException(error); }
         }
@@ -118,17 +138,31 @@ try
         diagnostics.LiveSlots == 0 && diagnostics.SurfacesCreated == diagnostics.SurfacesReleased &&
         diagnostics.SlotsCreated == diagnostics.SlotsReleased && player.PresentedFrames > 0,
         "GPU validation, presentation, or native ownership failed.");
+    Check(!textureProbe || textureKey != null, "The selected artifact has no base-color texture.");
+    if (textureKey is { } key)
+    {
+        var upload = diagnostics.MeshResources.Single(item => item.TextureUploads > 0);
+        // The upload backend borrows the already validated surface device.
+        Check(diagnostics.ValidationEnabled && diagnostics.DevicesCreated == diagnostics.DevicesReleased &&
+            upload.Errors == 0 && upload.Warnings == 0 && upload.LiveUploads == 0 &&
+            upload.TextureUploads == 1 && upload.LastTextureRevision == key.Revision.ToString() &&
+            upload.TextureImagesCreated == 1 && upload.TextureImagesReleased == 1 &&
+            upload.TextureSamplersCreated == 1 && upload.TextureSamplersReleased == 1,
+            $"Expected Vulkan texture {key.Revision} and released native owners. Upload: {upload}");
+    }
     var counts = host.Content.Counts;
     if (counts.ScopeCount != 0 || counts.RevisionCount != 0)
         throw new InvalidOperationException("Runtime render resources were retained after lease disposal.");
     var assemblies = AppDomain.CurrentDomain.GetAssemblies().Select(value => value.GetName().Name).ToArray();
-    if (assemblies.Any(name => name is "TrueMoon.Nom" or "TrueMoon.Aether.Nom" or "TrueMoon.Aether.Tooling" or "AssimpNetter" or "TrueMoon.Aether.Editor"))
+    if (assemblies.Any(name => name?.StartsWith("TrueMoon.Aether.Editor", StringComparison.Ordinal) == true ||
+        name is "TrueMoon.Nom" or "TrueMoon.Aether.Nom" or "TrueMoon.Aether.Tooling" or "AssimpNetter"))
         throw new InvalidOperationException("Runtime loaded an authoring dependency.");
     File.WriteAllText(args[4], JsonSerializer.Serialize(new
     {
         start.Artifact.BuildId, manifest.ProjectId, SceneSha256 = start.SceneHash,
         SceneId = scene.Id.Value, SceneRevision = scene.Revision, Meshes = meshes,
-        capture.Mask, capture.FrameId, capture.Tick, capture.ManifestHash, player.PresentedFrames,
+        capture.Mask, capture.TexturePixels, capture.FrameId, capture.Tick, capture.ManifestHash, player.PresentedFrames,
+        Pid = Environment.ProcessId, Texture = textureKey is { } texture ? new { texture.AssetId, Revision = texture.Revision.ToString() } : null,
         Validation = diagnostics, CatalogAfterRelease = counts, LoadedAssemblies = assemblies
     }));
     return 0;
@@ -175,6 +209,55 @@ static void Check(bool condition, string message)
     if (!condition) throw new InvalidOperationException(message);
 }
 
+static TexturePixels MeasureTexture(SKBitmap pixels)
+{
+    const uint oldColor = 0xD51006FF, newColor = 0x2194D5FF;
+    var samples = new Dictionary<uint, (long X, long Y, int Count)>
+    {
+        [oldColor] = default, [newColor] = default, [0xE40911FF] = default,
+        [0xF2160BFF] = default, [0xFC0316FF] = default, [0x00FF00FF] = default
+    };
+    var rgba = new byte[checked(pixels.Width * pixels.Height * 4)];
+    var offset = 0;
+    for (var y = 0; y < pixels.Height; y++)
+    for (var x = 0; x < pixels.Width; x++)
+    {
+        var pixel = pixels.GetPixel(x, y);
+        var color = (uint)pixel.Red << 24 | (uint)pixel.Green << 16 | (uint)pixel.Blue << 8 | pixel.Alpha;
+        if (samples.TryGetValue(color, out var point)) samples[color] = (point.X + x, point.Y + y, point.Count + 1);
+        BinaryPrimitives.WriteUInt32BigEndian(rgba.AsSpan(offset, 4), color);
+        offset += 4;
+    }
+    var rgbaHash = Convert.ToHexString(SHA256.HashData(rgba));
+    var topLeftColor = samples[oldColor].Count > 100 ? oldColor : newColor;
+    var replacedColor = topLeftColor == oldColor ? newColor : oldColor;
+    Check(samples[replacedColor].Count == 0, "Both texture revisions appeared in one Player frame.");
+    var topLeft = Center(topLeftColor);
+    var topRight = Center(0xE40911FF);
+    var bottomLeft = Center(0xF2160BFF);
+    var bottomRight = Center(0xFC0316FF);
+    var green = Center(0x00FF00FF);
+    Check(topLeft.X < topRight.X && bottomLeft.X < bottomRight.X && topLeft.Y < bottomLeft.Y &&
+        topRight.Y < bottomRight.Y && topRight.X < green.X && bottomRight.X < green.X,
+        "Texture texels or green slot appeared in the wrong region.");
+    if (topLeftColor == newColor)
+        for (var index = 0; index < rgba.Length; index += 4)
+        {
+            var pixel = rgba.AsSpan(index, 4);
+            if (BinaryPrimitives.ReadUInt32BigEndian(pixel) == newColor)
+                BinaryPrimitives.WriteUInt32BigEndian(pixel, oldColor);
+        }
+    return new(pixels.Width, pixels.Height, rgbaHash, Convert.ToHexString(SHA256.HashData(rgba)), topLeftColor.ToString("X8"));
+
+    (long X, long Y) Center(uint color)
+    {
+        var (x, y, count) = samples[color];
+        Check(count > 100, $"Expected color {color:X8} did not appear in Player.");
+        return (x / count, y / count);
+    }
+}
+
 internal sealed record PixelMask(int Width, int Height, int Left, int Right, int RedPixels, int Upper, int Lower,
     string Sha256, int GreenPixels, string GreenSha256);
-internal sealed record Capture(PixelMask Mask, ulong FrameId, ulong Tick, string ManifestHash);
+internal sealed record TexturePixels(int Width, int Height, string RgbaSha256, string NormalizedSha256, string TopLeft);
+internal sealed record Capture(PixelMask? Mask, TexturePixels? TexturePixels, ulong FrameId, ulong Tick, string ManifestHash);

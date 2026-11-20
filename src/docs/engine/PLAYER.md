@@ -81,3 +81,8 @@ payloads. Нет live переключения Editor↔Player, subsystem native
 logical content checkpoint, SDK publishing UI, production textures/import, device-loss
 или общей release/performance acceptance. Kul — отдельный optional scene bridge;
 он не включён в эту launch fixture.
+
+20.11.2026 в отдельном [срезе ARCH1f.5](HISTORY.md#arch1f5-player-imported-png-2026-11-20)
+Player показал импортированную PNG из двух frozen builds на Vulkan. В A → B → A
+подтверждены точные ревизии и пиксели после выноса исходников и Nom. Профили
+source Debug, published Release и закрытый feed прошли с Cobalt и Microsoft DI.

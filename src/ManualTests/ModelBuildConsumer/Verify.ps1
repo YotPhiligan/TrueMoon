@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
     [Parameter(Mandatory)][string]$ValidationDirectory,
     [Parameter(ParameterSetName = 'Revisions')][switch]$RevisionMatrix,
-    [Parameter(ParameterSetName = 'MultiModel')][switch]$MultiModel
+    [Parameter(ParameterSetName = 'MultiModel')][switch]$MultiModel,
+    [Parameter(ParameterSetName = 'ImportedTexture')][switch]$ImportedTexture
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,7 +35,7 @@ $feed = "$evidence/feed"
 [void][IO.Directory]::CreateDirectory($feed)
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($MultiModel) { 'ARCH1g.2j' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
+    Stage = if ($ImportedTexture) { 'ARCH1f.5-player-imported-png' } elseif ($MultiModel) { 'ARCH1g.2j' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
     Profile = $profile
     Runs = @()
     Packages = @()
@@ -62,9 +63,31 @@ function Test-Consumers([string]$ProfileName, [string]$Authoring, [string]$Runti
         $arguments = @($Authoring, $provider, $directory, $worker, $Runtime, $dotnet, $profile.TestFramework, $profile.Sdk)
         if ($RevisionMatrix) { $arguments += '--revisions' }
         if ($MultiModel) { $arguments += '--multi-model' }
+        if ($ImportedTexture) { $arguments += '--imported-texture' }
         Invoke-DotnetStep $name $arguments
-        $path = if ($MultiModel) { "$directory/multi-model.json" } elseif ($RevisionMatrix) { "$directory/revisions.json" } else { "$directory/report.json" }
+        $path = if ($ImportedTexture) { "$directory/imported-texture.json" } elseif ($MultiModel) { "$directory/multi-model.json" } elseif ($RevisionMatrix) { "$directory/revisions.json" } else { "$directory/report.json" }
         $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        if ($ImportedTexture) {
+            if (!$proof.Completed -or $proof.Inputs.ChangedDependency -ne 'textures/color.png' -or
+                $proof.Freshness.BeforeEdit.Status -ne 'Current' -or $proof.Freshness.AfterPngChange.Status -ne 'Stale' -or
+                $proof.Freshness.AfterReimport.Status -ne 'Current' -or
+                $proof.Old.Texture.AssetId -ne $proof.New.Texture.AssetId -or $proof.Old.Texture.Revision -eq $proof.New.Texture.Revision -or
+                $proof.Old.Texture.Revision -ne $proof.Reopened.Texture.Revision -or
+                $proof.Old.BuildId -eq $proof.New.BuildId -or $proof.Old.BuildId -ne $proof.Reopened.BuildId -or
+                $proof.Old.TexturePixels.RgbaSha256 -ne $proof.Reopened.TexturePixels.RgbaSha256 -or
+                $proof.Old.TexturePixels.NormalizedSha256 -ne $proof.New.TexturePixels.NormalizedSha256 -or
+                $proof.Old.TexturePixels.TopLeft -ne 'D51006FF' -or $proof.New.TexturePixels.TopLeft -ne '2194D5FF') {
+                throw 'Incomplete standalone Player texture evidence.'
+            }
+            $report.Runs += @{
+                Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
+                SceneSha256 = $proof.SceneSha256; OldBuild = $proof.Old.BuildId; NewBuild = $proof.New.BuildId
+                Captures = @('old', 'new', 'old-reopened' | ForEach-Object {
+                    @{ Path = "$directory/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$directory/$_.png").Hash }
+                })
+            }
+            continue
+        }
         if ($RevisionMatrix) {
             if (!$proof.Completed -or $proof.Revisions.AppliedScale -ne 1.5 -or $proof.Revisions.Garbage.ObjectsDeleted -lt 1 -or
                 $proof.Reopened.Mask.Sha256 -ne $proof.Original.Mask.Sha256 -or
@@ -139,6 +162,13 @@ try {
     Invoke-DotnetStep 'source-authoring' @('build', "$PSScriptRoot/Authoring/Authoring.csproj", '-c', 'Debug', '-o', "$evidence/source-authoring", '-v:q')
     Invoke-DotnetStep 'source-runtime' @('build', "$PSScriptRoot/Runtime/Runtime.csproj", '-c', 'Debug', '-o', "$evidence/source-runtime", '-v:q')
     Test-Consumers 'source-debug' "$evidence/source-authoring/Authoring.dll" "$evidence/source-runtime/ModelBuildRuntimeProbe.dll"
+    if ($ImportedTexture) {
+        Invoke-DotnetStep 'published-authoring' @('publish', "$PSScriptRoot/Authoring/Authoring.csproj", '-c', 'Release',
+            '--self-contained', 'false', '-p:UseAppHost=false', '-o', "$evidence/published-authoring", '-v:q')
+        Invoke-DotnetStep 'published-runtime' @('publish', "$PSScriptRoot/Runtime/Runtime.csproj", '-c', 'Release',
+            '--self-contained', 'false', '-p:UseAppHost=false', '-o', "$evidence/published-runtime", '-v:q')
+        Test-Consumers 'published-release' "$evidence/published-authoring/Authoring.dll" "$evidence/published-runtime/ModelBuildRuntimeProbe.dll"
+    }
 
     foreach ($id in $packages) {
         $project = "$workspace/$id/$id.csproj"
@@ -184,7 +214,7 @@ try {
             if ($assets.packageFolders.Count -ne 1 -or @($assets.libraries.Values | Where-Object type -ne 'package').Count -ne 0) { throw 'Fresh package graph is not isolated.' }
             foreach ($id in $assets.libraries.Keys) {
                 if ($id -like 'TrueMoon*' -and !$id.EndsWith("/$version")) { throw "Wrong TrueMoon version $id" }
-                if ($name -eq 'Runtime' -and $id -match '^(TrueMoon\.(Nom|Aether\.(Tooling|Nom))|AssimpNetter)/') { throw "Authoring dependency in Runtime: $id" }
+                if ($name -eq 'Runtime' -and $id -match '^(TrueMoon\.(Nom|Aether\.(Editor[^/]*|Tooling|Nom))|AssimpNetter)/') { throw "Authoring dependency in Runtime: $id" }
             }
             Invoke-DotnetStep "fresh-$name-publish" @('publish', $project, '--no-restore', '-c', 'Release', '--self-contained', 'false', '-p:UseAppHost=false', '-o', "$fresh/$name-output", '-v:q')
         }

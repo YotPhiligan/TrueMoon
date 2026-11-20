@@ -25,7 +25,8 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
+var playerTexture = args.Length == 8 && args[7] == "--imported-texture";
 var restartSlotOverride = args.Length == 8 && args[7] == "--editor-render-material-slots-restart";
 var restartImportedTexture = args.Length == 8 && args[7] == "--editor-imported-texture-restart";
 var textureWorkflow = args.Length == 8 && args[7] == "--editor-playing-texture-workflow";
@@ -48,6 +49,7 @@ var multiModelProbe = editorImports && !renderSlots || args.Length == 8 && args[
 var evidence = Path.GetFullPath(args[1]);
 if (Directory.Exists(evidence)) throw new IOException("Use a fresh output directory.");
 Directory.CreateDirectory(evidence);
+var playbackDirectory = Path.Combine(evidence, "playback");
 var workerPath = Path.GetFullPath(args[2]);
 var runtimeAssembly = Path.GetFullPath(args[3]);
 var dotnet = Path.GetFullPath(args[4]);
@@ -158,7 +160,8 @@ File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
 var path = Path.Combine(sourceDirectory, "scene.gltf");
 var original = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
 var primitives = original["meshes"]![0]!["primitives"]!.AsArray();
-if (restartImportedTexture || reimportTexture)
+const string revisedColorPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAHUlEQVR4AQESAO3/ACGU1f/kCRH/APIWC//8Axb/TywIralGM+UAAAAASUVORK5CYII=";
+if (restartImportedTexture || reimportTexture || playerTexture)
 {
     original = WriteTexturedModel(sourceDirectory);
 }
@@ -198,7 +201,7 @@ var initialScene = new SceneDocument(sceneId, 40, [new(cameraId, cameraDefinitio
             new Dictionary<string, PropertyValue> { ["z"] = PropertyValue.From(5d) }),
         new(new(Guid.Parse("33f571d0-da11-4e0c-b4ba-d1068cd827fc")), MeshRenderingComponents.CameraId, 1)
     ]))], [BuiltInComponents.Schemas[0], MeshRenderingComponents.CameraSchema]);
-var placement = renderSlots ? Matrix4x4.Identity : Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25f, 0, 0);
+var placement = renderSlots || playerTexture ? Matrix4x4.Identity : Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25f, 0, 0);
 var scenePath = Path.Combine(evidence, "placed.aetherscene");
 if (editorInitialImport)
 {
@@ -221,8 +224,7 @@ if (editorInitialImport)
     if (reimportTexture)
     {
         // Same 2×2 PNG with only the first texel changed to 2194D5FF.
-        const string replacement = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAHUlEQVR4AQESAO3/ACGU1f/kCRH/APIWC//8Axb/TywIralGM+UAAAAASUVORK5CYII=";
-        File.WriteAllBytes(Path.Combine(evidence, "revised-color.png"), Convert.FromBase64String(replacement));
+        File.WriteAllBytes(Path.Combine(evidence, "revised-color.png"), Convert.FromBase64String(revisedColorPng));
         var mode = textureWorkflow ? "--initial-import-playing-texture-workflow" :
             replaceTexture ? "--initial-import-replace-texture" : "--initial-import-reimport-texture";
         var reimported = await RunChild("import-reimported", [.. arguments, mode], TimeSpan.FromSeconds(120));
@@ -291,6 +293,7 @@ PublishedModelImport? scaledModel = null;
 PublishedModelImport? greenModel = null;
 string? greenSnapshotId = null;
 object? revisionEvidence = null;
+object? textureInputs = null;
 object? watchEvidence = null;
 var freshnessEvidence = new Dictionary<string, object>();
 await using (var app = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); }).Setup(context =>
@@ -441,59 +444,98 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         }
         else oldBuild = await BuildModel(oldSnapshotId);
 
-        var bytes = File.ReadAllBytes(vertices);
-        if (renderInspector) inspectorBaseline = bytes.ToArray();
-        // The dependency-only cases change the corner's Y inside the original accessor bounds.
-        var dependencyOnly = revisionProbe || multiModelProbe || renderSlots;
-        BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), renderSlots ? -.2f : dependencyOnly ? .5f : 2f);
-        File.WriteAllBytes(vertices, bytes);
         string? detectedInputRevision = null;
-        if (greenModel != null)
+        if (playerTexture)
         {
-            File.SetLastWriteTimeUtc(vertices, originalBinWriteTime);
-            Check(File.GetLastWriteTimeUtc(vertices) == originalBinWriteTime && new FileInfo(vertices).Length == bytes.Length &&
-                Hash(path) == rootHash && Hash(vertices) != originalBinHash,
-                "Expected a BIN-only edit with matching size and timestamp.");
-            var red = await CheckImport("RedAfterEdit", oldModel, sourceDirectory);
-            var green = await CheckImport("GreenAfterEdit", greenModel, secondSourceDirectory);
-            Check(red is { Status: ModelImportFreshnessStatus.Stale, InputChanged: true, SettingsChanged: false } &&
-                red.CapturedInputRevision != oldModel.Candidate.InputRevision &&
-                green is { Status: ModelImportFreshnessStatus.Current, InputChanged: false, SettingsChanged: false } &&
-                green.CapturedInputRevision == greenModel.Candidate.InputRevision,
-                "A dependency-only edit must invalidate just the model that references it.");
-            detectedInputRevision = red.CapturedInputRevision;
-            await RejectAsync<InvalidOperationException>(() => BuildChecked(oldSnapshotId, red, green), "must be current");
-            Check((await ledger.OpenAsync())?.Candidate.Revision == oldModel.Candidate.Revision,
-                "Freshness checks modified the published import.");
+            const string png = "textures/color.png";
+            var current = await CheckImport("BeforeEdit", oldModel, sourceDirectory);
+            Check(current.Status == ModelImportFreshnessStatus.Current, "Initial PNG import is stale.");
+            var before = ReadSourceHashes();
+            File.WriteAllBytes(Path.Combine(sourceDirectory, png), Convert.FromBase64String(revisedColorPng));
+            var after = ReadSourceHashes();
+            var changed = before.Where(entry => after.TryGetValue(entry.Key, out var digest) && digest != entry.Value)
+                .Select(entry => entry.Key);
+            Check(before.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(after.Keys) && changed.SequenceEqual([png]),
+                "PNG must be the only changed model input.");
+            var stale = await CheckImport("AfterPngChange", oldModel, sourceDirectory);
+            Check(stale is { Status: ModelImportFreshnessStatus.Stale, InputChanged: true, SettingsChanged: false, CapturedInputRevision: not null } &&
+                stale.CapturedInputRevision != oldModel.Candidate.InputRevision, "PNG-only edit did not invalidate the import.");
+            detectedInputRevision = stale.CapturedInputRevision;
+            textureInputs = new { ChangedDependency = png, Before = before, After = after };
+
+            Dictionary<string, string> ReadSourceHashes() => Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
+                .ToDictionary(file => Path.GetRelativePath(sourceDirectory, file).Replace('\\', '/'), Hash, StringComparer.Ordinal);
         }
-        if (!dependencyOnly)
+        else
         {
-            original["accessors"]![0]!["max"]![0] = 2;
-            File.WriteAllText(path, original.ToJsonString());
-        }
-        if (renderSlots)
-        {
-            var first = primitives[0];
-            primitives.RemoveAt(0);
-            primitives.Add(first);
-            File.WriteAllText(path, original.ToJsonString());
+            var bytes = File.ReadAllBytes(vertices);
+            if (renderInspector) inspectorBaseline = bytes.ToArray();
+            // The dependency-only cases change the corner's Y inside the original accessor bounds.
+            var dependencyOnly = revisionProbe || multiModelProbe || renderSlots;
+            BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), renderSlots ? -.2f : dependencyOnly ? .5f : 2f);
+            File.WriteAllBytes(vertices, bytes);
+            if (greenModel != null)
+            {
+                File.SetLastWriteTimeUtc(vertices, originalBinWriteTime);
+                Check(File.GetLastWriteTimeUtc(vertices) == originalBinWriteTime && new FileInfo(vertices).Length == bytes.Length &&
+                    Hash(path) == rootHash && Hash(vertices) != originalBinHash,
+                    "Expected a BIN-only edit with matching size and timestamp.");
+                var red = await CheckImport("RedAfterEdit", oldModel, sourceDirectory);
+                var green = await CheckImport("GreenAfterEdit", greenModel, secondSourceDirectory);
+                Check(red is { Status: ModelImportFreshnessStatus.Stale, InputChanged: true, SettingsChanged: false, CapturedInputRevision: not null } &&
+                    red.CapturedInputRevision != oldModel.Candidate.InputRevision &&
+                    green is { Status: ModelImportFreshnessStatus.Current, InputChanged: false, SettingsChanged: false } &&
+                    green.CapturedInputRevision == greenModel.Candidate.InputRevision,
+                    "A dependency-only edit must invalidate just the model that references it.");
+                detectedInputRevision = red.CapturedInputRevision;
+                await RejectAsync<InvalidOperationException>(() => BuildChecked(oldSnapshotId, red, green), "must be current");
+                Check((await ledger.OpenAsync())?.Candidate.Revision == oldModel.Candidate.Revision,
+                    "Freshness checks modified the published import.");
+            }
+            if (!dependencyOnly)
+            {
+                original["accessors"]![0]!["max"]![0] = 2;
+                File.WriteAllText(path, original.ToJsonString());
+            }
+            if (renderSlots)
+            {
+                var first = primitives[0];
+                primitives.RemoveAt(0);
+                primitives.Add(first);
+                File.WriteAllText(path, original.ToJsonString());
+            }
         }
         var dependencyCapture = await Capture();
-        Check(greenModel == null || detectedInputRevision == dependencyCapture.InputRevision,
+        Check(detectedInputRevision == null || detectedInputRevision == dependencyCapture.InputRevision,
             "The new import did not capture the revision identified by preflight.");
         newModel = await Import(1, dependencyCapture);
         var reimportedScene = ImportedModelScene.Place(initialScene, newModel, placement);
         if (greenModel != null) reimportedScene = ImportedModelScene.Place(reimportedScene, greenModel, greenPlacement);
         Check(sceneBytes.SequenceEqual(codec.Encode(reimportedScene)),
             "Asset-only reimport changed the placed scene document.");
+        if (playerTexture)
+        {
+            var current = await CheckImport("AfterReimport", newModel, sourceDirectory);
+            Check(current.Status == ModelImportFreshnessStatus.Current && newModel.Generation == oldModel.Generation + 1,
+                "The new PNG import is stale or has the wrong generation.");
+        }
         var latest = await bridge.PublishAsync(store, newModel, store.ContentGeneration);
         newSnapshotId = latest.Id;
         Check(oldSnapshotId != newSnapshotId, "Nom snapshots have the same identity after reimport.");
         var oldMesh = oldModel.Meshes.Single();
         var meshRevision = snapshot.Members.Single(member => member.AssetId == oldMesh.AssetId);
         Check(meshRevision.Digest == oldMesh.Geometry.Revision.ToString() &&
-            latest.Members.Single(member => member.AssetId == oldMesh.AssetId).Digest != meshRevision.Digest,
-            "Nom did not retain distinct exact mesh revisions for the same asset ID.");
+            (latest.Members.Single(member => member.AssetId == oldMesh.AssetId).Digest == meshRevision.Digest) == playerTexture,
+            "Nom retained the wrong mesh revisions.");
+        if (playerTexture)
+        {
+            var oldTexture = oldModel.Texture ?? throw new InvalidDataException("Initial import has no PNG texture.");
+            var newTexture = newModel.Texture ?? throw new InvalidDataException("Reimport has no PNG texture.");
+            Check(oldTexture.AssetId == newTexture.AssetId && oldTexture.Definition.Revision != newTexture.Definition.Revision &&
+                snapshot.Members.Single(member => member.AssetId == oldTexture.AssetId).Digest == oldTexture.Definition.Revision.ToString() &&
+                latest.Members.Single(member => member.AssetId == newTexture.AssetId).Digest == newTexture.Definition.Revision.ToString(),
+                "Nom did not capture both exact PNG revisions under the same texture ID.");
+        }
         if (greenModel != null)
         {
             var red = await CheckImport("RedAfterReimport", newModel, sourceDirectory);
@@ -629,7 +671,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
     }
     Check(oldModel.Ledger.Entries.SequenceEqual(newModel.Ledger.Entries), "Reimport changed persistent subasset identities.");
     Check(oldBuild.BuildId != newBuild.BuildId && oldBuild.SourceRevision == newBuild.SourceRevision,
-        "Geometry changed without changing build identity.");
+        "Asset content changed without changing build identity.");
     Check(Hash(Path.Combine(oldBuild.DirectoryPath, oldBuild.EntryAssembly)) == Hash(Path.Combine(newBuild.DirectoryPath, newBuild.EntryAssembly)),
         "Managed binaries changed in the asset-only build scenario.");
     if (multiModelProbe)
@@ -701,6 +743,58 @@ if (editorProbe)
         renderMaterialReset ? "editor-render-material-reset.json" : renderInspector ? "editor-render-inspector.json" :
         editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;
+}
+if (playerTexture)
+{
+    Check(!Directory.Exists(sourceDirectory) && !Directory.Exists(storeDirectory), "Authoring inputs are still at their original paths.");
+    var stagedBuilds = Directory.CreateDirectory(Path.Combine(playbackDirectory, "builds")).FullName;
+    var stagedScene = Path.Combine(playbackDirectory, Path.GetFileName(scenePath));
+    File.Copy(scenePath, stagedScene);
+    scenePath = stagedScene;
+    var sceneHash = Hash(scenePath);
+    var baseline = await ReadTextureBuild(oldBuild, oldModel, "old", "D51006FF");
+    var changed = await ReadTextureBuild(newBuild, newModel, "new", "2194D5FF");
+    var restored = await ReadTextureBuild(oldBuild, oldModel, "old-reopened", "D51006FF");
+    var before = baseline.GetProperty("TexturePixels");
+    var after = changed.GetProperty("TexturePixels");
+    var reopened = restored.GetProperty("TexturePixels");
+    Check(before.GetProperty("RgbaSha256").GetString() != after.GetProperty("RgbaSha256").GetString() &&
+        before.GetProperty("RgbaSha256").GetString() == reopened.GetProperty("RgbaSha256").GetString() &&
+        before.GetProperty("NormalizedSha256").GetString() == after.GetProperty("NormalizedSha256").GetString() &&
+        new[] { baseline, changed, restored }.Select(frame => frame.GetProperty("Pid").GetInt32()).Distinct().Count() == 3,
+        "Separate Player processes did not preserve the other pixels and restore the original frame.");
+    File.WriteAllText(Path.Combine(evidence, "imported-texture.json"), JsonSerializer.Serialize(new
+    {
+        Completed = true, Provider = args[0], SceneSha256 = sceneHash, PlaybackDirectory = playbackDirectory,
+        Inputs = textureInputs, Freshness = freshnessEvidence, OldSnapshot = oldSnapshotId, NewSnapshot = newSnapshotId,
+        StableIds = newModel.Ledger.Entries.Select(entry => new { entry.Key, entry.Id }),
+        Old = baseline, New = changed, Reopened = restored
+    }, new JsonSerializerOptions { WriteIndented = true }));
+    return 0;
+
+    async Task<JsonElement> ReadTextureBuild(GameBuildResult build, PublishedModelImport model, string name, string color)
+    {
+        var directory = Path.Combine(stagedBuilds, build.BuildId);
+        if (!Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+            foreach (var file in Directory.EnumerateFiles(build.DirectoryPath))
+                File.Copy(file, Path.Combine(directory, Path.GetFileName(file)));
+        }
+        var proof = await ReadRuntime(directory, build.BuildId, name);
+        var texture = model.Texture!;
+        var manifest = build.Artifact.RenderContent!;
+        var shown = proof.GetProperty("Texture");
+        Check(proof.GetProperty("SceneSha256").GetString() == sceneHash &&
+            proof.GetProperty("SceneId").GetGuid() == sceneId.Value && proof.GetProperty("SceneRevision").GetInt64() == 41 &&
+            proof.GetProperty("BuildId").GetString() == build.BuildId &&
+            RenderContentHash.Parse(proof.GetProperty("ManifestHash").GetString()!) == manifest.Digest &&
+            shown.GetProperty("AssetId").GetGuid() == texture.AssetId &&
+            shown.GetProperty("Revision").GetString() == texture.Definition.Revision.ToString() &&
+            proof.GetProperty("TexturePixels").GetProperty("TopLeft").GetString() == color,
+            $"Player showed the wrong scene, build, texture revision or texel for {name}.");
+        return proof;
+    }
 }
 var oldProof = await ReadBuild(oldBuild, "old");
 var newProof = await ReadBuild(newBuild, "new");
@@ -805,24 +899,31 @@ void AssertGeometry(JsonElement proof, PublishedModelImport model, float x, floa
         "Runtime received incorrect vertex, topology, bounds or revision.");
 }
 
-async Task<JsonElement> ReadBuild(GameBuildResult build, string name)
+Task<JsonElement> ReadBuild(GameBuildResult build, string name) => ReadRuntime(build.DirectoryPath, build.BuildId, name);
+
+async Task<JsonElement> ReadRuntime(string directory, string buildId, string name)
 {
-    var result = await RunRuntime(build.DirectoryPath, build.BuildId, name);
+    var result = await RunRuntime(directory, buildId, name);
     Check(result.ExitCode == 0, result.Error);
     using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(evidence, name + ".json")));
+    if (playerTexture)
+        Check(document.RootElement.GetProperty("Pid").GetInt32() == result.Pid, "Player report came from a different process.");
     return document.RootElement.Clone();
 }
 
-Task<(int ExitCode, string Error, int Pid)> RunRuntime(string directory, string buildId, string name) =>
-    RunChild(name, [runtimeAssembly, args[0], directory, buildId, hostId, Path.Combine(evidence, name + ".json"), scenePath],
-        TimeSpan.FromSeconds(90));
+Task<(int ExitCode, string Error, int Pid)> RunRuntime(string directory, string buildId, string name)
+{
+    string[] arguments = [runtimeAssembly, args[0], directory, buildId, hostId, Path.Combine(evidence, name + ".json"), scenePath];
+    if (playerTexture) arguments = [.. arguments, "--texture"];
+    return RunChild(name, arguments, TimeSpan.FromSeconds(90));
+}
 
 async Task<(int ExitCode, string Error, int Pid)> RunChild(string name, string[] arguments, TimeSpan timeout)
 {
     var info = new ProcessStartInfo(dotnet)
     {
         UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
-        WorkingDirectory = evidence
+        WorkingDirectory = playerTexture ? playbackDirectory : evidence
     };
     foreach (var argument in arguments)
         info.ArgumentList.Add(argument);

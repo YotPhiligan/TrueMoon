@@ -26,6 +26,27 @@ pixels while keeping its left edge. A fourth process rejects a copy with an
 altered render payload. The evidence directory retains the PNGs, measurements,
 build/snapshot IDs, validation counters, package hashes and logs.
 
+## Play two revisions of an imported PNG offline
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/Verify.ps1 -ImportedTexture `
+  -EvidenceDirectory 'TestResults/PlayerImportedTexture/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+Authoring places a two-slot glTF with external BIN and PNG and publishes Build A.
+Only `textures/color.png` changes. Reimport keeps the texture ID and publishes
+Build B with the same scene bytes, mesh revision and game assembly. Both builds
+capture their exact Nom snapshots before the source files and Nom are moved aside.
+
+The probe stages the scene and immutable artifacts in a separate playback
+directory. Three standalone Player processes run A → B → A. Each checks the
+presented scene stamp, exact Vulkan texture upload and balanced native cleanup.
+The top-left texel changes from `D51006FF` to `2194D5FF`. The other three texels,
+green slot and remaining pixels match. The two A frame hashes are identical.
+Source Debug, published Release and isolated Release from a closed feed each
+run on Cobalt and Microsoft DI.
+
 ## Editor hot replacement
 
 ```powershell
