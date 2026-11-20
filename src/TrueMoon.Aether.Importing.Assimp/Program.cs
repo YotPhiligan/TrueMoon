@@ -18,7 +18,9 @@ internal static class Program
         var activated = false;
         try
         {
-            var source = ModelImportProtocol.ReadInput(args[0]); GltfProfile.Validate(source); var tags=GltfIdentityTags.Create(source);
+            var source = ModelImportProtocol.ReadInput(args[0]);
+            var texture = GltfProfile.Validate(source);
+            var tags = GltfIdentityTags.Create(source, texture != null);
             var native = Path.Combine(AppContext.BaseDirectory, "assimp.dll");
             if (!File.Exists(native)) native = Path.Combine(AppContext.BaseDirectory, "runtimes/win-x64/native/assimp.dll");
             using (var stream = File.OpenRead(native))
@@ -28,7 +30,7 @@ internal static class Program
             ModelImportCandidate result;
             using (var io = new CapturedIo(tags.Input))
             {
-                result = NativeProjection.Import(source, io, tags);
+                result = NativeProjection.Import(source, io, tags, texture);
                 io.ThrowIfFailed();
                 ModelImportProtocol.Require(io.LiveStreams == 0, "Assimp retained callback streams after scene release.");
             }

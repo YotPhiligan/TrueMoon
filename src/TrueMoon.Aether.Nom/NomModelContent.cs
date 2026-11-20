@@ -27,23 +27,12 @@ public sealed class NomModelContent
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(model);
         token.ThrowIfCancellationRequested();
-        var project = store.ProjectId;
-        var materials = model.Materials.ToDictionary(material => material.AssetId,
-            material => Entry(project, material.AssetId, material.Definition));
-        var entries = materials.Values.ToList();
-        foreach (var mesh in model.Meshes)
-        {
-            var geometry = Entry(project, mesh.AssetId, mesh.Geometry);
-            var binding = new MaterialBindingSetDefinition(geometry.Key, mesh.Slots
-                .Select(slot => new MaterialSlotBinding(slot.SlotId, materials[slot.MaterialId].Key)).ToArray());
-            entries.Add(geometry);
-            entries.Add(Entry(project, mesh.BindingSetId, binding));
-        }
-        if (entries.Count is < 1 or > MaximumRoots) throw new InvalidDataException("Model render snapshot root budget exceeded.");
+        var entries = model.CreateRenderEntries(store.ProjectId).Take(MaximumRoots + 1).ToArray();
+        if (entries.Length is < 1 or > MaximumRoots) throw new InvalidDataException("Model render snapshot root budget exceeded.");
 
         var locators = model.Bindings.ToDictionary(binding => binding.Id, binding => binding.Key.Locator);
-        var specs = new List<AssetResourceWrite>(entries.Count);
-        var streams = new Dictionary<Guid, Stream>(entries.Count);
+        var specs = new List<AssetResourceWrite>(entries.Length);
+        var streams = new Dictionary<Guid, Stream>(entries.Length);
         try
         {
             long total = 24;
@@ -107,7 +96,7 @@ public sealed class NomModelContent
             foreach (var member in members)
             {
                 token.ThrowIfCancellationRequested();
-                var maximum = member.KindId == RenderContentProfile.MeshKindId
+                var maximum = member.KindId == RenderContentProfile.MeshKindId || member.KindId == RenderContentProfile.BaseColorTextureKindId
                     ? RenderContentProfile.MaximumMeshBytes : RenderContentProfile.MaximumSmallAssetBytes;
                 if (member.Length is <= 0 || member.Length > maximum)
                     throw new InvalidDataException("Invalid render snapshot member length.");

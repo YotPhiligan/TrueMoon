@@ -9,20 +9,27 @@ extensions и matching Vulkan adapter. Используется уже уста�
 ```powershell
 ./ManualTests/RenderSurface/Verify.ps1 -ValidationDirectory <каталог-с-DLL-и-JSON-слоя>
 ./ManualTests/RenderSurface/Verify.ps1 -BaseColorTexture -ValidationDirectory <каталог-с-DLL-и-JSON-слоя>
+./ManualTests/RenderSurface/Verify.ps1 -ImportedBaseColorTexture -ValidationDirectory <каталог-с-DLL-и-JSON-слоя>
 ```
 
 `-RunDirectory` и `-EvidenceDirectory` необязательны, должны быть новыми. RunDirectory
 обязательно вне checkout. Script сохраняет общий BuildProfile, unique MSBuild binlogs,
 source/package/validation hashes, private offline feed/cache и результаты трёх native
 профилей: source Debug, published Release, package-only Release. Нужные внешние nupkg
-берутся в точных версиях из существующего restored cache. 18 пакетов TrueMoon
-пересобираются для каждого прогона. `-BaseColorTexture` использует текущую версию
+берутся в точных версиях из существующего restored cache. 20 пакетов TrueMoon
+пересобираются для каждого прогона. Оба текстурных сценария используют текущую версию
 из `Directory.Build.props` в отдельном локальном feed.
 
 `-BaseColorTexture` собирает два артефакта одного меша с UV0, одним sampler
 `NearestClamp` и разными ревизиями текстуры 2×2. Запуск A → B → A проверяет
 ревизии Vulkan upload, четыре texels, две точки с UV вне [0,1] и равенство
 кадров A. [Контракт и проверки](../../docs/engine/RENDER_SURFACE.md#base-color-texture).
+
+`-ImportedBaseColorTexture` получает текстуру из glTF с внешними BIN и PNG.
+Runner публикует worker, фиксирует хеши его зависимостей и проверяет переход
+`Current → Stale → Current` после изменения только PNG. Nom удерживает
+снимки обеих ревизий, а Runtime показывает A → B → A.
+[Контракт и проверки](../../docs/engine/RENDER_SURFACE.md#imported-base-color-texture).
 
 В обоих сценариях actual Vulkan→OpenGL RGBA readback показан в Skia window. Только
 DrawCore плюс `FramePresented` разрешают подтверждение stamp. ARCH1f.4 проверяет два куба

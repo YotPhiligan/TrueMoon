@@ -138,5 +138,22 @@ pwsh -File ManualTests/RenderSurface/Verify.ps1 -BaseColorTexture -ValidationDir
 
 Runner покрывает source Debug, published Release и изолированный Release из
 свежих пакетов. Контракт доступен в [RENDERING_CONTRACTS](RENDERING_CONTRACTS.md#base-color-texture).
-Доставка начинается с типизированных RGBA8-данных и UV0. Подключение текстур
-из импорта glTF и выбор параметров sampler в Editor относятся к следующим срезам.
+Доставка этого сценария начинается с типизированных RGBA8-данных и UV0.
+
+<a id="imported-base-color-texture"></a>
+## ARCH1f.5. Внешняя PNG из glTF
+
+Сценарий `-ImportedBaseColorTexture` получает тот же профиль из `.gltf`
+с внешними BIN и PNG. Worker декодирует PNG из захваченных байтов и
+переводит UV0 в соглашение Runtime. Ledger сохраняет постоянный ID
+текстуры, а материал получает точный ключ после назначения ID проекта.
+Мост Nom удерживает исходную и новую ревизии в отдельных снимках.
+Probe проверяет, что меняется только PNG, исходный импорт становится
+устаревшим, а реимпорт восстанавливает актуальность с тем же ID.
+Проверки точного GPU upload, пикселей и A → B → A те же, что у первого среза.
+
+```powershell
+pwsh -File ManualTests/RenderSurface/Verify.ps1 -ImportedBaseColorTexture -ValidationDirectory <layer-dir> -EvidenceDirectory <fresh-dir>
+```
+
+[Ограничения импорта](MODEL_IMPORT_WORKER.md) · [Контракт Runtime](RENDERING_CONTRACTS.md#base-color-texture)

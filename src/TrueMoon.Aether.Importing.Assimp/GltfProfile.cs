@@ -4,10 +4,10 @@ using TrueMoon.Aether.Tooling.Importing;
 
 namespace TrueMoon.Aether.Importing.Assimp;
 
-// Explicit projection policy: static triangle geometry, optional normal/tangent/UV0 are ignored by position-only unlit.
+// Explicit projection policy: retain UV0 for textured primitives, and omit normal and tangent.
 internal static class GltfProfile
 {
-    internal static void Validate(CapturedModelSource source)
+    internal static GltfBaseColorTexture? Validate(CapturedModelSource source)
     {
         var root = source.GetFile(source.RootName);
         foreach (var dependency in ModelSourceDependencies.Discover(root, CancellationToken.None))
@@ -17,6 +17,7 @@ internal static class GltfProfile
             bytes = bytes.Slice(20, checked((int)BinaryPrimitives.ReadUInt32LittleEndian(bytes.Span[12..])));
         using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 64 }); var json = document.RootElement;
         CheckExtensions(json);
+        var texture = GltfBaseColorTexture.Read(json, source.RootName);
         foreach (var feature in new[] { "animations", "skins", "cameras" })
             if (json.TryGetProperty(feature, out var value) && value.GetArrayLength() != 0) throw new NotSupportedException("Unsupported static model feature.");
         if (json.TryGetProperty("nodes", out var nodes)) foreach (var node in nodes.EnumerateArray())
@@ -30,6 +31,8 @@ internal static class GltfProfile
                 if (primitive.TryGetProperty("targets", out _) || primitive.TryGetProperty("mode", out var mode) && mode.GetInt32() != 4)
                     throw new NotSupportedException("Only static triangle primitives are supported.");
                 var attributes = primitive.GetProperty("attributes"); attributes.GetProperty("POSITION").GetInt32();
+                if (texture != null && primitive.TryGetProperty("material", out var selected) && selected.GetInt32() == texture.MaterialIndex)
+                    ModelImportProtocol.Require(attributes.TryGetProperty("TEXCOORD_0", out _), "Textured primitives require TEXCOORD_0.");
                 foreach (var attribute in attributes.EnumerateObject())
                     if (attribute.Name is not ("POSITION" or "NORMAL" or "TANGENT" or "TEXCOORD_0")) throw new NotSupportedException("Unsupported vertex attribute.");
             }
@@ -43,7 +46,9 @@ internal static class GltfProfile
             if (material.TryGetProperty("pbrMetallicRoughness", out var pbr))
             {
                 foreach (var property in pbr.EnumerateObject())
-                    if (property.Name.EndsWith("Texture", StringComparison.Ordinal)) throw new NotSupportedException("Material textures are unsupported.");
+                    if (property.Name.EndsWith("Texture", StringComparison.Ordinal) &&
+                        (property.Name != "baseColorTexture" || texture == null))
+                        throw new NotSupportedException("Only base-color textures are supported.");
                 if (pbr.TryGetProperty("baseColorFactor", out var color))
                 {
                     ModelImportProtocol.Require(color.GetArrayLength() == 4, "Base color length.");
@@ -56,6 +61,7 @@ internal static class GltfProfile
             foreach (var name in new[] { "normalTexture", "occlusionTexture", "emissiveTexture" })
                 if (material.TryGetProperty(name, out _)) throw new NotSupportedException("Material textures are unsupported.");
         }
+        return texture;
     }
     private static void Unit(float value) => ModelImportProtocol.Require(float.IsFinite(value) && value is >= 0 and <= 1, "Material unit range.");
     private static void CheckExtensions(JsonElement value)

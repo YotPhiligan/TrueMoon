@@ -37,7 +37,7 @@ record с иным SourceId отвергается. Пути и content hashes �
 ## Семантические ключи
 
 Ledger schema1: `(ModelSubassetKind, ordinal locator) → random Guid + Active`.
-Категории: Mesh, Material, Slot, BindingSet, Instance. IDs уникальны в ledger,
+Категории: Mesh, Material, Slot, BindingSet, Instance, Texture. IDs уникальны в ledger,
 не пусты и не равны SourceId. Reconcile создаёт новый immutable ledger; перестановка
 discovery и изменение CPU content сохраняют существующие IDs.
 
@@ -96,7 +96,7 @@ Recipe/candidate protocol теперь **v2**; input capture packet и control h
 остаются v1. Требуется worker из согласованной поставки. v1 worker отклоняется явно;
 старые research/results manifests не переписаны.
 
-В child из захваченного original JSON извлекаются авторские locators. Только name
+В child из захваченного original JSON извлекаются авторские locators. Name
 полей meshes/materials/nodes заменяются временными ASCII transport tags, затем JSON/
 GLB заново собирается с прежними BIN bytes. Tags проверяются на native meshes,
 материалах, родительских node links и node→mesh→material references. Индексы внутри
@@ -105,6 +105,13 @@ persistent locator/Guid. Исходный InputRevision относится к **
 bytes**, recipe фиксирует metadata-only преобразование; disk fallback отсутствует.
 
 Это учитывает lazy material/mesh tables и primitive-name suffix pinned Assimp6.0.5.
+
+Для внешней PNG worker вычисляет locator `texture/<sha256>` по нормализованному
+имени зависимости относительно каталога исходников. Изменение содержимого
+PNG сохраняет locator и ID. Изменение пути создаёт другой ключ и допускает
+явное переименование через same-kind mapping. Ревизия render-ресурса вычисляется
+по каноническим декодированным texels. Material получает точный ключ текстуры
+при проекции в render-ресурсы проекта. [ARCH1f.5](RENDER_SURFACE.md#imported-base-color-texture)
 Основание: [source importer](https://github.com/assimp/assimp/blob/v6.0.5/code/AssetLib/glTF2/glTF2Importer.cpp).
 Native версии/SHA/precision, Job/callback quotas, finite deadline/kill/reap остаются
 из g.1b. Native input после tagging тоже ограничен16MiB/file/32MiB closure.

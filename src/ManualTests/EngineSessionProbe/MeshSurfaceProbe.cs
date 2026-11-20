@@ -10,6 +10,7 @@ using TrueMoon.Aether.Abstractions.Checkpoints;
 using TrueMoon.Aether.Abstractions.Input;
 using TrueMoon.Aether.Abstractions.Rendering;
 using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime.Gpu;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
@@ -24,6 +25,7 @@ using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
+using TrueMoon.Nom;
 
 namespace EngineSessionProbe;
 
@@ -67,9 +69,10 @@ public sealed class MeshSurfaceStyle : IViewStyle<MeshSurfaceView>
 
 // A diagnostic custom host: readback is displayed by Skia, and the exact stamp is
 // acknowledged only after DrawCore and a real HostedUiWindow.FramePresented event.
-public static class MeshSurfaceProbe
+public static partial class MeshSurfaceProbe
 {
-    public static async Task<int> RunAsync(string runtimePath, string gameDirectory, string reportDirectory, string? textureGameProject = null)
+    public static async Task<int> RunAsync(string runtimePath, string gameDirectory, string reportDirectory,
+        string? textureGameProject = null, string? workerDirectory = null)
     {
         var textureProof = textureGameProject != null;
         Directory.CreateDirectory(reportDirectory);
@@ -82,6 +85,13 @@ public static class MeshSurfaceProbe
         MeshSurfaceView view = null!;
         await using var app = App.Build(context =>
         {
+            if (workerDirectory != null)
+            {
+                context.UseNom();
+                context.UseAetherModelSourceCapture();
+                context.UseAetherModelImport();
+                context.UseAetherNomContent();
+            }
             context.UseAether(options =>
             {
                 options.HostContractId = hostId; options.GameBuildId = BuildIdentity.PreviewId; options.RuntimeLaunch = runtime;
@@ -121,13 +131,19 @@ public static class MeshSurfaceProbe
         Exception? failure = null; GpuAdapterId? adapter = null; var failedStartup = false; var replaceRejected = false;
         GpuOpenGlContext glContext = null!;
         TextureBuild[]? textureBuilds = null;
+        object? importEvidence = null;
         var textureFrames = new List<string>();
         bool Complete() => failure == null && cleanups.Count == 3 && (textureProof ? textureFrames.Count == 3 : failedStartup && replaceRejected);
         try
         {
             Check(validation, "Enable Vulkan core/synchronization validation for this proof."); Check(!GameLoaded(), "Parent loaded selected game.");
             await app.StartAsync(token); await shown.Task.WaitAsync(token);
-            if (textureGameProject != null) textureBuilds = await BuildTextureCases(textureGameProject, host.Builds, token);
+            if (textureGameProject != null)
+            {
+                if (workerDirectory == null) textureBuilds = await BuildTextureCases(textureGameProject, host.Builds, token);
+                else (textureBuilds, importEvidence) = await BuildImportedTextureCases(
+                    textureGameProject, workerDirectory, reportDirectory, app.Services, host.Builds, token);
+            }
             var build = textureBuilds?[0].Artifact ??
                 GameArtifactPublisher.Publish(gameDirectory, Path.Combine(reportDirectory, "artifacts"), hostId,
                     "RenderSurface.Game.dll", "RenderSurface.Game.MeshGame", 41, runtimeAccess: true);
@@ -232,7 +248,8 @@ public static class MeshSurfaceProbe
                 Check(ui.ActiveSessionCount == 0 && host.Gpu.ResourceCount == 0 && host.Gpu.OpenHandleCount == 0 && factory.Leases.All(lease => lease.Reaped && lease.ResourcesReleased), "Final App/native ownership retained.");
             }
             catch (Exception cleanup) { failure = failure == null ? cleanup : new AggregateException(failure, cleanup); }
-            var report = new { Completed = Complete(), Scenario = textureProof ? "base-color-texture" : "mesh-surface-playing-fence", ValidationRequested = validation,
+            var report = new { Completed = Complete(), Scenario = workerDirectory != null ? "imported-base-color-texture" :
+                    textureProof ? "base-color-texture" : "mesh-surface-playing-fence", ValidationRequested = validation, Import = importEvidence,
                 FailedStartupObserved = failedStartup, UnsupportedReplacePreservedGeneration = replaceRejected,
                 Adapter = adapter, Captures = captures, RuntimeCleanup = cleanups, GameLoadedInParent = GameLoaded(), Resources = host.Gpu.ResourceCount,
                 Handles = host.Gpu.OpenHandleCount, ActiveUiSessions = ui.ActiveSessionCount,
@@ -333,8 +350,8 @@ public static class MeshSurfaceProbe
             [0, 1, 2, 0, 2, 3], [new(RenderContentProfile.DefaultSlotId, 0, 6)],
             new(new(-1.2f, -1.2f, 0), new(1.2f, 1.2f, 0)));
         var meshKey = mesh.CreateKey(projectId, RenderContentProfile.CubeAssetId);
-        var original = Entries([193, 32, 71, 255, 39, 117, 224, 255, 82, 151, 65, 255, 220, 164, 92, 255]);
-        var revised = Entries([25, 206, 48, 255, 39, 117, 224, 255, 82, 151, 65, 255, 220, 164, 92, 255]);
+        var original = Entries(TexturePixels(revised: false));
+        var revised = Entries(TexturePixels(revised: true));
         try
         {
             _ = new GameBuildRenderContent(projectId, [revised[0], original[1], original[2], original[3]]);
@@ -361,20 +378,29 @@ public static class MeshSurfaceProbe
 
         async Task<TextureBuild> Build(RenderAssetEntry[] entries)
         {
-            var result = await compiler.BuildAsync(new(project, "RenderSurface.Game.dll", "RenderSurface.Game.TexturedMeshGame", 41)
-            {
-                RuntimeAccess = true,
-                RenderContent = new(projectId, entries)
-            }, token);
-            var content = result.Artifact.RenderContent ?? throw new InvalidDataException("Build omitted render content.");
-            var expected = entries[0].Key;
-            var texture = (BaseColorTextureDefinition)content.Resolve(expected).Definition;
-            var material = (OpaqueUnlitMaterialDefinition)content.Resolve(RenderContentProfile.WhiteMaterialAssetId, RenderContentProfile.MaterialKindId).Definition;
-            Check(material.BaseColorTexture == expected && material.Sampler == RenderTextureSampler.NearestClamp &&
-                texture.Pixels.AsSpan().SequenceEqual(((BaseColorTextureDefinition)entries[0].Definition).Pixels.AsSpan()),
-                "Published artifact changed the texture bytes, sampler or referenced key.");
-            return new(result.Artifact, expected, texture.Pixels.ToArray());
+            return await BuildTexture(project, compiler, new(projectId, entries), entries[0].Key,
+                RenderContentProfile.WhiteMaterialAssetId, ((BaseColorTextureDefinition)entries[0].Definition).Pixels.ToArray(), token);
         }
+    }
+
+    private static byte[] TexturePixels(bool revised) =>
+        [..(revised ? new byte[] { 25, 206, 48, 255 } : new byte[] { 193, 32, 71, 255 }),
+            39, 117, 224, 255, 82, 151, 65, 255, 220, 164, 92, 255];
+
+    private static async Task<TextureBuild> BuildTexture(string project, GameBuildCompiler compiler, GameBuildRenderContent renderContent,
+        RenderAssetKey expected, Guid materialId, byte[] pixels, CancellationToken token)
+    {
+        var result = await compiler.BuildAsync(new(project, "RenderSurface.Game.dll", "RenderSurface.Game.TexturedMeshGame", 41)
+        {
+            RuntimeAccess = true,
+            RenderContent = renderContent
+        }, token);
+        var content = result.Artifact.RenderContent ?? throw new InvalidDataException("Build omitted render content.");
+        var texture = (BaseColorTextureDefinition)content.Resolve(expected).Definition;
+        var material = (OpaqueUnlitMaterialDefinition)content.Resolve(materialId, RenderContentProfile.MaterialKindId).Definition;
+        Check(material.BaseColorTexture == expected && material.Sampler == RenderTextureSampler.NearestClamp &&
+            texture.Pixels.AsSpan().SequenceEqual(pixels), "Published artifact changed the texture bytes, sampler or referenced key.");
+        return new(result.Artifact, expected, pixels);
     }
 
     private static object CheckTexturePixels(byte[] rgba, int width, int height, byte[] expected)

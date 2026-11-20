@@ -14,7 +14,9 @@ public enum ModelSubassetKind
     /// <summary>Material binding-set resource.</summary>
     BindingSet = 4,
     /// <summary>One scene node/primitive occurrence.</summary>
-    Instance = 5
+    Instance = 5,
+    /// <summary>External base-color texture resource.</summary>
+    Texture = 6
 }
 
 /// <summary>Ordinal semantic key, independent of array positions and content revisions.</summary>

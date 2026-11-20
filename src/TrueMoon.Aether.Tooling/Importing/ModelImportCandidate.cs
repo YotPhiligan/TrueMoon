@@ -10,7 +10,7 @@ public sealed class ModelImportCandidate
 {
     internal ModelImportCandidate(Guid sourceId, string inputRevision, IEnumerable<ModelImportMesh> meshes,
         IEnumerable<OpaqueUnlitMaterialDefinition> materials, IEnumerable<ModelImportInstance> instances, ModelImportSemantics? semantics = null,
-        float geometryScale = 1)
+        float geometryScale = 1, ModelImportTexture? texture = null)
     {
         if (sourceId == Guid.Empty || inputRevision.Length != 64 || !inputRevision.All(Uri.IsHexDigit))
             throw new InvalidDataException("Invalid model input identity.");
@@ -24,10 +24,23 @@ public sealed class ModelImportCandidate
             throw new InvalidDataException("Candidate semantic counts do not match CPU data.");
         if (Meshes.Count is < 1 or > 64 || Materials.Count is < 1 or > 128 || Instances.Count is < 1 or > 4096)
             throw new InvalidDataException("CPU model count limit exceeded.");
+        Texture = texture;
+        if (texture != null)
+        {
+            ModelSubassetValidation.Locator(texture.Locator);
+            if (texture.Definition == null || texture.MaterialIndex < 0 || texture.MaterialIndex >= Materials.Count)
+                throw new InvalidDataException("Invalid imported texture material reference.");
+        }
+        var usesTexture = false;
         foreach (var mesh in Meshes)
         {
             if (mesh.Geometry == null || mesh.MaterialIndex < 0 || mesh.MaterialIndex >= Materials.Count)
                 throw new InvalidDataException("Invalid mesh material reference.");
+            var textured = texture != null &&
+                (mesh.MaterialIndex == texture.MaterialIndex || mesh.SlotMaterials.Any(slot => slot.MaterialIndex == texture.MaterialIndex));
+            if (textured == mesh.Geometry.Uv0.IsEmpty)
+                throw new InvalidDataException("Imported mesh UV0 does not match its base-color assignment.");
+            usesTexture |= textured;
             if (mesh.SlotMaterials.IsEmpty)
             {
                 if (mesh.Geometry.Slots.Length != 1 || mesh.Geometry.Slots[0].SlotId != RenderContentProfile.DefaultSlotId)
@@ -45,7 +58,12 @@ public sealed class ModelImportCandidate
                     throw new InvalidDataException("Invalid slot material reference.");
             }
         }
-        foreach (var material in Materials) ArgumentNullException.ThrowIfNull(material);
+        if (texture != null && !usesTexture) throw new InvalidDataException("The imported texture must be used by a mesh.");
+        foreach (var material in Materials)
+        {
+            ArgumentNullException.ThrowIfNull(material);
+            if (material.BaseColorTexture.HasValue) throw new InvalidDataException("A CPU candidate uses local texture references.");
+        }
         foreach (var instance in Instances)
         {
             if (instance.MeshIndex < 0 || instance.MeshIndex >= Meshes.Count)
@@ -74,6 +92,7 @@ public sealed class ModelImportCandidate
     public IReadOnlyList<ModelImportInstance> Instances { get; }
     /// <summary>Authored identity hints; ambiguous/missing hints do not prevent CPU-only import.</summary>
     public ModelImportSemantics Semantics { get; }
+    internal ModelImportTexture? Texture { get; }
 
     internal static bool IsValidGeometryScale(float value) => float.IsFinite(value) && value > 0;
 
@@ -90,10 +109,13 @@ public sealed class ModelImportCandidate
             var vertices = new Vector3[geometry.Vertices.Length];
             for (var vertex = 0; vertex < vertices.Length; vertex++) vertices[vertex] = geometry.Vertices[vertex] * scale;
             var bounds = new RenderBounds(geometry.Bounds.Minimum * scale, geometry.Bounds.Maximum * scale);
-            scaled[i] = mesh with { Geometry = new MeshDefinition(vertices, geometry.Indices, geometry.Slots, bounds) };
+            var definition = geometry.Uv0.IsEmpty
+                ? new MeshDefinition(vertices, geometry.Indices, geometry.Slots, bounds)
+                : new MeshDefinition(vertices, geometry.Uv0, geometry.Indices, geometry.Slots, bounds);
+            scaled[i] = mesh with { Geometry = definition };
         }
         token.ThrowIfCancellationRequested();
-        return new(SourceId, InputRevision, scaled, Materials, Instances, Semantics, scale);
+        return new(SourceId, InputRevision, scaled, Materials, Instances, Semantics, scale, Texture);
     }
 }
 
@@ -106,6 +128,8 @@ public sealed record ModelImportMesh(MeshDefinition Geometry, int MaterialIndex)
 }
 
 internal readonly record struct ModelImportSlot(string Locator, int MaterialIndex);
+
+internal sealed record ModelImportTexture(string Locator, int MaterialIndex, BaseColorTextureDefinition Definition);
 
 /// <summary>One occurrence of a candidate-local mesh with a row-vector world transform.</summary>
 public readonly record struct ModelImportInstance(int MeshIndex, Matrix4x4 World);

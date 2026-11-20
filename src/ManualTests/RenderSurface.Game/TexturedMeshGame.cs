@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using TrueMoon;
 using TrueMoon.Aether.Abstractions.Ecs;
@@ -35,9 +36,9 @@ public sealed class TexturedMeshGame(IFactory<World> worlds, RenderContentManife
         Revision = scene.Revision;
         _world = worlds.Create();
         _entity = _world.CreateEntity();
-        var mesh = content.Resolve(RenderContentProfile.CubeAssetId, RenderContentProfile.MeshKindId);
-        var bindings = content.Resolve(RenderContentProfile.CubeBindingSetAssetId, RenderContentProfile.BindingSetKindId);
-        _world.AddComponent(_entity, new MeshRenderer(mesh.Key, bindings.Key, true, uint.MaxValue, false, Vector3.One));
+        var bindings = content.Entries.Single(entry => entry.Key.KindId == RenderContentProfile.BindingSetKindId);
+        var mesh = ((MaterialBindingSetDefinition)bindings.Definition).Mesh;
+        _world.AddComponent(_entity, new MeshRenderer(mesh, bindings.Key, true, uint.MaxValue, false, Vector3.One));
         _world.AddComponent(_entity, new WorldTransform(Matrix4x4.Identity, TickNumber));
     }
 

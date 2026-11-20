@@ -48,13 +48,17 @@ cursor без доступа к underlying array; caller закрывает stre
 
 | Root | Захват зависимостей | Явные ограничения |
 | --- | --- | --- |
-| glTF 2.0 JSON | `buffers[].uri`, относительно каталога root | Только plain local files; URI-less buffer запрещён без GLB BIN |
+| glTF 2.0 JSON | `buffers[].uri` и, для профиля ARCH1f.5, одна `images[].uri` | Plain local files относительно каталога root. URI-less buffer требует GLB BIN |
 | GLB v2 | JSON первым, затем optional BIN; external buffers тоже захватываются | Header/total lengths/chunk boundaries/alignment проверяются; URI-less buffer только первый, с 0–3 байтами BIN padding |
 | OBJ UTF-8 | `mtllib`, относительно OBJ; несколько plain `.mtl` names | Comments и UTF-8 BOM поддержаны; quoted names, continuations, `call`/`csh` запрещены |
 | MTL UTF-8 dependency | Bytes сохраняются; texture directives проверяются | `map_*`, bump/disp/decal/refl/norm дают unsupported outcome |
 
-glTF extensions и nonempty images/textures/samplers отклоняются, включая embedded
-textures. Неизвестные GLB chunks в этом ограниченном профиле дают NotSupported;
+Для base-color текстуры `.gltf` допускается одна внешняя PNG с явным sampler
+`NearestClamp`, привязанная к одному материалу через UV0. PNG захватывается
+и повторно проверяется вместе с JSON и BIN. Изменение только PNG меняет
+`InputRevision` и делает прежний импорт устаревшим. Остальные форматы
+текстур, встроенные изображения и glTF extensions отклоняются.
+Неизвестные GLB chunks в этом ограниченном профиле дают NotSupported;
 это выбранное ограничение, не утверждение повреждения любого такого valid glTF.
 JSON duplicate properties запрещены как неоднозначные. Declared buffer length
 должна быть положительной и не превышать available bytes/budget.

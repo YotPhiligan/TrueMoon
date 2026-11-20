@@ -12,7 +12,10 @@ internal static class ModelImportProtocol
     private const int ScaledCandidate = 0x33434d54;
     private const int GroupedCandidate = 0x34434d54;
     private const int ScaledGroupedCandidate = 0x35434d54;
+    private const int TexturedCandidate = 0x36434d54;
+    private const int ScaledTexturedCandidate = 0x37434d54;
     private const string GroupedRecipe = "aether.assimp605.gltf2-static-opaque-unlit/grouped-slots/1";
+    private const string TexturedRecipe = "aether.assimp605.gltf2-static-opaque-unlit/base-color-png/1";
     internal const int MaximumOutputBytes = 8 * 1024 * 1024;
     private const int MaximumInputBytes = 32 * 1024 * 1024 + 32768;
 
@@ -50,9 +53,11 @@ internal static class ModelImportProtocol
         using var stream = new MemoryStream(); using var writer = new BinaryWriter(stream, Encoding.UTF8);
         var scaled = candidate.GeometryScale != 1;
         var grouped = candidate.Meshes.Any(mesh => !mesh.SlotMaterials.IsEmpty);
-        var version = grouped ? (scaled ? ScaledGroupedCandidate : GroupedCandidate) : (scaled ? ScaledCandidate : NativeCandidate);
+        var textured = candidate.Texture != null;
+        var version = textured ? (scaled ? ScaledTexturedCandidate : TexturedCandidate) :
+            grouped ? (scaled ? ScaledGroupedCandidate : GroupedCandidate) : (scaled ? ScaledCandidate : NativeCandidate);
         writer.Write(version);
-        WriteText(writer, grouped ? GroupedRecipe : ModelImportCandidate.Recipe);
+        WriteText(writer, textured ? TexturedRecipe : grouped ? GroupedRecipe : ModelImportCandidate.Recipe);
         writer.Write(candidate.SourceId.ToByteArray()); WriteText(writer, candidate.InputRevision);
         if (scaled) writer.Write(candidate.GeometryScale);
         writer.Write(candidate.Materials.Count);
@@ -62,7 +67,7 @@ internal static class ModelImportProtocol
         {
             writer.Write(mesh.MaterialIndex);
             Asset(writer, mesh.Geometry);
-            if (grouped)
+            if (grouped || textured)
             {
                 writer.Write(mesh.SlotMaterials.Length);
                 foreach (var slot in mesh.SlotMaterials)
@@ -86,6 +91,13 @@ internal static class ModelImportProtocol
             writer.Write(hints.Count);
             foreach (var hint in hints) { writer.Write((byte)(hint == null ? 0 : 1)); if (hint != null) WriteText(writer, hint); Budget(stream); }
         }
+        if (candidate.Texture is { } texture)
+        {
+            WriteText(writer, texture.Locator);
+            writer.Write(texture.MaterialIndex);
+            Asset(writer, texture.Definition);
+            Budget(stream);
+        }
         return stream.ToArray();
     }
 
@@ -105,10 +117,11 @@ internal static class ModelImportProtocol
     private static ModelImportCandidate ReadOutputCore(BinaryReader reader, Guid sourceId, string inputRevision, bool allowScaled)
     {
         var version = reader.ReadInt32();
+        var textured = version is TexturedCandidate or ScaledTexturedCandidate;
         var grouped = version is GroupedCandidate or ScaledGroupedCandidate;
-        var scaled = version is ScaledCandidate or ScaledGroupedCandidate;
-        Require((version is NativeCandidate or GroupedCandidate || allowScaled && scaled) &&
-            Text(reader, 128) == (grouped ? GroupedRecipe : ModelImportCandidate.Recipe), "Candidate recipe/version.");
+        var scaled = version is ScaledCandidate or ScaledGroupedCandidate or ScaledTexturedCandidate;
+        Require((version is NativeCandidate or GroupedCandidate or TexturedCandidate || allowScaled && scaled) &&
+            Text(reader, 128) == (textured ? TexturedRecipe : grouped ? GroupedRecipe : ModelImportCandidate.Recipe), "Candidate recipe/version.");
         Require(new Guid(Bytes(reader, 16)) == sourceId && Text(reader, 64) == inputRevision, "Candidate input identity mismatch.");
         var geometryScale = scaled ? reader.ReadSingle() : 1;
         Require(ModelImportCandidate.IsValidGeometryScale(geometryScale) &&
@@ -121,7 +134,7 @@ internal static class ModelImportProtocol
         {
             var material = reader.ReadInt32(); var mesh = ReadAsset(reader, RenderContentProfile.MaximumMeshBytes) as MeshDefinition
                 ?? throw new InvalidDataException("Expected triangle mesh.");
-            var slotCount = grouped ? Count(reader, 2) : 0;
+            var slotCount = grouped || textured ? Count(reader, 2) : 0;
             var slots = ImmutableArray.CreateBuilder<ModelImportSlot>(slotCount);
             for (var index = 0; index < slotCount; index++) slots.Add(new(Text(reader, 256), reader.ReadInt32()));
             meshes[i] = new(mesh, material) { SlotMaterials = slots.MoveToImmutable() };
@@ -138,7 +151,12 @@ internal static class ModelImportProtocol
             return hints;
         }
         var semantics = new ModelImportSemantics(Hints(64), Hints(128), Hints(4096));
-        End(reader); return new(sourceId, inputRevision, meshes, materials, instances, semantics, geometryScale);
+        ModelImportTexture? texture = null;
+        if (textured)
+            texture = new(Text(reader, 256), reader.ReadInt32(),
+                ReadAsset(reader, RenderContentProfile.MaximumMeshBytes) as BaseColorTextureDefinition ??
+                throw new InvalidDataException("Expected base-color texture."));
+        End(reader); return new(sourceId, inputRevision, meshes, materials, instances, semantics, geometryScale, texture);
     }
 
     private static void Asset(BinaryWriter writer, RenderAssetDefinition asset) { var bytes = RenderContentCodec.Encode(asset); writer.Write(bytes.Length); writer.Write(bytes); }

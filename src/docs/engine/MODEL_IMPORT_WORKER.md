@@ -69,13 +69,21 @@ OBJ, FBX, embedded data URIs and other formats is outside this recipe.
   keeps the material of each primitive. The ledger keys the slots by mesh and primitive
   labels. `MeshDefinition` and `RenderContentCodec` apply the existing geometry and
   render budgets to the combined mesh.
-- Opaque, single-sided, untextured material. glTF linear baseColorFactor RGB is encoded
+- Opaque, single-sided material. glTF linear baseColorFactor RGB is encoded
   to stored sRGB through `RenderColor.Encode`; alpha must be 1. The existing renderer is
   unlit: metallic/roughness values are range-checked and deliberately not represented.
-  Optional NORMAL, TANGENT and TEXCOORD_0 are deliberately omitted from the position-only
-  output. Authored names/extras.truemoon.subasset provide bounded nullable semantic
+  The worker retains TEXCOORD_0 for textured primitives and restores glTF's V
+  orientation after Assimp. Optional NORMAL and TANGENT are omitted.
+  Authored names/extras.truemoon.subasset provide bounded nullable semantic
   hints in v2; ambiguity requires explicit labels before ledger publication.
-- Reject animations, skins/bones, morphs, cameras/lights, textures, nonempty extensions,
+- ARCH1f.5 accepts one external 8-bit PNG in a `.gltf` file with one base-color
+  material reference and one explicit sampler. Minification and magnification
+  are nearest (9728), both wrap axes are clamp-to-edge (33071), and the material
+  uses TEXCOORD_0. The isolated worker decodes captured PNG bytes with SkiaSharp
+  into opaque RGBA8 sRGB at up to 512×512. A source-relative PNG path identifies
+  the texture in the ledger. The canonical texels determine its render revision.
+  [glTF texture and sampler specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#textures)
+- Reject animations, skins/bones, morphs, cameras/lights, other textures, nonempty extensions,
   transparency, double-sided/emissive materials, nontriangle modes and other attributes.
   Assimp validation or the CPU validator also rejects malformed input. Errors publish no
   partial candidate. This bounded recipe is not full glTF conformance.
@@ -85,12 +93,15 @@ caller-supplied, `InputRevision` identifies captured bytes, and `Revision` hashe
 identity, recipe, semantic hints, applied scale and canonical CPU bytes. The
 worker emits v2 for ordinary candidates and v4 for combined meshes with explicit slot
 labels and material indices. The ledger uses v3 and v5 for the respective nondefault
-scale variants, and reads all four versions. Existing v2 and v3 bytes and revisions
+scale variants. Textured candidates use v6 and their nondefault scale variants
+use v7. The ledger reads all six versions. Existing v2–v5 bytes and revisions
 are preserved.
 CPU candidates are not RenderContentManifest/AssetKey values.
 Persistent subasset IDs and atomic ledger publication are provided by [g.1c](MODEL_SUBASSET_LEDGER.md);
-Nom/build/runtime integration remains **g.2**. In the child only, name fields are replaced
-by checked transport tags in a derived captured JSON/GLB. Original InputRevision and BIN
+Nom/build/runtime integration is described in [ARCH1g.2](PLAN.md#arch1g-model-assets)
+and [ARCH1f.5](RENDER_SURFACE.md#imported-base-color-texture). In the child, name
+fields are replaced by checked transport tags in a derived captured JSON/GLB.
+The derived Assimp input omits texture declarations. Original InputRevision and BIN
 bytes remain authoritative; there is no disk fallback or index-derived persistent ID.
 
 ## Bounds and native boundary
@@ -124,7 +135,10 @@ Do not claim that arbitrary compromised native code cannot access the user's fil
 
 Use the SDK/profile from `global.json` and `Directory.Build.props`. Publish the optional
 worker for `win-x64`, framework-dependent, `UseAppHost=false`; retain its full closure,
-manifest and included licenses. `ManualTests/ModelImportConsumer/Verify.ps1` performs
+manifest and included licenses. The native Skia PDB is excluded from worker
+publish to keep the per-file size limit. The decoder DLL is pinned by the
+worker closure manifest, which also covers the Skia license and third-party
+notices copied from the restored package. `ManualTests/ModelImportConsumer/Verify.ps1` performs
 source Debug, published source Release and fresh package Debug/published Release proofs
 with Cobalt and Microsoft DI. Both source and fresh package paths use the same Release
 worker; a separate Debug worker is also checked. The acceptance-only fake worker exercises

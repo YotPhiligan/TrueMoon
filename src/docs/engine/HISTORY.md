@@ -16380,3 +16380,42 @@ SHA256 `7EEDE99BF8EBEFEA8D9E3CE61B02F8216A1E33440BB2476038CDDC2D2748206D`.
 Команда запуска описана в [RENDER_SURFACE](RENDER_SURFACE.md#base-color-texture).
 Встроенные SPIR-V шейдеры собраны `glslang 16.6.0` с
 `-V --target-env vulkan1.1`. [Khronos glslang](https://github.com/KhronosGroup/glslang)
+
+<a id="arch1f5-imported-png-2026-11-20"></a>
+## 2026-11-20 — ARCH1f.5: внешняя PNG через glTF → Nom → Build → Vulkan
+
+Версия `1.2611.20.1-alpha`, SDK `11.0.100`, `net11.0`. Приёмка прошла в
+source Debug, published Release и Release из закрытого feed с 20 пакетами
+TrueMoon. Worker опубликован отдельно, его 34 файла закреплены хешами.
+Assimp 6.0.5 обрабатывает геометрию, SkiaSharp 4.157.0 декодирует PNG.
+Хеш `libSkiaSharp.dll` — `1B0EABBE6738818A2E9E58BC09FB7032DFABBD5E93F65EB4F604D5000FC4B3CD`.
+Native PDB исключён из publish, чтобы соблюдать лимит 64 МиБ на файл.
+Лицензия и third-party notices Skia входят в publish.
+
+Во всех профилях хеши glTF и BIN совпали, изменился только
+`textures/color.png`. Импорт прошёл `Current → Stale → Current` без изменения
+настроек. Ledger после повторного открытия сохранил ID текстуры и все привязки;
+ревизия геометрии совпала. Снимок A в Nom после публикации B сохранил исходный
+ключ. Сборки получили точные ключи текстуры и исходный sampler `NearestClamp`.
+
+| Запуск | Ревизия текстуры | RGBA в (140,70) | SHA256 кадра 320×180 |
+| --- | --- | --- | --- |
+| A и повтор A | `922bbed019565cb959f8c139fee72e29409e7687db25a7ace760781fbb3997df` | `C12047FF` | `67D432C53E9D3C1D5A7FF382AD68B3018422F9D22529976D00AF6AC07A7033FD` |
+| B | `09764b3080012ef7035c04bd9a3fdd641f95576ec703b36738980cc34ceda3ec` | `19CE30FF` | `708A503AEEE816FA943E296B73BB766005E33C2081F517191833F394BF0AB702` |
+
+Шесть точек проверили четыре texels и clamp за пределами UV [0,1]. Во всех
+9 дочерних Runtime совпали ревизии фактического upload, Vulkan core/sync
+validation не выдала ошибок или предупреждений, image и sampler освобождены.
+PNG кадров, точные Build ID, ключи Nom и SHA исходных файлов находятся
+в подкаталогах профилей.
+
+Адресная регрессия Aether (Importing, Rendering, GPU, GameBuildTests) прошла
+по 1097 тестов, Editor — по 1507, в Debug и Release. Прежний профиль импорта
+прошёл 10 проверочных прогонов на Cobalt и Microsoft DI, включая оба
+worker-конфига и свежие пакеты. Проверены 870 утверждений и завершение всех
+210 worker-процессов. Отчёты в
+`TestResults/ARCH1f5-imported-png-regression-20261120-02`.
+
+Локальный отчёт `TestResults/ARCH1f5-imported-png-20261120-06/verification.json`,
+SHA256 `E5B805D640BB8890B1EDA16AEDE88E62E902BC71282751662D480A638F2A28F5`.
+[Команда воспроизведения](RENDER_SURFACE.md#imported-base-color-texture).

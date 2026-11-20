@@ -275,23 +275,8 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
 
     private IEnumerable<RenderAssetEntry> Entries(PublishedModelImport published) => GetRenderEntries(projectId, published);
 
-    internal static IEnumerable<RenderAssetEntry> GetRenderEntries(Guid project, PublishedModelImport published)
-    {
-        var materials = published.Materials.ToDictionary(material => material.AssetId,
-            material => new RenderAssetEntry(Key(material.AssetId, material.Definition), material.Definition));
-        foreach (var material in materials.Values) yield return material;
-        foreach (var mesh in published.Meshes)
-        {
-            var geometry = Key(mesh.AssetId, mesh.Geometry);
-            var bindings = new MaterialBindingSetDefinition(geometry, mesh.Slots
-                .Select(slot => new MaterialSlotBinding(slot.SlotId, materials[slot.MaterialId].Key)).ToArray());
-            yield return new(geometry, mesh.Geometry);
-            yield return new(Key(mesh.BindingSetId, bindings), bindings);
-        }
-
-        RenderAssetKey Key(Guid id, RenderAssetDefinition definition) =>
-            new(project, id, definition.KindId, definition.SchemaVersion, definition.Revision);
-    }
+    internal static IEnumerable<RenderAssetEntry> GetRenderEntries(Guid project, PublishedModelImport published) =>
+        published.CreateRenderEntries(project);
 
     internal IReadOnlyList<SceneModelImportStatus> Read(Guid openingId) =>
         _current is { } selection && selection.OpeningId == openingId ? selection.Read() : [];

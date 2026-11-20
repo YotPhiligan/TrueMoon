@@ -23,10 +23,12 @@ internal static class ModelSourceDependencies
                 throw new NotSupportedException("Source capture supports glTF asset version 2.0 only.");
             if (source.GetProperty("asset").TryGetProperty("minVersion", out var minimum) && minimum.GetString() != "2.0")
                 throw new NotSupportedException("The glTF minimum version is unsupported.");
-            foreach (var feature in new[] { "extensionsUsed", "extensionsRequired", "images", "textures", "samplers" })
+            foreach (var feature in new[] { "extensionsUsed", "extensionsRequired" })
                 if (source.TryGetProperty(feature, out var values) && values.GetArrayLength() != 0)
-                    throw new NotSupportedException("Source capture v1 does not support glTF extensions or textures.");
+                    throw new NotSupportedException("Source capture does not support glTF extensions.");
             var dependencies = new Dictionary<string, ModelSourceDependency>(StringComparer.OrdinalIgnoreCase);
+            if (GltfBaseColorTexture.Read(source, root.Name) is { } image)
+                Add(dependencies, new(image.Name, 33), root.Name);
             if (!source.TryGetProperty("buffers", out var buffers)) return dependencies.Values.ToArray();
             var index = 0;
             foreach (var buffer in buffers.EnumerateArray())

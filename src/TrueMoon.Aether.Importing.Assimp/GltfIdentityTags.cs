@@ -17,7 +17,7 @@ internal sealed class GltfIdentityTags
     internal Dictionary<string,NodeInfo> Nodes { get; } = new(StringComparer.Ordinal);
     internal Dictionary<int,string> SlottedMeshes { get; } = [];
 
-    internal static GltfIdentityTags Create(CapturedModelSource source)
+    internal static GltfIdentityTags Create(CapturedModelSource source, bool hasBaseColorTexture)
     {
         var result=new GltfIdentityTags(); var original=source.GetFile(source.RootName).Bytes;
         var glb=Path.GetExtension(source.RootName).Equals(".glb",StringComparison.OrdinalIgnoreCase);
@@ -55,6 +55,15 @@ internal sealed class GltfIdentityTags
             var material=materials[i]!.AsObject(); var label=Label(material);
             result.Materials.Add(MaterialTag(i),new(i,label==null ? null : Bounded("material/"+label))); material["name"]=MaterialTag(i);
         }
+        if (hasBaseColorTexture)
+        {
+            // Assimp supplies geometry and material factors. PNG bytes are decoded directly from the captured dependency.
+            foreach (var material in materials)
+                if (material?["pbrMetallicRoughness"] is JsonObject pbr) pbr.Remove("baseColorTexture");
+            root.Remove("images");
+            root.Remove("textures");
+            root.Remove("samplers");
+        }
         var scenes=root["scenes"]!.AsArray(); var scene=root["scene"]?.GetValue<int>() ?? 0;
         Require(scene>=0 && scene<scenes.Count,"Selected source scene."); var seen=new HashSet<int>();
         string? scenePrefix="node/";
@@ -80,7 +89,7 @@ internal sealed class GltfIdentityTags
         foreach(var tag in result.Materials.Keys.ToArray()) if(result.Materials[tag].Locator is { } locator && duplicateMaterials.Contains(locator)) result.Materials[tag]=result.Materials[tag] with {Locator=null};
         var duplicateNodes=result.Nodes.Values.Where(value=>value.Locator!=null).GroupBy(value=>value.Locator,StringComparer.Ordinal).Where(group=>group.Count()>1).Select(group=>group.Key!).ToArray();
         foreach(var tag in result.Nodes.Keys.ToArray()) if(result.Nodes[tag].Locator is { } locator && duplicateNodes.Any(duplicate=>locator==duplicate || locator.StartsWith(duplicate+"/",StringComparison.Ordinal))) result.Nodes[tag]=result.Nodes[tag] with {Locator=null};
-        // Preserve the remaining document and all BIN bytes. Names alone are replaced, within the original capture budgets.
+        // Preserve the geometry and all BIN bytes within the original capture budgets.
         for(var i=0;i<nodes.Count;i++) nodes[i]!["name"]=NodeTag(i);
         var text=Encoding.UTF8.GetBytes(root.ToJsonString()); byte[] bytes;
         if(glb)

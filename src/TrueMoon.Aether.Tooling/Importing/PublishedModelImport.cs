@@ -28,6 +28,11 @@ public readonly record struct PublishedModelSlot(Guid SlotId, Guid MaterialId);
 /// <param name="AssetId">Persistent ID.</param><param name="Definition">Immutable CPU material.</param>
 public sealed record PublishedModelMaterial(Guid AssetId, OpaqueUnlitMaterialDefinition Definition);
 
+/// <summary>External base-color texture published with a persistent identity.</summary>
+/// <param name="AssetId">Texture ID.</param><param name="MaterialId">Material that uses the texture.</param>
+/// <param name="Definition">Immutable opaque sRGB texels.</param>
+public sealed record PublishedModelTexture(Guid AssetId, Guid MaterialId, BaseColorTextureDefinition Definition);
+
 /// <summary>Node occurrence referring to a permanent mesh identity.</summary>
 /// <param name="Id">Occurrence ID.</param><param name="MeshId">Mesh ID.</param><param name="World">Affine row-vector transform.</param>
 public readonly record struct PublishedModelInstance(Guid Id, Guid MeshId, Matrix4x4 World);
@@ -40,7 +45,8 @@ public sealed class PublishedModelImport
         if (generation <= 0 || candidate.SourceId != ledger.SourceId) throw new InvalidDataException("Invalid published model generation/identity.");
         Generation = generation; Candidate = candidate; Ledger = ledger;
         var entries = bindings.Take(1025).OrderBy(value => value.Kind).ThenBy(value => value.Index).ToArray();
-        var expected = checked(candidate.Meshes.Count * 2 + Count(candidate, ModelSubassetKind.Slot) + candidate.Materials.Count + candidate.Instances.Count);
+        var expected = checked(candidate.Meshes.Count * 2 + Count(candidate, ModelSubassetKind.Slot) +
+            candidate.Materials.Count + candidate.Instances.Count + Count(candidate, ModelSubassetKind.Texture));
         if (entries.Length != expected || expected > 1024) throw new InvalidDataException("Published model binding count mismatch.");
         var selectors = new HashSet<(ModelSubassetKind,int)>(); var keys = new HashSet<ModelSubassetKey>();
         var active = ledger.Entries.Where(value => value.Active).ToDictionary(value => value.Key);
@@ -67,12 +73,17 @@ public sealed class PublishedModelImport
                 slots[1] = slots[1] with { SlotId = ids[(ModelSubassetKind.Slot, nextExtraSlot++)] };
                 second = new(slots[1].SlotId, ids[(ModelSubassetKind.Material, mesh.MaterialAt(1))]);
             }
+            var persistentGeometry = geometry.Uv0.IsEmpty
+                ? new MeshDefinition(geometry.Vertices, geometry.Indices, slots, geometry.Bounds)
+                : new MeshDefinition(geometry.Vertices, geometry.Uv0, geometry.Indices, slots, geometry.Bounds);
             meshes[i] = new(ids[(ModelSubassetKind.Mesh, i)], slots[0].SlotId, ids[(ModelSubassetKind.Material, mesh.MaterialIndex)],
-                ids[(ModelSubassetKind.BindingSet, i)], new MeshDefinition(geometry.Vertices, geometry.Indices, slots, geometry.Bounds))
+                ids[(ModelSubassetKind.BindingSet, i)], persistentGeometry)
                 { SecondSlot = second };
         }
         Meshes = Array.AsReadOnly(meshes);
         Materials = Array.AsReadOnly(candidate.Materials.Select((material,index) => new PublishedModelMaterial(ids[(ModelSubassetKind.Material,index)],material)).ToArray());
+        if (candidate.Texture is { } texture)
+            Texture = new(ids[(ModelSubassetKind.Texture, 0)], Materials[texture.MaterialIndex].AssetId, texture.Definition);
         Instances = Array.AsReadOnly(candidate.Instances.Select((instance,index) => new PublishedModelInstance(ids[(ModelSubassetKind.Instance,index)],meshes[instance.MeshIndex].AssetId,instance.World)).ToArray());
     }
     /// <summary>Optimistic publication generation, starting at one.</summary>
@@ -87,14 +98,41 @@ public sealed class PublishedModelImport
     public IReadOnlyList<PublishedModelMesh> Meshes { get; }
     /// <summary>CPU materials with persistent IDs.</summary>
     public IReadOnlyList<PublishedModelMaterial> Materials { get; }
+    /// <summary>External base-color texture and its material assignment, if present.</summary>
+    public PublishedModelTexture? Texture { get; }
     /// <summary>Persistent node occurrences and mesh references.</summary>
     public IReadOnlyList<PublishedModelInstance> Instances { get; }
+
+    /// <summary>Projects persistent model IDs into an exact render closure for one project.</summary>
+    /// <param name="projectId">Project scope used for material, texture, and binding references.</param>
+    /// <returns>Canonical render entries for this import generation.</returns>
+    public IEnumerable<RenderAssetEntry> CreateRenderEntries(Guid projectId)
+    {
+        RenderAssetEntry Entry(Guid id, RenderAssetDefinition definition) => new(definition.CreateKey(projectId, id), definition);
+
+        var texture = Texture is { } publishedTexture ? Entry(publishedTexture.AssetId, publishedTexture.Definition) : null;
+        if (texture != null) yield return texture;
+        var materials = Materials.ToDictionary(material => material.AssetId, material => Entry(material.AssetId,
+            texture != null && material.AssetId == Texture!.MaterialId
+                ? new OpaqueUnlitMaterialDefinition(material.Definition.BaseColorSrgb, texture.Key, RenderTextureSampler.NearestClamp)
+                : material.Definition));
+        foreach (var material in materials.Values) yield return material;
+        foreach (var mesh in Meshes)
+        {
+            var geometry = Entry(mesh.AssetId, mesh.Geometry);
+            var bindings = new MaterialBindingSetDefinition(geometry.Key, mesh.Slots
+                .Select(slot => new MaterialSlotBinding(slot.SlotId, materials[slot.MaterialId].Key)).ToArray());
+            yield return geometry;
+            yield return Entry(mesh.BindingSetId, bindings);
+        }
+    }
 
     internal static int Count(ModelImportCandidate candidate, ModelSubassetKind kind) => kind switch
     {
         ModelSubassetKind.Mesh or ModelSubassetKind.BindingSet => candidate.Meshes.Count,
         ModelSubassetKind.Slot => candidate.Meshes.Sum(mesh => mesh.Geometry.Slots.Length),
         ModelSubassetKind.Material => candidate.Materials.Count, ModelSubassetKind.Instance => candidate.Instances.Count,
+        ModelSubassetKind.Texture => candidate.Texture == null ? 0 : 1,
         _ => throw new InvalidDataException("Unknown subasset kind.")
     };
     internal static PublishedModelImport Prepare(ModelImportCandidate candidate, PublishedModelImport? previous, long expectedGeneration, ModelImportIdentityEdits? edits)
@@ -128,6 +166,7 @@ public sealed class PublishedModelImport
         }
         for (var i = 0; i < candidate.Materials.Count; i++) Resolve(ModelSubassetKind.Material,i,candidate.Semantics.Materials[i]);
         for (var i = 0; i < candidate.Instances.Count; i++) Resolve(ModelSubassetKind.Instance,i,candidate.Semantics.Instances[i]);
+        if (candidate.Texture is { } texture) Resolve(ModelSubassetKind.Texture, 0, texture.Locator);
         var ledger = (previous?.Ledger ?? new(candidate.SourceId,[])).Reconcile(keys.Select(value => value.Key),edits?.Renames);
         var active = ledger.Entries.Where(value => value.Active).ToDictionary(value => value.Key,value => value.Id);
         return new(checked(expectedGeneration+1),candidate,ledger,keys.Select(value => new ModelSubassetBinding(value.Kind,value.Index,value.Key,active[value.Key])));

@@ -1,5 +1,6 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$ValidationDirectory, [string]$EvidenceDirectory, [string]$RunDirectory, [switch]$BaseColorTexture)
+param([Parameter(Mandatory)][string]$ValidationDirectory, [string]$EvidenceDirectory, [string]$RunDirectory,
+    [switch]$BaseColorTexture, [switch]$ImportedBaseColorTexture)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
@@ -12,15 +13,18 @@ $validation = [IO.Path]::GetFullPath($ValidationDirectory)
 foreach ($file in @('VkLayer_khronos_validation.json','VkLayer_khronos_validation.dll')) { if (!(Test-Path -LiteralPath (Join-Path $validation $file))) { throw 'Existing validation layer is required.' } }
 foreach ($path in @($evidence, $run, "$run/feed", "$run/cache", "$run/unrelated working directory")) { [void][IO.Directory]::CreateDirectory($path) }
 $surfaceBuildProfile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
-$version = if ($BaseColorTexture) { $surfaceBuildProfile.Version } else { $surfaceBuildProfile.Version + '.meshsurface.' + (Get-Date -Format 'yyyyMMddHHmmss') }
-$stage = if ($BaseColorTexture) { 'ARCH1f.5' } else { 'ARCH1f.4' }
+$textureProof = $BaseColorTexture -or $ImportedBaseColorTexture
+$version = if ($textureProof) { $surfaceBuildProfile.Version } else { $surfaceBuildProfile.Version + '.meshsurface.' + (Get-Date -Format 'yyyyMMddHHmmss') }
+$stage = if ($textureProof) { 'ARCH1f.5' } else { 'ARCH1f.4' }
 $textureProject = "$run/texture-game/TextureGame.csproj"
+$worker = "$run/worker"
 $dotnet = (Get-Command dotnet.exe -ErrorAction Stop).Source
 $packages = @('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit.Generator',
     'TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk',
-    'TrueMoon.Alloy.Hosting','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling')
+    'TrueMoon.Alloy.Hosting','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling',
+    'TrueMoon.Nom','TrueMoon.Aether.Nom')
 $report = [ordered]@{ Completed=$false; Stage=$stage; RunDirectory=$run; Version=$version; BuildProfile=$surfaceBuildProfile; Commands=@(); Packages=@(); ExternalPackages=@();
-    Sources=@(); Graphs=@(); Profiles=@(); Validation=@(); Failure=$null }
+    Sources=@(); Graphs=@(); Profiles=@(); Validation=@(); Worker=@(); Failure=$null }
 function Save-Report { $report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath "$evidence/verification.json" -Encoding utf8 }
 function Invoke-Proof([string]$name, [string[]]$arguments, [string]$cwd=$workspace, [switch]$isolated) {
     if ($arguments[0] -in @('build','publish','pack','restore')) { $arguments += "-bl:$evidence/$name-{}.binlog" }
@@ -42,14 +46,20 @@ function Invoke-Proof([string]$name, [string[]]$arguments, [string]$cwd=$workspa
 function Run-Profile([string]$name,[string]$probe,[string]$runtime,[string]$game,[switch]$isolated) {
     $output="$evidence/$name"
     $arguments = @($probe,'--mesh-surface-proof',$runtime,$game,$output)
-    if ($BaseColorTexture) { $arguments += $textureProject }
+    if ($textureProof) { $arguments += $textureProject }
+    if ($ImportedBaseColorTexture) { $arguments += $worker }
     Invoke-Proof $name $arguments "$run/unrelated working directory" -isolated:$isolated
     $proof=Get-Content -LiteralPath "$output/verification.json" -Raw | ConvertFrom-Json
     if (!$proof.Completed -or $proof.RuntimeCleanup.Count -ne 3 -or $proof.Resources -ne 0 -or
         $proof.Handles -ne 0 -or $proof.ActiveUiSessions -ne 0 -or $proof.GameLoadedInParent) { throw 'Native proof scope mismatch.' }
-    if ($BaseColorTexture) {
-        if ($proof.Scenario -ne 'base-color-texture' -or $proof.Captures.Count -ne 3 -or
+    if ($textureProof) {
+        $scenario = if ($ImportedBaseColorTexture) { 'imported-base-color-texture' } else { 'base-color-texture' }
+        if ($proof.Scenario -ne $scenario -or $proof.Captures.Count -ne 3 -or
             @($proof.Captures | Where-Object { !$_.TextureRevision -or $_.Samples.Count -ne 6 }).Count) { throw 'Texture proof scope mismatch.' }
+        if ($ImportedBaseColorTexture -and (!$proof.Import.OnlyPngChanged -or !$proof.Import.StableBindings -or
+            !$proof.Import.OldNomSnapshotRetained -or ($proof.Import.Freshness -join ',') -ne 'Current,Stale,Current')) {
+            throw 'Texture import proof scope mismatch.'
+        }
     } elseif (!$proof.FailedStartupObserved -or !$proof.UnsupportedReplacePreservedGeneration -or $proof.Captures.Count -ne 10) {
         throw 'Mesh proof scope mismatch.'
     }
@@ -60,12 +70,25 @@ try {
     $inputs = @('Directory.Build.props','Directory.Packages.props','global.json','TrueMoon.slnx','ManualTests/BuildProfile.ps1','ManualTests/RenderSurface/Verify.ps1',
         'ManualTests/EngineSessionProbe/MeshSurfaceProbe.cs','ManualTests/EngineSessionProbe/GpuCapabilityCollector.cs','ManualTests/EngineSessionProbe/EngineSessionProbe.csproj','Examples/AetherRuntimeHost/Program.cs',
         'Examples/AetherRuntimeHost/AetherRuntimeHost.csproj','ManualTests/RenderSurface.Game/RenderSurface.Game.csproj','ManualTests/RenderSurface.Game/MeshGame.cs','ManualTests/RenderSurface.Game/FailedMeshGame.cs',
-        'ManualTests/RenderSurface.Game/TexturedMeshGame.cs')
-    $projects = @('TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime')
+        'ManualTests/RenderSurface.Game/TexturedMeshGame.cs','ManualTests/EngineSessionProbe/ImportedTextureSurfaceProof.cs')
+    $projects = @('TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime',
+        'TrueMoon.Aether.Importing.Assimp','TrueMoon.Aether.Nom','TrueMoon.Nom')
     $inputs += Get-ChildItem ($projects | ForEach-Object { Join-Path $workspace $_ }) -Recurse -File |
         Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in @('.cs','.csproj','.spv','.vert','.frag','.md') } | ForEach-Object { [IO.Path]::GetRelativePath($workspace,$_.FullName) }
     foreach ($sourcePath in $inputs | Sort-Object -Unique) { $path=Join-Path $workspace $sourcePath; $report.Sources+=@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash} }
-    if ($BaseColorTexture) {
+    if ($ImportedBaseColorTexture) {
+        Invoke-Proof 'publish-worker' @('publish','TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj',
+            '-c','Release','-r','win-x64','--self-contained','false','-p:UseAppHost=false','-o',$worker,'--verbosity','quiet')
+        $report.Worker = @(Get-ChildItem -LiteralPath $worker -File -Recurse | ForEach-Object {
+            @{Name=[IO.Path]::GetRelativePath($worker,$_.FullName);Sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}
+        })
+        if ((Get-FileHash -LiteralPath "$worker/assimp.dll").Hash -ne '90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386' -or
+            !(Test-Path -LiteralPath "$worker/libSkiaSharp.dll")) { throw 'Missing or mismatched published native worker inputs.' }
+        foreach ($file in @('SkiaSharp.LICENSE.txt','SkiaSharp.THIRD-PARTY-NOTICES.txt')) {
+            if (!(Test-Path -LiteralPath "$worker/$file")) { throw "Missing published worker file $file." }
+        }
+    }
+    if ($textureProof) {
         $textureSource = Split-Path -Parent $textureProject
         Write-TrueMoonConsumerBuildProfile -Profile $surfaceBuildProfile -Directory $textureSource
         Copy-Item -LiteralPath "$workspace/ManualTests/RenderSurface.Game/TexturedMeshGame.cs" -Destination "$textureSource/TexturedMeshGame.cs"
@@ -113,12 +136,13 @@ try {
     [IO.File]::WriteAllText("$fresh/Directory.Build.targets",'<Project/>')
     foreach ($name in @('probe','runtime','game')) { [void][IO.Directory]::CreateDirectory("$fresh/$name") }
     Copy-Item -LiteralPath "$workspace/ManualTests/EngineSessionProbe/MeshSurfaceProbe.cs" -Destination "$fresh/probe/MeshSurfaceProbe.cs"
+    Copy-Item -LiteralPath "$workspace/ManualTests/EngineSessionProbe/ImportedTextureSurfaceProof.cs" -Destination "$fresh/probe/ImportedTextureSurfaceProof.cs"
     Copy-Item -LiteralPath "$workspace/ManualTests/EngineSessionProbe/GpuCapabilityCollector.cs" -Destination "$fresh/probe/GpuCapabilityCollector.cs"
-    [IO.File]::WriteAllText("$fresh/probe/Program.cs",'return await EngineSessionProbe.MeshSurfaceProbe.RunAsync(Path.GetFullPath(args[1]),Path.GetFullPath(args[2]),Path.GetFullPath(args[3]),args.Length == 5 ? Path.GetFullPath(args[4]) : null);')
+    [IO.File]::WriteAllText("$fresh/probe/Program.cs",'return await EngineSessionProbe.MeshSurfaceProbe.RunAsync(Path.GetFullPath(args[1]),Path.GetFullPath(args[2]),Path.GetFullPath(args[3]),args.Length >= 5 ? Path.GetFullPath(args[4]) : null,args.Length == 6 ? Path.GetFullPath(args[5]) : null);')
     Copy-Item -LiteralPath "$workspace/Examples/AetherRuntimeHost/Program.cs" -Destination "$fresh/runtime/Program.cs"
     foreach ($file in @('MeshGame.cs','FailedMeshGame.cs')) { Copy-Item -LiteralPath "$workspace/ManualTests/RenderSurface.Game/$file" -Destination "$fresh/game/$file" }
     $specs=@(
-        @{Name='probe';Assembly='MeshSurfaceConsumer';Namespace='EngineSessionProbe';References=@('TrueMoon','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling');Exe=$true},
+        @{Name='probe';Assembly='MeshSurfaceConsumer';Namespace='EngineSessionProbe';References=@('TrueMoon','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling','TrueMoon.Aether.Nom');Exe=$true},
         @{Name='runtime';Assembly='AetherRuntimeHost';Namespace='TrueMoon.Examples.AetherRuntimeHost';References=@('TrueMoon','TrueMoon.Aether.Tooling');Exe=$true},
         @{Name='game';Assembly='RenderSurface.Game';Namespace='RenderSurface.Game';References=@('TrueMoon.Aether.Tooling');Exe=$false})
     foreach ($spec in $specs) {

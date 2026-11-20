@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Security.Cryptography;
 using Assimp;
 using Assimp.Unmanaged;
 using TrueMoon.Aether.Abstractions.Rendering;
@@ -10,7 +11,7 @@ internal static unsafe class NativeProjection
 {
     private static readonly Guid SecondCandidateSlotId = new(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-    internal static ModelImportCandidate Import(CapturedModelSource source, CapturedIo io, GltfIdentityTags tags)
+    internal static ModelImportCandidate Import(CapturedModelSource source, CapturedIo io, GltfIdentityTags tags, GltfBaseColorTexture? texture)
     {
         var api = AssimpLibrary.Instance;
         var pointer = api.ImportFile(source.RootName, PostProcessSteps.ValidateDataStructure, io.Pointer, IntPtr.Zero);
@@ -41,6 +42,14 @@ internal static unsafe class NativeProjection
                 }
             }
             Require(defaults==1,"Missing native default material.");
+            ModelImportTexture? importedTexture = null;
+            if (texture != null)
+            {
+                var materialIndex = Array.IndexOf(materialSources, texture.MaterialIndex);
+                Require(materialIndex >= 0, "The textured material is missing from the native scene.");
+                var locator = "texture/" + Convert.ToHexStringLower(SHA256.HashData(ModelSourcePath.Utf8.GetBytes(texture.Name)));
+                importedTexture = new(locator, materialIndex, BaseColorPng.Decode(source.GetFile(texture.Name).Bytes.Span));
+            }
             var meshes = new ModelImportMesh[scene->NumMeshes]; long outputBytes = 0;
             var meshInfos=new GltfIdentityTags.MeshInfo[meshes.Length]; var seenMeshes=new HashSet<string>();
             for (var i = 0; i < meshes.Length; i++)
@@ -48,7 +57,8 @@ internal static unsafe class NativeProjection
                 var mesh = (AiMesh*)((nint*)scene->Meshes)[i];
                 Require(mesh != null && mesh->NumBones == 0 && mesh->NumAnimMeshes == 0 && mesh->NumVertices is > 0 and <= 65536 &&
                     mesh->NumFaces is > 0 and <= 65536 && mesh->Vertices != 0 && mesh->Faces != 0, "Native mesh counts.");
-                outputBytes = checked(outputBytes + mesh->NumVertices * 12L + mesh->NumFaces * 12L + 128);
+                var textured = importedTexture != null && mesh->MaterialIndex == importedTexture.MaterialIndex;
+                outputBytes = checked(outputBytes + mesh->NumVertices * (textured ? 20L : 12L) + mesh->NumFaces * 12L + 128);
                 Require(outputBytes <= ModelImportProtocol.MaximumOutputBytes, "CPU mesh aggregate quota before copies.");
                 var positions = new ReadOnlySpan<Vector3>((void*)mesh->Vertices, checked((int)mesh->NumVertices)).ToArray();
                 var minimum = new Vector3(float.PositiveInfinity); var maximum = new Vector3(float.NegativeInfinity);
@@ -59,7 +69,11 @@ internal static unsafe class NativeProjection
                     var face = ((AiFace*)mesh->Faces)[f]; Require(face.NumIndices == 3 && face.Indices != 0, "Native triangle list.");
                     for (var k = 0; k < 3; k++) indices[f * 3 + k] = ((uint*)face.Indices)[k];
                 }
-                var definition = new MeshDefinition(positions, indices, new[] { new MeshSlot(RenderContentProfile.DefaultSlotId, 0, (uint)indices.Length) }, new(minimum, maximum));
+                MeshSlot[] slots = [new(RenderContentProfile.DefaultSlotId, 0, (uint)indices.Length)];
+                var bounds = new RenderBounds(minimum, maximum);
+                var definition = textured
+                    ? new MeshDefinition(positions, ReadUv0(mesh), indices, slots, bounds)
+                    : new MeshDefinition(positions, indices, slots, bounds);
                 meshes[i] = new(definition, checked((int)mesh->MaterialIndex));
                 var name=mesh->Name.GetString(); Require(tags.Meshes.TryGetValue(name,out var info) && seenMeshes.Add(name),"Unrecognized/duplicate native mesh transport tag.");
                 Require(mesh->MaterialIndex<materialSources.Length && materialSources[mesh->MaterialIndex]==info!.Material,"Native material provenance mismatch."); meshInfos[i]=info!;
@@ -112,9 +126,20 @@ internal static unsafe class NativeProjection
                 for (var i = 0; i < node->NumChildren; i++) Visit((AiNode*)((nint*)node->Children)[i], world, depth + 1,tagged ? name : parentTag);
             }
             Visit((AiNode*)scene->RootNode, Matrix4x4.Identity, 0);
-            return new(source.SourceId, source.InputRevision, projected, materials, instances, new(meshLocators, materialLocators, instanceLocators));
+            return new(source.SourceId, source.InputRevision, projected, materials, instances,
+                new(meshLocators, materialLocators, instanceLocators), texture: importedTexture);
         }
         finally { api.ReleaseImport(pointer); }
+    }
+
+    private static Vector2[] ReadUv0(AiMesh* mesh)
+    {
+        Require(mesh->NumUVComponents[0] == 2 && mesh->TextureCoords[0] != 0, "Native textured mesh requires 2D UV0.");
+        var native = new ReadOnlySpan<Vector3>((void*)mesh->TextureCoords[0], checked((int)mesh->NumVertices));
+        var uv = new Vector2[native.Length];
+        // The glTF importer flips V into Assimp's convention. Our texture rows use the glTF origin.
+        for (var i = 0; i < uv.Length; i++) uv[i] = new(native[i].X, 1 - native[i].Y);
+        return uv;
     }
 
     private static ModelImportMesh CombineSlots(ModelImportMesh first, ModelImportMesh second, string firstLocator, string secondLocator)
@@ -126,8 +151,19 @@ internal static unsafe class NativeProjection
         var offset = (uint)a.Vertices.Length;
         var split = (uint)a.Indices.Length;
         var bounds = new RenderBounds(Vector3.Min(a.Bounds.Minimum, b.Bounds.Minimum), Vector3.Max(a.Bounds.Maximum, b.Bounds.Maximum));
-        var geometry = new MeshDefinition([.. a.Vertices, .. b.Vertices], [.. a.Indices, .. b.Indices.Select(index => index + offset)],
-            [new(RenderContentProfile.DefaultSlotId, 0, split), new(SecondCandidateSlotId, split, (uint)b.Indices.Length)], bounds);
+        Vector3[] vertices = [.. a.Vertices, .. b.Vertices];
+        uint[] indices = [.. a.Indices, .. b.Indices.Select(index => index + offset)];
+        MeshSlot[] slots = [new(RenderContentProfile.DefaultSlotId, 0, split), new(SecondCandidateSlotId, split, (uint)b.Indices.Length)];
+        MeshDefinition geometry;
+        if (a.Uv0.IsEmpty && b.Uv0.IsEmpty)
+            geometry = new(vertices, indices, slots, bounds);
+        else
+        {
+            var uv = new Vector2[vertices.Length];
+            a.Uv0.AsSpan().CopyTo(uv);
+            b.Uv0.AsSpan().CopyTo(uv.AsSpan(a.Vertices.Length));
+            geometry = new(vertices, uv, indices, slots, bounds);
+        }
         return new(geometry, first.MaterialIndex)
         {
             SlotMaterials = [new(firstLocator, first.MaterialIndex), new(secondLocator, second.MaterialIndex)]

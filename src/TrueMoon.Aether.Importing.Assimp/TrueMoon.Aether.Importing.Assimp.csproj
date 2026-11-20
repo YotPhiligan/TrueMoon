@@ -9,9 +9,22 @@
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
     <PackageReference Include="AssimpNetter" />
+    <PackageReference Include="SkiaSharp" />
   </ItemGroup>
   <ItemGroup>
     <None Update="AssimpNetter.License.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="$(MSBuildThisFileDirectory)..\..\LICENSE" Link="TrueMoon.LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="_ConfigureSkiaWorkerPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <!-- The reviewed worker closure admits at most 64 MiB per file. Skia's native symbols exceed that limit. -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'libSkiaSharp.pdb'" />
+      <_WorkerSkiaNative Include="@(ResolvedFileToPublish)"
+                         Condition="'$(RuntimeIdentifier)' == 'win-x64' and '%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'libSkiaSharp.dll'" />
+      <ResolvedFileToPublish Include="@(_WorkerSkiaNative->'%(RootDir)%(Directory)..\..\..\LICENSE.txt')"
+                             RelativePath="SkiaSharp.LICENSE.txt" CopyToPublishDirectory="PreserveNewest" />
+      <ResolvedFileToPublish Include="@(_WorkerSkiaNative->'%(RootDir)%(Directory)..\..\..\THIRD-PARTY-NOTICES.txt')"
+                             RelativePath="SkiaSharp.THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>
