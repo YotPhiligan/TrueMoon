@@ -1719,6 +1719,7 @@ overrides не мутируют общий asset. World не владеет borr
 | ARCH1f.4 | Реализован2026-11-12: [Vulkan consumer/Playing fence](RENDER_SURFACE.md), built-in cube/shared opaque unlit material/independent tint | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
 | ARCH1f.5 | [Build → Runtime → Vulkan](#arch1f5-base-color-texture) поддерживает RGBA8 sRGB, UV0 и `NearestClamp`. [Импорт glTF](#arch1f5-imported-png) проводит внешнюю PNG через Nom. Editor проверен при [перезапуске](#arch1f5-editor-texture-restart) и [переимпорте после правки PNG](#arch1f5-editor-texture-reimport). [Горячий Replace](#arch1f5-editor-texture-replace) подхватывает новую ревизию в Playing. [Отдельный Player](#arch1f5-player-imported-png) проверен в A → B → A | Layout/capability, color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes и performance/native evidence для каждого нового профиля. Light/lighting/PBR — последующие этапы |
 | ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |
+| ARCH1f.7 | [Ортографическая камера игрового World](#arch1f7-orthographic-camera) для блочного маршрута TrueMoon.Tales | Сохранённая сцена и точные ресурсы Build открываются в пакетном Player. Vulkan подтверждает видимость улицы, ступеней, крыльца и комнаты и сохранение масштаба по высоте при изменении пропорций окна |
 
 <a id="arch1f5-base-color-texture"></a>
 #### ARCH1f.5. Первый срез базовой текстуры — 2026-11-19
@@ -1882,6 +1883,36 @@ Editor mesh/material inspector — [ED4i](EDITOR_PLAN.md#ed4i-render-components)
 вторая копия resource lifecycle. HUD/Alloy external composition остаётся ENG5c.4,
 generic controls — в UI плане. Новый пакет/backend/render graph/DI scope автоматически
 не назначены. K7/K8/VRAM/final release сохраняют прежний незакрытый scope.
+
+<a id="arch1f7-orthographic-camera"></a>
+#### ARCH1f.7 — ортографическая камера и изометрический маршрут
+
+[Требования TrueMoon.Tales](../../../../TrueMoon.Tales.Game/docs/PLAN.md#block-world-design).
+Камера в World имеет отдельный v1 ECS-тип. `verticalSize` задаёт полную
+высоту в мировых единицах. Проекция вычисляет ширину по физическому
+aspect ratio. Сцены с перспективной камерой сохраняют прежнюю схему и
+путь рендера. На выбранной сущности допускается ровно одна проекция.
+Маску слоёв, clear color, Vulkan depth [0,1] и владение кадрами сохраняет
+общий mesh-путь.
+
+Проверочный маршрут использует единичный игровой блок, четыре ступени на
+один блок подъёма, крыльцо и комнату с полом 3×3. Build фиксирует игровой
+артефакт и материалы. Пакетный Player проверил этот масштаб при
+1200×810 → 1560×810 на Vulkan. Повтор на текущей игровой сцене включает
+пандус и временного персонажа.
+[Приёмка и кадры](HISTORY.md#arch1f7-tales-route-2026-11-21).
+
+Следующие требования игры:
+
+- Проход персонажа через ступени и скосы, обратный спуск, сохранение опоры
+  и открытие обзора при входе в комнату через слои или видимость. Контракт
+  контроллера ведётся в [PHYS6](../physics/PLAN.md#phys6).
+- Выбор и редактирование проекции в инспекторе, затем импортированная
+  геометрия в Edit Preview. [Очередь Editor](EDITOR_PLAN.md#ed4i-next).
+- Для сменных частей чиби-персонажа определить импорт общего скелета,
+  клипы и замены мешей. Для блочного ландшафта определить доставку областей
+  с идентичностью по координатам, сиду и версии генератора, проверкой швов
+  при разном порядке загрузки. Эти этапы развиваются по игровым профилям.
 
 <a id="arch1g-model-assets"></a>
 ### ARCH1g. Импорт и загрузка ассетов моделей — план исследования 2026-11-07

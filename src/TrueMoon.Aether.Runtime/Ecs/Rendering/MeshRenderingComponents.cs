@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Numerics;
 using TrueMoon.Aether.Abstractions.Ecs.Loading;
 using TrueMoon.Aether.Abstractions.Ecs.Rendering;
 using TrueMoon.Aether.Abstractions.Rendering;
@@ -7,13 +8,15 @@ using TrueMoon.Aether.Runtime.Ecs.Loading;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 
-/// <summary>Explicit v1 CPU rendering schemas and registry bindings. No renderer, catalog service or GPU is activated.</summary>
+/// <summary>Explicit CPU rendering schemas and registry bindings. No renderer, catalog service or GPU is activated.</summary>
 public static class MeshRenderingComponents
 {
     /// <summary>Persistent singleton mesh-renderer component type.</summary>
     public static ComponentTypeId MeshRendererId { get; } = new(RenderContentProfile.Id("1101"));
     /// <summary>Persistent singleton perspective-camera component type.</summary>
     public static ComponentTypeId CameraId { get; } = new(RenderContentProfile.Id("1102"));
+    /// <summary>Persistent singleton orthographic-camera component type.</summary>
+    public static ComponentTypeId OrthographicCameraId { get; } = new(RenderContentProfile.Id("1103"));
     /// <summary>Exact scalar mesh schema requiring the existing Transform v1.</summary>
     public static ComponentSchema MeshRendererSchema { get; } = new(MeshRendererId, 1,
         [new("mesh", PropertyValueKind.String, PropertyValue.From(RenderContentProfile.CubeAssetId.ToString("D"))),
@@ -25,8 +28,12 @@ public static class MeshRenderingComponents
     public static ComponentSchema CameraSchema { get; } = new(CameraId, 1,
         [Number("fov", Math.PI / 3), Number("near", .1), Number("far", 100), Mask(),
          Number("clearR", .04), Number("clearG", .06), Number("clearB", .10)], requiredTypes: [BuiltInComponents.TransformId]);
-    /// <summary>Gets only the two new schemas; legacy BuiltInComponents.Schemas stays unchanged.</summary>
-    public static ImmutableArray<ComponentSchema> Schemas { get; } = [MeshRendererSchema, CameraSchema];
+    /// <summary>Exact orthographic settings requiring the existing Transform v1.</summary>
+    public static ComponentSchema OrthographicCameraSchema { get; } = new(OrthographicCameraId, 1,
+        [Number("verticalSize", 10), Number("near", .1), Number("far", 100), Mask(),
+         Number("clearR", .04), Number("clearG", .06), Number("clearB", .10)], requiredTypes: [BuiltInComponents.TransformId]);
+    /// <summary>Gets the mesh rendering schemas; legacy BuiltInComponents.Schemas stays unchanged.</summary>
+    public static ImmutableArray<ComponentSchema> Schemas { get; } = [MeshRendererSchema, CameraSchema, OrthographicCameraSchema];
 
     /// <summary>Registers only mesh/camera values against one borrowed immutable CPU manifest.</summary>
     /// <remarks>The caller registers Transform separately. This explicitly installs the builder's single AssetValidator;
@@ -40,6 +47,8 @@ public static class MeshRenderingComponents
             [new("mesh", ComponentReferenceKind.Asset)],
             context => { Renderer(context, content); });
         builder.Register<PerspectiveCamera>(CameraSchema, context => Camera(context), validate: context => { Camera(context); });
+        builder.Register<OrthographicCamera>(OrthographicCameraSchema, context => Orthographic(context),
+            validate: context => { Orthographic(context); });
         return builder;
     }
     internal static MeshRenderer Renderer(ComponentValidationContext context, RenderContentManifest content)
@@ -66,14 +75,33 @@ public static class MeshRenderingComponents
     }
     internal static PerspectiveCamera Camera(ComponentValidationContext context)
     {
-        context.CancellationToken.ThrowIfCancellationRequested();
+        ValidateCameraType(context, OrthographicCameraId);
         var fov = context.GetNumber("fov"); var near = context.GetNumber("near"); var far = context.GetNumber("far");
         ContentValidation.Require(fov > 0 && fov < Math.PI && near > 0 && far > near,
             RenderContentError.InvalidCamera, "Camera Number values are outside the projection domain.");
         var result = new PerspectiveCamera(context.GetSingle("fov"), context.GetSingle("near"), context.GetSingle("far"), Layers(context),
-            new(context.GetSingle("clearR", 0, 1), context.GetSingle("clearG", 0, 1), context.GetSingle("clearB", 0, 1)));
+            ClearColor(context));
         result.Validate(); return result;
     }
+
+    internal static OrthographicCamera Orthographic(ComponentValidationContext context)
+    {
+        ValidateCameraType(context, CameraId);
+        var result = new OrthographicCamera(context.GetSingle("verticalSize"), context.GetSingle("near"),
+            context.GetSingle("far"), Layers(context), ClearColor(context));
+        result.Validate();
+        return result;
+    }
+
+    private static void ValidateCameraType(ComponentValidationContext context, ComponentTypeId other)
+    {
+        context.CancellationToken.ThrowIfCancellationRequested();
+        ContentValidation.Require(!context.SourceEntity.Components.Values.Any(component => component.TypeId == other),
+            RenderContentError.InvalidCamera, "A camera entity must have exactly one projection.");
+    }
+
+    private static Vector3 ClearColor(ComponentValidationContext context)
+        => new(context.GetSingle("clearR", 0, 1), context.GetSingle("clearG", 0, 1), context.GetSingle("clearB", 0, 1));
     private static uint Layers(ComponentValidationContext context)
     {
         var value = context.GetInteger("layers");

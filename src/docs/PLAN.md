@@ -110,10 +110,10 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
 ## Текущая очередь — актуализация 2026-11-21
 
-[TrueMoon.Tales](engine/PLAN.md#eng7b4-tales-consumer) проверен в собственном
-окне на пакетах с загрузкой World и игровым вводом. Следующие шаги —
-смена сцены или сборки в standalone Player и содержательная сцена игры.
-[Решение по заявке](requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Decision.md).
+[ARCH1f.7](engine/PLAN.md#arch1f7-orthographic-camera) проверен на пакетах
+в отдельном Player: изометрический маршрут TrueMoon.Tales сохраняет масштаб
+при resize. Далее персонаж Kton на ступенях и скосах и открытие обзора при входе.
+Смена сцены или сборки остаётся в [ENG7b.4](engine/PLAN.md#eng7b4-tales-consumer).
 
 [ARCH1g.2n](engine/PLAN.md#arch1g2n-project-model-catalog) добавляет список
 импортированных моделей проекта и выбор ресурсов для открытой сцены.

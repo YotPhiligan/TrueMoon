@@ -17,6 +17,8 @@ internal static class Program
 {
     internal static async Task<int> Main(string[] args)
     {
+        if (args is ["--orthographic-route", var artifact, var routeScene, var routeReport])
+            return await OrthographicRouteProof.RunAsync(artifact, routeScene, routeReport);
         if (args.Length is <2 or >4 || args.Length>=3 && args[2] is not ("microsoft" or "cobalt")) throw new ArgumentException("PlayerProbe <compiled-game-directory> <report-directory> [cobalt|microsoft] [selected-snapshot]");
         var microsoft=args.Length>=3 && args[2]=="microsoft";
         var report = Path.GetFullPath(args[1]); Directory.CreateDirectory(report);

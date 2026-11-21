@@ -59,6 +59,27 @@ public sealed class SnapshotExtractionTests
         Assert.Equal(256L + expected * (long)Unsafe.SizeOf<RenderDrawRange>(), result.PayloadBytes);
     }
 
+    [Fact]
+    public async Task OrthographicCamera_PreservesHeightAndDepthWhileResizing()
+    {
+        await using var t = await SnapshotFixture.CreateAsync();
+        t.World.RemoveComponent<PerspectiveCamera>(t.Camera);
+        var settings = new OrthographicCamera(4, 1, 9, 1, new(.1f, .2f, .3f));
+        t.World.AddComponent(t.Camera, settings);
+        t.World.SetComponent(t.Second, t.World.GetComponent<MeshRenderer>(t.Second) with { Layers = 2 });
+
+        var initial = await t.CaptureAsync();
+        var resized = await t.CaptureAsync(configuration: t.Configuration with { Width = 960, SurfaceGeneration = 2 });
+
+        Assert.Equal(t.First, Assert.Single(resized.Draws).Entity);
+        Assert.Equal(settings.ClearColorSrgb, resized.ClearColorSrgb);
+        Assert.Equal(initial.ViewProjection.M22, resized.ViewProjection.M22);
+        Assert.Equal(initial.ViewProjection.M11 * 2 / 3, resized.ViewProjection.M11, 6);
+        Assert.Equal(new Vector3(0, -.5f, 0), Vector3.Transform(new(0, 1, 5), resized.ViewProjection));
+        Assert.Equal(new Vector3(0, -.5f, 1), Vector3.Transform(new(0, 1, -3), resized.ViewProjection));
+        Assert.Equal(new(.25f, -.5f, .5f), Vector3.Transform(new(4f / 3, 1, 1), resized.ViewProjection));
+    }
+
     [Theory]
     [InlineData("key")] [InlineData("binding")] [InlineData("tint")] [InlineData("missing-transform")]
     [InlineData("tick")] [InlineData("nan-matrix")] [InlineData("singular")]
@@ -89,7 +110,7 @@ public sealed class SnapshotExtractionTests
     [Theory]
     [InlineData("missing-camera")] [InlineData("foreign")] [InlineData("stale")] [InlineData("missing-transform")]
     [InlineData("tick")] [InlineData("scale")] [InlineData("shear")] [InlineData("reflection")]
-    [InlineData("nonfinite")] [InlineData("settings")] [InlineData("ambiguous")]
+    [InlineData("nonfinite")] [InlineData("settings")] [InlineData("ambiguous")] [InlineData("two-projections")]
     public async Task ExplicitCamera_InvalidPartitionsNeverSelectAnotherCamera(string change)
     {
         await using var t = await SnapshotFixture.CreateAsync(); var previous = await t.CaptureAsync(); t.Advance(1);
@@ -107,6 +128,7 @@ public sealed class SnapshotExtractionTests
             case "nonfinite": var invalid = Matrix4x4.Identity; invalid.M41 = float.PositiveInfinity; t.World.SetComponent(t.Camera, new WorldTransform(invalid, 1)); break;
             case "settings": t.World.SetComponent(t.Camera, PerspectiveCamera.Default with { Near = 0 }); break;
             case "ambiguous": configuration = configuration with { Camera = new(t.Camera, Matrix4x4.Identity, PerspectiveCamera.Default) }; break;
+            case "two-projections": t.World.AddComponent(t.Camera, new OrthographicCamera(4, 1, 9, 1, Vector3.Zero)); break;
         }
         configuration = configuration with { CameraRevision = 2 };
         var expected = change == "missing-camera" ? typeof(KeyNotFoundException) : change is "foreign" or "stale" or "ambiguous" ? typeof(RenderResourceException) : typeof(RenderContentException);

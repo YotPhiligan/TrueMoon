@@ -1,5 +1,9 @@
 # TrueMoon: общий статус
 
+[Ортографический маршрут TrueMoon.Tales](engine/PLAN.md#arch1f7-orthographic-camera)
+проверен в поставке из пакетов `1.2611.21.10-alpha`: Vulkan показывает
+четыре ориентира в прежнем масштабе после resize, ресурсные счётчики закрыты.
+
 [Первый оконный срез TrueMoon.Tales](engine/PLAN.md#eng7b4-tales-consumer)
 прошёл из пакетов `1.2611.21.9-alpha`: World, игровое действие, кадры и закрытие.
 

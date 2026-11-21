@@ -10,7 +10,7 @@ namespace TrueMoon.Aether.Runtime.Rendering.Snapshots;
 /// <param name="ExternalWorld">External proper rigid camera pose.</param><param name="ExternalSettings">External perspective settings.</param>
 public readonly record struct RenderCameraSource(EntityHandle Entity, Matrix4x4 ExternalWorld, PerspectiveCamera ExternalSettings)
 {
-    /// <summary>Selects a live entity with PerspectiveCamera and current-tick WorldTransform.</summary>
+    /// <summary>Selects a live entity with one camera projection and current-tick WorldTransform.</summary>
     /// <param name="entity">Nondefault entity handle.</param><returns>Explicit entity source.</returns>
     public static RenderCameraSource FromEntity(EntityHandle entity)
     {

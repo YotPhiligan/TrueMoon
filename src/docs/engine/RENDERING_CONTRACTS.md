@@ -188,7 +188,15 @@ PerspectiveCamera type1102: singleton, RequiredTypes={Transform}. Scalar propert
 far>near, layers UInt32, clear[0,1]; conversion в Single должна быть representable.
 Semantic ranges и far>near проверяются также после conversion, без clamp/округления
 недопустимого double в допустимый float. View/projection product должен быть finite.
-Другой projection profile не подразумевается наличием Camera.
+
+`OrthographicCamera` type1103, v1 — отдельный singleton с тем же
+RequiredTypes={Transform}, `near`, `far`, `layers` и clear color.
+`verticalSize` Number10 по умолчанию задаёт полную положительную высоту
+области в мировых единицах. Ширина равна `verticalSize × width / height`
+текущей физической поверхности. Проекция использует rigid pose, RH,
+Vulkan depth [0,1] и один Y flip. Одновременные компоненты двух проекций
+на выбранной сущности отклоняются. Прежний внешний перспективный
+источник и документы с type1102 сохраняют своё поведение.
 
 Render view явно выбирает persistent camera entity либо external camera value
 (например navigation camera). Выбор разрешается в live same-World handle, нужный

@@ -15,7 +15,7 @@ namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 internal static class MeshSnapshotExtraction
 {
     internal const int HeaderBytes = 256;
-    internal readonly record struct Plan(int Count, long Bytes, Matrix4x4 Camera, Matrix4x4 ViewProjection, PerspectiveCamera Settings);
+    internal readonly record struct Plan(int Count, long Bytes, Matrix4x4 Camera, Matrix4x4 ViewProjection, uint Layers, Vector3 ClearColorSrgb);
 
     internal static Plan Prepare(World world, ulong tick, RenderContentManifest content, RenderViewConfiguration view,
         RenderSnapshotOptions limits, CancellationToken token)
@@ -23,29 +23,47 @@ internal static class MeshSnapshotExtraction
         ObjectDisposedException.ThrowIf(world.IsDisposed, world);
         ResourceGuard.Require(!world.IsFaulted, RenderResourceError.Closed, "World is faulted.");
         ResourceGuard.Require(world.EntityCount <= 10000, RenderResourceError.LimitExceeded, "Snapshot profile admits at most10000logical entities.");
-        var source = view.Camera; PerspectiveCamera settings; Matrix4x4 camera;
-        if (source.Entity != default)
-        {
-            ResourceGuard.Require(source.ExternalWorld == default && source.ExternalSettings == default && world.IsAlive(source.Entity),
-                RenderResourceError.InvalidIdentity, "Camera source is ambiguous or stale.");
-            settings = world.GetComponent<PerspectiveCamera>(source.Entity);
-            camera = Transform(world, source.Entity, tick).Matrix;
-        }
-        else { settings = source.ExternalSettings; camera = source.ExternalWorld; }
-        var projection = settings.CreateViewProjection(camera, view.Width, view.Height);
+        var (camera, projection, layers, clearColor) = ProjectCamera(world, tick, view);
         var count = 0; var renderers = 0;
         world.Query<MeshRenderer>().ForEach((EntityHandle entity, in MeshRenderer value) =>
         {
             token.ThrowIfCancellationRequested();
             ResourceGuard.Require(++renderers <= RenderWorldBinding.MaximumRenderers, RenderResourceError.LimitExceeded, "Renderer count exceeds the snapshot profile.");
             var row = Validate(world, entity, value, tick, content);
-            if (!value.Enabled || (value.Layers & settings.Layers) == 0) return;
+            if (!value.Enabled || (value.Layers & layers) == 0) return;
             count = checked(count + row.Mesh.Slots.Length);
             ResourceGuard.Require(count <= limits.MaximumDrawRanges, RenderResourceError.LimitExceeded, "Draw range admission exhausted; truncation is forbidden.");
         });
         var bytes = checked(HeaderBytes + (long)count * Unsafe.SizeOf<RenderDrawRange>());
         ResourceGuard.Require(bytes <= limits.MaximumPayloadBytes, RenderResourceError.LimitExceeded, "Snapshot payload admission exhausted.");
-        token.ThrowIfCancellationRequested(); return new(count, bytes, camera, projection, settings);
+        token.ThrowIfCancellationRequested(); return new(count, bytes, camera, projection, layers, clearColor);
+    }
+
+    private static (Matrix4x4 World, Matrix4x4 ViewProjection, uint Layers, Vector3 ClearColor)
+        ProjectCamera(World world, ulong tick, RenderViewConfiguration view)
+    {
+        var source = view.Camera;
+        if (source.Entity == default)
+        {
+            var settings = source.ExternalSettings;
+            return (source.ExternalWorld, settings.CreateViewProjection(source.ExternalWorld, view.Width, view.Height),
+                settings.Layers, settings.ClearColorSrgb);
+        }
+
+        ResourceGuard.Require(source.ExternalWorld == default && source.ExternalSettings == default && world.IsAlive(source.Entity),
+            RenderResourceError.InvalidIdentity, "Camera source is ambiguous or stale.");
+        if (world.TryGetComponent<OrthographicCamera>(source.Entity, out var orthographicSettings))
+        {
+            ContentValidation.Require(!world.HasComponent<PerspectiveCamera>(source.Entity), RenderContentError.InvalidCamera,
+                "A camera entity must have exactly one projection.");
+            var pose = Transform(world, source.Entity, tick).Matrix;
+            return (pose, orthographicSettings.CreateViewProjection(pose, view.Width, view.Height),
+                orthographicSettings.Layers, orthographicSettings.ClearColorSrgb);
+        }
+        var perspectiveSettings = world.GetComponent<PerspectiveCamera>(source.Entity);
+        var perspectivePose = Transform(world, source.Entity, tick).Matrix;
+        return (perspectivePose, perspectiveSettings.CreateViewProjection(perspectivePose, view.Width, view.Height),
+            perspectiveSettings.Layers, perspectiveSettings.ClearColorSrgb);
     }
 
     internal static RenderSnapshotData Capture(Plan plan, Guid viewId, RenderResourceIdentity identity, World world,
@@ -56,7 +74,7 @@ internal static class MeshSnapshotExtraction
         world.Query<MeshRenderer>().ForEach((EntityHandle entity, in MeshRenderer value) =>
         {
             token.ThrowIfCancellationRequested(); var row = Validate(world, entity, value, tick, resources.Manifest);
-            if (!value.Enabled || (value.Layers & plan.Settings.Layers) == 0) return;
+            if (!value.Enabled || (value.Layers & plan.Layers) == 0) return;
             var handle = resources.Handle(value.Mesh);
             for (var i = 0; i < row.Mesh.Slots.Length; i++)
             {
@@ -75,7 +93,7 @@ internal static class MeshSnapshotExtraction
         });
         token.ThrowIfCancellationRequested();
         return new(viewId, identity, scene, sourceRevision, tick, sequence, resources.BindingRevision, deviceGeneration, resources.Manifest.Digest,
-            view, plan.Camera, plan.ViewProjection, plan.Settings.ClearColorSrgb, ImmutableCollectionsMarshal.AsImmutableArray(draws), plan.Bytes);
+            view, plan.Camera, plan.ViewProjection, plan.ClearColorSrgb, ImmutableCollectionsMarshal.AsImmutableArray(draws), plan.Bytes);
     }
 
     private static (MeshDefinition Mesh, MaterialBindingSetDefinition Bindings, WorldTransform World, RenderBounds Bounds)

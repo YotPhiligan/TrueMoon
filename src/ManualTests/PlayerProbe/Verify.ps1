@@ -83,7 +83,11 @@ try{
         [void][IO.Directory]::CreateDirectory("$fresh/$($spec.Name)")
         $refs=($spec.References | ForEach-Object {'<PackageReference Include="'+$_+'" Version="'+$version+'"/>'}) -join '';$output=if($spec.Exe){'<OutputType>Exe</OutputType>'}else{''}
         [IO.File]::WriteAllText("$fresh/$($spec.Name)/Consumer.csproj",'<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'+$output+'<AssemblyName>'+$spec.Assembly+'</AssemblyName><RootNamespace>'+$spec.Namespace+'</RootNamespace></PropertyGroup><ItemGroup>'+$refs+'</ItemGroup></Project>')
-        if($spec.Name -eq 'probe'){Copy-Item -LiteralPath "$PSScriptRoot/Program.cs" -Destination "$fresh/probe/Program.cs"}
+        if($spec.Name -eq 'probe'){
+            foreach($source in @('Program.cs','OrthographicRouteProof.cs')){
+                Copy-Item -LiteralPath "$PSScriptRoot/$source" -Destination "$fresh/probe/$source"
+            }
+        }
         elseif($spec.Name -eq 'publisher'){Copy-Item -LiteralPath "$workspace/ManualTests/RuntimeArtifactTool/Program.cs" -Destination "$fresh/publisher/Program.cs"}
         else{foreach($file in @('MeshGame.cs','FailedMeshGame.cs')){Copy-Item -LiteralPath "$workspace/ManualTests/RenderSurface.Game/$file" -Destination "$fresh/game/$file"}}
         Invoke-Proof ('fresh-restore-'+$spec.Name) @('restore',"$($spec.Name)/Consumer.csproj",'--configfile',"$fresh/NuGet.Config",'--no-http-cache') $fresh -isolated

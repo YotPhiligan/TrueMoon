@@ -1,5 +1,12 @@
 # Aether / Editor: состояние и точка продолжения
 
+21.11.2026 — [ARCH1f.7](PLAN.md#arch1f7-orthographic-camera). В
+поставке `1.2611.21.10-alpha` пакетный Player показал изометрический
+маршрут TrueMoon.Tales из готового Build. Vulkan подтвердил сохранение
+масштаба четырёх ориентиров при 1200×810 → 1560×810, новую surface
+generation и штатное освобождение ресурсов. По 702 render/ECS теста
+прошли в Debug и Release. [Приёмка](HISTORY.md#arch1f7-tales-route-2026-11-21).
+
 21.11.2026 — первый [оконный срез TrueMoon.Tales](PLAN.md#eng7b4-tales-consumer)
 проверен на пакетах `1.2611.21.9-alpha`. В отдельном окне видны изменения от
 игрового ввода. Шесть профилей Player подтвердили native lifecycle и точный

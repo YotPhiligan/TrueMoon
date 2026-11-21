@@ -31,3 +31,24 @@ file после capture; показывает два cube, независимы�
 Расширенная ENG7b.3 matrix завершена в [LaunchProfiles](../LaunchProfiles/README.md):
 combined/separate hosts, повторные Play/Stop/crash, документы/history, CLI и SDK-free
 Player. Этот runner сохраняет отдельный минимальный Player scope.
+
+<a id="orthographic-route"></a>
+## Ортографический маршрут TrueMoon.Tales
+
+Сначала выполните `Verify.ps1 -RepositoryVersion` с точной версией,
+выбранной в игре. Затем используйте полученный `verification.json`.
+
+```powershell
+pwsh -NoProfile -File ManualTests/PlayerProbe/VerifyOrthographicRoute.ps1 `
+    -PlayerVerification <player-verification.json> `
+    -GameSourceDirectory ../../TrueMoon.Tales.Game/src `
+    -ValidationDirectory <Vulkan-layer-directory> `
+    -EvidenceDirectory TestResults/OrthographicRoute/<fresh-run>
+```
+
+Build использует закрытый feed и отдельный пакетный кэш. Player открывает
+артефакт с ортографической сценой и сохраняет кадры до и после resize.
+Проверка сверяет физический размер, актуальную surface generation,
+четыре ориентира, точные ID Build/сцены и счётчики Vulkan после Stop.
+Аргумент `-ProbeAssembly` позволяет повторить проверку новым пробником
+с теми же пакетными DLL.

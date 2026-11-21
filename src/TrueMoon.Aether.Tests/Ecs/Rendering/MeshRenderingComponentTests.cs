@@ -18,7 +18,9 @@ public sealed class MeshRenderingComponentTests
     {
         Assert.Equal(Guid.Parse("6fc9fce0-9547-42f5-b4df-f05f306f1101"), MeshRenderingComponents.MeshRendererId.Value);
         Assert.Equal(Guid.Parse("6fc9fce0-9547-42f5-b4df-f05f306f1102"), MeshRenderingComponents.CameraId.Value);
-        Assert.Equal(new[] { MeshRenderingComponents.MeshRendererId, MeshRenderingComponents.CameraId }, MeshRenderingComponents.Schemas.Select(schema => schema.TypeId));
+        Assert.Equal(Guid.Parse("6fc9fce0-9547-42f5-b4df-f05f306f1103"), MeshRenderingComponents.OrthographicCameraId.Value);
+        Assert.Equal(new[] { MeshRenderingComponents.MeshRendererId, MeshRenderingComponents.CameraId, MeshRenderingComponents.OrthographicCameraId },
+            MeshRenderingComponents.Schemas.Select(schema => schema.TypeId));
         Assert.Equal(3, BuiltInComponents.Schemas.Length);
         Assert.Equal(new[] { "6fc9fce0-9547-42f5-b4df-f05f306f1001", "6fc9fce0-9547-42f5-b4df-f05f306f1002", "6fc9fce0-9547-42f5-b4df-f05f306f1003" },
             BuiltInComponents.Schemas.Select(schema => schema.TypeId.Value.ToString("D")));
@@ -49,17 +51,17 @@ public sealed class MeshRenderingComponentTests
     }
 
     [Fact]
-    public void Register_AddsOnlyTwoExplicitBindingsAndRequiresAnExplicitTransformRegistration()
+    public void Register_AddsOnlyRenderingBindingsAndRequiresAnExplicitTransformRegistration()
     {
         var content = MeshRenderingFixture.Content();
         var builder = new ComponentRegistryBuilder();
         Assert.Same(builder, MeshRenderingComponents.Register(builder, content));
-        Assert.Equal(2, builder.Build().Count);
-        Assert.Equal(6, MeshRenderingFixture.Registry(content).Count);
+        Assert.Equal(3, builder.Build().Count);
+        Assert.Equal(7, MeshRenderingFixture.Registry(content).Count);
         Assert.Throws<ArgumentNullException>(() => MeshRenderingComponents.Register(null!, content));
         Assert.Throws<ArgumentNullException>(() => MeshRenderingComponents.Register(new(), null!));
         Assert.Throws<ArgumentException>(() => MeshRenderingComponents.Register(builder, content));
-        Assert.Equal(2, builder.Build().Count);
+        Assert.Equal(3, builder.Build().Count);
     }
 
     [Fact]

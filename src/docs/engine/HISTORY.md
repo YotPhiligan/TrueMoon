@@ -16822,3 +16822,60 @@ suspend/resume и закрытие. После Stop в каждом профил
   `2A524FBC5987ACE3A928A21553D9E89CCE3D6898EE11D3F9D250DE364A9FDC42`.
   Кадры `before.png`, `interact.png`, `restored.png`.
 - `game-tests/Debug.trx` и `game-tests/Release.trx`.
+
+<a id="arch1f7-tales-route-2026-11-21"></a>
+## 2026-11-21 — ARCH1f.7. Ортографический маршрут TrueMoon.Tales
+
+Движок `1.2611.21.10-alpha`, игра `1.2611.21.2-alpha`, Windows x64,
+SDK 11.0.100. Из чистой копии `8a4e22c` с правками среза прошли
+702 render/ECS теста в каждом Debug и Release. Матрица Player проверила
+17 пакетов, source Debug, published Release и fresh-package Release
+на Cobalt и Microsoft DI. Player и Tooling использовали единый feed.
+
+Игровой Build с отдельным `OrthographicCamera` и 33 точными render-ассетами
+открыт пакетным Player из каталога с опубликованным Build и сценой.
+Window resize 800×540 → 1040×540 логических пикселей при DPI 150% дал
+1200×810 → 1560×810 физических. Surface generation 1 → 2, tick 0 → 2.
+Build ID, сцена и render manifest сохранились. Перенос границ каждого
+из четырёх ориентиров по X составил ровно 180 пикселей, их границы по Y
+и размеры совпали.
+
+| Ориентир | Пиксели до | Пиксели после |
+| --- | ---: | ---: |
+| Улица | 26 810 | 26 810 |
+| Ступени | 11 455 | 11 455 |
+| Крыльцо | 10 610 | 10 610 |
+| Пол комнаты | 10 588 | 10 586 |
+
+Vulkan Validation 0 ошибок и предупреждений. Освобождены 2/2 поверхности
+и 6/6 слотов, live slots и открытые handles равны нулю.
+Исходники и SDK использовались для Build в отдельном процессе.
+Граф окна проверен отдельно от Tooling-графа сборки.
+
+Отчёты в `TestResults/ORTHO-20261121-01`:
+
+- `player/verification.json`, SHA-256
+  `D7323363A0B66B91DB790EF159BE3092EA5E222C0247DEF1D09C228AA42555F6`.
+- `route-04/verification.json`, SHA-256
+  `57394F2B598C2307ABADA431580F59552FAFD323BACB10C8004A0EDC675E3C3B`.
+  Кадры `frames/before-resize.png` и `frames/after-resize.png`.
+- `tests/render-debug.trx` и `tests/render-release.trx`.
+
+Тот же пакетный probe прошёл на текущей игровой рабочей копии
+`1.2611.21.3-alpha` с пандусом, временной фигуркой и ревизией сцены 2.
+Build `F1040609D459489011F6E896D4AC426705ED637C4FA94DB2900D40290E1936A4`
+показан в тех же двух размерах. Границы четырёх ориентиров снова
+сдвинулись ровно на 180 пикселей по X с сохранением размера и Y. Vulkan
+Validation 0/0, 2/2 поверхности и 6/6 слотов освобождены.
+`route-current/verification.json`, SHA-256
+`C17216A32594ADDDB4F4D1EBF7B73C69AF63296F8B4C53CEC3C81A046778DF2D`.
+Кадры и исходный документ сцены сохранены в `route-current`.
+
+Широкая Debug-регрессия в исходной временной копии дала 3 703 из 3 705
+после переноса TEMP из дерева фреймворка. В двух случаях остались
+ошибка запуска SDK из длинного пути внутри репозитория и сбой
+проверки AggregateException при отмене. Отдельный повтор этих методов
+из короткой копии дал 3/3, включая оба параметра SDK-фикстуры.
+`tests/engine-debug-default-temp.trx` и `tests/engine-debug-short-retry.trx`.
+
+[Воспроизведение](../../ManualTests/PlayerProbe/README.md#orthographic-route).
