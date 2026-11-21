@@ -12,6 +12,12 @@ artifact для exact Player identity; нормальный Player/PlayerProbe �
 на Cobalt и Microsoft DI. Fresh consumers расположены вне checkout, имеют offline
 feed, отдельный пустой cache, CPM isolation и ни одного ProjectReference.
 
+Для поставки consumer из чистого дерева добавьте `-RepositoryVersion`. Пакеты
+получат точный `Version` из профиля сборки. После завершения проверки
+`verification.json` фиксирует их пути и SHA-256. Feed находится в
+`RunDirectory/feed`. Указанный `-PackageVerification` использует версию и
+пакеты уже существующей проверенной поставки.
+
 Каждый профиль фиксирует неизменяемые artifact/scene inputs до App; изменяет scene
 file после capture; показывает два cube, независимый tint по W, уменьшение geometry
 по единственному E action; resize/minimize/restore; actual presentation/Playing fence;

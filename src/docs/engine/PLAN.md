@@ -1572,6 +1572,25 @@ ENG7b.3 matrix была отдельным этапом и завершена202
 из нынешней Aether DLL подтверждается после ARCH3.3, не выдаётся за готовое здесь.
 Полный World/ECS и новый DI scope API сами по себе для выбора роли не требуются.
 
+<a id="eng7b4-tales-consumer"></a>
+#### ENG7b.4 — пакетный оконный сценарий TrueMoon.Tales
+
+[TALES-20261110-ae80510f](../requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Decision.md)
+использует существующие ARCH1f.4 и ENG7b.1–3. Приложение вызывает
+`UseAetherPlayer` через App/Cobalt, получает готовый артефакт игровой DLL и
+загружает выбранную сцену в World. Вход из Player проходит через публичный
+`IInputGameSession`. Владелец окна и графики — композиция Player.
+
+- [x] Поставить closure Player и Runtime из одной версии, повторить native
+  матрицу на source Debug, published Release и свежем NuGet feed.
+- [x] Собрать TrueMoon.Tales из пакетов, показать техническую сцену и два
+  действия `E` в окне, сверить контрольный объект и штатное закрытие.
+  [Приёмка 21.11.2026](HISTORY.md#eng7b4-tales-consumer-2026-11-21).
+- [ ] Для standalone Player определить смену сцены или сборки и явные
+  outcomes rollback. Проверить repeated launch и failed startup на игровом
+  потребителе, сверяя освобождение ресурсов. Device loss остаётся отдельным
+  профилем.
+
 ### Модель мира и наследование
 
 - World содержит Entity с устойчивыми IDs, Components и отдельной parent/child

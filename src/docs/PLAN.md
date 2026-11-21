@@ -108,7 +108,12 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-19
+## Текущая очередь — актуализация 2026-11-21
+
+[TrueMoon.Tales](engine/PLAN.md#eng7b4-tales-consumer) проверен в собственном
+окне на пакетах с загрузкой World и игровым вводом. Следующие шаги —
+смена сцены или сборки в standalone Player и содержательная сцена игры.
+[Решение по заявке](requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Decision.md).
 
 [ARCH1g.2n](engine/PLAN.md#arch1g2n-project-model-catalog) добавляет список
 импортированных моделей проекта и выбор ресурсов для открытой сцены.

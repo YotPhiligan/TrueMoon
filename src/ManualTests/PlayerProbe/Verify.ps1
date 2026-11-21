@@ -1,5 +1,10 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$ValidationDirectory,[Parameter(Mandatory)][string]$EvidenceDirectory,[string]$PackageVerification)
+param(
+    [Parameter(Mandatory)][string]$ValidationDirectory,
+    [Parameter(Mandatory)][string]$EvidenceDirectory,
+    [string]$PackageVerification,
+    [switch]$RepositoryVersion
+)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
@@ -13,7 +18,7 @@ foreach($file in @('VkLayer_khronos_validation.json','VkLayer_khronos_validation
 foreach($directory in @($evidence,$run,"$run/feed","$run/cache","$run/unrelated working directory")){[void][IO.Directory]::CreateDirectory($directory)}
 $profile=Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $sharedDelivery=Import-TrueMoonPackageDelivery -Manifest $PackageVerification -Profile $profile
-$version=if($sharedDelivery){$sharedDelivery.Version}else{$profile.Version+'.player.'+(Get-Date -Format 'yyyyMMddHHmmss')}
+$version=if($sharedDelivery){$sharedDelivery.Version}elseif($RepositoryVersion){$profile.Version}else{$profile.Version+'.player.'+(Get-Date -Format 'yyyyMMddHHmmss')}
 $packages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Hosting','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Player')
 $report=[ordered]@{Completed=$false;Stage='ARCH3.3 Player';Version=$version;BuildProfile=$profile;RunDirectory=$run;Commands=@();Packages=@();Graphs=@();Profiles=@();Sources=@();Failure=$null}
 function Save-Report{$report | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath "$evidence/verification.json" -Encoding utf8}

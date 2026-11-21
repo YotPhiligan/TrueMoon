@@ -16790,3 +16790,35 @@ SHA256 `97549DCB8C5BF8585BD495769B5E63A0AE9CC0F934BF1FD16B6A60205D3B602F`.
 TRX сохранены в `tests`, проверенные кадры Release Cobalt — в `frames`
 того же каталога.
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#edit-meshrenderer-visibility-and-layers).
+
+<a id="eng7b4-tales-consumer-2026-11-21"></a>
+## 2026-11-21 — ENG7b.4. Первый пакетный Player для TrueMoon.Tales
+
+Пакеты `1.2611.21.9-alpha` собраны из чистого дерева `499f5fa`,
+`net11.0`, SDK 11.0.100, runtime-async. `PlayerProbe/Verify.ps1`
+с `-RepositoryVersion` проверил 17 пакетов, source Debug, published
+Release и fresh-package Release на Cobalt и Microsoft DI. По пять кадров
+в каждом из шести профилей. Проверены Playing, игровое действие, resize,
+suspend/resume и закрытие. После Stop в каждом профиле Vulkan сообщил
+0/0 ошибок и предупреждений, 0 live slots, handles и surfaces.
+Эти счётчики относятся к PlayerProbe.
+
+Игра `1.2611.21.1-alpha` проверена в изолированной Release-сборке.
+Оба графа restore, хост и gameplay, получены из закрытого feed с отдельным
+пакетным кэшем. В них 0 ProjectReference и нет Editor/Tooling. Publisher
+из той же поставки создал артефакт для точного хоста. Тестовая сцена
+прошла через компиляцию игрового артефакта, загрузку в ECS World и
+показ в собственном окне. Адресные Win32 сообщения привели к двум
+действиям `E`. Кадры до и после второго действия совпали по SHA-256.
+Контрольный объект сохранил 3 124 зелёных пикселя. Закрытие окна вернуло
+код 0. Смоук игры прошёл по одному тесту в Debug и Release.
+
+Снимки экрана игры и readback из PlayerProbe сохранены раздельно в
+`TestResults/TALES-game-loop-20261121-01`.
+
+- `player/verification.json`, SHA-256
+  `D41461F8653F0279032872A84054840E523E5CA4D9CBD28C72A88FF249F7335D`.
+- `game-native/verification.json`, SHA-256
+  `2A524FBC5987ACE3A928A21553D9E89CCE3D6898EE11D3F9D250DE364A9FDC42`.
+  Кадры `before.png`, `interact.png`, `restored.png`.
+- `game-tests/Debug.trx` и `game-tests/Release.trx`.
