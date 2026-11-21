@@ -31,6 +31,8 @@ public sealed class TextBox : Element
     /// <inheritdoc />
     protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : IsReadOnly ? Theme.ReadOnly : Theme.Input;
     /// <inheritdoc />
+    protected override bool UsesThemedControlBackdrop => true;
+    /// <inheritdoc />
     protected override float ThemeBorderWidth => Theme.BorderWidth;
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.EditorPadding;

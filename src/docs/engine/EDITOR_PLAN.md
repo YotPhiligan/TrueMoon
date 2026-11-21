@@ -815,6 +815,15 @@ stop/cancel остаются наблюдаемыми и drainable. Preview и �
 Path draft и unsaved decision сохраняются; общие file picker/project wizard не
 добавляются скрытым условием этого шага. New/Open/Save/Close shortcuts сохраняются.
 
+21.11.2026 — в заголовок добавлены Open, Save, Undo и Redo с теми же командами,
+что в меню. Все семь значков панели используют векторные контуры размером
+16 логических пикселей. В узком заголовке четыре документных действия доступны
+через меню. [План и приёмка Alloy PA8c.2a](../alloy/PLAN.md#pa8c2a-vector-icons).
+
+В PA8c.2b на общий каталог контуров перешли оконные кнопки, меню, дерево,
+инспектор, статус и валидация. Знак перед меню изображает Аргентис.
+[Каталог и результаты](../alloy/PLAN.md#pa8c2b-vector-catalog).
+
 View/Data/Style и UI-owner factories — через App/Cobalt/IFactory. Общие Menu/
 Overlay/animation/icon contracts реализуются в [PA3a/PA4a/PA8b UI](../alloy/PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23).
 Сначала общая основа и deterministic tests, затем Editor integration/native proof:

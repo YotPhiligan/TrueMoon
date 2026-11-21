@@ -16,6 +16,7 @@ public sealed class SettingsModel : ViewModel
     private readonly RowCollection _rows = new() { new("Первое дело"), new("Проверить 🧑‍💻"), new("Третье дело") };
     private LoadStatus _loadStatus = LoadStatus.Ready;
     private bool _isLight, _isCompact, _controlsEnabled = true;
+    internal bool UseSquareOpaqueAppearance { get; init; }
 
     /// <summary>Whether the light palette is selected.</summary>
     public bool IsLight { get => _isLight; set { if (_isLight == value) return; _isLight = value; NotifyAppearance(nameof(IsLight)); } }
@@ -27,7 +28,9 @@ public sealed class SettingsModel : ViewModel
     public Theme Appearance => (IsLight ? Theme.Light : Theme.Dark) with
     {
         ButtonPadding = IsCompact ? new Thickness(8, 4, 8, 4) : new Thickness(12, 8, 12, 8),
-        EditorPadding = new Thickness(IsCompact ? 4 : 8), StackSpacing = IsCompact ? 6 : 12
+        EditorPadding = new Thickness(IsCompact ? 4 : 8), StackSpacing = IsCompact ? 6 : 12,
+        ControlTintAlpha = UseSquareOpaqueAppearance ? (byte)255 : Theme.Dark.ControlTintAlpha,
+        EditorCornerRadius = UseSquareOpaqueAppearance ? 0 : Theme.Dark.EditorCornerRadius
     };
     /// <summary>Selects the light palette.</summary>
     public void UseLight() => IsLight = true;

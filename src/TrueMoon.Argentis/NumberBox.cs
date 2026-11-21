@@ -81,9 +81,9 @@ public sealed class NumberBox : ElementList
     {
         if (!AdjustmentEnabled || Prefix.Value.Length != 0 || DragBounds.Width <= 0) return;
         var color = Editor.IsEffectivelyEnabled && !Editor.IsReadOnly ? Theme.EditorColor(ColorRole) : Theme.Disabled;
-        var x = DragBounds.X + DragBounds.Width / 2; var y = DragBounds.Y + DragBounds.Height / 2;
-        context.Fill(new(x - 4, y, 8, 1), color);
-        for (var i = 0; i < 3; i++) { context.Fill(new(x - 4 + i, y - i, 1, 1 + 2 * i), color); context.Fill(new(x + 3 - i, y - i, 1, 1 + 2 * i), color); }
+        var size = Math.Min(12, Math.Min(DragBounds.Width, DragBounds.Height));
+        UiSymbols.Draw(context, UiSymbol.AdjustHorizontal,
+            new(DragBounds.X + (DragBounds.Width - size) / 2, DragBounds.Y + (DragBounds.Height - size) / 2, size, size), color);
     }
     private bool Allowed => AdjustmentEnabled && IsEffectivelyEnabled && Editor.IsEffectivelyEnabled && !Editor.IsReadOnly && (CanAdjust?.Invoke() ?? true);
     private double EffectiveStep(bool shift, bool control) =>

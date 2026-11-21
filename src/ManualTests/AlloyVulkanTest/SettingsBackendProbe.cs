@@ -62,7 +62,7 @@ internal static class SettingsBackendProbe
     private static Result Exercise(IRenderBackend backend, UiRenderTarget target, UiViewport viewport, Func<UiSession, byte[]> read,
         SettingsGoldenProbe? golden, string backendName)
     {
-        var model = new SettingsModel(); var view = new View1(model); var script = new SettingsFormSmoke();
+        var model = new SettingsModel { UseSquareOpaqueAppearance = golden != null }; var view = new View1(model); var script = new SettingsFormSmoke();
         var states = new List<string>(); var bounds = new List<Rect>(); var draws = 0;
         using var ui = UiSession.Create(golden == null ? view : SettingsGoldenProbe.Wrap(view), backend, target, viewport);
         for (var frame = 0; frame < 40; frame++)
@@ -85,10 +85,13 @@ internal static class SettingsBackendProbe
         Select(2, 2); // Theme background, away from glyphs/antialiased edges.
         var button = view.DarkButton.Bounds;
         Select(button.X + button.Width - 6, button.Y + button.Height / 2);
-        Select(view.Logo.Bounds.X + 3, view.Logo.Bounds.Y + 3);
+        var logo = view.Logo.Bounds;
+        Select(logo.X + (golden == null ? 35 : 3), logo.Y + (golden == null ? 19 : 3));
         Select(view.Meter.Bounds.X + 2, view.Meter.Bounds.Y + 2);
         Select(view.RowScroll.Bounds.X + 2, view.RowScroll.Bounds.Y + 2);
         Require(selected[3] == 255 && selected[7] == 255 && selected[11] == 255, "Settings background/button/image became transparent.");
+        if (golden == null) Require(selected[8] == 244 && selected[9] == 240 && selected[10] == 245,
+            "The settings header did not paint the silver Argentis disc.");
         ui.Dispose(); script.VerifyDisposed();
         var preserved = model.Name; model.Name = "After disposal"; model.AddRow();
         Require(view.NameEditor.Value == preserved && view.RowList.IsDisposed, "Disposed settings still observed the model.");

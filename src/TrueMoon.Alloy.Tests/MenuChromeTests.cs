@@ -64,19 +64,12 @@ public sealed class MenuChromeTests
     }
 
     [Fact]
-    public void TrueMoonSymbol_PaintsCrescentAndLeavesTheCutoutTransparent()
+    public void TrueMoonSymbol_UsesABoundedLunarDiscInTheGeometryFallback()
     {
         var drawing = new SymbolDrawing();
         UiSymbols.Draw(drawing, UiSymbol.TrueMoon, new(0, 0, 12, 12), new(80, 150, 240));
-        Assert.Contains(drawing.Marks, mark => mark.Contains(2, 6));
-        Assert.DoesNotContain(drawing.Marks, mark => mark.Contains(7, 4));
+        Assert.Equal(new Rect(1, 1, 10, 10), Assert.Single(drawing.Marks));
         Assert.Equal(0, drawing.TextCalls);
-        Assert.All(drawing.Marks, mark =>
-        {
-            Assert.True(mark.Width > 0 && mark.Height > 0);
-            Assert.InRange(mark.X, 0, 12); Assert.InRange(mark.Y, 0, 12);
-            Assert.True(mark.X + mark.Width <= 12 && mark.Y + mark.Height <= 12);
-        });
     }
 
     [Fact]

@@ -79,7 +79,8 @@ public sealed partial class OverlayHost
     private sealed class ValidationHintSurface : Border
     {
         public ValidationHintSurface() { Padding = new(8); CornerRadius = 4; FontSize = 12; }
-        protected override Color ThemeBackground => Theme.Surface;
+        protected override BackdropMaterial? ThemeBackdrop => Theme.MenuBackdrop;
+        protected override Color ThemeBackground => Backdrop == null ? Theme.Surface : Color.Transparent;
         protected override BoxShadow? ThemeShadow => Theme.MenuShadow;
     }
     private sealed class ValidationHintText(string value) : Text(value)

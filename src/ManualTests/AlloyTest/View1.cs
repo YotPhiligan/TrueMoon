@@ -18,7 +18,7 @@ public sealed class View1 : View<SettingsModel>
     internal CheckBox CompactToggle { get; }
     internal CheckBox EditingToggle { get; }
     internal VolumeMeter Meter { get; }
-    internal Image Logo { get; }
+    internal Element Logo { get; }
     internal VStack SettingsFields { get; }
 
     /// <summary>Creates the retained form for a model supplied by DI.</summary>
@@ -26,9 +26,14 @@ public sealed class View1 : View<SettingsModel>
     public View1(SettingsModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
-        var logoSource = new SkiaImageSource(Path.Combine(AppContext.BaseDirectory, "Assets", "alloy-mark.png"));
-        Own(logoSource);
-        Logo = new Image { Source = logoSource, Width = 48, Height = 48 };
+        if (model.UseSquareOpaqueAppearance)
+        {
+            var logoSource = new SkiaImageSource(Path.Combine(AppContext.BaseDirectory, "Assets", "alloy-mark.png"));
+            Own(logoSource);
+            Logo = new Image { Source = logoSource };
+        }
+        else Logo = new LogoMark();
+        Logo.Width = Logo.Height = 48;
         LightButton = Button.Simple("Светлая").OnClick(model.UseLight);
         DarkButton = new Button("Тёмная").OnClick(model.UseDark);
         CompactToggle = CheckBox.Create("Компактно").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.IsCompact);
@@ -77,6 +82,12 @@ public sealed class View1 : View<SettingsModel>
                 RowScroll
             ));
         this.Bind(AppearanceProperty, model, x => x.Appearance);
+    }
+
+    private sealed class LogoMark : Element
+    {
+        protected override void DrawCore(IDrawingContext context) =>
+            UiSymbols.Draw(context, UiSymbol.TrueMoon, Bounds, Foreground);
     }
 
     /// <inheritdoc />

@@ -83,6 +83,8 @@ public sealed class WindowFrame : Element, IUiFrameParticipant
     /// <inheritdoc />
     protected override Color ThemeBackground => _grip == null ? Color.Transparent : Theme.Surface;
     /// <inheritdoc />
+    protected override WindowGradient? ThemeBackgroundGradient => _grip == null ? null : Theme.WindowGradient;
+    /// <inheritdoc />
     protected override void OnPropertyChanged(object property)
     {
         base.OnPropertyChanged(property);

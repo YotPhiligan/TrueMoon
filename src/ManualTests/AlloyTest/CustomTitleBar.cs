@@ -12,10 +12,11 @@ internal sealed class CustomTitleBar : Panel
     internal CustomTitleBar(IWindowCommands commands)
     {
         Height = 44; Padding = new Thickness(8); WindowRegion = WindowRegionRole.Caption;
-        _minimize = new Button("—").OnClick(commands.Minimize);
-        _maximize = new Button("□") { WindowRegion = WindowRegionRole.Maximize }.OnClick(() =>
+        _minimize = new IconButton(UiSymbol.Minimize, "Свернуть") { Width = 40 }.OnClick(commands.Minimize);
+        _maximize = new IconButton(UiSymbol.Maximize, "Развернуть или восстановить")
+        { Width = 40, WindowRegion = WindowRegionRole.Maximize }.OnClick(() =>
         { if (commands.State == UiWindowState.Maximized) commands.Restore(); else commands.Maximize(); });
-        _close = new Button("×").OnClick(commands.Close);
+        _close = new IconButton(UiSymbol.Close, "Закрыть") { Width = 40 }.OnClick(commands.Close);
         Add(_title); Add(_note); Add(_minimize); Add(_maximize); Add(_close);
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text)

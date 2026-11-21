@@ -24,7 +24,8 @@ public sealed class CheckBox : Button
     /// <inheritdoc />
     protected override Color ThemeForeground => Theme.Foreground;
     /// <inheritdoc />
-    protected override Color ThemeBackground => IsReadOnly ? Theme.ReadOnly : IsEffectivelyEnabled && IsHovered ? Theme.ControlHover : Color.Transparent;
+    protected override Color ThemeBackground => IsReadOnly ? Theme.ReadOnly : IsEffectivelyEnabled && IsHovered ? Theme.ControlHover :
+        Theme.ControlTintAlpha == 255 ? Color.Transparent : IsEffectivelyEnabled ? Theme.Control : Theme.ControlDisabled;
     /// <summary>The current value.</summary>
     public bool IsChecked { get => Get(IsCheckedProperty); set => Set(IsCheckedProperty, value); }
     /// <inheritdoc />
@@ -51,6 +52,8 @@ public sealed class CheckBox : Button
 /// <summary>A horizontal progress indicator in the inclusive range zero to one.</summary>
 public class ProgressBar : Element
 {
+    /// <inheritdoc />
+    protected override bool UsesThemedControlBackdrop => true;
     /// <inheritdoc />
     protected override Color ThemeBackground => IsEffectivelyEnabled ? Theme.Control : Theme.ControlDisabled;
     /// <inheritdoc />
@@ -79,7 +82,7 @@ public sealed class Slider : ProgressBar
     /// <inheritdoc />
     protected override float ThemeBorderWidth => 0;
     /// <inheritdoc />
-    protected override Color ThemeBackground => Color.Transparent;
+    protected override Color ThemeBackground => Theme.ControlTintAlpha == 255 ? Color.Transparent : base.ThemeBackground;
     /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {

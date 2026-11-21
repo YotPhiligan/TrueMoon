@@ -42,7 +42,7 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     public bool FontItalic { get; init; }
     private Thickness _buttonPadding = new(12, 8, 12, 8), _editorPadding = new(8);
     private float _stackSpacing;
-    private float _cornerRadius, _borderWidth = 1;
+    private float _cornerRadius, _editorCornerRadius = 5, _borderWidth = 1, _controlBlurSigma = 4;
     /// <summary>Normal meaningful outline, also used for inactive window framing.</summary>
     public Color Border { get; init; } = new(104, 121, 144);
     /// <summary>Hovered neutral control surface.</summary>
@@ -55,10 +55,24 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     public Color Input { get; init; } = new(22, 28, 38);
     /// <summary>Read-only field surface.</summary>
     public Color ReadOnly { get; init; } = new(27, 34, 45);
+    /// <summary>Tint alpha for themed control backgrounds. Use 255 for solid control backgrounds.</summary>
+    public byte ControlTintAlpha { get; init; } = 232;
+    /// <summary>Blur in logical pixels for a control drawn over an untreated background. Zero uses the tint alone.</summary>
+    public float ControlBlurSigma
+    {
+        get => _controlBlurSigma;
+        init
+        {
+            if (!float.IsFinite(value) || value is < 0 or > 64) throw new ArgumentOutOfRangeException(nameof(value));
+            _controlBlurSigma = value;
+        }
+    }
     /// <summary>Frosted menu surface; null selects the ordinary opaque Surface fill.</summary>
     public BackdropMaterial? MenuBackdrop { get; init; } = new(12, new(18, 22, 30, 176), new(18, 22, 30));
     /// <summary>Frosted persistent panel surface; null lets a consumer select its opaque Surface fill.</summary>
     public BackdropMaterial? PanelBackdrop { get; init; } = new(8, new(18, 22, 30, 208), new(18, 22, 30));
+    /// <summary>Static underlay for the default window and empty editor viewport; null uses a solid fill.</summary>
+    public WindowGradient? WindowGradient { get; init; }
     /// <summary>Outer shadow for semantic panels; layout containers opt in through their style.</summary>
     public BoxShadow? PanelShadow { get; init; } = new(5, 0, 3, new(0, 0, 0, 90));
     /// <summary>Outer shadow for menus and transient hints.</summary>
@@ -97,6 +111,8 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     public Color OnAccent { get; init; } = new(255, 255, 255);
     /// <summary>Corner radius in logical units; default style has square corners.</summary>
     public float CornerRadius { get => _cornerRadius; init { UiProperties.CornerRadius.Validate(value); _cornerRadius = value; } }
+    /// <summary>Default corner radius of single-line and rich text editors, in logical units.</summary>
+    public float EditorCornerRadius { get => _editorCornerRadius; init { UiProperties.CornerRadius.Validate(value); _editorCornerRadius = value; } }
     /// <summary>Control outline width in logical units; drawn inside bounds.</summary>
     public float BorderWidth { get => _borderWidth; init { UiProperties.BorderWidth.Validate(value); _borderWidth = value; } }
     /// <summary>Default padding of buttons; check boxes add room for their indicator.</summary>
@@ -106,7 +122,10 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     /// <summary>Default distance between visible stack children; zero preserves the original layout default.</summary>
     public float StackSpacing { get => _stackSpacing; init { UiProperties.Spacing.Validate(value); _stackSpacing = value; } }
     /// <summary>The default dark palette.</summary>
-    public static Theme Dark { get; } = new(new(18, 22, 30), new(32, 40, 52), new(24, 104, 178), new(231, 237, 245), new(142, 154, 170));
+    public static Theme Dark { get; } = new(new(18, 22, 30), new(32, 40, 52), new(24, 104, 178), new(231, 237, 245), new(142, 154, 170))
+    {
+        WindowGradient = new(new(32, 54, 87), new(55, 41, 75), new(25, 65, 67))
+    };
     /// <summary>A light palette.</summary>
     public static Theme Light { get; } = new(new(242, 245, 250), new(255, 255, 255), new(24, 104, 178), new(24, 34, 49), new(92, 105, 122))
     {
@@ -120,6 +139,7 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
         AxisX = new(171, 48, 65), AxisY = new(30, 117, 55), AxisZ = new(32, 99, 175),
         MenuBackdrop = new(12, new(242, 245, 250, 192), new(242, 245, 250)),
         PanelBackdrop = new(8, new(242, 245, 250, 216), new(242, 245, 250)),
+        WindowGradient = new(new(197, 221, 248), new(230, 208, 241), new(184, 224, 221)),
         PanelShadow = new(5, 0, 3, new(20, 30, 45, 48)),
         MenuShadow = new(7, 0, 4, new(20, 30, 45, 76))
     };

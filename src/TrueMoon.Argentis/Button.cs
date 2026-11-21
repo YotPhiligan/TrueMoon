@@ -18,6 +18,8 @@ public class Button : Text
     /// <inheritdoc />
     protected override Color ThemeForeground => Tone == ControlTone.Neutral ? Theme.Foreground : Theme.OnAccent;
     /// <inheritdoc />
+    protected override bool UsesThemedControlBackdrop => true;
+    /// <inheritdoc />
     protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : Tone == ControlTone.Neutral
         ? _pressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Theme.Control
         : Theme.Mix(Theme.ActionColor(Tone), _pressed ? new Color(0, 0, 0) : new Color(255, 255, 255), _pressed ? .16f : IsHovered ? .08f : 0);

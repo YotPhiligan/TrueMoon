@@ -63,19 +63,23 @@ public sealed class ValidationPresentationTests
     }
 
     [Theory] [InlineData(false)] [InlineData(true)]
-    public void ValidationBadge_FillsEntireSquareWithContrastingCenteredSymbolAndSeparateFocus(bool light)
+    public void ValidationBadge_SitsInsideRoundedEditorWithContrastingSymbolAndSeparateFocus(bool light)
     {
         using var t = new Fixture(); var theme = light ? Theme.Light : Theme.Dark;
         t.Ui.SetTheme(theme); t.Field.HasError = true; t.Ui.Focus(t.Field); t.Ui.Update();
         var drawing = new Drawing(); t.Field.Draw(drawing);
-        Assert.Contains((new Rect(160, 0, 40, 40), theme.Error), drawing.Fills);
+        Assert.Equal(5, t.Field.CornerRadius);
+        Assert.Equal(new Rect(160, 0, 40, 40), t.Field.ValidationIconBounds);
+        Assert.Contains((new Rect(169.5f, 6, 28, 28), theme.Error), drawing.Fills);
         var symbols = drawing.Fills.Where(fill => fill.Color == theme.OnError && fill.Bounds.X >= 160).ToArray(); Assert.NotEmpty(symbols);
-        Assert.All(symbols, fill => { Assert.InRange(fill.Bounds.X, 173, 187); Assert.InRange(fill.Bounds.Y, 13, 27); });
+        Assert.All(symbols, fill => { Assert.InRange(fill.Bounds.X, 176.5f, 190.5f); Assert.InRange(fill.Bounds.Y, 13, 27); });
         Assert.Contains((new Rect(2, 2, 156, 36), theme.Focus, 2f), drawing.Strokes);
         Assert.True(Contrast(theme.Error, theme.OnError) >= 4.5);
         using var image = t.Ui.SnapshotRasterImage(); using var bitmap = SKBitmap.FromImage(image);
-        var pixel = bitmap.GetPixel(162, 3); Assert.Equal(new SKColor(theme.Error.R, theme.Error.G, theme.Error.B), pixel);
-        // The whole colored block is the tooltip target, including space outside the glyph.
+        var error = new SKColor(theme.Error.R, theme.Error.G, theme.Error.B);
+        Assert.Equal(error, bitmap.GetPixel(183, 10));
+        Assert.NotEqual(error, bitmap.GetPixel(162, 3));
+        // The reserved right-edge region still triggers the tooltip, including the inset.
         t.Ui.HandleInput(new(InputKind.PointerMove, 162, 3)); t.Clock.Add(500); t.Ui.Update();
         Assert.NotNull(t.Host.Popup); Assert.True(t.Field.IsFocused);
         static double Contrast(Color a, Color b)

@@ -70,8 +70,13 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Thickness ThemePadding => default;
     /// <summary>Background when no local/style value is supplied.</summary>
     protected virtual Color ThemeBackground => Color.Transparent;
+    /// <summary>Optional gradient replacing the default background fill on a window surface.</summary>
+    protected virtual WindowGradient? ThemeBackgroundGradient => null;
     /// <summary>Optional background material when no local or styled value is supplied.</summary>
     protected virtual BackdropMaterial? ThemeBackdrop => null;
+    /// <summary>Whether to apply the theme's glass treatment to the default background.</summary>
+    protected virtual bool UsesThemedControlBackdrop => false;
+    private BackdropMaterial? _themedControlBackdrop;
     /// <summary>Outer shadow when no local or styled value is supplied.</summary>
     protected virtual BoxShadow? ThemeShadow => null;
     /// <summary>Foreground when no local/style value is supplied.</summary>
@@ -174,7 +179,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (ReferenceEquals(property, UiProperties.Backdrop)) return (T)(object?)ThemeBackdrop!;
         if (ReferenceEquals(property, UiProperties.Shadow)) return (T)(object?)ThemeShadow!;
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
-        if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)Theme.CornerRadius;
+        if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)(SupportsValidationIcon ? Theme.EditorCornerRadius : Theme.CornerRadius);
         if (ReferenceEquals(property, UiProperties.BorderWidth)) return (T)(object)ThemeBorderWidth;
         if (ReferenceEquals(property, UiProperties.BorderColor)) return (T)(object)ThemeBorderColor;
         if (ReferenceEquals(property, UiProperties.FontSize)) return (T)(object)Theme.FontSize;
@@ -468,7 +473,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Arranges custom content inside the padded bounds.</summary>
     protected virtual void ArrangeCore(Rect contentBounds) { }
     /// <summary>Draws this subtree with balanced clipping state.</summary>
-    public void Draw(IDrawingContext context)
+    public void Draw(IDrawingContext context) => Draw(context, overBackdrop: false);
+
+    private void Draw(IDrawingContext context, bool overBackdrop)
     {
         if (!IsVisible || Opacity == 0 || Bounds.Width <= 0 || Bounds.Height <= 0) return;
         context.Save();
@@ -478,43 +485,58 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             if (Opacity < 1 && context is IOpacityDrawingContext composite)
             {
                 composite.SaveOpacity(Shadow?.PaintBounds(Bounds) ?? Bounds, Opacity);
-                try { DrawSurface(context); }
+                try { DrawSurface(context, overBackdrop); }
                 finally { context.Restore(); }
             }
-            else DrawSurface(context);
+            else DrawSurface(context, overBackdrop);
         }
         finally { context.Restore(); }
     }
-    private void DrawSurface(IDrawingContext context)
+    private void DrawSurface(IDrawingContext context, bool overBackdrop)
     {
         if (Shadow is { Color.A: > 0 } shadow && context is IShadowDrawingContext drawing)
             drawing.DrawShadow(Bounds, shadow, CornerRadius);
         if (Shadow != null) context.Clip(Bounds);
-        DrawContents(context);
+        DrawContents(context, overBackdrop);
     }
-    private void DrawContents(IDrawingContext context)
+    private void DrawContents(IDrawingContext context, bool overBackdrop)
     {
-        if (Backdrop is { } material &&
-            (context is not IBackdropDrawingContext backdrop || !backdrop.TryDrawBackdrop(Bounds, material, CornerRadius)))
-            context.Fill(Bounds, material.Fallback, CornerRadius);
-        if (Background.A != 0) context.Fill(Bounds, Background, CornerRadius);
+        overBackdrop = DrawBackground(context, overBackdrop);
         DrawCore(context);
         var childClip = ChildClipBounds;
         if (Children.Count != 0 && childClip != Bounds)
         {
             context.Save();
-            try { context.Clip(childClip); foreach (var child in Children) child.Draw(context); }
+            try { context.Clip(childClip); foreach (var child in Children) child.Draw(context, overBackdrop); }
             finally { context.Restore(); }
         }
-        else foreach (var child in Children) child.Draw(context);
+        else foreach (var child in Children) child.Draw(context, overBackdrop);
         var badge = ValidationIconBounds;
-        if (badge.Width > 0) context.Fill(badge, Theme.Error);
-        if (BorderWidth > 0) context.Stroke(Bounds.Deflate(new Thickness(BorderWidth / 2)), BorderColor, BorderWidth, CornerRadius);
+        var radius = CornerRadius;
+        var plate = badge;
+        if (badge.Width > 0)
+        {
+            if (radius > 0)
+            {
+                var inset = Math.Min(Math.Max(BorderWidth + 1, radius / 2), Math.Min(badge.Width, badge.Height) / 4);
+                var available = badge.Deflate(new Thickness(inset));
+                var size = Math.Min(28, Math.Min(available.Width, available.Height));
+                plate = new(available.X + available.Width - size, available.Y + (available.Height - size) / 2, size, size);
+            }
+            context.Fill(plate, Theme.Error, Math.Min(radius, Math.Min(plate.Width, plate.Height) / 2));
+        }
+        if (BorderWidth > 0)
+        {
+            var inset = BorderWidth / 2;
+            context.Stroke(Bounds.Deflate(new Thickness(inset)), BorderColor, BorderWidth,
+                SupportsValidationIcon ? Math.Max(0, radius - inset) : radius);
+        }
         if (HasError && SupportsValidationIcon)
         {
-            var size = Math.Max(0, Math.Min(14, Math.Min(badge.Width - 4, badge.Height - 4)));
+            var space = Math.Min(plate.Width, plate.Height);
+            var size = Math.Min(14, radius > 0 ? space * .65f : Math.Max(0, space - 4));
             if (size > 0) UiSymbols.Draw(context, UiSymbol.Warning,
-                new(badge.X + (badge.Width - size) / 2, badge.Y + (badge.Height - size) / 2, size, size), Theme.OnError);
+                new(plate.X + (plate.Width - size) / 2, plate.Y + (plate.Height - size) / 2, size, size), Theme.OnError);
         }
         else if (HasError)
         {
@@ -524,9 +546,57 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (IsFocused && IsEffectivelyEnabled)
         {
             var focus = badge.Width > 0 ? Bounds with { Width = Math.Max(0, badge.X - Bounds.X) } : Bounds;
-            if (focus.Width > 4 && focus.Height > 4) context.Stroke(focus.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
+            if (focus.Width > 4 && focus.Height > 4)
+                context.Stroke(focus.Deflate(new Thickness(2)), Theme.Focus, 2, SupportsValidationIcon ? Math.Max(0, radius - 2) : radius);
         }
     }
+
+    private bool DrawBackground(IDrawingContext context, bool overBackdrop)
+    {
+        var backdrop = context as IBackdropDrawingContext;
+        var material = Backdrop;
+        var radius = CornerRadius;
+        if (material != null)
+        {
+            if (backdrop != null && backdrop.TryDrawBackdrop(Bounds, material, radius))
+                overBackdrop = material.Tint.A < 255 && (material.BlurSigma > 0 || overBackdrop);
+            else
+            {
+                context.Fill(Bounds, material.Fallback, radius);
+                overBackdrop = false;
+            }
+        }
+
+        var color = Background;
+        if (color.A == 0) return overBackdrop;
+        if (material == null && ThemeBackgroundGradient is { } gradient &&
+            !OverridesAppearance(UiProperties.Background) &&
+            context is IWindowGradientDrawingContext window && window.TryDrawWindowGradient(Bounds, gradient, radius))
+            return false;
+        if (UsesThemedControlBackdrop && backdrop != null && color.A == 255 && Theme.ControlTintAlpha < 255 &&
+            material == null && !OverridesAppearance(UiProperties.Backdrop) && !OverridesAppearance(UiProperties.Background))
+        {
+            // Keep white action labels readable even when glass samples a bright backdrop.
+            var alpha = IsEffectivelyEnabled && Tone != ControlTone.Neutral
+                ? Math.Max(Theme.ControlTintAlpha, (byte)250) : Theme.ControlTintAlpha;
+            var tint = color with { A = alpha };
+            if (overBackdrop || Theme.ControlBlurSigma == 0)
+            {
+                context.Fill(Bounds, tint, radius);
+                return overBackdrop;
+            }
+
+            var cached = _themedControlBackdrop;
+            if (cached == null || cached.Tint != tint || cached.BlurSigma != Theme.ControlBlurSigma)
+                _themedControlBackdrop = cached = new(Theme.ControlBlurSigma, tint, color);
+            if (backdrop.TryDrawBackdrop(Bounds, cached, radius)) return true;
+        }
+        context.Fill(Bounds, color, radius);
+        return overBackdrop && color.A < 255;
+    }
+
+    private bool OverridesAppearance<T>(UiProperty<T> property) =>
+        _values.ContainsKey(property) || _style?.TryGet(property, out _) == true || _viewStyle?.TryGet(property, out _) == true;
     /// <summary>Draws custom content before children.</summary>
     protected virtual void DrawCore(IDrawingContext context) { }
     /// <summary>Handles a routed input event, returning true when consumed.</summary>

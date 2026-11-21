@@ -302,19 +302,23 @@ public sealed class RasterRenderingTests
         var root = new Panel(); var button = ButtonAt(); root.Add(button);
         using var ui = Create(root); ui.Update();
         using var dark = ui.SnapshotRasterImage();
-        var color = Theme.Dark.Control;
-        Assert.Equal(new byte[] { color.R, color.G, color.B, color.A }, Pixel(dark, 74, 20));
+        CheckTint(dark, Theme.Dark.Control, Theme.Dark.ControlTintAlpha);
         ui.SetTheme(Theme.Light); ui.Update();
         using var light = ui.SnapshotRasterImage();
-        color = Theme.Light.Control;
-        Assert.Equal(new byte[] { color.R, color.G, color.B, color.A }, Pixel(light, 74, 20));
+        CheckTint(light, Theme.Light.Control, Theme.Light.ControlTintAlpha);
         ui.HandleInput(new UiInput(InputKind.PointerDown, 10, 10)); ui.Update();
-        using var pressed = ui.SnapshotRasterImage(); color = Theme.Light.ControlPressed;
-        Assert.Equal(new byte[] { color.R, color.G, color.B, color.A }, Pixel(pressed, 74, 20));
+        using var pressed = ui.SnapshotRasterImage();
+        CheckTint(pressed, Theme.Light.ControlPressed, Theme.Light.ControlTintAlpha);
         ui.HandleInput(new UiInput(InputKind.FocusLost)); ui.Update();
         Assert.False(button.IsPressed); Assert.False(button.IsFocused);
-        using var cancelled = ui.SnapshotRasterImage(); color = Theme.Light.Control;
-        Assert.Equal(new byte[] { color.R, color.G, color.B, color.A }, Pixel(cancelled, 74, 20));
+        using var cancelled = ui.SnapshotRasterImage();
+        CheckTint(cancelled, Theme.Light.Control, Theme.Light.ControlTintAlpha);
+
+        static void CheckTint(SKImage image, Color color, byte alpha)
+        {
+            byte Premultiply(byte channel) => (byte)((channel * alpha + 127) / 255);
+            Assert.Equal(new byte[] { Premultiply(color.R), Premultiply(color.G), Premultiply(color.B), alpha }, Pixel(image, 74, 20));
+        }
     }
 
     [Theory]

@@ -4,7 +4,7 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Rendering.Skia;
 
-internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext, IOpacityDrawingContext, IShadowDrawingContext
+internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext, IOpacityDrawingContext, IShadowDrawingContext, IVectorIconDrawingContext, IWindowGradientDrawingContext
 {
     // Contexts are created at the surface's root clip, before Element.Draw narrows it.
     private readonly SKRectI _surfaceBounds = canvas.DeviceClipBounds;
@@ -45,6 +45,44 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     }
     public void Fill(Rect rectangle, Color color, float radius = 0)
     { var paint = resources.Paint(Color(color), SKPaintStyle.Fill); canvas.DrawRoundRect(Rect(rectangle), radius, radius, paint); }
+
+    public bool TryDrawWindowGradient(Rect bounds, WindowGradient gradient, float cornerRadius)
+    {
+        resources.VerifyRichTextAccess();
+        ArgumentNullException.ThrowIfNull(gradient);
+        if (!float.IsFinite(bounds.X) || !float.IsFinite(bounds.Y) ||
+            !float.IsFinite(bounds.Width) || bounds.Width < 0 || !float.IsFinite(bounds.Height) || bounds.Height < 0)
+            throw new ArgumentOutOfRangeException(nameof(bounds));
+        if (!float.IsFinite(cornerRadius) || cornerRadius < 0)
+            throw new ArgumentOutOfRangeException(nameof(cornerRadius));
+        if (bounds.Width == 0 || bounds.Height == 0) return true;
+
+        var rect = Rect(bounds);
+        using var shader = SKShader.CreateLinearGradient(new(rect.Left, rect.Top), new(rect.Right, rect.Bottom),
+            [Color(gradient.Start), Color(gradient.Middle), Color(gradient.End)], SKShaderTileMode.Clamp);
+        if (shader == null) return false;
+        using var paint = new SKPaint { Shader = shader, IsAntialias = true, IsDither = true };
+        canvas.DrawRoundRect(rect, cornerRadius, cornerRadius, paint);
+        return true;
+    }
+
+    public void DrawVectorIcon(VectorIcon icon, Rect bounds, Color color)
+    {
+        ArgumentNullException.ThrowIfNull(icon);
+        if (!float.IsFinite(bounds.X) || !float.IsFinite(bounds.Y) || !float.IsFinite(bounds.Width) || !float.IsFinite(bounds.Height) ||
+            bounds.Width < 0 || bounds.Height < 0) throw new ArgumentOutOfRangeException(nameof(bounds));
+        var side = Math.Min(bounds.Width, bounds.Height);
+        if (side == 0 || color.A == 0) return;
+        var (path, paint) = resources.Icon(icon, Color(color));
+        canvas.Save();
+        try
+        {
+            canvas.Translate(bounds.X + (bounds.Width - side) / 2, bounds.Y + (bounds.Height - side) / 2);
+            canvas.Scale(side / VectorIcon.ViewBoxSize);
+            canvas.DrawPath(path, paint);
+        }
+        finally { canvas.Restore(); }
+    }
     public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0)
     {
         if (radius == 0 && width > 0 && rectangle.Width >= width && rectangle.Height >= width)
@@ -149,6 +187,8 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
     private const int FontCapacity = 16;
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly SKPaint _paint = new() { IsAntialias = true };
+    private Dictionary<VectorIcon, SKPath>? _icons;
+    private SKPaint? _iconPaint;
     private readonly Dictionary<FontKey, FontEntry> _fonts = new(FontCapacity);
     private readonly FontKey[] _order = new FontKey[FontCapacity];
     private int _next;
@@ -172,6 +212,23 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
         // Reset every property varied by this adapter, including after a stroke or a failed draw.
         _paint.Color = color; _paint.Style = style; _paint.StrokeWidth = width;
         return _paint;
+    }
+
+    internal (SKPath Path, SKPaint Paint) Icon(VectorIcon icon, SKColor color)
+    {
+        VerifyAvailable();
+        // VectorIcon instances come from the finite Argentis catalog. Keep parsed paths on the UI owner.
+        _icons ??= [];
+        if (!_icons.TryGetValue(icon, out var path))
+        {
+            path = SKPath.ParseSvgPathData(icon.PathData) ?? throw new InvalidOperationException("Invalid built-in vector icon path.");
+            _icons.Add(icon, path);
+        }
+        var paint = _iconPaint ??= new SKPaint { IsAntialias = true, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
+        paint.Color = color;
+        paint.Style = icon.StrokeWidth == 0 ? SKPaintStyle.Fill : SKPaintStyle.Stroke;
+        paint.StrokeWidth = icon.StrokeWidth;
+        return (path, paint);
     }
 
     internal FontEntry Font(string family, float size, int weight = 400, bool italic = false)
@@ -203,9 +260,11 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
     {
         if (_disposed) return;
         VerifyAvailable(); _disposed = true;
-        var cleanup = _fonts.Values.Select(entry => (Action)entry.Font.Dispose).Append(_paint.Dispose)
-            .Append(() => _richFonts?.Dispose()).ToArray();
+        var paths = _icons?.Values.Select(path => (Action)path.Dispose) ?? [];
+        var cleanup = _fonts.Values.Select(entry => (Action)entry.Font.Dispose).Concat(paths).Append(_paint.Dispose)
+            .Append(() => _iconPaint?.Dispose()).Append(() => _richFonts?.Dispose()).ToArray();
         _fonts.Clear();
+        _icons?.Clear();
         UiCleanup.Complete(null, cleanup);
     }
 }

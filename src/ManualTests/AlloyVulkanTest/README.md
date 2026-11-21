@@ -364,8 +364,28 @@ back explicitly; this is not physical-DPI or automatic-optical-sizing acceptance
 
 ## Validation icons and shadows
 
+For the default frosted control style, run
+`--control-glass --design-output fresh-directory --validation`. It covers
+Light and Dark at 100%, 125%, and 175% on raster, OpenGL, and Vulkan. The
+fixture captures rounded validation badges, their tooltip and focus, controls
+within a frosted panel, and a standalone field over a black/white split.
+The report verifies the standalone blur by sampling each side of the split
+and records full-frame pixel comparisons and diff PNGs.
+
+`--icon-catalog --design-output fresh-directory --validation` captures every
+built-in symbol at 12, 16, and 24 logical pixels in Light and Dark, at 100%,
+125%, and 175% on raster, OpenGL, and Vulkan. The report verifies visible
+contours, both the silver disc and the rim of Argentis, matching layout and
+idle. Full-frame differences and diff PNGs are recorded separately.
+
+`--window-underlay --design-output fresh-directory --validation` captures the
+Light and Dark window gradient and a frosted panel over the empty Editor viewport
+at 100%, 125%, and 175% on raster, OpenGL, and Vulkan. The report includes pixel
+samples before and after the glass tint. The fixture also checks idle, the solid
+theme fallback, an explicit frame background, and the validation badge.
+
 `--validation-shadows --design-output fresh-directory --validation` runs the shared
-gallery scaffold with full-height square TextBox/RichTextEditor/NumberBox validation badges, an actual500ms hover
+gallery scaffold with TextBox/RichTextEditor/NumberBox validation badges, an actual500ms hover
 tooltip, semantic panel and a MenuPopup sample. Raster/OpenGL/Vulkan, Dark/Light,
 synthetic100/150/200%,18PNG/12comparisons; exact logical bounds, flat tolerance2 and
 symmetric1px edge envelope with coverage32 (typography retains24). Uses default
@@ -502,3 +522,20 @@ region. Routed arrows visit all grapheme boundaries in both directions.
 The probe saves 1:1 frames, a 4× crop, and frames with the caret on either side
 of each emoji. It exercises toggling shaped layout off and back on within the
 same session.
+
+## Editor vector toolbar icons
+
+`--editor-vector-icons --icons-output fresh-directory --validation`
+captures the actual Editor header with controlled command models. The upper
+row draws vector paths and the lower row shows previous geometry at the same
+logical icon size of 16. The matrix covers Light and Dark at synthetic 100%,
+125%, and 175% on raster, OpenGL, and Vulkan. It saves normal, pressed Play,
+and disabled frames, 4× crops, and crops of pixel differences outside the
+existing comparison tolerances.
+
+The probe verifies keyboard activation of each toolbar action and the compact
+layout. The report records both geometry and pixel parity. `Passed` requires
+successful interaction, matching layout, matching icon centers within half a
+physical pixel, matching ink bounds within one pixel, and clean Vulkan
+validation. `PixelParityPassed` reports the existing pixel tolerances
+independently and retains all recorded edge differences.

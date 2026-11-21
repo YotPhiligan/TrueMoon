@@ -308,7 +308,8 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false, bool trace
                 break;
             case 28:
                 Require(_rowScroll!.Offset == 72, "Wheel did not move by one logical step.");
-                Require(Math.Abs(_view!.Meter.Value - model.Volume) < .001f && _view.Logo.Source?.Size == new Size(32, 32), "Meter/image mismatch.");
+                Require(Math.Abs(_view!.Meter.Value - model.Volume) < .001f &&
+                    _view.Logo.Bounds.Width == 48 && _view.Logo.Bounds.Height == 48, "Meter/logo layout mismatch.");
                 ui.Focus((TextBox)_list.Items[^1].Children[0]);
                 _stage++;
                 break;

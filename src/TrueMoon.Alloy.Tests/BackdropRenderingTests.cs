@@ -121,6 +121,47 @@ public sealed class BackdropRenderingTests
     }
 
     [Fact]
+    public void ThemedControls_SampleOnceOrUseAnExplicitAppearance()
+    {
+        using var panel = new Panel { Backdrop = Theme.Dark.PanelBackdrop };
+        var field = new TextBox();
+        panel.Add(field);
+        panel.Measure(new(200, 40), new FixedTextLayout());
+        panel.Arrange(new(0, 0, 200, 40));
+
+        var drawing = new LegacyDrawing(canSample: true);
+        panel.Draw(drawing);
+        Assert.Same(Theme.Dark.PanelBackdrop, Assert.Single(drawing.Materials));
+        Assert.Equal(Theme.Dark.Input with { A = Theme.Dark.ControlTintAlpha }, Assert.Single(drawing.Fills));
+
+        drawing.Materials.Clear();
+        drawing.Fills.Clear();
+        field.Draw(drawing);
+        var standalone = Assert.Single(drawing.Materials);
+        Assert.Equal(Theme.Dark.ControlBlurSigma, standalone.BlurSigma);
+        Assert.Equal(Theme.Dark.Input, standalone.Fallback);
+        Assert.Empty(drawing.Fills);
+
+        drawing.Materials.Clear();
+        field.Backdrop = null;
+        field.Draw(drawing);
+        Assert.Empty(drawing.Materials);
+        Assert.Equal(Theme.Dark.Input, Assert.Single(drawing.Fills));
+        field.Clear(UiProperties.Backdrop);
+
+        drawing.Fills.Clear();
+        field.Style = new Style().With(UiProperties.Background, new Color(90, 80, 70));
+        field.Draw(drawing);
+        Assert.Empty(drawing.Materials);
+        Assert.Equal(new Color(90, 80, 70), Assert.Single(drawing.Fills));
+        field.Style = null;
+
+        var unsupported = new LegacyDrawing();
+        field.Draw(unsupported);
+        Assert.Equal(Theme.Dark.Input, Assert.Single(unsupported.Fills));
+    }
+
+    [Fact]
     public void SkiaWithoutSurfaceOrUnsupportedTransform_ReturnsFalseWithoutPainting()
     {
         SkiaNativeLibrary.Initialize();
@@ -178,9 +219,16 @@ public sealed class BackdropRenderingTests
             => context.Fill(new(Bounds.X + 20, Bounds.Y + 15, 8, 10), new(255, 0, 0));
     }
 
-    private sealed class LegacyDrawing : IDrawingContext
+    private sealed class LegacyDrawing(bool canSample = false) : IDrawingContext, IBackdropDrawingContext
     {
         internal readonly List<Color> Fills = [];
+        internal readonly List<BackdropMaterial> Materials = [];
+        public bool TryDrawBackdrop(Rect rectangle, BackdropMaterial material, float cornerRadius)
+        {
+            if (!canSample) return false;
+            Materials.Add(material);
+            return true;
+        }
         public void Save() { }
         public void Restore() { }
         public void Clip(Rect rectangle) { }

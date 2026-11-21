@@ -77,9 +77,10 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(600, 420);
     protected override void DrawCore(IDrawingContext context)
     {
-        context.Fill(Bounds, new(10, 15, 26)); DrawnFrame = null; ImageBounds = Bounds;
+        DrawnFrame = null; ImageBounds = Bounds;
         if (_image != null && _frame != null && _current!())
         {
+            context.Fill(Bounds, new(10, 15, 26));
             var surface = _frame.Presentation.Surface; var scale = Math.Min(Bounds.Width / surface.Width, Bounds.Height / surface.Height);
             ImageBounds = new(Bounds.X + (Bounds.Width - surface.Width * scale) / 2, Bounds.Y + (Bounds.Height - surface.Height * scale) / 2, surface.Width * scale, surface.Height * scale);
             var clip = EffectiveClip();
@@ -89,10 +90,13 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
             _drawnBounds = Bounds; context.Image(_image, ImageBounds); DrawnFrame = _frame;
             _controller?.DrawTranslationOverlay(context); return;
         }
-        var line = new Color(28, 37, 52);
+        if (Theme.WindowGradient is not { } gradient || context is not IWindowGradientDrawingContext window ||
+            !window.TryDrawWindowGradient(Bounds, gradient, 0))
+            context.Fill(Bounds, Theme.Surface);
+        var line = Theme.Foreground with { A = 24 };
         for (var x = Bounds.X; x < Bounds.X + Bounds.Width; x += 32) context.Fill(new(x, Bounds.Y, 1, Bounds.Height), line);
         for (var y = Bounds.Y; y < Bounds.Y + Bounds.Height; y += 32) context.Fill(new(Bounds.X, y, Bounds.Width, 1), line);
-        context.Text(EmptyText, Bounds.X + 24, Bounds.Y + Math.Max(16, Bounds.Height / 2 - 12), new(142, 154, 170), FontSize, FontFamily, FontWeight, FontItalic);
+        context.Text(EmptyText, Bounds.X + 24, Bounds.Y + Math.Max(16, Bounds.Height / 2 - 12), Theme.Foreground, FontSize, FontFamily, FontWeight, FontItalic);
     }
     private Rect _drawnImage, _drawnBounds;
     private Rect EffectiveClip()

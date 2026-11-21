@@ -11,6 +11,7 @@ public sealed record EditorHeaderArguments(OverlayHost Overlays, string Title, A
 /// <summary>Retained compact title content, borrowing presentation models and owning controls/subscriptions.</summary>
 public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipant, IUiInputObserver, IWindowHeaderActivity
 {
+    internal static readonly ViewStyleRole<IconButton> ToolbarButtonRole = new("EditorHeaderAction");
     private readonly OverlayHost _overlays;
     private readonly IEditorDocumentViewModel _documentModel;
     private readonly IEditorInspectorViewModel _transformModel;
@@ -22,12 +23,21 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
     private bool _refreshPending;
     private readonly Dictionary<EditorCommand, IUiCommand> _runtime = [];
     private readonly Dictionary<DocumentCommand, IUiCommand> _documents = [];
+    private readonly IconButton[] _toolbarButtons;
     /// <summary>Gets the compact disclosure and application menus.</summary>
     public MenuBar Menu { get; }
     /// <summary>Gets the fixed, non-interactive TrueMoon mark preceding the menu.</summary>
     public Element BrandIcon { get; }
     /// <summary>Gets the retained, clipped window/project caption.</summary>
     public Text Caption { get; }
+    /// <summary>Gets the open scene action.</summary>
+    public IconButton OpenButton { get; }
+    /// <summary>Gets the save scene action.</summary>
+    public IconButton SaveButton { get; }
+    /// <summary>Gets the document history undo action.</summary>
+    public IconButton UndoButton { get; }
+    /// <summary>Gets the document history redo action.</summary>
+    public IconButton RedoButton { get; }
     /// <summary>Gets the fixed simulation start/resume action.</summary>
     public IconButton RunButton { get; }
     /// <summary>Gets the fixed pause action.</summary>
@@ -137,10 +147,16 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             BrandIcon = new BrandMark();
             Caption = new CaptionText(arguments.Title);
             UpdateCaption();
-            RunButton = Bind(new(UiSymbol.Play, "Запустить / продолжить симуляцию"), RunCommand);
-            PauseButton = Bind(new(UiSymbol.Pause, "Пауза симуляции"), _runtime[EditorCommand.Pause]);
-            StopButton = Bind(new(UiSymbol.Stop, "Остановить симуляцию"), _runtime[EditorCommand.Stop]);
-            Content(model, _ => new HeaderLayout(BrandIcon, Menu, Caption, RunButton, PauseButton, StopButton));
+            OpenButton = Action(UiSymbol.Folder, "Открыть сцену по пути", _documents[DocumentCommand.Open]);
+            SaveButton = Action(UiSymbol.Save, "Сохранить сцену · Ctrl+S", _documents[DocumentCommand.Save]);
+            UndoButton = Action(UiSymbol.Undo, "Отменить изменение · Ctrl+Z", undo);
+            RedoButton = Action(UiSymbol.Redo, "Повторить изменение · Ctrl+Y", redo);
+            RunButton = Action(UiSymbol.Play, "Запустить / продолжить симуляцию", RunCommand);
+            PauseButton = Action(UiSymbol.Pause, "Пауза симуляции", _runtime[EditorCommand.Pause]);
+            StopButton = Action(UiSymbol.Stop, "Остановить симуляцию", _runtime[EditorCommand.Stop]);
+            _toolbarButtons = [OpenButton, SaveButton, UndoButton, RedoButton, RunButton, PauseButton, StopButton];
+            Content(model, _ => new HeaderLayout(BrandIcon, Menu, Caption, new FileActions(OpenButton, SaveButton, UndoButton, RedoButton),
+                RunButton, PauseButton, StopButton));
             this.WithViewStyle(style);
             Watch(model); Watch(documents); Watch(transform);
             AttachmentChanged += Detached;
@@ -162,6 +178,10 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
     {
         var command = new DelegateUiCommand(action, available); _commands.Add(command); return command;
     }
+
+    private IconButton Action(UiSymbol symbol, string name, IUiCommand command)
+        => Bind(new IconButton(symbol, name).WithRole(ToolbarButtonRole), command);
+
     private IconButton Bind(IconButton button, IUiCommand command)
     {
         button.IsEnabled = command.CanExecute;
@@ -220,7 +240,8 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
     {
         if (input.Kind == InputKind.PointerMove)
         {
-            var hint = new Element[] { RunButton, PauseButton, StopButton, Caption }.FirstOrDefault(b => b.Bounds.Contains(input.X, input.Y));
+            Element? hint = _toolbarButtons.FirstOrDefault(b => b.Parent?.IsVisible == true && b.Bounds.Contains(input.X, input.Y));
+            if (hint == null && Caption.Bounds.Contains(input.X, input.Y)) hint = Caption;
             if (!ReferenceEquals(hint, _hint))
             {
                 CloseHint(); _hint = hint;
@@ -310,14 +331,34 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
         protected override void ArrangeCore(Rect area)
         {
             var controls = Math.Min(96, area.Width);
-            var left = Math.Max(0, area.Width - controls);
+            var simulationStart = area.Width - controls;
+            var files = Children[3];
+            // Keep room for the collapsed menu and caption. Narrow headers keep the same commands in the menu.
+            files.IsVisible = area.Width >= 368;
+            var left = simulationStart - (files.IsVisible ? FileActions.WidthWithGap : 0);
             var brandWidth = Math.Min(Children[0].DesiredSize.Width, left);
             var menuWidth = Math.Min(Children[1].DesiredSize.Width, left - brandWidth);
             Children[0].Arrange(new(area.X, area.Y, brandWidth, area.Height));
             Children[1].Arrange(new(area.X + brandWidth, area.Y + (area.Height - 32) / 2, menuWidth, Math.Min(32, area.Height)));
             Children[2].Arrange(new(area.X + brandWidth + menuWidth + 10, area.Y, Math.Max(0, left - brandWidth - menuWidth - 20), area.Height));
+            files.Arrange(new(area.X + left, area.Y, FileActions.WidthWithGap, area.Height));
             var size = controls / 3;
-            for (var i = 0; i < 3; i++) Children[i + 3].Arrange(new(area.X + left + size * i, area.Y + (area.Height - size) / 2, size, size));
+            for (var i = 0; i < 3; i++) Children[i + 4].Arrange(new(area.X + simulationStart + size * i, area.Y + (area.Height - size) / 2, size, size));
+        }
+    }
+
+    private sealed class FileActions : ElementList
+    {
+        internal const float WidthWithGap = 136;
+        public FileActions(params IconButton[] buttons)
+        { foreach (var button in buttons) Add(button); }
+        protected override Size MeasureCore(Size available, ITextLayoutService text)
+        { foreach (var button in Children) button.Measure(available, text); return new(WidthWithGap, 32); }
+        protected override void ArrangeCore(Rect area)
+        {
+            var size = Math.Min(32, area.Height);
+            for (var i = 0; i < Children.Count; i++)
+                Children[i].Arrange(new(area.X + i * 32, area.Y + (area.Height - size) / 2, 32, size));
         }
     }
     private sealed class CaptionText(string value) : Text(value)

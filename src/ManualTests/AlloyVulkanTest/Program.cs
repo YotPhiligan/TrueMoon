@@ -17,6 +17,12 @@ if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
     throw new ArgumentException("--native-skia requires a DLL path.");
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
+if (args.Contains("--editor-vector-icons"))
+{
+    var index = Array.IndexOf(args, "--icons-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--icons-output requires a fresh directory.");
+    FontTypographyProbe.RunEditorIcons(args[index + 1], args.Contains("--validation")); return;
+}
 if (args.Contains("--fractional-typography"))
 {
     var index = Array.IndexOf(args, "--font-output");
@@ -46,6 +52,31 @@ if (args.Contains("--typography-emoji"))
     var index = Array.IndexOf(args, "--font-output");
     if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
     FontTypographyProbe.RunEmoji(args[index + 1], args.Contains("--validation")); return;
+}
+if (args.Contains("--icon-catalog"))
+{
+    var index = Array.IndexOf(args, "--design-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--design-output requires a fresh directory.");
+    FontTypographyProbe.UseIconCatalogScene = true;
+    FontTypographyProbe.Run(args[index + 1], args.Contains("--validation"), useDefaults: true);
+    return;
+}
+if (args.Contains("--window-underlay"))
+{
+    var index = Array.IndexOf(args, "--design-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--design-output requires a fresh directory.");
+    FontTypographyProbe.UseWindowUnderlayScene = true;
+    FontTypographyProbe.Run(args[index + 1], args.Contains("--validation"), useDefaults: true, decorations: true);
+    return;
+}
+if (args.Contains("--control-glass"))
+{
+    var index = Array.IndexOf(args, "--design-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--design-output requires a fresh directory.");
+    FontTypographyProbe.UseControlGlassScene = true;
+    FontTypographyProbe.UseDecorationBackdrop = true;
+    FontTypographyProbe.Run(args[index + 1], args.Contains("--validation"), useDefaults: true, decorations: true);
+    return;
 }
 if (args.Contains("--validation-shadows"))
 {

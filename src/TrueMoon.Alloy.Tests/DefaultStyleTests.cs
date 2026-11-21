@@ -1,3 +1,5 @@
+using SkiaSharp;
+using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -10,7 +12,7 @@ public sealed class DefaultStyleTests
     [InlineData(false)] [InlineData(true)]
     public void SquareDefaults_ApplyToConstructorsFactoriesAndEditors(bool light)
     {
-        var theme = light ? Theme.Light : Theme.Dark;
+        var theme = (light ? Theme.Light : Theme.Dark) with { EditorCornerRadius = 0 };
         Element[] controls = [new Button(), Button.Simple(), new TextBox(), TextBox.Create(), new RichTextEditor(),
             new ProgressBar(), new Slider(), new CheckBox(), new Border(), new IconButton(UiSymbol.Close, "Close")];
         foreach (var control in controls)
@@ -53,16 +55,27 @@ public sealed class DefaultStyleTests
     [InlineData(false, ControlTone.Danger)] [InlineData(true, ControlTone.Danger)]
     public void EnabledText_ContrastRemainsAtLeastFourPointFiveAcrossActionStates(bool light, ControlTone tone)
     {
-        var button = new Button("Action") { Tone = tone }; using var ui = Create(button); ui.SetTheme(light ? Theme.Light : Theme.Dark); ui.Update();
+        var button = new Button("Action") { Tone = tone };
+        var root = new Panel { Background = new Color(255, 255, 255) }.WithChildren(button);
+        using var ui = UiSession.Create(root, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(240, 140));
+        ui.SetTheme(light ? Theme.Light : Theme.Dark);
         Check(); button.IsHovered = true; Check();
         ui.Focus(button); ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Space)); Check();
-        void Check() => Assert.True(Contrast(button.Foreground, button.Background) >= 4.5, $"{light}/{tone}/{button.IsHovered}/{button.IsPressed}");
+        void Check()
+        {
+            ui.Update();
+            using var image = ui.SnapshotRasterImage();
+            using var pixels = SKBitmap.FromImage(image);
+            var background = pixels.GetPixel(220, 70);
+            Assert.True(Contrast(button.Foreground, new Color(background.Red, background.Green, background.Blue)) >= 4.5,
+                $"{light}/{tone}/{button.IsHovered}/{button.IsPressed}");
+        }
     }
 
     [Fact]
     public void FocusAndError_UseInsideSquareOutlineAndStructuralErrorMarker()
     {
-        var editor = new TextBox { HasError = true }; using var ui = Create(editor); ui.Update(); ui.Focus(editor);
+        var editor = new TextBox { HasError = true, CornerRadius = 0 }; using var ui = Create(editor); ui.Update(); ui.Focus(editor);
         var drawing = new Drawing(); editor.Draw(drawing);
         Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(.5f, .5f, 239, 139) && x.Color == new Color(255, 112, 128) && x.Width == 1 && x.Radius == 0);
         Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(2, 2, 96, 136) && x.Color == new Color(255, 201, 92) && x.Width == 2 && x.Radius == 0);

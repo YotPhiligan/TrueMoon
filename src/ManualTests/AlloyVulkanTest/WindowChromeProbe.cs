@@ -134,8 +134,10 @@ internal static partial class WindowChromeProbe
                 Appearance = new WindowAppearance { Decorated = false }, Chrome = new WindowChromeOptions { NativeDrag = true },
                 ValidationMessage = validation ? message => { Interlocked.Increment(ref warnings); Console.Error.WriteLine(message); } : null,
                 TitleBarFactory = commands => title = new HStack { Height = 40, WindowRegion = WindowRegionRole.Caption }.WithChildren(
-                    new Text("Custom frame") { Width = 200 }, new Button("—").OnClick(commands.Minimize),
-                    new Button("□").OnClick(commands.Maximize), new Button("×").OnClick(commands.Close)) };
+                    new Text("Custom frame") { Width = 200 },
+                    new IconButton(UiSymbol.Minimize, "Minimize") { Width = 40 }.OnClick(commands.Minimize),
+                    new IconButton(UiSymbol.Maximize, "Maximize") { Width = 40 }.OnClick(commands.Maximize),
+                    new IconButton(UiSymbol.Close, "Close") { Width = 40 }.OnClick(commands.Close)) };
             await using var window = new HostedUiWindow(options, sessions, () => root = new Panel { Background = new Color(30, 40, 50) });
             UiSession? sessionsForInput = null;
             var rendered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -146,7 +148,7 @@ internal static partial class WindowChromeProbe
             // Routed title-bar button remains client input and invokes the independent window command.
             await OnOwner(window, host =>
             {
-                var button = title!.Children.OfType<Button>().Single(b => b.Value == "□");
+                var button = title!.Children.OfType<IconButton>().Single(b => b.Symbol == UiSymbol.Maximize);
                 var session = sessionsForInput ?? throw new InvalidOperationException("Missing session.");
                 var x = button.Bounds.X + button.Bounds.Width / 2; var y = button.Bounds.Y + button.Bounds.Height / 2;
                 session.HandleInput(new UiInput(InputKind.PointerDown, x, y));

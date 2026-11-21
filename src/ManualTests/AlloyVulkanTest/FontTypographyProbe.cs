@@ -16,7 +16,7 @@ namespace AlloyVulkanTest;
 // Direct, low-level renderer fixture; no application services or native resources belong to the controls.
 internal static partial class FontTypographyProbe
 {
-    private sealed record Capture(Rect[] Bounds, byte[] Pixels, object? BlurWitness = null, object? Shadows = null);
+    private sealed record Capture(Rect[] Bounds, byte[] Pixels, object? BlurWitness = null, object? Shadows = null, object? IconCoverage = null);
     private sealed record PixelSample(int X, int Y, string RasterRgba, string ActualRgba);
     private sealed record Comparison(string Backend, string Scene, PixelDifference Result, bool LayoutMatches,
         IReadOnlyList<PixelSample>? OutsideToleranceSamples);
@@ -32,8 +32,9 @@ internal static partial class FontTypographyProbe
             SkiaFontCatalog.Load("Fixed", new Dictionary<string, string> { ["Fixed"] = file }));
         var captures = new List<object>(); var comparisons = new List<Comparison>(); var hardware = new List<object>();
         var validationReports = new List<object>();
+        var recordPixelDifferences = UseControlGlassScene || UseWindowUnderlayScene || UseIconCatalogScene;
         var themes = lowerRichTextHint ? new[] { true } : new[] { false, true };
-        var scales = lowerRichTextHint ? new[] { 2f } : new[] { 1f, 1.5f, 2f };
+        var scales = lowerRichTextHint ? new[] { 2f } : recordPixelDifferences ? new[] { 1f, 1.25f, 1.75f } : new[] { 1f, 1.5f, 2f };
         foreach (var light in themes)
         foreach (var scale in scales)
         {
@@ -72,6 +73,7 @@ internal static partial class FontTypographyProbe
                 Compare("opengl", openGl);
                 Compare("vulkan", vulkan);
             }
+            else if (UseIconCatalogScene) Console.WriteLine($"Icon catalog {suffix}: all symbols visible on 3 backends, matching layout and idle.");
             else Console.WriteLine($"Typography {suffix}: 3 backends, identical logical layout, font-weight update, selection/input/idle/cleanup passed.");
 
             Capture CaptureBackend(string backend, IRenderBackend renderer, UiRenderTarget target, Func<UiSession, byte[]> read)
@@ -84,7 +86,7 @@ internal static partial class FontTypographyProbe
                 if (lowerRichTextHint) WriteShadowCrop(output, $"{backend}-{suffix}", viewport.Width, capture.Pixels);
                 captures.Add(new
                 {
-                    File = name, viewport.Width, viewport.Height, viewport.Scale, capture.Bounds, capture.BlurWitness, capture.Shadows,
+                    File = name, viewport.Width, viewport.Height, viewport.Scale, capture.Bounds, capture.BlurWitness, capture.Shadows, capture.IconCoverage,
                     CaptureMilliseconds = milliseconds,
                     HistoricalLocationRgba = lowerRichTextHint ? ReadPixel(capture.Pixels, viewport.Width, HistoricalX, HistoricalY) : null
                 });
@@ -96,9 +98,9 @@ internal static partial class FontTypographyProbe
                 if (!lowerRichTextHint) Require(layoutMatches, $"Font logical layout differs on {backend}.");
                 // Rounded decoration corners may have different CPU/GPU coverage.
                 // Flat interiors remain strict (2/255), with the same symmetric1px edge envelope.
-                List<PixelSample>? samples = lowerRichTextHint ? [] : null;
+                List<PixelSample>? samples = lowerRichTextHint || recordPixelDifferences ? [] : null;
                 var result = PixelDifference.Compare(raster.Pixels, actual.Pixels, viewport.Width, viewport.Height, 2, 1, decorations ? 32 : 24,
-                    lowerRichTextHint ? CollectOutside : null);
+                    samples != null ? CollectOutside : null);
                 comparisons.Add(new(backend, suffix, result, layoutMatches, samples));
                 if (lowerRichTextHint)
                 {
@@ -107,7 +109,11 @@ internal static partial class FontTypographyProbe
                     WritePng(Path.Combine(output, diffName + ".png"), viewport.Width, viewport.Height, diff);
                     WriteShadowCrop(output, diffName, viewport.Width, diff);
                 }
-                else Require(result.Passed, $"Font pixels outside established tolerance on {backend}: {result}.");
+                else if (recordPixelDifferences && !result.Passed)
+                    WritePng(Path.Combine(output, $"diff-raster-{backend}-{suffix}.png"), viewport.Width, viewport.Height,
+                        PixelDifference.Diff(raster.Pixels, actual.Pixels));
+                else if (!recordPixelDifferences)
+                    Require(result.Passed, $"Font pixels outside established tolerance on {backend}: {result}.");
 
                 void CollectOutside(int x, int y)
                 {
@@ -120,13 +126,16 @@ internal static partial class FontTypographyProbe
         var hashes = new[] { file, SkiaNativeLibrary.LoadedPath!, Path.Combine(fontDirectory, "segoeui.ttf"),
             Path.Combine(fontDirectory, "seguisb.ttf"), Path.Combine(fontDirectory, "SegUIVar.ttf") }
             .Where(File.Exists).Select(path => new { File = path, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))) }).ToArray();
-        var passed = comparisons.All(comparison => comparison.LayoutMatches && comparison.Result.Passed);
+        var pixelParity = comparisons.All(comparison => comparison.Result.Passed);
+        var passed = comparisons.All(comparison => comparison.LayoutMatches) && (recordPixelDifferences || pixelParity);
         File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new
         {
-            Completed = true, Passed = passed, Profile = lowerRichTextHint ? "lower-richtext-shadow-overlap" : decorations ? "validation-shadows" : "typography",
+            Completed = true, Passed = passed, PixelParityPassed = pixelParity, Profile = UseIconCatalogScene ? "icon-catalog" :
+                UseWindowUnderlayScene ? "window-underlay" : UseControlGlassScene ? "control-glass" :
+                lowerRichTextHint ? "lower-richtext-shadow-overlap" : decorations ? "validation-shadows" : "typography",
             DecorationShadows = decorations && !OmitDecorationShadows,
-            OpaqueDecorationMenu = decorations && !UseDecorationBackdrop,
-            DecorationBlurEnabled = decorations && UseDecorationBackdrop && !OmitDecorationBlur,
+            OpaqueDecorationMenu = decorations && !UseWindowUnderlayScene && !UseDecorationBackdrop,
+            DecorationBlurEnabled = UseWindowUnderlayScene || (decorations && UseDecorationBackdrop && !OmitDecorationBlur),
             PhysicalDpi = false, AutomaticOpticalSizing = false, ValidationEnabled = validation, DefaultPolicy = useDefaults,
             OS = Environment.OSVersion.VersionString, Runtime = Environment.Version.ToString(), SkiaSharp = typeof(SKFont).Assembly.FullName,
             SystemFamilies = SKFontManager.Default.FontFamilies.Where(family => family.StartsWith("Segoe UI", StringComparison.Ordinal)),
@@ -135,10 +144,12 @@ internal static partial class FontTypographyProbe
             Crop = lowerRichTextHint ? new { X = ShadowCrop.Left, Y = ShadowCrop.Top, ShadowCrop.Width, ShadowCrop.Height, Magnification = ShadowZoom } : null,
             Tolerance = new { Flat = 2, EdgeRadius = 1, Edge = decorations ? 32 : 24 },
             TimingScope = "Single cold fixture construction, layout, drawing, readback and disposal per capture.",
-            Scope = decorations ? "Source/published renderer fixture: validation icons/live tooltip, panel/menu shadows and actual frosted backdrop (opaque control optional). No physical input/DPI, VRAM or full release acceptance." :
+            Scope = UseIconCatalogScene ? "All built-in UI symbols at 12, 16 and 24 logical pixels, including the Argentis mark; logical scales." :
+                UseWindowUnderlayScene ? "Default frame and empty EditorViewport; point samples under glass, solid fallback, style precedence and idle." :
+                decorations ? "Source/published renderer fixture: validation icons/live tooltip, panel/menu shadows and actual frosted backdrop (opaque control optional). No physical input/DPI, VRAM or full release acceptance." :
                 "Source/published renderer fixture; system family fallback, regular400/semibold600/italic, plain/rich/editable text; no per-glyph fallback or fresh-package/physical acceptance."
         }, new JsonSerializerOptions { WriteIndented = true }));
-        var title = lowerRichTextHint ? "Lower RichText shadow overlap" : "Typography";
+        var title = UseIconCatalogScene ? "Icon catalog" : lowerRichTextHint ? "Lower RichText shadow overlap" : "Typography";
         Console.WriteLine($"{title}: {captures.Count} captures, {comparisons.Count} full-frame comparisons; " +
             (validation ? "Vulkan validation 0 errors/0 warnings including teardown. " : "Vulkan validation disabled. ") + output);
         if (lowerRichTextHint && !passed)
@@ -158,6 +169,8 @@ internal static partial class FontTypographyProbe
     private static Capture Exercise(IRenderBackend backend, UiRenderTarget target, UiViewport viewport, bool light,
         Func<UiSession, byte[]> read, bool decorations, bool lowerRichTextHint)
     {
+        if (UseIconCatalogScene) return ExerciseIconCatalog(backend, target, viewport, light, read);
+        if (UseWindowUnderlayScene) return ExerciseWindowUnderlay(backend, target, viewport, light, read);
         if (decorations) return ExerciseDecorations(backend, target, viewport, light, read, lowerRichTextHint);
         var theme = (light ? Theme.Light : Theme.Dark) with { FontFamily = "Segoe UI Variable Text", FontSize = 14 };
         var root = new VStack { Spacing = 4, Padding = new(8), Background = theme.Surface };

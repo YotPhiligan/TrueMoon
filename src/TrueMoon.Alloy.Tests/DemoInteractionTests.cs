@@ -159,18 +159,19 @@ public sealed class DemoInteractionTests
     }
 
     [Fact]
-    public void RealDemoIcon_RendersPackagedCheckerColorsAndThemeBackgroundThroughSkia()
+    public void RealDemoIcon_RendersArgentisPaletteAndThemeBackgroundThroughSkia()
     {
         var model = new SettingsModel(); var view = new View1(model);
         using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new UiViewport(800, 1100)); ui.Update();
-        Assert.Equal(new Size(32, 32), view.Logo.Source!.Size); Assert.Equal(48, view.Logo.Bounds.Width); Assert.Equal(48, view.Logo.Bounds.Height);
+        Assert.Equal(48, view.Logo.Bounds.Width); Assert.Equal(48, view.Logo.Bounds.Height);
         using var snapshot = ui.SnapshotRasterImage(); using var bitmap = SKBitmap.FromImage(snapshot);
         var x = (int)view.Logo.Bounds.X; var y = (int)view.Logo.Bounds.Y;
-        Assert.Equal(new SKColor(93, 153, 255), bitmap.GetPixel(x + 4, y + 4)); Assert.Equal(new SKColor(255, 196, 64), bitmap.GetPixel(x + 16, y + 4));
+        Assert.Equal(new SKColor(244, 240, 245), bitmap.GetPixel(x + 35, y + 19));
+        Assert.Equal(new SKColor(179, 168, 186), bitmap.GetPixel(x + 13, y + 19));
         Assert.Equal(new SKColor(Theme.Dark.Surface.R, Theme.Dark.Surface.G, Theme.Dark.Surface.B), bitmap.GetPixel(790, 1090));
         model.UseLight(); ui.Update(); using var light = ui.SnapshotRasterImage(); using var lightBitmap = SKBitmap.FromImage(light);
         Assert.Equal(new SKColor(Theme.Light.Surface.R, Theme.Light.Surface.G, Theme.Light.Surface.B), lightBitmap.GetPixel(790, 1090));
-        Assert.Equal(new SKColor(93, 153, 255), lightBitmap.GetPixel(x + 4, y + 4)); ui.Dispose(); Assert.True(view.Logo.IsDisposed);
+        Assert.Equal(new SKColor(244, 240, 245), lightBitmap.GetPixel(x + 35, y + 19)); ui.Dispose(); Assert.True(view.Logo.IsDisposed);
     }
 
     [Fact]

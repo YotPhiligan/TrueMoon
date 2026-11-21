@@ -79,6 +79,8 @@ public sealed class RichTextEditor : Element
     /// <inheritdoc />
     protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : Options.IsReadOnly ? Theme.ReadOnly : Theme.Input;
     /// <inheritdoc />
+    protected override bool UsesThemedControlBackdrop => true;
+    /// <inheritdoc />
     protected override float ThemeBorderWidth => Theme.BorderWidth;
 
     /// <inheritdoc />
