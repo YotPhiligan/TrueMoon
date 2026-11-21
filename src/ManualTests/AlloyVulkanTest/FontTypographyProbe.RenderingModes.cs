@@ -52,82 +52,12 @@ internal static partial class FontTypographyProbe
             var viewport = new UiViewport((int)(FractionalWidth * scale), (int)(CompositionHeight * scale), scale);
             var (bounds, samples) = LayoutTextSamples(viewport);
             var region = DeviceRect(bounds, scale);
-            var info = new SKImageInfo(viewport.Width, viewport.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
-            var raster = CaptureSkia("raster", info, null);
-            Dictionary<ModeCase, ModeFrame> openGl;
-            using (var window = new SilkWindowHost(320, 240, "Typography modes OpenGL", true))
-            using (var gl = GL.GetApi(window.NativeWindow))
-            {
-                var nativeContext = window.NativeWindow.GLContext ?? throw new NotSupportedException("Missing host GL context.");
-                nativeContext.MakeCurrent();
-                using var api = GRGlInterface.CreateOpenGl(name => nativeContext.TryGetProcAddress(name, out var address) ? address : 0)
-                    ?? throw new NotSupportedException("Could not load the desktop OpenGL interface.");
-                Require(api.Validate(), "Invalid desktop OpenGL interface.");
-                using var context = GRContext.CreateGl(api) ?? throw new NotSupportedException("Could not create a Skia OpenGL context.");
-                hardware.Add(new { Scale = scale, Backend = "opengl", Renderer = gl.GetStringS(StringName.Renderer), Version = gl.GetStringS(StringName.Version) });
-                openGl = CaptureSkia("opengl", info, context);
-                Require(gl.GetError() == GLEnum.NoError, "Typography modes generated an OpenGL error.");
-            }
-
-            var device = new VulkanDevice(validationMessage: validation ? Console.Error.WriteLine : null);
-            Dictionary<ModeCase, ModeFrame> vulkan;
-            using (device)
-            using (var extensions = GRVkExtensions.Create(device.GetProcedureAddress, device.Instance.Handle, device.PhysicalDevice.Handle,
-                device.InstanceExtensions, device.DeviceExtensions))
-            using (var backend = new GRVkBackendContext
-            {
-                VkInstance = device.Instance.Handle, VkPhysicalDevice = device.PhysicalDevice.Handle, VkDevice = device.Device.Handle,
-                VkQueue = device.Queue.Handle, GraphicsQueueIndex = device.QueueFamily, MaxAPIVersion = Silk.NET.Vulkan.Vk.Version11,
-                Extensions = extensions, GetProcedureAddress = device.GetProcedureAddress
-            })
-            using (var context = GRContext.CreateVulkan(backend) ?? throw new NotSupportedException("Could not create a Skia Vulkan context."))
-            using (var surface = SilkVulkanHost.CreateSurface(device, context, new(viewport.Width, viewport.Height)))
-            using (var compositor = new VulkanHostCompositor(device, viewport.Width, viewport.Height))
-            {
-                hardware.Add(VulkanHardware(device));
-                vulkan = Capture("vulkan", (draw, composition) =>
-                {
-                    surface.Draw(draw);
-                    var lease = surface.Acquire();
-                    var layout = (Silk.NET.Vulkan.ImageLayout)lease.Info.Layout;
-                    void SetLayout(Silk.NET.Vulkan.ImageLayout value) => layout = value;
-                    try
-                    {
-                        var source = lease.Info;
-                        if (composition != TextComposition.Offscreen) return new(VulkanHostReadback.Read(device, source, SetLayout));
-                        var pixels = compositor.Compose(source, CompositionColors, SetLayout);
-                        source.Layout = (uint)layout;
-                        return new(pixels, VulkanHostReadback.Read(device, source, SetLayout));
-                    }
-                    finally { lease.Return(layout); }
-                });
-            }
-            validationReports.Add(new { Scale = scale, Errors = device.ValidationErrorCount, Warnings = device.ValidationWarningCount });
-            passed &= device.ValidationErrorCount == 0 && device.ValidationWarningCount == 0;
+            var (raster, openGl, vulkan, validationPassed) = CaptureTypographyBackends(viewport, validation, hardware, validationReports, Capture);
+            passed &= validationPassed;
 
             CompareBackends("raster", raster, "opengl", openGl, 1);
             CompareBackends("raster", raster, "vulkan", vulkan, 1);
             CompareBackends("opengl", openGl, "vulkan", vulkan, 0);
-
-            Dictionary<ModeCase, ModeFrame> CaptureSkia(string backend, SKImageInfo imageInfo, GRContext? context)
-            {
-                using var surface = CreateSurface();
-                using var destination = CreateSurface();
-                return Capture(backend, (draw, composition) =>
-                {
-                    draw(surface.Canvas);
-                    using var source = surface.Snapshot();
-                    Require(source.IsTextureBacked == (context != null), $"Unexpected {backend} text surface backing.");
-                    if (composition != TextComposition.Offscreen) return new(RasterProbe.ReadSnapshot(source));
-                    PaintCompositionBackground(destination.Canvas, viewport.Width, viewport.Height);
-                    destination.Canvas.DrawImage(source, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
-                    using var composed = destination.Snapshot();
-                    return new(RasterProbe.ReadSnapshot(composed), RasterProbe.ReadSnapshot(source));
-                });
-
-                SKSurface CreateSurface() => (context == null ? SKSurface.Create(imageInfo) : SKSurface.Create(context, false, imageInfo))
-                    ?? throw new NotSupportedException($"Could not allocate a {backend} text surface.");
-            }
 
             Dictionary<ModeCase, ModeFrame> Capture(string backend, Func<Action<SKCanvas>, TextComposition, ModeFrame> render)
             {
@@ -210,6 +140,85 @@ internal static partial class FontTypographyProbe
         }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } }));
         Console.WriteLine($"Typography modes: {captures.Count} frames, {comparisons.Count} mode and phase comparisons, {backendComparisons.Count} backend comparisons. Report in {output}.");
         if (!passed) Environment.ExitCode = 1;
+    }
+
+    private static (T Raster, T OpenGL, T Vulkan, bool ValidationPassed) CaptureTypographyBackends<T>(UiViewport viewport,
+        bool validation, List<object> hardware, List<object> validationReports,
+        Func<string, Func<Action<SKCanvas>, TextComposition, ModeFrame>, T> capture)
+    {
+        var scale = viewport.Scale;
+        var info = new SKImageInfo(viewport.Width, viewport.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        var raster = CaptureSkia("raster", null);
+        T openGl;
+        using (var window = new SilkWindowHost(320, 240, "Typography modes OpenGL", true))
+        using (var gl = GL.GetApi(window.NativeWindow))
+        {
+            var nativeContext = window.NativeWindow.GLContext ?? throw new NotSupportedException("Missing host GL context.");
+            nativeContext.MakeCurrent();
+            using var api = GRGlInterface.CreateOpenGl(name => nativeContext.TryGetProcAddress(name, out var address) ? address : 0)
+                            ?? throw new NotSupportedException("Could not load the desktop OpenGL interface.");
+            Require(api.Validate(), "Invalid desktop OpenGL interface.");
+            using var context = GRContext.CreateGl(api) ?? throw new NotSupportedException("Could not create a Skia OpenGL context.");
+            hardware.Add(new { Scale = scale, Backend = "opengl", Renderer = gl.GetStringS(StringName.Renderer), Version = gl.GetStringS(StringName.Version) });
+            openGl = CaptureSkia("opengl", context);
+            Require(gl.GetError() == GLEnum.NoError, "Typography modes generated an OpenGL error.");
+        }
+
+        var device = new VulkanDevice(validationMessage: validation ? Console.Error.WriteLine : null);
+        T vulkan;
+        using (device)
+        using (var extensions = GRVkExtensions.Create(device.GetProcedureAddress, device.Instance.Handle, device.PhysicalDevice.Handle,
+                   device.InstanceExtensions, device.DeviceExtensions))
+        using (var backend = new GRVkBackendContext
+               {
+                   VkInstance = device.Instance.Handle, VkPhysicalDevice = device.PhysicalDevice.Handle, VkDevice = device.Device.Handle,
+                   VkQueue = device.Queue.Handle, GraphicsQueueIndex = device.QueueFamily, MaxAPIVersion = Silk.NET.Vulkan.Vk.Version11,
+                   Extensions = extensions, GetProcedureAddress = device.GetProcedureAddress
+               })
+        using (var context = GRContext.CreateVulkan(backend) ?? throw new NotSupportedException("Could not create a Skia Vulkan context."))
+        using (var surface = SilkVulkanHost.CreateSurface(device, context, new(viewport.Width, viewport.Height)))
+        using (var compositor = new VulkanHostCompositor(device, viewport.Width, viewport.Height))
+        {
+            hardware.Add(VulkanHardware(device));
+            vulkan = capture("vulkan", (draw, composition) =>
+            {
+                surface.Draw(draw);
+                var lease = surface.Acquire();
+                var layout = (Silk.NET.Vulkan.ImageLayout)lease.Info.Layout;
+                void SetLayout(Silk.NET.Vulkan.ImageLayout value) => layout = value;
+                try
+                {
+                    var source = lease.Info;
+                    if (composition != TextComposition.Offscreen) return new(VulkanHostReadback.Read(device, source, SetLayout));
+                    var pixels = compositor.Compose(source, CompositionColors, SetLayout);
+                    source.Layout = (uint)layout;
+                    return new(pixels, VulkanHostReadback.Read(device, source, SetLayout));
+                }
+                finally { lease.Return(layout); }
+            });
+        }
+        validationReports.Add(new { Scale = scale, Errors = device.ValidationErrorCount, Warnings = device.ValidationWarningCount });
+        return (raster, openGl, vulkan, device.ValidationErrorCount == 0 && device.ValidationWarningCount == 0);
+
+        T CaptureSkia(string backend, GRContext? context)
+        {
+            using var surface = CreateSurface();
+            using var destination = CreateSurface();
+            return capture(backend, (draw, composition) =>
+            {
+                draw(surface.Canvas);
+                using var source = surface.Snapshot();
+                Require(source.IsTextureBacked == (context != null), $"Unexpected {backend} text surface backing.");
+                if (composition != TextComposition.Offscreen) return new(RasterProbe.ReadSnapshot(source));
+                PaintCompositionBackground(destination.Canvas, viewport.Width, viewport.Height);
+                destination.Canvas.DrawImage(source, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
+                using var composed = destination.Snapshot();
+                return new(RasterProbe.ReadSnapshot(composed), RasterProbe.ReadSnapshot(source));
+            });
+
+            SKSurface CreateSurface() => (context == null ? SKSurface.Create(info) : SKSurface.Create(context, false, info))
+                ?? throw new NotSupportedException($"Could not allocate a {backend} text surface.");
+        }
     }
 
     private static SKTypeface MatchDefaultFace(int weight)

@@ -470,3 +470,20 @@ differences. It includes glyph bounds, partial alpha counts and per-sample
 horizontal centroids weighted by the alpha channel of the intermediate
 texture. Each configuration writes 324 frames at 1:1 with 4× text crops
 and 108 intermediate textures with alpha.
+
+## Isolated glyph positions and clipping
+
+`--typography-glyphs --font-output fresh-directory --validation` captures
+`A V i j Ё ф` individually at 125% and 175%, with `SKFont.Subpixel` off and on.
+Columns follow that glyph order. Rows are 11/400, 11/600, 12/400, 12/600,
+14/400, and 14/600. Each cell uses the same baseline and origin for its
+unclipped and clipped captures. The `x50` variant moves the origin right by
+0.5 device pixels. Grayscale antialiasing and normal hinting stay fixed.
+
+The report includes `SKFont` advances and run origins before shaping, their
+scaled equivalents, and the actual pixel bounds and alpha centroids from
+each backend. The `advance` clip uses the exact horizontal advance rectangle.
+The `halfadvance` clip cuts at a known device-pixel edge inside the glyph and
+checks which pixels survive. Both checks preserve the RGBA of surviving
+pixels and count removed coverage. Each configuration saves 72 composed
+frames, 72 source textures with alpha, and 72 first-row crops at 4×.

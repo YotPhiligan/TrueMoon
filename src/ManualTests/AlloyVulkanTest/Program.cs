@@ -35,6 +35,12 @@ if (args.Contains("--typography-rendering-modes"))
     if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
     FontTypographyProbe.RunRenderingModes(args[index + 1], args.Contains("--validation")); return;
 }
+if (args.Contains("--typography-glyphs"))
+{
+    var index = Array.IndexOf(args, "--font-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
+    FontTypographyProbe.RunGlyphs(args[index + 1], args.Contains("--validation")); return;
+}
 if (args.Contains("--validation-shadows"))
 {
     var index = Array.IndexOf(args, "--design-output");
