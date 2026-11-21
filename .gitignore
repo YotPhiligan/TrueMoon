@@ -246,6 +246,10 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Nom uses Backup as a source directory.
+!/src/TrueMoon.Nom/Backup/
+/src/TrueMoon.Nom/Backup/*
+!/src/TrueMoon.Nom/Backup/*.cs
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/
