@@ -21,6 +21,7 @@ public class InspectorProperty : Bindable
     /// <summary>Gets the presentation label.</summary>
     public string Label { get; }
     internal bool IsRenderReference { get; init; }
+    internal bool IsLayerMask { get; init; }
     internal bool DisplayNumberInDegrees { get; init; }
     /// <summary>Gets the scalar kind, independent of an explicit null value.</summary>
     public PropertyValueKind Kind => Schema.Kind;
@@ -116,6 +117,10 @@ public class InspectorProperty : Bindable
         {
             case PropertyValueKind.Boolean:
                 if (bool.TryParse(Value, out var boolean)) value = PropertyValue.From(boolean); else error = "Выберите true или false";
+                break;
+            case PropertyValueKind.Integer when IsLayerMask:
+                if (uint.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mask)) value = PropertyValue.From((long)mask);
+                else error = "Введите маску слоёв от 0 до 4294967295";
                 break;
             case PropertyValueKind.Integer:
                 if (long.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer)) value = PropertyValue.From(integer);

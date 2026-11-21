@@ -426,6 +426,22 @@ projected shapes in the Vulkan viewport, exact pixel restoration after Undo,
 and the inspector values and viewport pixels after saving the Redo state and
 restarting Editor. `-FreshPackages` uses the closed feed.
 
+## Edit MeshRenderer visibility and layers
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -MeshVisibility `
+  -EvidenceDirectory 'TestResults/EditorMeshVisibility/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The probe applies visibility and the layer mask separately, rejects out-of-range
+masks, and checks two Undo and two Redo operations. A new Editor process opens
+the saved scene and checks the retained values and component identities.
+Vulkan shows the mesh with matching masks and hides it when rendering is
+disabled or the camera's mask does not intersect the mesh's mask. Each
+capture comes from the selected build. The report compares the visible and
+hidden RGBA regions and checks runtime cleanup.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell

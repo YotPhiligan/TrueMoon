@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
@@ -399,10 +400,11 @@ internal static class EditorModelBuildSmoke
         var saveAfterSlotUndo = initialMode == "--initial-import-save-overrides-after-undo";
         var transferMaterials = initialMode == "--initial-import-material-transfer";
         var cameraProjection = initialMode is "--initial-import-camera-save" or "--initial-import-camera-reopen";
+        var meshVisibility = initialMode is "--initial-import-visibility-save" or "--initial-import-visibility-reopen";
         var saveInitialImport = transferMaterials || saveAfterSlotUndo || reimportTexture ||
-            initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides" or "--initial-import-camera-save";
+            initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides" or "--initial-import-camera-save" or "--initial-import-visibility-save";
         var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture"
-            or "--initial-import-reopen-overrides" or "--initial-import-camera-reopen";
+            or "--initial-import-reopen-overrides" or "--initial-import-camera-reopen" or "--initial-import-visibility-reopen";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistMultipleOverrides = saveAfterSlotUndo || initialMode is "--initial-import-save-overrides" or "--initial-import-reopen-overrides";
         var persistSlotOverride = persistMultipleOverrides || initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
@@ -802,6 +804,11 @@ internal static class EditorModelBuildSmoke
                 var published = await ledger.OpenAsync(token) ?? throw new InvalidDataException("Committed catalog ledger is missing.");
                 var mesh = published.Meshes.Single();
                 var entityId = published.Instances.Single().Id;
+                if (meshVisibility)
+                {
+                    await VerifyMeshVisibility();
+                    return;
+                }
                 if (cameraProjection)
                 {
                     await VerifyCameraProjection();
@@ -1114,6 +1121,156 @@ internal static class EditorModelBuildSmoke
                     await CheckReleased(generation, texture);
                     Check(engine.Supervisor.Status.State == SessionState.Stopped && engine.Frames.Presentation == null &&
                         engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0, "Stop retained viewport resources.");
+                }
+
+                async Task VerifyMeshVisibility()
+                {
+                    const long matchingMask = 2;
+                    const long otherMask = 1;
+                    var rendererEntity = new EntityId(entityId);
+                    var renderer = document.Read().Content!.Resolved.Entities[rendererEntity].Components.Values.Single(
+                        item => item.TypeId == MeshRenderingComponents.MeshRendererId).Id;
+                    var camera = document.Read().Content!.Resolved.Entities.Values.Single(entity =>
+                        entity.Components.Values.Any(item => item.TypeId == MeshRenderingComponents.CameraId));
+                    var cameraComponent = camera.Components.Values.Single(item => item.TypeId == MeshRenderingComponents.CameraId).Id;
+                    var inspector = view.Inspector!;
+                    var path = Path.Combine(proofDirectory, "editor-mesh-visibility.json");
+                    await EditorHierarchySmoke.ClickItemAsync(ui, view, entityId.ToString("D"), token);
+
+                    if (reopenInitialImport)
+                    {
+                        var savedPath = Path.Combine(report, "import-saved", "editor-mesh-visibility.json");
+                        var saved = JsonSerializer.Deserialize<MeshVisibilityProof>(await File.ReadAllBytesAsync(savedPath, token))!;
+                        Check(saved.Completed && saved.EditorPid != Environment.ProcessId && saved.Entity == entityId &&
+                            saved.Renderer == renderer.Value && saved.Camera == cameraComponent.Value && saved.SceneSha256 == sceneHash &&
+                            saved.Initial?.Pixels != null, "Reopening Editor did not preserve the scene and component identities.");
+                        await ExpectRenderer(false, matchingMask, draft: false);
+                        ExpectDocument(false, matchingMask, matchingMask);
+                        var disabled = await BuildFrame("mesh-disabled", visible: false);
+
+                        await ClickInspector(() => inspector.Properties[(renderer, "enabled")].Input);
+                        await ExpectRenderer(true, matchingMask, draft: true);
+                        await Apply();
+                        await ExpectRenderer(true, matchingMask, draft: false);
+                        ExpectDocument(true, matchingMask, matchingMask);
+                        var matching = await BuildFrame("mesh-matching-layer", visible: true);
+                        Check(matching.Pixels == saved.Initial!.Pixels, "Matching layers did not reproduce the exact initial frame.");
+
+                        await EditorHierarchySmoke.ClickItemAsync(ui, view, camera.Id.Value.ToString("D"), token);
+                        await EditorHeaderSmoke.UntilAsync(ui, () => LayerText(cameraComponent, matchingMask), token);
+                        await EnterLayer(cameraComponent, otherMask.ToString(CultureInfo.InvariantCulture));
+                        await Apply();
+                        await EditorHeaderSmoke.UntilAsync(ui, () => LayerText(cameraComponent, otherMask) &&
+                            inspector.DataContext?.HasDraft == false, token);
+                        ExpectDocument(true, matchingMask, otherMask);
+                        var mismatch = await BuildFrame("mesh-mismatched-layer", visible: false);
+                        Check(disabled.Pixels == mismatch.Pixels && matching.Pixels != mismatch.Pixels &&
+                            disabled.BuildId != matching.BuildId && matching.BuildId != mismatch.BuildId,
+                            "Vulkan did not distinguish matching visibility from the two hidden states.");
+                        await WriteProof(new(true, Environment.ProcessId, entityId, renderer.Value, cameraComponent.Value, sceneHash,
+                            null, disabled, matching, mismatch));
+                        return;
+                    }
+
+                    await ExpectRenderer(true, uint.MaxValue, draft: false);
+                    ExpectDocument(true, uint.MaxValue, matchingMask);
+                    var initial = await BuildFrame("mesh-visible", visible: true);
+                    var unedited = document.Read().Content!;
+                    await ClickInspector(() => inspector.Properties[(renderer, "enabled")].Input);
+                    await ExpectRenderer(false, uint.MaxValue, draft: true);
+                    Check(ReferenceEquals(unedited, document.Read().Content), "Toggling visibility committed before Apply.");
+                    await Apply();
+                    await ExpectRenderer(false, uint.MaxValue, draft: false);
+                    var visibilityApplied = document.Read().Content!;
+                    Check(visibilityApplied.UndoCount == unedited.UndoCount + 1, "Visibility did not have its own history operation.");
+                    ExpectDocument(false, uint.MaxValue, matchingMask);
+
+                    foreach (var invalid in new[] { "-1", "4294967296" })
+                    {
+                        await EnterLayer(renderer, invalid);
+                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.Properties[(renderer, "layers")].Input is TextBox box &&
+                            box.Value == invalid && box.HasError && !inspector.Apply.IsEnabled, token);
+                        Check(ReferenceEquals(visibilityApplied, document.Read().Content), "An invalid layer mask changed the document.");
+                    }
+                    await EnterLayer(renderer, "0");
+                    await ExpectRenderer(false, 0, draft: true);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.Apply.IsEnabled, token);
+                    await EnterLayer(renderer, matchingMask.ToString(CultureInfo.InvariantCulture));
+                    await ExpectRenderer(false, matchingMask, draft: true);
+                    Check(ReferenceEquals(visibilityApplied, document.Read().Content), "Layer input committed before Apply.");
+                    await Apply();
+                    await ExpectRenderer(false, matchingMask, draft: false);
+                    Check(document.Read().Content!.UndoCount == unedited.UndoCount + 2, "Layers did not have a separate history operation.");
+                    ExpectDocument(false, matchingMask, matchingMask);
+
+                    await StepHistory("edit.undo", false, uint.MaxValue);
+                    await StepHistory("edit.undo", true, uint.MaxValue);
+                    await StepHistory("edit.redo", false, uint.MaxValue);
+                    await StepHistory("edit.redo", false, matchingMask);
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+                    await documents.Pending.WaitAsync(token);
+                    Check(documents.Read().Error == null && !document.Read().IsDirty, "The visibility and layers scene did not save.");
+                    sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
+                    await WriteProof(new(true, Environment.ProcessId, entityId, renderer.Value, cameraComponent.Value, sceneHash, initial));
+
+                    async Task StepHistory(string action, bool enabled, long mask)
+                    {
+                        await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", action, token);
+                        await ExpectRenderer(enabled, mask, draft: false);
+                        ExpectDocument(enabled, mask, matchingMask);
+                    }
+
+                    Task Apply() => ClickInspector(() => inspector.Apply);
+                    Task ExpectRenderer(bool enabled, long mask, bool draft) => EditorHeaderSmoke.UntilAsync(ui, () =>
+                        inspector.DataContext?.HasDraft == draft &&
+                        inspector.Properties.TryGetValue((renderer, "enabled"), out var field) &&
+                        field.Property.Label == "Видимость" && field.Input is CheckBox box && box.IsChecked == enabled &&
+                        LayerText(renderer, mask), token);
+
+                    bool LayerText(ComponentId component, long mask) =>
+                        inspector.Properties.TryGetValue((component, "layers"), out var field) &&
+                        field.Property.Label == "Маска слоёв" && field.Input is TextBox box &&
+                        box.Value == mask.ToString(CultureInfo.InvariantCulture) && !box.HasError;
+
+                    async Task EnterLayer(ComponentId component, string text)
+                    {
+                        await ClickInspector(() => inspector.Properties[(component, "layers")].Input);
+                        await ui.InvokeAsync(() =>
+                        {
+                            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+                            ui.HandleInput(new(InputKind.Text, Text: text));
+                        }).WaitAsync(token);
+                    }
+
+                    void ExpectDocument(bool enabled, long rendererMask, long cameraMask)
+                    {
+                        var scene = document.Read().Content!.Resolved;
+                        var properties = scene.Entities[rendererEntity].Components[renderer].Properties;
+                        Check(properties["enabled"].Value.GetBoolean() == enabled && properties["layers"].Value.GetInteger() == rendererMask &&
+                            scene.Entities[camera.Id].Components[cameraComponent].Properties["layers"].Value.GetInteger() == cameraMask,
+                            "The document did not contain the exact visibility and masks.");
+                    }
+
+                    async Task<FrameProof> BuildFrame(string capture, bool visible)
+                    {
+                        before = document.Read();
+                        content = before.Content!;
+                        await StartBuild();
+                        await Complete();
+                        var artifact = engine.Editor.Status.Candidate!.Build.Artifact;
+                        Check(playback.RunSelectedBuild(artifact), "Editor declined playing the visibility scene.");
+                        await Complete();
+                        var frame = await CapturePlaying(capture, artifact, 0);
+                        Check(frame.Pixels != null && (visible
+                            ? frame.Mask.RedPixels > 100 && frame.Mask.GreenPixels > 100
+                            : frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels == 0),
+                            $"Unexpected Vulkan visibility in {capture}: {frame.Mask.RedPixels}/{frame.Mask.GreenPixels} pixels.");
+                        await StopAndCheck(frame.Generation, null);
+                        return frame;
+                    }
+
+                    Task WriteProof(MeshVisibilityProof proof) =>
+                        File.WriteAllTextAsync(path, JsonSerializer.Serialize(proof), token);
                 }
 
                 async Task VerifyCameraProjection()
@@ -1989,11 +2146,11 @@ internal static class EditorModelBuildSmoke
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
                     var compareSlots = materialSlots || persistSlotOverride || reimportTexture || transferMaterials;
                     var redSlot = persistMultipleOverrides || transferMaterials;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot);
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot, meshVisibility);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
-                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, redSlot) : null;
+                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, redSlot, meshVisibility) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -2049,7 +2206,8 @@ internal static class EditorModelBuildSmoke
         return directory;
     }
 
-    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence, bool materialSlots = false, bool redSlot = false)
+    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence,
+        bool materialSlots = false, bool redSlot = false, bool allowHidden = false)
     {
         Check(clip.Left >= 0 && clip.Top >= 0 && clip.Right <= pixels.Width && clip.Bottom <= pixels.Height &&
             clip.Width > 0 && clip.Height > 0, "Invalid GPU image bounds.");
@@ -2076,13 +2234,16 @@ internal static class EditorModelBuildSmoke
             left = Math.Min(left, x);
             right = Math.Max(right, x);
         }
-        Check(materialSlots ? green > 100 || redSlot && upper + lower > 100 : allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100,
+        Check(allowHidden || (materialSlots ? green > 100 || redSlot && upper + lower > 100 :
+            allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100),
             "Expected occurrences in the GPU viewport.");
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
     }
 
-    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask,
-        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, uint? textureTopLeft, bool redSlot)
+    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image,
+        float scale, PixelMask mask,
+        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, uint? textureTopLeft, bool redSlot,
+        bool allowHidden)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -2095,7 +2256,7 @@ internal static class EditorModelBuildSmoke
             Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
             Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
             Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
-        var cropped = Measure(pixels, crop, allowSingleRedOccurrence, materialSlots, redSlot);
+        var cropped = Measure(pixels, crop, allowSingleRedOccurrence, materialSlots, redSlot, allowHidden);
         Check(cropped.RedPixels == mask.RedPixels && cropped.GreenPixels == mask.GreenPixels,
             "The unobstructed viewport crop does not contain all visible model pixels.");
         var rgba = new byte[checked(crop.Width * crop.Height * 4)];
@@ -2212,6 +2373,8 @@ internal static class EditorModelBuildSmoke
     private sealed record ImportedSlotProof(Guid Id, AssetProof Material);
     private sealed record MaterialTransferFrame(AssetProof Mesh, AssetProof Binding, ImportedSlotProof[] Slots, FrameProof Frame);
     private sealed record CameraProjectionValues(double Angle, double Near, double Far);
+    private sealed record MeshVisibilityProof(bool Completed, int EditorPid, Guid Entity, Guid Renderer, Guid Camera, string SceneSha256,
+        FrameProof? Initial = null, FrameProof? Disabled = null, FrameProof? Matching = null, FrameProof? Mismatch = null);
     private sealed record CameraProjectionFrame(CameraProjectionValues Values, FrameProof Frame);
     private sealed record CameraProjectionProof(bool Completed, int EditorPid, Guid Camera, string SceneSha256,
         CameraProjectionFrame Current, CameraProjectionFrame? Initial, CameraProjectionFrame? Undone);

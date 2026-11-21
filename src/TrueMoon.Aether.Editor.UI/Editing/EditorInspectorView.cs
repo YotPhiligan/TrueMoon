@@ -288,6 +288,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             var number = new NumberBox().WithRole(NumberRole); content = number;
             number.NumericKind = property.Kind == PropertyValueKind.Integer ? NumericValueKind.Integer : NumericValueKind.Real;
             if (property.Kind == PropertyValueKind.Integer || property.DisplayNumberInDegrees) number.Step = 1;
+            if (property.IsLayerMask) { number.Minimum = 0; number.Maximum = uint.MaxValue; }
             input = number.Editor.WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, property, x => x.Value);
             ConfigureNumber(number, property);
         }

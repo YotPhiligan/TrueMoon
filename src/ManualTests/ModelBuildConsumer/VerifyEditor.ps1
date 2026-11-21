@@ -19,6 +19,7 @@ param(
     [switch]$RenderMaterialSlotOverrides,
     [switch]$RenderMaterialTransfer,
     [switch]$CameraProjection,
+    [switch]$MeshVisibility,
     [switch]$SaveAfterSlotUndo,
     [switch]$ImportedTextureRestart,
     [switch]$ImportedTextureReimport,
@@ -43,14 +44,14 @@ $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
 $textureReplaceProbe = $ImportedTextureReplace -or $PlayingTextureWorkflow
 $textureReimportProbe = $ImportedTextureReimport -or $textureReplaceProbe
-$initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $RenderMaterialTransfer -or $CameraProjection -or $ImportedTextureRestart -or $textureReimportProbe
+$initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $RenderMaterialTransfer -or $CameraProjection -or $MeshVisibility -or $ImportedTextureRestart -or $textureReimportProbe
 $renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $initialImportProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($CameraProjection) { 'ED4i-camera-projection' } elseif ($RenderMaterialTransfer) { 'ED4i-material-transfer' } elseif ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotOverrides) { 'ED4i-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($MeshVisibility) { 'ED4i-mesh-visibility' } elseif ($CameraProjection) { 'ED4i-camera-projection' } elseif ($RenderMaterialTransfer) { 'ED4i-material-transfer' } elseif ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotOverrides) { 'ED4i-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -71,7 +72,7 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($CameraProjection) { '--editor-camera-projection' } elseif ($RenderMaterialTransfer) { '--editor-render-material-transfer' } elseif ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotOverrides) { '--editor-render-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($MeshVisibility) { '--editor-mesh-visibility' } elseif ($CameraProjection) { '--editor-camera-projection' } elseif ($RenderMaterialTransfer) { '--editor-render-material-transfer' } elseif ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotOverrides) { '--editor-render-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         if ($mode -eq '--editor-render-material-slot-overrides' -and $SaveAfterSlotUndo) { $mode += '-undo' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
@@ -122,6 +123,33 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                         $images += "$childDirectory/texture-after-blocked-build.png"
                     }
                 }
+            } elseif ($MeshVisibility) {
+                $savedDir = "$fixture/import-saved"
+                $reopenedDir = "$fixture/import-reopened"
+                $savedPath = "$output/visibility-saved.json"
+                $reopenedPath = "$output/visibility-reopened.json"
+                Copy-Item -LiteralPath "$savedDir/editor-mesh-visibility.json" -Destination $savedPath
+                Copy-Item -LiteralPath "$reopenedDir/editor-mesh-visibility.json" -Destination $reopenedPath
+                $saved = Get-Content -LiteralPath $savedPath -Raw | ConvertFrom-Json
+                $reopened = Get-Content -LiteralPath $reopenedPath -Raw | ConvertFrom-Json
+                $children = @(Get-ChildItem -LiteralPath $savedDir -Filter 'runtime-*.json' -File) +
+                    @(Get-ChildItem -LiteralPath $reopenedDir -Filter 'runtime-*.json' -File)
+                if (!$saved.Completed -or !$reopened.Completed -or $children.Count -ne 4 -or
+                    $saved.EditorPid -eq $reopened.EditorPid -or $saved.Entity -ne $reopened.Entity -or
+                    $saved.Renderer -ne $reopened.Renderer -or $saved.Camera -ne $reopened.Camera -or
+                    $saved.SceneSha256 -ne $reopened.SceneSha256 -or
+                    $saved.Initial.Pixels.Sha256 -ne $reopened.Matching.Pixels.Sha256 -or
+                    $reopened.Disabled.Pixels.Sha256 -ne $reopened.Mismatch.Pixels.Sha256 -or
+                    $reopened.Matching.Pixels.Sha256 -eq $reopened.Mismatch.Pixels.Sha256 -or
+                    $reopened.Matching.Mask.RedPixels -le 100 -or $reopened.Matching.Mask.GreenPixels -le 100 -or
+                    $reopened.Disabled.Mask.RedPixels -ne 0 -or $reopened.Disabled.Mask.GreenPixels -ne 0 -or
+                    $reopened.Mismatch.Mask.RedPixels -ne 0 -or $reopened.Mismatch.Mask.GreenPixels -ne 0) {
+                    throw "Incomplete MeshRenderer visibility, layer or restart evidence for $name-$provider"
+                }
+                $run.Saved = @{ Path = $savedPath; Sha256 = (Get-FileHash -LiteralPath $savedPath).Hash }
+                $run.Reopened = @{ Path = $reopenedPath; Sha256 = (Get-FileHash -LiteralPath $reopenedPath).Hash }
+                $images = @("$savedDir/mesh-visible.png", "$reopenedDir/mesh-disabled.png",
+                    "$reopenedDir/mesh-matching-layer.png", "$reopenedDir/mesh-mismatched-layer.png")
             } elseif ($CameraProjection) {
                 $savedDir = "$fixture/import-saved"
                 $reopenedDir = "$fixture/import-reopened"

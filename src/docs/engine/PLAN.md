@@ -32,6 +32,8 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 на `1.2611.20.4-alpha` со сменой геометрии и Undo на Vulkan.
 [Проекция камеры](EDITOR_PLAN.md#ed4i-camera-projection) добавляет проверку
 угла и плоскостей отсечения перед Apply.
+[Видимость и слои ED4i](EDITOR_PLAN.md#ed4i-mesh-visibility) проверены
+в версии `1.2611.21.9-alpha`.
 [Открытые задачи инспектора](EDITOR_PLAN.md#ed4i-next) ведутся в плане Editor.
 
 **Согласованный порядок 2026-11-12:**

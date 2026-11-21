@@ -16762,3 +16762,31 @@ dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c 
 `TestResults/ED4i-camera-projection-20261120-tests-01`.
 
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#edit-and-restore-the-camera-projection).
+
+<a id="ed4i-mesh-visibility-2026-11-21"></a>
+## 2026-11-21 — ED4i. Видимость и слои MeshRenderer
+
+Версия `1.2611.21.9-alpha`. В инспекторе доступны «Видимость» и
+«Маска слоёв». Камера использует редактор той же маски. Ввод `-1` и
+`4294967296` показывал ошибку и блокировал Apply. Значения `0`
+и `4294967295` проверены в поле. Маршрутизованный ввод отдельно сохранил
+выключение меша и маску `2`. Два Undo и два Redo подтвердили
+независимость операций. После сохранения новый процесс Editor сверил
+SHA сцены, ID сущности и компонентов и значения обоих полей.
+
+| Состояние при новом Build | Красные и зелёные пиксели | SHA256 RGBA |
+| --- | --- | --- |
+| Меш выключен, маски меша и камеры `2` | 0 / 0 | `648D4AF091C5CA2BEE3FC904DA25C378407C892106C56BCC8E0AF031F6D8AF5D` |
+| Меш включён, маски `2` и `2` | 16 653 / 16 926 | `6906DB097254B304B8841E1FFCF78046330BBA57CE255F09968A1634EB195331` |
+| Меш включён, маски `2` и `1` | 0 / 0 | `648D4AF091C5CA2BEE3FC904DA25C378407C892106C56BCC8E0AF031F6D8AF5D` |
+
+Видимый кадр побайтно совпал с исходным. Source Debug и published Release
+прошли на Cobalt и Microsoft DI. Все 16 процессов Runtime завершены и
+освободили ресурсы, Vulkan Validation сообщил 0 ошибок и предупреждений.
+Матрица проверена на дереве `27129fe` с правками среза и зависимостями `main`.
+Отчёт `TestResults/ED4i-mesh-visibility-20261121-01/verification.json`,
+SHA256 `97549DCB8C5BF8585BD495769B5E63A0AE9CC0F934BF1FD16B6A60205D3B602F`.
+Все 1 522 теста Editor прошли в каждой конфигурации Debug и Release.
+TRX сохранены в `tests`, проверенные кадры Release Cobalt — в `frames`
+того же каталога.
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#edit-meshrenderer-visibility-and-layers).

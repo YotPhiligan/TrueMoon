@@ -18,6 +18,11 @@ public partial class EditorInspectorViewModel
 
     private bool HasRenderDraft => _renderMesh?.HasDraft == true || _renderBinding?.HasDraft == true;
 
+    private static int MeshRendererOrder(string key) => key switch
+    {
+        "mesh" => -4, "bindings" => -3, "enabled" => -2, "layers" => -1, _ => 0
+    };
+
     private void RefreshRenderAssets()
     {
         if (_renderMesh == null || _renderBinding == null)

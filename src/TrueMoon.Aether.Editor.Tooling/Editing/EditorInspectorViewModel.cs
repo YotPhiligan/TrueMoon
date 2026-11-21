@@ -216,17 +216,21 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                     var schema = content!.Document.Schemas.Single(s => s.TypeId == component.TypeId && s.Version == component.SchemaVersion);
                     var fields = new List<InspectorProperty>();
                     var cameraProjection = HasCameraProjection(schema);
+                    var meshRenderer = schema.TypeId == MeshRenderingComponents.MeshRendererId && schema.Version == 1;
+                    var camera = schema.TypeId == MeshRenderingComponents.CameraId && schema.Version == 1;
                     var ordered = schema.Properties.Values.OrderBy(p => component.TypeId == BuiltInComponents.TransformId
                         ? Array.FindIndex(Fields.ToArray(), f => f.Key == p.Id)
                         : cameraProjection ? ProjectionOrder(p.Id)
-                        : component.TypeId == MeshRenderingComponents.MeshRendererId ? p.Id == "mesh" ? -2 : p.Id == "bindings" ? -1 : 0 : 0)
+                        : meshRenderer ? MeshRendererOrder(p.Id) : 0)
                         .ThenBy(p => p.Id, StringComparer.Ordinal);
                     foreach (var property in ordered)
                     {
                         var address = (component.Id, property.Id); wanted.Add(address);
-                        var renderReference = component.TypeId == MeshRenderingComponents.MeshRendererId &&
-                            component.SchemaVersion == 1 && property.Kind == PropertyValueKind.String && property.Id is "mesh" or "bindings";
-                        var label = cameraProjection ? ProjectionLabel(property.Id)
+                        var renderReference = meshRenderer && property.Kind == PropertyValueKind.String && property.Id is "mesh" or "bindings";
+                        var layerMask = (meshRenderer || camera) && property.Id == "layers" && property.Kind == PropertyValueKind.Integer && !property.IsNullable;
+                        var visibility = meshRenderer && property.Id == "enabled" && property.Kind == PropertyValueKind.Boolean && !property.IsNullable;
+                        var label = layerMask ? "Маска слоёв" : visibility ? "Видимость"
+                            : cameraProjection ? ProjectionLabel(property.Id)
                             : renderReference ? property.Id == "mesh" ? "Меш" : "Материал" : property.Id;
                         var displayDegrees = cameraProjection && property.Id == "fov";
                         InspectorProperty field;
@@ -236,12 +240,14 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                         }
                         else if (!_properties.TryGetValue(address, out field!) || field.Schema.Kind != property.Kind ||
                             field.Schema.IsNullable != property.IsNullable || field.Schema.DefaultValue != property.DefaultValue ||
-                            field.IsRenderReference != renderReference || field.Label != label || field.DisplayNumberInDegrees != displayDegrees)
+                            field.IsRenderReference != renderReference || field.IsLayerMask != layerMask ||
+                            field.Label != label || field.DisplayNumberInDegrees != displayDegrees)
                         {
                             if (field != null) field.Changed -= DraftChanged;
                             field = new(component.Id, property, label, VerifyOwner)
                             {
                                 IsRenderReference = renderReference,
+                                IsLayerMask = layerMask,
                                 DisplayNumberInDegrees = displayDegrees
                             };
                             field.Changed += DraftChanged;
