@@ -165,6 +165,12 @@ DPI/K7 GDI soak/K8 device-loss/VRAM/release matrix не закрываются �
 проверит дробное позиционирование в штатном текстовом контроле на границе
 строки с кареткой и попаданием указателя.
 
+[PA8c.3c](PLAN.md#pa8c3c-emoji-fallback) проверен на Windows при 1,25× и 1,75×.
+`TextBox.UseShapedText` показал ✅ и 👩‍💻 через Segoe UI Emoji на raster,
+OpenGL и Vulkan. Смешанная строка и контроль совпали по высоте и базовой
+линии. Каретка проходит 👩‍💻 одним шагом в обе стороны. `1.2611.21.1-alpha`,
+Vulkan Validation 0/0. [Приёмка](HISTORY.md#pa8c3c-mixed-emoji-2026-11-21).
+
 <a id="текущие-проверки--wsi-stages2026-10-10"></a>
 <a id="предыдущие-проверки--hosting-dispatcher2026-10-10"></a>
 <a id="предыдущие-проверки--wglthread-lifetime2026-10-10"></a>

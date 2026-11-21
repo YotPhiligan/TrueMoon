@@ -11,9 +11,17 @@ public sealed class TextBox : Element
 
     /// <summary>The editable string.</summary>
     public static readonly UiProperty<string> ValueProperty = new("Value", "", Invalidation.Layout, v => v != null && !v.Contains('\r') && !v.Contains('\n'));
+    /// <summary>Requests single-line shaping when the renderer provides rich text layout and drawing.</summary>
+    public static readonly UiProperty<bool> UseShapedTextProperty = new("UseShapedText", false, Invalidation.Layout);
     private int _caret, _anchor;
     private float _scrollX;
     private ITextLayoutService? _text;
+    private IRichTextLayout? _shapedLine;
+    private ShapedLineSource _shapedSource;
+
+    private readonly record struct ShapedLineSource(ITextLayoutService Service, string Text, string Family,
+        float Size, int Weight, bool Italic, Color Foreground);
+
     /// <summary>Creates a text editor.</summary>
     public TextBox() { MinWidth = 160; }
     /// <summary>Whether text is selectable/copyable without user edits.</summary>
@@ -32,6 +40,8 @@ public sealed class TextBox : Element
     protected override bool SupportsValidationIcon => true;
     /// <summary>The editor content.</summary>
     public string Value { get => Get(ValueProperty); set => Set(ValueProperty, value); }
+    /// <summary>Shares the shaped line between drawing and caret placement on capable renderers. Defaults to false.</summary>
+    public bool UseShapedText { get => Get(UseShapedTextProperty); set => Set(UseShapedTextProperty, value); }
     /// <inheritdoc />
     protected override void OnPropertyChanged(object property)
     {
@@ -46,8 +56,43 @@ public sealed class TextBox : Element
     public int SelectionLength => Math.Abs(_caret - _anchor);
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
-    { _text = text; ClampSelection(); return new Size(160, text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height); }
-    private float MeasurePrefix(int position) => _text?.Measure(Value[..position], FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0;
+    {
+        _text = text;
+        ClampSelection();
+        return new Size(160, GetShapedLine()?.Size.Height ?? text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height);
+    }
+    private float MeasurePrefix(int position, IRichTextLayout? line) => line?.GetCaretBounds(position).X ??
+        _text?.Measure(Value[..position], FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0;
+
+    private IRichTextLayout? GetShapedLine()
+    {
+        if (!UseShapedText || _text is not IRichTextLayoutService rich)
+        {
+            ReleaseShapedLine();
+            return null;
+        }
+        var source = new ShapedLineSource(_text, Value, FontFamily, FontSize, FontWeight, FontItalic,
+            IsEffectivelyEnabled ? Foreground : Theme.Disabled);
+        if (_shapedLine != null && ReferenceEquals(source.Service, _shapedSource.Service) && source == _shapedSource)
+            return _shapedLine;
+
+        ReleaseShapedLine();
+        _shapedLine = rich.CreateRichTextLayout(RichTextDocument.FromText(source.Text), new RichTextStyle
+        {
+            FontFamily = source.Family, FontSize = source.Size, FontWeight = source.Weight,
+            Italic = source.Italic, Foreground = source.Foreground
+        }, null, RichTextAlignment.Left);
+        _shapedSource = source;
+        return _shapedLine;
+    }
+
+    private void ReleaseShapedLine()
+    {
+        var line = _shapedLine;
+        _shapedLine = null;
+        _shapedSource = default;
+        line?.Dispose();
+    }
     private void ClampSelection()
     {
         var value = Value;
@@ -84,23 +129,33 @@ public sealed class TextBox : Element
     {
         ClampSelection();
         if (IsReadOnly && !HasError) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
-        var lineHeight = _text?.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height ?? EditorContentBounds.Height;
+        var shaped = GetShapedLine();
+        var lineHeight = shaped?.Size.Height ?? _text?.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height ?? EditorContentBounds.Height;
         var area = TextLineArea(lineHeight);
         var border = Math.Min(BorderWidth, Bounds.Height / 2);
         // Padding positions the line; it must not clip glyph ink or antialiased
         // selection edges. Horizontal clipping still excludes the error badge.
         var viewport = area with { Y = Bounds.Y + border, Height = Math.Max(0, Bounds.Height - 2 * border) };
         var textY = area.Y + (area.Height - lineHeight) / 2;
-        var caretX = MeasurePrefix(_caret);
+        var caretX = MeasurePrefix(_caret, shaped);
         _scrollX = Math.Clamp(_scrollX, Math.Max(0, caretX - Math.Max(0, area.Width - 2)), Math.Max(0, caretX));
         context.Save();
         try
         {
             context.Clip(viewport);
-            if (IsFocused && SelectionLength > 0)
-                context.Fill(new Rect(area.X + MeasurePrefix(SelectionStart) - _scrollX, textY,
-                    MeasurePrefix(SelectionStart + SelectionLength) - MeasurePrefix(SelectionStart), lineHeight), Theme.Accent with { A = 100 });
-            context.Text(Value, area.X - _scrollX, textY, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
+            if (shaped != null)
+            {
+                if (context is not IRichTextDrawingContext rich)
+                    throw new InvalidOperationException("Shaped layout requires a matching rich text drawing context.");
+                rich.RichText(shaped, area.X - _scrollX, textY, SelectionStart, IsFocused ? SelectionLength : 0, Theme.Accent with { A = 100 });
+            }
+            else
+            {
+                if (IsFocused && SelectionLength > 0)
+                    context.Fill(new Rect(area.X + MeasurePrefix(SelectionStart, null) - _scrollX, textY,
+                        MeasurePrefix(SelectionStart + SelectionLength, null) - MeasurePrefix(SelectionStart, null), lineHeight), Theme.Accent with { A = 100 });
+                context.Text(Value, area.X - _scrollX, textY, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
+            }
             if (IsFocused) context.Fill(new Rect(area.X + caretX - _scrollX, textY, 1, lineHeight), Foreground);
         }
         finally { context.Restore(); }
@@ -114,9 +169,10 @@ public sealed class TextBox : Element
         {
             if (HasError && ValidationIconBounds.Contains(input.X, input.Y)) return true;
             context.Focus(this);
-            var x = input.X - Bounds.X - Padding.Left + _scrollX;
+            var shaped = GetShapedLine();
+            var x = input.X - EditorContentBounds.X + _scrollX;
             var positions = StringInfo.ParseCombiningCharacters(Value).Append(Value.Length);
-            Move(positions.MinBy(i => Math.Abs(MeasurePrefix(i) - x)), input.Shift);
+            Move(positions.MinBy(i => Math.Abs(MeasurePrefix(i, shaped) - x)), input.Shift);
             return true;
         }
         if (!IsReadOnly && input.Kind == InputKind.Text && !string.IsNullOrEmpty(input.Text))
@@ -155,6 +211,19 @@ public sealed class TextBox : Element
                 if (SelectionLength == 0) _anchor = Next(_caret);
                 ReplaceSelection(""); return true;
             default: return false;
+        }
+    }
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        try { base.Dispose(); }
+        finally
+        {
+            if (IsDisposed)
+            {
+                _text = null;
+                ReleaseShapedLine();
+            }
         }
     }
 }

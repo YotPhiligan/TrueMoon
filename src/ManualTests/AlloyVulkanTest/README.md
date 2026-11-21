@@ -487,3 +487,18 @@ The `halfadvance` clip cuts at a known device-pixel edge inside the glyph and
 checks which pixels survive. Both checks preserve the RGBA of surviving
 pixels and count removed coverage. Each configuration saves 72 composed
 frames, 72 source textures with alpha, and 72 first-row crops at 4×.
+
+## Mixed text and color emoji
+
+`--typography-emoji --font-output fresh-directory --validation` draws
+`Готово ✅ · Автор 👩‍💻` and a text-only control in `TextBox` with
+`UseShapedText = true`. It uses installed Segoe UI Variable Text and Segoe UI
+Emoji at logical size 18 and synthetic 125% and 175% on raster, OpenGL and
+Vulkan. The report records font revisions and hashes, fallback runs, line
+heights and baselines, color-pixel counts and caret positions. A reference
+render from the recorded RichTextKit runs checks the pixels inside the text
+region. Routed arrows visit all grapheme boundaries in both directions.
+
+The probe saves 1:1 frames, a 4× crop, and frames with the caret on either side
+of each emoji. It exercises toggling shaped layout off and back on within the
+same session.

@@ -163,6 +163,11 @@ and validation-badge exclusion remain in effect. Natural height still includes t
 configured padding. A field physically shorter than its font remains bounded by its
 outer rectangle; text is not scaled down.
 
+Set `TextBox.UseShapedText = true` to share a single shaped line between drawing,
+line height, caret placement and hit testing. A renderer that implements rich
+text layout and drawing supplies shaping and the configured font fallback. The
+plain-text path is the default and also serves renderers without rich text layout.
+
 Validation presentation: bind HasError and ErrorMessage on TextBox/RichTextEditor
 or NumberBox. A solid Theme.Error square at the right edge spans the field height;
 Theme.OnError supplies the contrasting centered symbol. Narrow fields clip the badge.
