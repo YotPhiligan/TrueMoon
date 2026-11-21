@@ -16588,6 +16588,275 @@ Debug/Cobalt. Повреждённый артефакт отклонён до с
 
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#reimport-build-and-replace-from-the-editor-during-play).
 
+<a id="engine-roadmap-before-2026-11-20"></a>
+
+## Очередь Aether до ревизии 20.11.2026
+
+## Текущая очередь — актуализация 2026-11-19
+
+[ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport) добавил команду Editor для реимпорта
+выбранной модели и обновления её ресурсов для следующего Build.
+[ARCH1g.2m](PLAN.md#arch1g2m-persisted-model-selection) восстанавливает точный выбор
+импортов при открытии сцены.
+[ARCH1g.2n](PLAN.md#arch1g2n-project-model-catalog) добавляет выбор импортов проекта
+из каталога Editor.
+[ARCH1g.2o](PLAN.md#arch1g2o-place-catalog-model) добавляет модель из каталога в сцену.
+[Первый срез ED4i](EDITOR_PLAN.md#ed4i-render-components) меняет меш и материал
+одного экземпляра. В `main` это поставка `098fc53`, версия `1.2611.19.7-alpha`.
+[Сохранение привязки после перезапуска](EDITOR_PLAN.md#ed4i-render-binding-restart)
+и [сброс материала меша](EDITOR_PLAN.md#ed4i-material-reset) проверены в ED4i.
+[Диагностика отсутствующих ссылок](EDITOR_PLAN.md#ed4i-reference-diagnostics)
+проверена в инспекторе и при Build. [Два слота ED4i](EDITOR_PLAN.md#ed4i-material-slots)
+добавляют устойчивые ID слотов при импорте и замену материала одного слота.
+[ARCH1g.2p](PLAN.md#arch1g2p-initial-model-import) добавил первичный импорт из Editor,
+размещение и проверку восстановления каталога и ID слотов после перезапуска.
+
+**Согласованный порядок 2026-11-12:**
+
+1. [ARCH3.0](PLAN.md#arch3-0) — карта типов/зависимостей/совместимости **завершена статически**:
+   [решения](ARCH3_MAP.md), [488 публичных типов](ARCH3_TYPE_MAP.csv), [61 проект](ARCH3_PROJECT_MAP.csv).
+2. Короткий [ARCH2e.4b](PLAN.md#arch2e4b-drain-diagnostics) срез **завершён 2026-11-12**:
+   [диагностика](DRAIN_DIAGNOSTICS.md), solution D/R0errors и 11 suites по8568passed;
+   causal fix исторического timeout открыт, deadlines не повышались.
+3. [ARCH1f.4](PLAN.md#arch1f-rendering) — **завершён 2026-11-12**: [surface/Playing fence](RENDER_SURFACE.md), [actual source/publish/fresh15package proofs](HISTORY.md#arch1f4-2026-11-12).
+4. Минимальные [ENG7b.1–2](PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29) — **завершены 2026-11-12**: [local Player/role contracts](PLAYER.md), [actual proofs](HISTORY.md#eng7b12-2026-11-12).
+5. [ARCH3.1](PLAN.md#arch3-1) — **завершён 2026-11-12**: [независимый контрактный SDK](ABSTRACTIONS.md).
+6. [ARCH3.2](PLAN.md#arch3-2) — **завершён 2026-11-12**: [real ECS binding/App/DI/registry](ECS_BINDING.md), [актуальные проверки](ARCH32_BASELINE.json).
+7. [ARCH3.3](PLAN.md#arch3-3) — **завершён 2026-11-13**: [самостоятельный Runtime/App/schema2](RUNTIME.md), [дельта карты](ARCH33_MIGRATION.csv), [fresh acceptance](ARCH33_BASELINE.json).
+8. [ARCH3.4](PLAN.md#arch3-4) — **завершён 2026-11-14**: [headless Tooling/App/ownership](TOOLING.md), [проверки/SHA](ARCH34_BASELINE.json).
+9. [ARCH3.5](PLAN.md#arch3-5) — Editor UI и optional Editor.Tooling bridge; завершён 14 ноября, [API/приёмка](EDITOR_LAYERS.md).
+10. [ARCH3.6](PLAN.md#arch3-6) — managed Mod SDK/manifest/collectible loader; завершён 14 ноября, [API/ownership](MODS.md), [приёмка/SHA](ARCH36_BASELINE.json).
+11. [ARCH3.7](PLAN.md#arch3-7) — stable-component system replacement завершён 14 ноября: [API/ownership](MOD_RELOAD.md), [проверки](ARCH37_BASELINE.json).
+12. [ARCH3.8](PLAN.md#arch3-8) — private components/new-World migration завершён 2026-11-15: [API/ownership](MOD_MIGRATION.md), [приёмка](ARCH38_BASELINE.json).
+13. [ARCH3.9](PLAN.md#arch3-9) — завершён 2026-11-15: [единая поставка/guide](ARCHITECTURE_GUIDE.md), [приёмка/SHA](ARCH39_BASELINE.json).
+14. [ARCH1j — общий слой сессии](PLAN.md#arch1j-session-subsystems), [Kton PHYS5](../physics/PLAN.md#phys5) и [Kul ARCH1h.2a](PLAN.md#arch1h2a-kul-session) завершены2026-11-15 в своём scope. ENG7b.3 завершён2026-11-16: [матрица/границы](LAUNCH_ACCEPTANCE.md); functional/release gates сохраняются.
+
+Завершены 17.11.2026: [g.1a source capture](PLAN.md#arch1g1a-source-capture), [g.1b isolated CPU import](PLAN.md#arch1g1b-isolated-import)
+и [g.1c persistent IDs/atomic ledger](PLAN.md#arch1g1c-subasset-ledger). Ограниченный CPU g.1 завершён;
+[ARCH1g.2a](PLAN.md#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime.
+[ARCH1g.2b](PLAN.md#arch1g2b-model-scene-gpu) разместил её в сцене и проверил обе сборки на GPU.
+[ARCH1g.2c](PLAN.md#arch1g2c-model-editor-builds) проверил смену сборок в одном Editor через Stop/Start.
+[ARCH1g.2d](PLAN.md#arch1g2d-full-scene-replace) проверил горячий Replace и восстановление полной сцены.
+[ARCH1g.2e](PLAN.md#arch1g2e-build-selection-ui) провёл этот сценарий через меню Editor.
+[ARCH1g.2f](PLAN.md#arch1g2f-fresh-editor-packages) повторил сценарий в независимом Editor из закрытого feed.
+[ARCH1g.2g](PLAN.md#arch1g2g-dependency-settings-deletion) проверил правку зависимости, настройку и удаление ресурсов.
+[ARCH1g.2h](PLAN.md#arch1g2h-multiple-models) объединил точные снимки двух импортированных моделей в одной сборке.
+[ARCH1g.2i](PLAN.md#arch1g2i-import-freshness) проверил актуальность этих импортов перед новой сборкой.
+[ARCH1g.2j](PLAN.md#arch1g2j-model-source-watch) подключил уведомления и периодическую проверку источников моделей.
+[ARCH1g.2k](PLAN.md#arch1g2k-editor-model-imports) показывает актуальность выбранных импортов в Editor и повторяет проверку перед сборкой сцены.
+
+<a id="editor-roadmap-before-2026-11-20"></a>
+
+## Очередь Editor до ревизии 20.11.2026
+
+## Точка продолжения — актуализация 2026-11-19
+
+[ARCH1g.2k](PLAN.md#arch1g2k-editor-model-imports) проверил статусы
+выбранных импортов и команду Build из меню. [ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport)
+добавил действие реимпорта модели из панели статуса с повтором после отмены.
+[ARCH1g.2m](PLAN.md#arch1g2m-persisted-model-selection) восстановил сохранённый
+выбор моделей при повторном открытии документа.
+[ARCH1g.2n](PLAN.md#arch1g2n-project-model-catalog) добавляет список импортированных
+моделей проекта и выбор ресурсов для открытой сцены.
+[ARCH1g.2o](PLAN.md#arch1g2o-place-catalog-model) размещает выбранный импорт в
+сцене с обычными Undo, Redo и сохранением документа.
+
+ARCH3.5 завершён 2026-11-14: [Editor.UI и optional Editor.Tooling](EDITOR_LAYERS.md) выделены. View/data/styles/ports работают с Runtime без Tooling, полный project/document/build/authoring workflow подключается bridge. [Единая очередь](PLAN.md#current-engine-queue), [фактическая приёмка](ARCH35_BASELINE.json). ARCH3.6 добавил [managed Mod SDK/loader](MODS.md); ARCH3.7 добавил [stable-component system replacement](MOD_RELOAD.md); ARCH3.8 добавил [owned-World component migration](MOD_MIGRATION.md); ARCH3.9 завершил [сквозную приёмку/поставку](ARCHITECTURE_GUIDE.md). Детальные ED задачи ниже сохраняются.
+
+CORE8.3: SDK preflight и frozen game compiler переведены на module target .NET11;
+full Editor1496/Aether3243 D/R и SDK11-only source/published runtime proof прошли.
+[Команды/границы](../core/HISTORY.md#core83-frozen-2026-11-11); детальная миграция — Core.
+
+ED4f.3 Window, ED4g.1/2 compact/numeric editors, ED6b source tracking и bounded
+Build/Play/Replace реализованы в scopes из [STATUS](STATUS.md). Первый profiling,
+directory cache и native open/metadata не являются новой следующей задачей.
+ED5 имеет GPU Edit Preview, завершённый ED5a camera/selection и ED5b translation v1 в указанном acceptance scope; rotation/scale остаются отдельными.
+
+Типографика больше не входит в открытую очередь: [подключение Editor/default family](EDITOR_PLAN.md#editor-default-typography)
+завершено в [PA8c.3b](../alloy/PLAN.md#pa8c3b-default-fonts). ED4g.3 group reset
+реализован и проверен2026-11-08; ED4g.4 rad/deg также завершён.
+ED5a.0 contract и ED5a.1 immutable camera/projection/unprojection/cube ray math
+реализованы. ED5a.2 explicit preview view/actual receipt также реализован и проверен.
+ED5a.1–4 завершены в bounded Windows x64 scope: source/published и fresh-package GPU,
+Windows input доступного supported scope. ED5b world translation v1 реализован и проверен09ноября;
+local-oriented handles/snapping и rotation/scale — отдельный будущий scope.
+Held-button hardware input и multi-monitor DPI остаются отдельными gates.
+
+Контракты ECS, рендера и материалов ведутся в [ARCH1e/f](PLAN.md#arch1f-rendering).
+Первый срез [ED4i](EDITOR_PLAN.md#ed4i-render-components) использует их для выбора однослотового
+меша и материала из импортов сцены. [Предлагаемое продолжение](EDITOR_PLAN.md#ed4i-next).
+
+| Очередь | Результат | Статус |
+| --- | --- | --- |
+| Завершённый UI срез | [ED4g.3 group reset](EDITOR_PLAN.md#ed4g3-group-reset) | Реализован2026-11-08: Editor1323/1323 D/R, source Debug/published Release native history/save/reopen/preview; [scope](HISTORY.md#ed4g3-group-reset-2026-11-08) |
+| Завершённый UI срез | [ED4g.4 angle units](EDITOR_PLAN.md#ed4g4-angle-units) | Реализован2026-11-08: default rad, display deg, explicit invalid/gesture admission; Editor1353/1353 D/R + source/published native; [scope](HISTORY.md#ed4g4-angle-units-2026-11-08) |
+| Контракт готов | [ED5a.0 camera/selection](EDITOR_PLAN.md#ed5a0-contract) | Решения2026-11-08 и20численных checks; исторический contract-only этап, реализация/acceptance ниже |
+| Реализован численный срез | [ED5a.1 camera values/ray math](EDITOR_PLAN.md#ed5a1-camera-values) | 77newcases; Aether1857/1857 D/R, Editor1353/1353 Debug; [scope](HISTORY.md#ed5a1-values-2026-11-08) |
+| Реализован transport/receipt | [ED5a.2 preview view/actual receipt](EDITOR_PLAN.md#ed5a2-preview-view) | Control4/Frame2,52new Aether+10Editor cases; Aether2103/Editor1363 D/R, source/published native same-child pixels и cleanup0; [scope](HISTORY.md#ed5a2-view-2026-11-08) |
+| Input реализован | [ED5a.3 navigation/selection](EDITOR_PLAN.md#ed5a3-navigation-picking) |33new Editor+1Aether case; Editor1396/Aether2104 D/R и native source/published directed GPU input; [scope](HISTORY.md#ed5a3-input-2026-11-08) |
+| Приёмка завершена в указанном scope | [ED5a.4 full profile](EDITOR_PLAN.md#ed5a4-acceptance) | Editor1412/Aether2104 D/R; source/published/fresh-package GPU и Windows input; [scope/limits](HISTORY.md#ed5a4-acceptance-2026-11-08) |
+| Приёмка v1 завершена | [ED5b translation v1](EDITOR_PLAN.md#ed5b-translation) | World handles/outline/one commit; Editor1465 D/R, source/published/fresh-package native; [scope](HISTORY.md#ed5b-translation-2026-11-09) |
+| Параллельный proof | [ED4g.2a physical input](EDITOR_PLAN.md#ed4g2a-native-numeric) | Частично: source/published native пройден, оставшиеся physical cases не подтверждены |
+| Performance срез завершён | [ED6b.2e.4f](EDITOR_PLAN.md#ed6b2e4f-observer-cost) | Allocation objective проверен09ноября:−3.46/−3.51% workload, latency близка к baseline; общий speedup не заявлен. [Scope](OBSERVER_COST.md) |
+
+Общие full-solution/release и drain diagnostics ведутся в engine/общем плане.
+Hardware gates ограничивают readiness, не требуют завершить всё UI alpha перед
+каждым прикладным control. Game AI inspector обозначен **ED4h**: прежний ED4g
+от30октября конфликтовал с compact Transform от5ноября; старый anchor сохранён.
+
+<a id="engine-status-before-review-2026-11-20"></a>
+
+## Aether STATUS до ревизии 20.11.2026
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-20 — ARCH1f.5, переимпорт, Build и Replace из интерфейса в Playing.**
+В версии `1.2611.20.2-alpha` панель статуса запускает переимпорт выбранной
+модели, Build в меню проекта публикует кандидат для играющей сцены. Диалог
+замены предлагает его BuildId. На Vulkan после отказа при устаревшем импорте
+и после публикации кандидата сохраняется кадр исходного Runtime. После Replace
+видна новая ревизия текстуры, ID и счётчик тиков сохраняются.
+[Приёмка](HISTORY.md#arch1f5-editor-playing-texture-workflow-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, горячий Replace сцены после переимпорта PNG.**
+Сборка продолжала Playing с исходными пикселями после публикации новой
+ревизии PNG. Replace из меню применил новый BuildId и сохранил ход тиков.
+Vulkan показал новую ревизию с тем же ID текстуры и прежним правым слотом.
+Переимпорт и Build во время Playing проверены через API открытого документа
+и компилятора. [Приёмка](HISTORY.md#arch1f5-editor-texture-replace-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, переимпорт внешней PNG в открытом Editor.**
+В версии `1.2611.20.1-alpha` изменение только PNG привело к статусу
+«Импорт устарел» до попытки Build. Build отклонён до переимпорта. Команда
+«Переимпортировать» сохранила ID модели, меша, слотов и текстуры и сменила
+ревизию текстуры. На Vulkan изменился верхний левый texel, остальные
+texels и одноцветный слот совпали. [Приёмка](HISTORY.md#arch1f5-editor-texture-reimport-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, текстурированная сцена после перезапуска Editor.**
+В версии `1.2611.20.1-alpha` штатный импорт внешней PNG, размещение из
+каталога и Save прошли в шести профилях на Cobalt и Microsoft DI.
+После открытия в новом процессе совпали ID и точные ревизии ресурсов.
+Build из восстановленной сцены показал те же четыре texels и побайтно
+тот же участок viewport на Vulkan.
+[Приёмка](HISTORY.md#arch1f5-editor-texture-restart-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, внешняя PNG из glTF.** Версия **1.2611.20.1-alpha**.
+Импорт с `TEXCOORD_0` и `NearestClamp` передаёт точную ревизию текстуры
+через ledger и Nom в Build. После изменения только PNG получен переход
+`Current → Stale → Current`, ID текстуры, привязки и геометрия сохранились.
+Три профиля, включая Release из свежих пакетов, прошли A → B → A на Vulkan
+с ожидаемыми пикселями и нулём ошибок и предупреждений validation.
+[Приёмка](HISTORY.md#arch1f5-imported-png-2026-11-20).
+
+**2026-11-19 — первый срез ARCH1f.5.** Версия **1.2611.19.12-alpha**.
+Меш с UV0 и одной непрозрачной RGBA8 sRGB-текстурой проходит Build → Runtime →
+Vulkan с sampler `NearestClamp`. Source Debug, published Release и свежие пакеты
+прошли A → B → A. Совпали точные ревизии upload и ожидаемые пиксели. Повторный
+кадр A побайтно совпал с первым. Vulkan core/sync validation: 0 ошибок и
+предупреждений, все image/sampler и процессы освобождены.
+[Следующий срез](PLAN.md#arch1f5-base-color-texture),
+[приёмка](HISTORY.md#arch1f5-base-color-2026-11-19).
+
+**2026-11-19 — ED4i, сохранение материала слота.** На версии **1.2611.19.11-alpha**
+Editor сохранил переопределение одного слота двухслотовой модели из каталога.
+В новом процессе проверены оба значения в инспекторе, ID слотов, точные
+ключи ресурсов и совпадение пикселей из новой сборки на Vulkan во всех
+шести профилях, включая Editor из свежих пакетов.
+[Приёмка](HISTORY.md#ed4i-material-slot-restart-2026-11-19).
+
+**2026-11-19 — ARCH1g.2p, первичный импорт из Editor.** Версия **1.2611.19.11-alpha**.
+Команда добавляет в каталог модель проекта после worker, ledger и Nom.
+Проверены блокировка регистрации и повтор с прежним ledger. Двухслотовая
+glTF с внешним BIN размещена и сохранена в сцене. В новом процессе Editor
+совпали запись каталога, два ID слотов, ключи материалов и кадр из новой
+сборки на Vulkan во всех шести профилях, включая Editor из свежих пакетов.
+В Debug и Release прошли 144 теста импорта и 1507 тестов Editor.
+[Приёмка](HISTORY.md#arch1g2p-2026-11-19).
+
+**2026-11-19 — ED4i, два слота материала.** Версия **1.2611.19.10-alpha**.
+Worker импортирует два именованных примитива как один меш. После реимпорта с
+перестановкой примитивов и изменением геометрии оба ID сохранились. Инспектор
+меняет один слот, Build сохраняет точный ключ соседнего материала. На Vulkan
+попиксельно совпала вся область с соседним слотом в шести профилях, включая
+независимый Editor из свежих пакетов. В Debug и Release прошли 678 адресных
+тестов Aether и 1507 тестов Editor.
+[Приёмка](HISTORY.md#ed4i-material-slots-2026-11-19).
+
+**2026-11-19 — ED4i, диагностика ссылок.** Версия **1.2611.19.9-alpha**.
+Инспектор и Build показывают ID отсутствующего меша или привязки материала.
+Build отклоняет сборку до смены кандидата. Возврат импортов восстановил
+точный ключ привязки и пиксели на Vulkan в шести профилях, включая
+независимый Editor из свежих пакетов. Прежний сценарий каталога прошёл в
+четырёх профилях. Тесты Editor прошли 1507/1507 в Debug и Release.
+[Приёмка](HISTORY.md#ed4i-reference-diagnostics-2026-11-19).
+
+**2026-11-19 — ED4i, вернуть материал меша.** Версия **1.2611.19.8-alpha**.
+Кнопка выбирает исходный материал текущего меша через Apply. Vulkan подтвердил
+прежний ключ меша, кадр с переопределением после Undo и кадр сброса после Redo
+в шести профилях, включая независимый Editor из свежих пакетов. Тесты Editor
+прошли 1507/1507 в Debug и Release.
+[Приёмка](HISTORY.md#ed4i-material-reset-2026-11-19).
+
+**2026-11-19 — ED4i, приёмка перезапуска.** На версии **1.2611.19.7-alpha**
+новый процесс Editor восстановил меш, материал и ID привязки из сохранённой
+сцены. Новая сборка закрепила те же ключи ресурсов. Пиксели видимой геометрии
+совпали на Vulkan в шести профилях, включая свежие пакеты. Тесты Editor
+прошли 1507/1507 в Debug и Release.
+[Приёмка](HISTORY.md#ed4i-render-binding-restart-2026-11-19).
+
+**2026-11-19 — ED4i, первый срез в `main`.** Коммит `098fc53`,
+версия **1.2611.19.7-alpha**.
+Выбор однослотового меша и материала из импортов сцены работает через
+черновик инспектора. Apply меняет ссылки выбранного экземпляра одной правкой.
+Vulkan подтвердил смену геометрии и восстановление исходного кадра после Undo
+в шести профилях на Cobalt и Microsoft DI, включая свежие пакеты.
+Тесты Editor прошли 1507/1507 в Debug и Release.
+Следующий двухслотовый сценарий требует совместимой публикации модели.
+[План](EDITOR_PLAN.md#ed4i-next), [проверки от 19.11.2026](HISTORY.md#ed4i-render-inspector-2026-11-19).
+
+**2026-11-19 — ARCH1g.2o.** Версия **1.2611.19.6-alpha**. Editor добавляет
+выбранный импорт из каталога в сцену одной командой истории. Проверены один
+Undo, Redo, сохранение и повторное открытие с теми же ID. Vulkan показал оба
+экземпляра добавленной модели из новой сборки в шести профилях, включая
+независимый Editor из свежего feed. Тесты Editor прошли 1507/1507 в Debug и
+Release. [Проверки](HISTORY.md#arch1g2o-2026-11-19).
+
+**2026-11-19 — ARCH1g.2n.** Первый каталог моделей в Editor, версия
+**1.2611.19.5-alpha**. Панель состояния показывает
+зарегистрированные импорты проекта. Флажки меняют набор ресурсов сцены,
+повторное открытие восстанавливает выбор. Для размещённых моделей Build
+проверяет наличие выбранных ресурсов. Сценарий с двумя моделями подтвердил
+выбор и восстановление, отказ сборки при неполном наборе и точные ревизии на GPU.
+Шесть профилей на Cobalt и Microsoft DI, включая свежие пакеты. Стандартный
+пример собран в Release. Тесты Editor — 1507/1507 в Debug и Release.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2n-project-model-catalog),
+[проверки](HISTORY.md#arch1g2n-2026-11-19).
+
+**ARCH1g.2l–m**, коммит `9e36e8e`, версия `1.2611.19.4-alpha`.
+[Приёмка сохранённого выбора](HISTORY.md#arch1g2m-2026-11-19).
+
+[ARCH1g.2l — приёмка реимпорта из Editor](HISTORY.md#arch1g2l-2026-11-19).
+
+**Предыдущая поставка — ARCH1g.2k**, коммит `b92a6a9`, версия `1.2611.19.2-alpha`.
+[Проверки статусов и допуска Build](HISTORY.md#arch1g2k-2026-11-19).
+
+
+**2026-11-18 — ARCH1g.2i.** Проверка актуальности импорта перед сборкой.
+Version **1.2611.18.10-alpha**.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2i-import-freshness),
+[план](PLAN.md#arch1g2i-import-freshness), [проверки](HISTORY.md#arch1g2i-2026-11-18).
+
+Захват Tooling сверяет входные байты и масштаб с выбранным импортом.
+Изменение внешнего BIN помечает устаревшей одну из двух моделей. После
+реимпорта обе проходят проверку, а Player показывает нужную геометрию
+с выбранным BuildId. Проверено в четырёх профилях Player, включая Release
+на свежих пакетах. Aether Importing 144/144 в Debug и Release.
+
+Другие форматы, платформы и release-профили ведутся в [плане ARCH1g](PLAN.md#arch1g-model-assets).
+[Приёмка нескольких снимков](HISTORY.md#arch1g2h-2026-11-18),
+[Приёмка Editor на свежих пакетах](HISTORY.md#arch1g2f-2026-11-18),
+[приёмка удаления ресурсов](HISTORY.md#arch1g2g-2026-11-18).
+
 <a id="arch1f5-player-imported-png-2026-11-20"></a>
 ## 2026-11-20 — ARCH1f.5, импортированная PNG в отдельном Player
 

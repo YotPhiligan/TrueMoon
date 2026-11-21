@@ -7,7 +7,23 @@ arguments; storage format и очередь ниже сохраняются. Д�
 <a id="current-assets-queue"></a>
 <a id="current-nom-queue"></a>
 <a id="nom-own-queue"></a>
-## Текущая очередь — полная замена LiteDB, 2026-11-07
+<a id="текущая-очередь--полная-замена-litedb-2026-11-07"></a>
+## Текущая очередь — 2026-11-21
+
+<a id="nom6-1-clean-checkout"></a>
+### NOM6.1. Восстановить чистую сборку Nom и Editor
+
+Поставлено в `main` на `27129fe` (`1.2611.21.8-alpha`). Nom и Editor
+собираются из чистой копии. [Воспроизведение исходного дефекта](HISTORY.md#nom6-1-clean-checkout-2026-11-21)
+и [результаты исправления](HISTORY.md#nom6-1-verification-2026-11-21).
+
+- [x] Добавить адресное исключение для C#-исходников Nom Backup и включить
+  пять файлов в индекс Git.
+- [x] Собрать и проверить Nom и Editor в Debug и Release из нового checkout.
+- [x] Повторить профиль backup/restore и проверить поставку Nom
+  в независимом consumer по [NOM7](DELIVERY.md).
+
+### Принятое направление хранения — 2026-11-07
 
 **Принято пользователем: Nom получает собственную реализацию хранения. LiteDB
 полностью удаляется из целевой поставки, кода, тестов и исполняемых probes.**
@@ -31,14 +47,18 @@ disk-full/recovery проверен в5cases/profile; [границы](DURABILIT
 536cases D/R,92console groups/profile и16public App checks.
 **NOM5 завершён2026-11-08 в IO/process scope:** [indexes/snapshots/pins/GC](RETENTION.md),
 628cases D/R,104groups/profile и27public App checks. NOM6 [backup/restore](BACKUP.md) и [workload/limits](PERFORMANCE.md) проверены2026-11-08. **NOM7 [package delivery](DELIVERY.md) проверен2026-11-08:** четыре fresh packages, public App34checks и самостоятельный NomAssetTool211checks/profile; portable Debug/published Release и win-x64 framework-dependent Release. Повторены718cases D/R и120functional groups/profile; heavy capacity/workload остаются NOM6 evidence. Physical NOM3/NOM4 остаётся
-открытым guest-VM acceptance до actual trials; hardware power-off исключён, isolated-volume disk-full проверен NOM7 UAC. Automatic scheduling нет; engine bridge согласуется отдельно.
+открытым guest-VM acceptance до actual trials; hardware power-off исключён, isolated-volume disk-full проверен NOM7 UAC. Обслуживание запускается явно.
 
 **Решение пользователя2026-11-08 — actual VM crash verification отложена.**
 [Стенд](VM_CRASH.md) и предыдущие98guards/10host protocol groups D/R сохраняются;
 actual VM0trials, acceptance не закрыта. Подготовка image/credential не является
 текущей задачей и не блокирует независимые Nom/engine features. Возобновлять actual
 VM run только по новому запросу пользователя. Hardware power-off остаётся исключённым.
-Кодовая очередь engine f.3/f.4/g.1 не меняется; Nom bridge g.2 зависит от g.1.
+
+[ARCH1g.2a](../engine/PLAN.md#arch1g2a-model-delivery) использует batch и точные
+снимки Nom для доставки моделей в Build. [ARCH1f.5](../engine/PLAN.md#arch1f5-imported-png)
+доставляет этим путём две ревизии текстуры. Следующие задачи потребителя
+ведутся в [очереди Aether](../engine/PLAN.md#current-engine-queue).
 
 **NOM8a реализован2026-11-08 — byte Memory/Span API:** [контракт](BUFFER_API.md#nom8-buffer-api)
 добавляет borrowed memory input/batch, whole-resource destination read,

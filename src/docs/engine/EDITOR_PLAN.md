@@ -17,62 +17,36 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 
 <a id="current-editor-queue"></a>
 <a id="точка-продолжения--ревизия-2026-11-05"></a>
-## Точка продолжения — актуализация 2026-11-19
+<a id="точка-продолжения--актуализация-2026-11-19"></a>
+<a id="точка-продолжения--актуализация-2026-11-20"></a>
+## Точка продолжения — актуализация 2026-11-21
 
-[ARCH1g.2k](PLAN.md#arch1g2k-editor-model-imports) проверил статусы
-выбранных импортов и команду Build из меню. [ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport)
-добавил действие реимпорта модели из панели статуса с повтором после отмены.
-[ARCH1g.2m](PLAN.md#arch1g2m-persisted-model-selection) восстановил сохранённый
-выбор моделей при повторном открытии документа.
-[ARCH1g.2n](PLAN.md#arch1g2n-project-model-catalog) добавляет список импортированных
-моделей проекта и выбор ресурсов для открытой сцены.
-[ARCH1g.2o](PLAN.md#arch1g2o-place-catalog-model) размещает выбранный импорт в
-сцене с обычными Undo, Redo и сохранением документа.
+На дереве [NOM6.1](../nom/PLAN.md#nom6-1-clean-checkout), поставленном
+в `main` коммитом `27129fe`, сборка и тесты Editor прошли из чистой копии
+в Debug и Release. Стекло, подложка и иконки Editor вошли в `20ed7f4`.
+[Проверки Alloy](../alloy/HISTORY.md#alloy-main-glass-icons-2026-11-21).
 
-ARCH3.5 завершён 2026-11-14: [Editor.UI и optional Editor.Tooling](EDITOR_LAYERS.md) выделены. View/data/styles/ports работают с Runtime без Tooling, полный project/document/build/authoring workflow подключается bridge. [Единая очередь](PLAN.md#current-engine-queue), [фактическая приёмка](ARCH35_BASELINE.json). ARCH3.6 добавил [managed Mod SDK/loader](MODS.md); ARCH3.7 добавил [stable-component system replacement](MOD_RELOAD.md); ARCH3.8 добавил [owned-World component migration](MOD_MIGRATION.md); ARCH3.9 завершил [сквозную приёмку/поставку](ARCHITECTURE_GUIDE.md). Детальные ED задачи ниже сохраняются.
+В `main` на `a1764fb` проверены первичный импорт из пустого каталога,
+размещение модели и восстановление сцены после перезапуска.
+[ARCH1g.2p](PLAN.md#arch1g2p-initial-model-import).
 
-CORE8.3: SDK preflight и frozen game compiler переведены на module target .NET11;
-full Editor1496/Aether3243 D/R и SDK11-only source/published runtime proof прошли.
-[Команды/границы](../core/HISTORY.md#core83-frozen-2026-11-11); детальная миграция — Core.
-
-ED4f.3 Window, ED4g.1/2 compact/numeric editors, ED6b source tracking и bounded
-Build/Play/Replace реализованы в scopes из [STATUS](STATUS.md). Первый profiling,
-directory cache и native open/metadata не являются новой следующей задачей.
-ED5 имеет GPU Edit Preview, завершённый ED5a camera/selection и ED5b translation v1 в указанном acceptance scope; rotation/scale остаются отдельными.
-
-Типографика больше не входит в открытую очередь: [подключение Editor/default family](#editor-default-typography)
-завершено в [PA8c.3b](../alloy/PLAN.md#pa8c3b-default-fonts). ED4g.3 group reset
-реализован и проверен2026-11-08; ED4g.4 rad/deg также завершён.
-ED5a.0 contract и ED5a.1 immutable camera/projection/unprojection/cube ray math
-реализованы. ED5a.2 explicit preview view/actual receipt также реализован и проверен.
-ED5a.1–4 завершены в bounded Windows x64 scope: source/published и fresh-package GPU,
-Windows input доступного supported scope. ED5b world translation v1 реализован и проверен09ноября;
-local-oriented handles/snapping и rotation/scale — отдельный будущий scope.
-Held-button hardware input и multi-monitor DPI остаются отдельными gates.
-
-Контракты ECS, рендера и материалов ведутся в [ARCH1e/f](PLAN.md#arch1f-rendering).
 [ED4i](#ed4i-render-components) поддерживает выбор меша и материала,
 сброс привязки, диагностику отсутствующих ресурсов и независимое
 переопределение нескольких слотов. [Приёмка двух слотов](#ed4i-independent-slot-overrides)
 проверяет отдельные шаги Undo и восстановление обоих материалов после перезапуска.
 
-| Очередь | Результат | Статус |
-| --- | --- | --- |
-| Завершённый UI срез | [ED4g.3 group reset](#ed4g3-group-reset) | Реализован2026-11-08: Editor1323/1323 D/R, source Debug/published Release native history/save/reopen/preview; [scope](HISTORY.md#ed4g3-group-reset-2026-11-08) |
-| Завершённый UI срез | [ED4g.4 angle units](#ed4g4-angle-units) | Реализован2026-11-08: default rad, display deg, explicit invalid/gesture admission; Editor1353/1353 D/R + source/published native; [scope](HISTORY.md#ed4g4-angle-units-2026-11-08) |
-| Контракт готов | [ED5a.0 camera/selection](#ed5a0-contract) | Решения2026-11-08 и20численных checks; исторический contract-only этап, реализация/acceptance ниже |
-| Реализован численный срез | [ED5a.1 camera values/ray math](#ed5a1-camera-values) | 77newcases; Aether1857/1857 D/R, Editor1353/1353 Debug; [scope](HISTORY.md#ed5a1-values-2026-11-08) |
-| Реализован transport/receipt | [ED5a.2 preview view/actual receipt](#ed5a2-preview-view) | Control4/Frame2,52new Aether+10Editor cases; Aether2103/Editor1363 D/R, source/published native same-child pixels и cleanup0; [scope](HISTORY.md#ed5a2-view-2026-11-08) |
-| Input реализован | [ED5a.3 navigation/selection](#ed5a3-navigation-picking) |33new Editor+1Aether case; Editor1396/Aether2104 D/R и native source/published directed GPU input; [scope](HISTORY.md#ed5a3-input-2026-11-08) |
-| Приёмка завершена в указанном scope | [ED5a.4 full profile](#ed5a4-acceptance) | Editor1412/Aether2104 D/R; source/published/fresh-package GPU и Windows input; [scope/limits](HISTORY.md#ed5a4-acceptance-2026-11-08) |
-| Приёмка v1 завершена | [ED5b translation v1](#ed5b-translation) | World handles/outline/one commit; Editor1465 D/R, source/published/fresh-package native; [scope](HISTORY.md#ed5b-translation-2026-11-09) |
-| Параллельный proof | [ED4g.2a physical input](#ed4g2a-native-numeric) | Частично: source/published native пройден, оставшиеся physical cases не подтверждены |
-| Performance срез завершён | [ED6b.2e.4f](#ed6b2e4f-observer-cost) | Allocation objective проверен09ноября:−3.46/−3.51% workload, latency близка к baseline; общий speedup не заявлен. [Scope](OBSERVER_COST.md) |
+Во время Playing панель статуса запускает переимпорт PNG, Build создаёт
+кандидат, Replace предлагает его BuildId. Пиксели и тики до и после
+замены проверены на Vulkan. Контракт и приёмка ведутся у
+[ARCH1f.5](PLAN.md#arch1f5-editor-playing-texture-workflow).
 
-Общие full-solution/release и drain diagnostics ведутся в engine/общем плане.
-Hardware gates ограничивают readiness, не требуют завершить всё UI alpha перед
-каждым прикладным control. Game AI inspector обозначен **ED4h**: прежний ED4g
-от30октября конфликтовал с compact Transform от5ноября; старый anchor сохранён.
+[Перенос материалов между мешами](#ed4i-material-transfer) доступен для
+однозначно совпадающих имён переопределённых слотов.
+[Проекция камеры](#ed4i-camera-projection) редактируется в инспекторе.
+[Видимость и слои MeshRenderer](#ed4i-mesh-visibility) проверены с двумя Apply,
+восстановлением после перезапуска и сравнением кадров Vulkan.
+Rotation/scale в ED5, физический ввод и multi-monitor DPI остаются отдельными
+задачами. [Статус Aether и Editor](STATUS.md), [прежняя очередь](HISTORY.md#editor-roadmap-before-2026-11-20).
 
 <a id="editor-default-typography"></a>
 ### Типографика Editor — 2026-11-08

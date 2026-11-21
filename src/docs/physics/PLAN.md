@@ -27,10 +27,9 @@ Kul ARCH1h.2a завершён в nonspatial scope; [PHYS6 завершён](#ph
 
 Подробные задачи физики, включая ECS bridge, ведутся **только здесь**.
 [ARCH1i](../engine/PLAN.md#arch1i-physics) — ссылка из engine-направления.
-Headless-физика не требует завершения renderer/Player/ARCH3. Подключение bridge к
-целевым Aether Abstractions/Runtime согласуется с ARCH3.1–3; ранний прототип на
-действующем ECS остаётся отдельным исследованием, без закрепления старой assembly
-как новой публичной границы. Приоритет BEPU не переставляет текущую очередь Aether.
+Профили самостоятельной физики работают headless. PHYS5 использует целевые
+Aether Abstractions/Runtime после ARCH3.1–3. PHYS8.4 добавляет оконный
+визуальный consumer для проверки контроллера.
 
 ## Решение и границы
 
@@ -58,7 +57,7 @@ Headless-физика не требует завершения renderer/Player/A
 Имя модуля Kton выбрано пользователем. PHYS0 проверил точные backend packages;
 PHYS1 создал TrueMoon.Kton с dependency-free contract/validation API, PHYS2 —
 TrueMoon.Kton.Bepu с exact beta.33 и existing IFactory из Contracts. PHYS4 добавил
-публичное App/configuration/DI подключение; bridge впереди и зависит от ARCH3.
+публичное App/configuration/DI подключение. PHYS5 добавил ECS bridge к Runtime.
 
 | Роль | Содержание | Зависимости |
 | --- | --- | --- |

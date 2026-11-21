@@ -47,6 +47,27 @@ if (args.Contains("--typography-glyphs"))
     if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
     FontTypographyProbe.RunGlyphs(args[index + 1], args.Contains("--validation")); return;
 }
+if (args.Contains("--typography-textbox-performance") || args.Contains("--typography-inspector-performance"))
+{
+    var index = Array.IndexOf(args, "--font-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
+    FontTypographyProbe.RunTextBoxPerformance(args[index + 1], args.Contains("--validation"), args.Contains("--subpixel-on-first"),
+        inspector: args.Contains("--typography-inspector-performance"));
+    return;
+}
+if (args.Contains("--typography-textbox-renderer-positioning"))
+{
+    var index = Array.IndexOf(args, "--font-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
+    FontTypographyProbe.RunRendererTextBoxPositioning(args[index + 1], args.Contains("--validation"));
+    return;
+}
+if (args.Contains("--typography-textbox-positioning"))
+{
+    var index = Array.IndexOf(args, "--font-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
+    FontTypographyProbe.RunTextBoxPositioning(args[index + 1], args.Contains("--validation"), args.Contains("--dark-bidirectional")); return;
+}
 if (args.Contains("--typography-emoji"))
 {
     var index = Array.IndexOf(args, "--font-output");

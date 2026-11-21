@@ -7,24 +7,34 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-19
+<a id="текущая-очередь--актуализация-2026-11-19"></a>
+<a id="текущая-очередь--актуализация-2026-11-20"></a>
+## Текущая очередь — актуализация 2026-11-21
 
-[ARCH1g.2l](#arch1g2l-editor-reimport) добавил команду Editor для реимпорта
-выбранной модели и обновления её ресурсов для следующего Build.
-[ARCH1g.2m](#arch1g2m-persisted-model-selection) восстанавливает точный выбор
-импортов при открытии сцены.
-[ARCH1g.2n](#arch1g2n-project-model-catalog) добавляет выбор импортов проекта
-из каталога Editor.
-[ARCH1g.2o](#arch1g2o-place-catalog-model) добавляет модель из каталога в сцену.
-[Первый срез ED4i](EDITOR_PLAN.md#ed4i-render-components) меняет меш и материал
-одного экземпляра. В `main` это поставка `098fc53`, версия `1.2611.19.7-alpha`.
-[Сохранение привязки после перезапуска](EDITOR_PLAN.md#ed4i-render-binding-restart)
-и [сброс материала меша](EDITOR_PLAN.md#ed4i-material-reset) проверены в ED4i.
-[Диагностика отсутствующих ссылок](EDITOR_PLAN.md#ed4i-reference-diagnostics)
-проверена в инспекторе и при Build. [Два слота ED4i](EDITOR_PLAN.md#ed4i-material-slots)
-добавляют устойчивые ID слотов при импорте и замену материала одного слота.
-[ARCH1g.2p](#arch1g2p-initial-model-import) добавил первичный импорт из Editor,
-размещение и проверку восстановления каталога и ID слотов после перезапуска.
+Чистая сборка проверена на дереве [NOM6.1](../nom/PLAN.md#nom6-1-clean-checkout),
+которое поставлено в `main` коммитом `27129fe`.
+[Видимость и слои ED4i](EDITOR_PLAN.md#ed4i-mesh-visibility) проверены
+в `1.2611.21.9-alpha`. [Открытые задачи инспектора](EDITOR_PLAN.md#ed4i-next)
+ведутся в плане Editor.
+
+На `a1764fb` (`1.2611.20.2-alpha`) в `main` завершены следующие
+сквозные сценарии.
+
+- [ARCH1g.1 и g.2a–p](#arch1g-model-assets) — захват исходников, постоянные ID,
+  точные ревизии в Nom и Build, каталог, размещение и восстановление сцены.
+  [Первичный импорт из Editor](#arch1g2p-initial-model-import).
+- [ED4i](EDITOR_PLAN.md#ed4i-render-components) — выбор меша и материала,
+  Undo/Redo, диагностика ссылок, один override слота и восстановление после
+  перезапуска. [Приёмка слота](HISTORY.md#ed4i-material-slot-restart-2026-11-19).
+- [ARCH1f.5](#arch1f5-editor-playing-texture-workflow) — внешняя PNG с UV0 и
+  `NearestClamp`, переимпорт, Build и горячий Replace из интерфейса в Playing.
+  [Приёмка](HISTORY.md#arch1f5-editor-playing-texture-workflow-2026-11-20).
+
+**[Внешняя PNG в отдельном Player](#arch1f5-player-imported-png) проверена
+20.11.2026.** Три процесса Player воспроизводят A → B → A с точными
+ревизиями текстуры из артефактов. Заявка TrueMoon.Tales на пакетный игровой
+surface принята. Первый оконный сценарий проверен в самой игре.
+[ENG7b.4](#eng7b4-tales-consumer).
 
 [Два независимых переопределения ED4i](EDITOR_PLAN.md#ed4i-independent-slot-overrides)
 проверены в версии `1.2611.20.3-alpha` с Undo и перезапуском Editor.
@@ -32,43 +42,11 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 на `1.2611.20.4-alpha` со сменой геометрии и Undo на Vulkan.
 [Проекция камеры](EDITOR_PLAN.md#ed4i-camera-projection) добавляет проверку
 угла и плоскостей отсечения перед Apply.
-[Видимость и слои ED4i](EDITOR_PLAN.md#ed4i-mesh-visibility) проверены
-в версии `1.2611.21.9-alpha`.
 [Открытые задачи инспектора](EDITOR_PLAN.md#ed4i-next) ведутся в плане Editor.
-
-**Согласованный порядок 2026-11-12:**
-
-1. [ARCH3.0](#arch3-0) — карта типов/зависимостей/совместимости **завершена статически**:
-   [решения](ARCH3_MAP.md), [488 публичных типов](ARCH3_TYPE_MAP.csv), [61 проект](ARCH3_PROJECT_MAP.csv).
-2. Короткий [ARCH2e.4b](#arch2e4b-drain-diagnostics) срез **завершён 2026-11-12**:
-   [диагностика](DRAIN_DIAGNOSTICS.md), solution D/R0errors и 11 suites по8568passed;
-   causal fix исторического timeout открыт, deadlines не повышались.
-3. [ARCH1f.4](#arch1f-rendering) — **завершён 2026-11-12**: [surface/Playing fence](RENDER_SURFACE.md), [actual source/publish/fresh15package proofs](HISTORY.md#arch1f4-2026-11-12).
-4. Минимальные [ENG7b.1–2](#eng7b-режимы-запуска-editor-и-player--2026-10-29) — **завершены 2026-11-12**: [local Player/role contracts](PLAYER.md), [actual proofs](HISTORY.md#eng7b12-2026-11-12).
-5. [ARCH3.1](#arch3-1) — **завершён 2026-11-12**: [независимый контрактный SDK](ABSTRACTIONS.md).
-6. [ARCH3.2](#arch3-2) — **завершён 2026-11-12**: [real ECS binding/App/DI/registry](ECS_BINDING.md), [актуальные проверки](ARCH32_BASELINE.json).
-7. [ARCH3.3](#arch3-3) — **завершён 2026-11-13**: [самостоятельный Runtime/App/schema2](RUNTIME.md), [дельта карты](ARCH33_MIGRATION.csv), [fresh acceptance](ARCH33_BASELINE.json).
-8. [ARCH3.4](#arch3-4) — **завершён 2026-11-14**: [headless Tooling/App/ownership](TOOLING.md), [проверки/SHA](ARCH34_BASELINE.json).
-9. [ARCH3.5](#arch3-5) — Editor UI и optional Editor.Tooling bridge; завершён 14 ноября, [API/приёмка](EDITOR_LAYERS.md).
-10. [ARCH3.6](#arch3-6) — managed Mod SDK/manifest/collectible loader; завершён 14 ноября, [API/ownership](MODS.md), [приёмка/SHA](ARCH36_BASELINE.json).
-11. [ARCH3.7](#arch3-7) — stable-component system replacement завершён 14 ноября: [API/ownership](MOD_RELOAD.md), [проверки](ARCH37_BASELINE.json).
-12. [ARCH3.8](#arch3-8) — private components/new-World migration завершён 2026-11-15: [API/ownership](MOD_MIGRATION.md), [приёмка](ARCH38_BASELINE.json).
-13. [ARCH3.9](#arch3-9) — завершён 2026-11-15: [единая поставка/guide](ARCHITECTURE_GUIDE.md), [приёмка/SHA](ARCH39_BASELINE.json).
-14. [ARCH1j — общий слой сессии](#arch1j-session-subsystems), [Kton PHYS5](../physics/PLAN.md#phys5) и [Kul ARCH1h.2a](#arch1h2a-kul-session) завершены2026-11-15 в своём scope. ENG7b.3 завершён2026-11-16: [матрица/границы](LAUNCH_ACCEPTANCE.md); functional/release gates сохраняются.
-
-Завершены 17.11.2026: [g.1a source capture](#arch1g1a-source-capture), [g.1b isolated CPU import](#arch1g1b-isolated-import)
-и [g.1c persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). Ограниченный CPU g.1 завершён;
-[ARCH1g.2a](#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime.
-[ARCH1g.2b](#arch1g2b-model-scene-gpu) разместил её в сцене и проверил обе сборки на GPU.
-[ARCH1g.2c](#arch1g2c-model-editor-builds) проверил смену сборок в одном Editor через Stop/Start.
-[ARCH1g.2d](#arch1g2d-full-scene-replace) проверил горячий Replace и восстановление полной сцены.
-[ARCH1g.2e](#arch1g2e-build-selection-ui) провёл этот сценарий через меню Editor.
-[ARCH1g.2f](#arch1g2f-fresh-editor-packages) повторил сценарий в независимом Editor из закрытого feed.
-[ARCH1g.2g](#arch1g2g-dependency-settings-deletion) проверил правку зависимости, настройку и удаление ресурсов.
-[ARCH1g.2h](#arch1g2h-multiple-models) объединил точные снимки двух импортированных моделей в одной сборке.
-[ARCH1g.2i](#arch1g2i-import-freshness) проверил актуальность этих импортов перед новой сборкой.
-[ARCH1g.2j](#arch1g2j-model-source-watch) подключил уведомления и периодическую проверку источников моделей.
-[ARCH1g.2k](#arch1g2k-editor-model-imports) показывает актуальность выбранных импортов в Editor и повторяет проверку перед сборкой сцены.
+Kton, Kul и Nom ведут свои контракты и приёмку в планах владельцев.
+ARCH3.1–9, ARCH1j и ENG7b.3 остаются завершёнными в своих датированных
+профилях. [Поставки архитектуры](ARCHITECTURE_GUIDE.md),
+[запуск Editor/Player](LAUNCH_ACCEPTANCE.md), [прежняя очередь](HISTORY.md#engine-roadmap-before-2026-11-20).
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1717,7 +1695,7 @@ overrides не мутируют общий asset. World не владеет borr
 | ARCH1f.2 | Реализован2026-11-07: [resource owners/leases/preparation](RENDER_RESOURCES.md), frozen in-memory catalog, App/IFactory integration, atomic World binding и standalone Vulkan upload | Bounded old/candidate/retiring allocations и metadata, counted CPU/preparation leases, stale owner/device/slot rejection; cancel/late completion/failed creation/reload/drain retry. Explicit pinned-key rebind, no sync GPU wait в scene loader; unit/source/published/fresh-package CPU и actual Vulkan upload/readback проверены отдельно. Surface rendering/Playing fence — f.3/4; external-file delivery отдельно |
 | ARCH1f.3 | Реализован2026-11-09: [owned render snapshots](RENDER_SNAPSHOTS.md), explicit camera/mesh/material extraction, bounded mailbox/recording/submission owners, App/IFactory | Same-tick complete matrices/exact keys/masks/tint/shear bounds, drop/coalesce/reload retain, actual backend completion/cleanup contract, generation fence/retry/budgets;1376scoped D/R и source/published/fresh7package CPU proofs. [Evidence/limits](HISTORY.md#render-snapshots-2026-11-09); actual Vulkan surface — f.4 |
 | ARCH1f.4 | Реализован2026-11-12: [Vulkan consumer/Playing fence](RENDER_SURFACE.md), built-in cube/shared opaque unlit material/independent tint | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
-| ARCH1f.5 | [Build → Runtime → Vulkan](#arch1f5-base-color-texture) поддерживает RGBA8 sRGB, UV0 и `NearestClamp`. [Импорт glTF](#arch1f5-imported-png) проводит внешнюю PNG через Nom. Editor проверен при [перезапуске](#arch1f5-editor-texture-restart) и [переимпорте после правки PNG](#arch1f5-editor-texture-reimport). [Горячий Replace](#arch1f5-editor-texture-replace) подхватывает новую ревизию в Playing. [Отдельный Player](#arch1f5-player-imported-png) проверен в A → B → A | Layout/capability, color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes и performance/native evidence для каждого нового профиля. Light/lighting/PBR — последующие этапы |
+| ARCH1f.5 | [Build → Runtime → Vulkan](#arch1f5-base-color-texture) поддерживает RGBA8 sRGB, UV0 и `NearestClamp`. [Импорт glTF](#arch1f5-imported-png) проводит внешнюю PNG через Nom. Editor проверен при [перезапуске](#arch1f5-editor-texture-restart) и [переимпорте после правки PNG](#arch1f5-editor-texture-reimport). [Переимпорт и Replace из интерфейса](#arch1f5-editor-playing-texture-workflow) проверены в Playing. [Отдельный Player](#arch1f5-player-imported-png) проверен в A → B → A | Layout/capability, color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes и performance/native evidence для каждого нового профиля. Light/lighting/PBR — последующие этапы |
 | ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |
 | ARCH1f.7 | [Ортографическая камера игрового World](#arch1f7-orthographic-camera) для блочного маршрута TrueMoon.Tales | Сохранённая сцена и точные ресурсы Build открываются в пакетном Player. Vulkan подтверждает видимость улицы, ступеней, крыльца и комнаты и сохранение масштаба по высоте при изменении пропорций окна |
 
@@ -1764,7 +1742,7 @@ ID модели, слотов и текстуры. Build и Vulkan провер�
 одного texel. Соседний слот и остальные texels сравниваются с исходным кадром.
 [Приёмка](HISTORY.md#arch1f5-editor-texture-reimport-2026-11-20).
 
-Следующий профиль выбирается по игровому сценарию. Дополнительные sampler
+Дополнительные sampler
 modes, data textures, mipmaps, lighting и PBR ведутся отдельно.
 
 <a id="arch1f5-editor-texture-replace"></a>
@@ -1782,14 +1760,12 @@ viewport при растущем тике. После Replace из меню св
 <a id="arch1f5-editor-playing-texture-workflow"></a>
 #### ARCH1f.5. Переимпорт, Build и Replace из интерфейса во время Playing
 
-Открыть действия переимпорта выбранной модели и сборки кандидата для
-играющей сцены. Переимпорт сохраняет открытый документ и публикует новую
-ревизию ресурса. Build фиксирует актуальные ресурсы и предлагает BuildId
-в диалоге замены. Активная сборка продолжает Playing до подтверждения
-Replace. Ошибка или отмена Build оставляет прежний Runtime в Playing.
-На Vulkan сверять пиксели исходной сборки после отклонённого Build и после
-публикации кандидата, затем точную новую ревизию текстуры и продолжение
-тика после Replace.
+Завершено 20.11.2026, коммит `a1764fb`. Переимпорт выбранной модели
+публикует новую ревизию и сохраняет открытый документ. Build фиксирует
+актуальные ресурсы. Диалог замены предлагает BuildId кандидата.
+На Vulkan проверены пиксели исходной сборки после отклонённого Build и
+после публикации кандидата, затем точная новая ревизия текстуры и
+продолжение тика после Replace. Отмена Build проверена в тестах Editor.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1f5-hot-texture-replace),
 [приёмка](HISTORY.md#arch1f5-editor-playing-texture-workflow-2026-11-20).
 

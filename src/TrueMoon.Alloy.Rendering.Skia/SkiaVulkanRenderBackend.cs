@@ -90,6 +90,14 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface, IUiRenderDiagnostics
         if (Environment.CurrentManagedThreadId != _thread) throw new InvalidOperationException("Vulkan rendering requires its creator thread.");
         _surface?.VerifyAvailable();
     }
+    internal (int Resources, long Bytes) GetGpuResourceCacheUsageForProbe()
+    {
+        VerifyAvailable();
+        VerifyContext(nameof(GetGpuResourceCacheUsageForProbe));
+        _context.GetResourceCacheUsage(out var resources, out var bytes);
+        return (resources, bytes);
+    }
+
     /// <inheritdoc />
     public void Resize(UiViewport viewport)
     {

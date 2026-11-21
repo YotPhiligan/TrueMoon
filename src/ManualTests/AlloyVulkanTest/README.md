@@ -508,6 +508,97 @@ checks which pixels survive. Both checks preserve the RGBA of surviving
 pixels and count removed coverage. Each configuration saves 72 composed
 frames, 72 source textures with alpha, and 72 first-row crops at 4×.
 
+## Fractional scrolling in TextBox
+
+`--typography-textbox-positioning --font-output fresh-directory --validation`
+renders a focused, single-line `TextBox` at synthetic 125% and 175% on
+raster, OpenGL and Vulkan. The Light theme fixture uses Segoe UI Variable
+Text at logical size 14. With the caret at End, the probe changes the field
+width so the text origin moves left by 0, 0.25, 0.5 and 0.75 device pixels.
+It uses the stock layout service and varies `SKFont.Subpixel` in a diagnostic
+drawing context. The stock raster renderer provides a pixel-exact comparison
+for the off mode within the text row.
+
+At each phase the probe checks that clipped text leaves the left padding clear,
+clicks the boundary before the final glyph, and verifies the painted caret and
+selection of that glyph with Shift+Left. End must restore the scroll position. The
+report records the contrast-weighted horizontal center of the final glyph
+and compares the geometry and text-row pixels across backends. Each run
+writes 48 frames at 1:1 and 48 field crops at 4×. File suffixes
+`x0`, `x25`, `x50` and `x75` identify the four scroll phases.
+
+Add `--dark-bidirectional` to run the same probe in Dark with three strings
+ending in `W`, `Д`, and `7` before trailing spaces. The spaces keep the
+measured glyph clear of the caret. The probe narrows the field to capture
+`toward-end`, then widens it to capture `toward-start`. On the return pass
+it renders at Home and then End at each width so that TextBox recalculates
+its retained scroll offset. It saves the End frame at each phase. Reported
+motion is relative to the first captured phase of each direction.
+
+The Dark run writes 288 frames at 1:1 and 288 field crops at 4×. It checks
+equality of complete frames at the same phase in both directions on each
+backend. Backend comparisons and stock raster checks cover the text row
+as in the Light run.
+
+## Fractional positioning in the Skia renderer
+
+`--typography-textbox-renderer-positioning --font-output fresh-directory --validation`
+repeats the Dark matrix with actual raster, OpenGL, and Vulkan UI backends.
+For each string, it exercises plain text and `TextBox.UseShapedText` at
+125% and 175% in both directions. The probe runs the renderer defaults,
+explicit `off`, and explicit `on`. It configures the surface before the first
+layout. Plain text uses `SKFont.Subpixel` and shaped text uses RichTextKit's
+`TextPaintOptions.SubpixelPositioning`. Application backends keep their
+defaults.
+
+The report records the origin, glyph coverage, and interaction geometry for
+all 864 frames. Each captured phase verifies the caret move and selection in
+the readback, then checks that End restores the frame exactly. Forward and
+reverse frames must match at the same phase. Explicit settings that match a
+renderer default must match its pixels exactly. Other mode comparisons
+record measured pixel differences. Each run also saves 864 field crops at 4×.
+
+## TextBox positioning performance
+
+`--typography-textbox-performance --font-output fresh-directory` compares
+`Subpixel=false` and `true` on the stock raster, OpenGL, and Vulkan renderers
+at 125% and 175%. The Dark fixture contains 12 plain `TextBox` controls using
+the same three strings. Stationary frames redraw the retained tree at the
+same scroll offset. Scrolling frames narrow the fields in steps of 0.25
+device pixels. Home and End restart each four-phase sweep. The intermediate
+Home frame and its completion run outside the timed sample.
+
+Use a published Release executable for timing. The default order within each
+backend, scale and scenario is off–on–on–off. Run a second process with
+`--subpixel-on-first` to reverse it. Each batch has at least 192 warmup
+frames and 200 ms of warmup, then 512 measured frames. A separate
+`--validation` run uses 16 warmup and 32 measured frames per batch.
+
+The report records CPU wall time and managed allocations for `UiSession.Update`
+and its nested `Render` call. GPU completion and Vulkan texture return have
+separate measurements. The probe samples the process-wide Skia font cache
+after purge, after warmup, and after measurement. The counts refer to cache
+entries and bytes. The final pixel readback is outside the timed frames and
+checks identical repeated frames and a pixel difference between modes.
+
+## Editor inspector positioning performance
+
+`--typography-inspector-performance --font-output fresh-directory` uses the
+same timing protocol and order flags with the production `EditorInspectorView`
+and style. It creates an isolated Editor project and opens an in-memory scene
+through the document services. The 336×600 logical pixel fixture shows
+Transform, Appearance, Interaction and a schema-defined section with numeric,
+boolean and multiline fields. The scrolling case anchors the caret at the
+end of a long Transform X value and narrows that field by 0.25 device pixels
+per phase. The render surface and document are retained throughout each batch.
+
+The toggle applies to the plain text path of the surface. RichTextKit keeps
+its default positioning, including for the note with colored emoji. OpenGL and
+Vulkan report the Skia context's cached resource count and bytes before drawing,
+after the first anchored frame, after warmup, after measurement, and at each
+phase of an untimed verification pass. The counters cover Skia's context cache.
+Raster has no GPU context. Short validation runs save representative PNGs.
+
 ## Mixed text and color emoji
 
 `--typography-emoji --font-output fresh-directory --validation` draws

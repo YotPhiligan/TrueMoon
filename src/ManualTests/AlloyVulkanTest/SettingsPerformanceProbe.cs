@@ -152,7 +152,7 @@ internal static class SettingsPerformanceProbe
         return new FrameSample(mutation, update, root.Measurement, root.Arrangement, surface.Drawing, output, rendered);
     }
 
-    private static HostSample Handoff(SkiaVulkanSurface surface, VulkanHostCompositor? compositor, VulkanWindowPresenter? presenter, int variant)
+    internal static HostSample Handoff(SkiaVulkanSurface surface, VulkanHostCompositor? compositor, VulkanWindowPresenter? presenter, int variant)
     {
         var acquireStart = PerformanceClock.Begin(); var lease = surface.AcquireTexture(); var acquire = PerformanceClock.End(acquireStart);
         var layout = (ImageLayout)lease.Info.Layout; var leaseImage = lease.Info.Image;
@@ -195,14 +195,14 @@ internal static class SettingsPerformanceProbe
             finally { Arrangement = PerformanceClock.End(start); ArrangeCalls++; }
         }
     }
-    private sealed class ProfiledBackend(IRenderBackend inner) : IRenderBackend
+    internal sealed class ProfiledBackend(IRenderBackend inner) : IRenderBackend
     {
         internal ProfiledSurface? Surface;
         internal long Creates;
         public IUiRenderSurface CreateSurface(UiRenderTarget target, UiViewport viewport)
         { Creates++; return Surface = new ProfiledSurface(inner.CreateSurface(target, viewport)); }
     }
-    private sealed class ProfiledSurface(IUiRenderSurface inner) : IUiRenderSurface
+    internal sealed class ProfiledSurface(IUiRenderSurface inner) : IUiRenderSurface
     {
         internal IUiRenderSurface Inner => inner;
         internal PerformanceMeasurement Drawing;

@@ -1,0 +1,232 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using Silk.NET.OpenGL;
+using SkiaSharp;
+using Topten.RichTextKit;
+using TrueMoon.Alloy.Hosting;
+using TrueMoon.Alloy.Platform.Silk;
+using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Alloy.Runtime;
+using TrueMoon.Argentis;
+
+namespace AlloyVulkanTest;
+
+internal static partial class FontTypographyProbe
+{
+    private readonly record struct RendererScrollCase(string Sample, bool Shaped, bool? Subpixel, ScrollStep Step);
+    private readonly record struct ScrollGeometry(Rect Field, Rect Line, Rect Caret, float TextX, float GlyphLeft, float GlyphRight);
+    private sealed record RendererScrollFrame(byte[] Pixels, ScrollGeometry Geometry, double GlyphCenter, int HitIndex,
+        int SelectionStart, int SelectionLength, Rect HitCaretInk, Rect SelectionInk);
+
+    internal static void RunRendererTextBoxPositioning(string output, bool validation)
+    {
+        output = Path.GetFullPath(output);
+        if (Directory.Exists(output) && Directory.EnumerateFileSystemEntries(output).Any())
+            throw new ArgumentException("Use a fresh font output directory.");
+        Directory.CreateDirectory(output);
+        using var face = MatchDefaultFace(400);
+        using var font = new SKFont(face, ScrollFontSize);
+        var plainDefault = font.Subpixel;
+        var shapedDefault = new TextPaintOptions().SubpixelPositioning;
+        var theme = Theme.Dark;
+        var hardware = new List<object>();
+        var validationReports = new List<object>();
+        var captures = new List<object>();
+        var backendComparisons = new List<object>();
+        var directionComparisons = new List<object>();
+        var modeComparisons = new List<object>();
+        var passed = true;
+
+        foreach (var scale in new[] { 1.25f, 1.75f })
+        {
+            var viewport = new UiViewport((int)(ScrollWidth * scale), (int)(ScrollHeight * scale), scale);
+            var raster = Capture("raster", new SkiaRasterRenderBackend(), new RasterUiTarget(),
+                ui => { using var image = ui.SnapshotRasterImage(); return RasterProbe.ReadSnapshot(image); });
+            Dictionary<RendererScrollCase, RendererScrollFrame> openGl;
+            using (var window = new SilkWindowHost(320, 240, "TextBox positioning OpenGL", true))
+            using (var gl = GL.GetApi(window.NativeWindow))
+            {
+                hardware.Add(new { Scale = scale, Backend = "opengl", Renderer = gl.GetStringS(StringName.Renderer), Version = gl.GetStringS(StringName.Version) });
+                openGl = Capture("opengl", new SkiaOpenGLRenderBackend(), OpenGLProbe.Target(window),
+                    ui => { using var image = ui.ReadbackOpenGLImage(); return RasterProbe.ReadSnapshot(image); });
+                Require(gl.GetError() == GLEnum.NoError, "TextBox positioning generated an OpenGL error.");
+            }
+            var device = new VulkanDevice(validationMessage: validation ? Console.Error.WriteLine : null);
+            Dictionary<RendererScrollCase, RendererScrollFrame> vulkan;
+            using (device)
+            {
+                hardware.Add(VulkanHardware(device));
+                vulkan = Capture("vulkan", new SkiaVulkanRenderBackend(), SilkVulkanHost.CreateTarget(device),
+                    ui => ReadVulkanText(ui, (info, returned) => VulkanHostReadback.Read(device, info, returned)));
+            }
+            validationReports.Add(new { Scale = scale, Errors = device.ValidationErrorCount, Warnings = device.ValidationWarningCount });
+            passed &= device.ValidationErrorCount == 0 && device.ValidationWarningCount == 0;
+
+            CompareBackends("raster", raster, "opengl", openGl, 1);
+            CompareBackends("raster", raster, "vulkan", vulkan, 1);
+            CompareBackends("opengl", openGl, "vulkan", vulkan, 0);
+
+            Dictionary<RendererScrollCase, RendererScrollFrame> Capture(string backend, IRenderBackend renderer,
+                UiRenderTarget target, Func<UiSession, byte[]> read)
+            {
+                var frames = new Dictionary<RendererScrollCase, RendererScrollFrame>();
+                foreach (var sample in DarkScrollSamples)
+                foreach (var shaped in new[] { false, true })
+                foreach (var subpixel in new bool?[] { null, false, true })
+                {
+                    var (root, editor) = CreateScrollTextBox(sample, theme);
+                    editor.UseShapedText = shaped;
+                    using var ui = UiSession.Create(root, renderer, target, viewport);
+                    var layout = (SkiaDrawingContext)ui.Rendering.TextLayout;
+                    if (subpixel is bool enabled) layout.SetSubpixelPositioningForProbe(enabled);
+                    ui.SetTheme(theme);
+                    Require(ui.Update(), "Expected the TextBox fixture to render.");
+                    ui.Focus(editor);
+                    MoveToEnd(ui, editor);
+
+                    var glyphEnd = sample.Text.TrimEnd().Length;
+                    var glyphStart = glyphEnd - 1;
+                    using var line = shaped ? layout.CreateRichTextLayout(RichTextDocument.FromText(sample.Text),
+                        new RichTextStyle { FontFamily = editor.FontFamily, FontSize = ScrollFontSize, Foreground = editor.Foreground },
+                        null, RichTextAlignment.Left) : null;
+                    var lineHeight = line?.Size.Height ?? layout.Measure("Mg", ScrollFontSize, editor.FontFamily).Height;
+                    var prefix = Advance(glyphStart);
+                    var glyphAdvance = Advance(glyphEnd);
+                    var endAdvance = Advance(sample.Text.Length);
+
+                    foreach (var step in BidirectionalScrollSteps)
+                    {
+                        var key = new RendererScrollCase(sample.Name, shaped, subpixel, step);
+                        var context = $"{backend}/{sample.Name}/{(shaped ? "shaped" : "plain")}/{PositioningMode(subpixel)}/{scale}/{step.Direction}/{step.Phase}";
+                        RenderScrollStep(ui, editor, scale, step);
+                        var field = editor.Bounds;
+                        var content = field.Deflate(editor.Padding);
+                        Require(content.Height >= lineHeight && endAdvance > content.Width - 2, $"Expected to scroll at {context}.");
+                        var caret = new Rect(content.X + content.Width - 2, content.Y + (content.Height - lineHeight) / 2, 1, lineHeight);
+                        var textX = caret.X - endAdvance;
+                        var glyphLeft = textX + prefix;
+                        var glyphRight = textX + glyphAdvance;
+                        var lineRect = new Rect(content.X, caret.Y, content.Width, lineHeight);
+                        var geometry = new ScrollGeometry(field, lineRect, caret, textX, glyphLeft, glyphRight);
+
+                        var pixels = read(ui);
+                        var padding = DeviceRect(new Rect(field.X + 4, caret.Y, 2, caret.Height), scale);
+                        RequirePadding(pixels, viewport.Width, padding, theme.Input);
+                        var glyphCenter = FinalGlyphCenter(pixels, viewport.Width, scale, glyphLeft, caret, theme.Input, isolated: true);
+                        var frame = CheckRendererCaretAndSelection(ui, editor, read, viewport, geometry, pixels, glyphCenter, glyphStart, context);
+                        frames.Add(key, frame);
+                        var firstPhase = step.Returning ? 3 : 0;
+                        var start = frames[key with { Step = new(firstPhase, step.Returning) }];
+                        var motion = (textX - start.Geometry.TextX) * scale;
+                        Require(Math.Abs(motion + (step.Phase - firstPhase) * 0.25f) < 0.001f, $"Wrong scroll displacement at {context}.");
+
+                        var stem = $"{sample.Name}-{step.Direction}-{backend}-{(int)(scale * 100)}-" +
+                            $"{(shaped ? "shaped" : "plain")}-{PositioningMode(subpixel)}-x{step.Phase * 25}";
+                        var file = stem + ".png";
+                        var crop = stem + "-field-4x.png";
+                        WritePng(Path.Combine(output, file), viewport.Width, viewport.Height, pixels);
+                        WriteEnlargedCrop(Path.Combine(output, crop), pixels, viewport.Width, DeviceRect(field, scale), FractionalZoom);
+                        captures.Add(new { Scale = scale, Backend = backend, Sample = sample.Name, Shaped = shaped, Mode = PositioningMode(subpixel),
+                            step.Direction, step.PhasePx, ScrollMotionPx = motion, GlyphCenterPx = glyphCenter, GlyphMotionPx = glyphCenter - start.GlyphCenter,
+                            frame.Geometry, frame.HitIndex, frame.SelectionStart, frame.SelectionLength, frame.HitCaretInk, frame.SelectionInk,
+                            File = file, Crop = crop, viewport.Width, viewport.Height });
+                    }
+
+                    float Advance(int index) => line?.GetCaretBounds(index).X ?? layout.Measure(sample.Text[..index], ScrollFontSize, editor.FontFamily).Width;
+                }
+
+                foreach (var (key, frame) in frames)
+                {
+                    if (key.Step.Returning)
+                    {
+                        var outgoing = frames[key with { Step = new(key.Step.Phase, false) }];
+                        var sameLayout = SameRendererCoordinates(outgoing, frame);
+                        var pixels = PixelDifference.Compare(outgoing.Pixels, frame.Pixels, viewport.Width, viewport.Height, 0);
+                        passed &= sameLayout && pixels.Passed;
+                        directionComparisons.Add(new { Scale = scale, Backend = backend, key.Sample, key.Shaped, Mode = PositioningMode(key.Subpixel),
+                            key.Step.PhasePx, SameLayout = sameLayout, Result = pixels });
+                    }
+                    if (key.Subpixel is bool enabled)
+                    {
+                        var baseline = frames[key with { Subpixel = null }];
+                        var sameLayout = SameRendererCoordinates(baseline, frame);
+                        var pixels = PixelDifference.Compare(baseline.Pixels, frame.Pixels, viewport.Width, viewport.Height, 0);
+                        var expectsExact = enabled == (key.Shaped ? shapedDefault : plainDefault);
+                        passed &= sameLayout && (!expectsExact || pixels.Passed);
+                        modeComparisons.Add(new { Scale = scale, Backend = backend, key.Sample, key.Shaped, Mode = PositioningMode(key.Subpixel),
+                            key.Step.Direction, key.Step.PhasePx, SameLayout = sameLayout, ExpectsExact = expectsExact, Result = pixels });
+                    }
+                }
+                return frames;
+            }
+
+            void CompareBackends(string reference, Dictionary<RendererScrollCase, RendererScrollFrame> expected,
+                string backend, Dictionary<RendererScrollCase, RendererScrollFrame> actual, int edgeRadius)
+            {
+                foreach (var (key, first) in expected)
+                {
+                    var second = actual[key];
+                    var sameLayout = SameRendererCoordinates(first, second);
+                    var pixels = PixelDifference.Compare(first.Pixels, second.Pixels, viewport.Width, viewport.Height, 2, edgeRadius,
+                        region: DeviceRect(first.Geometry.Line, scale));
+                    passed &= sameLayout && pixels.Passed;
+                    backendComparisons.Add(new { Scale = scale, Reference = reference, Backend = backend, key.Sample, key.Shaped,
+                        Mode = PositioningMode(key.Subpixel), key.Step.Direction, key.Step.PhasePx, SameLayout = sameLayout, Result = pixels });
+                }
+            }
+        }
+
+        File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new
+        {
+            Completed = true, Passed = passed, ValidationEnabled = validation, PhysicalDpi = false, Theme = "Dark",
+            FontFamily = face.FamilyName, FontSize = ScrollFontSize, Samples = DarkScrollSamples,
+            DefaultSubpixel = new { Plain = plainDefault, Shaped = shapedDefault },
+            NativeSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(SkiaNativeLibrary.LoadedPath!))),
+            Hardware = hardware, ValidationReports = validationReports, Captures = captures,
+            BackendComparisons = backendComparisons, DirectionComparisons = directionComparisons, ModeComparisons = modeComparisons
+        }, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine($"Renderer TextBox positioning: {captures.Count} frames, {backendComparisons.Count} backend, " +
+            $"{directionComparisons.Count} direction and {modeComparisons.Count} mode comparisons. Report in {output}.");
+        if (!passed) Environment.ExitCode = 1;
+    }
+
+    private static RendererScrollFrame CheckRendererCaretAndSelection(UiSession ui, TextBox editor, Func<UiSession, byte[]> read,
+        UiViewport viewport, ScrollGeometry geometry, byte[] pixels, double glyphCenter, int glyphStart, string context)
+    {
+        var x = geometry.GlyphLeft;
+        var y = geometry.Caret.Y + geometry.Caret.Height / 2;
+        ui.HandleInput(new UiInput(InputKind.PointerDown, x, y));
+        ui.HandleInput(new UiInput(InputKind.PointerUp, x, y));
+        var hit = editor.CaretIndex;
+        Require(hit == glyphStart && editor.SelectionLength == 0 && ui.Update(), $"Click missed the glyph boundary at {context}.");
+        var clicked = read(ui);
+        var caretArea = geometry.Caret with { X = x - 1, Width = 3 };
+        var caretInk = ChangedInk(pixels, clicked, viewport.Width, DeviceRect(caretArea, viewport.Scale));
+        var endCaretInk = ChangedInk(pixels, clicked, viewport.Width, DeviceRect(geometry.Caret, viewport.Scale));
+        var minimumInkHeight = (int)(geometry.Caret.Height * viewport.Scale) - 2;
+        Require(caretInk.Width > 0 && caretInk.Height >= minimumInkHeight && endCaretInk.Height >= minimumInkHeight,
+            $"Readback lacks a caret move at {context}.");
+
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Right));
+        Require(editor.CaretIndex == glyphStart + 1, $"Right missed the boundary after the glyph at {context}.");
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Left, Shift: true));
+        var selection = editor.SelectionStart;
+        var length = editor.SelectionLength;
+        Require(selection == hit && length == 1 && ui.Update(), $"Expected selection of the last visible glyph at {context}.");
+        var glyphArea = caretArea with { X = x + 1, Width = geometry.GlyphRight - x - 2 };
+        var selectionInk = ChangedInk(clicked, read(ui), viewport.Width, DeviceRect(glyphArea, viewport.Scale));
+        Require(selectionInk.Width > 0 && selectionInk.Height >= minimumInkHeight - 2, $"Readback lacks a painted selection at {context}.");
+
+        MoveToEnd(ui, editor);
+        Require(ui.Update() && pixels.AsSpan().SequenceEqual(read(ui)), $"End did not restore the frame at {context}.");
+        return new(pixels, geometry, glyphCenter, hit, selection, length,
+            new(caretInk.Left, caretInk.Top, caretInk.Width, caretInk.Height),
+            new(selectionInk.Left, selectionInk.Top, selectionInk.Width, selectionInk.Height));
+    }
+
+    private static string PositioningMode(bool? subpixel) => subpixel switch { true => "on", false => "off", _ => "default" };
+
+    private static bool SameRendererCoordinates(RendererScrollFrame first, RendererScrollFrame second) =>
+        first.Geometry == second.Geometry && first.HitIndex == second.HitIndex &&
+        first.SelectionStart == second.SelectionStart && first.SelectionLength == second.SelectionLength;
+}

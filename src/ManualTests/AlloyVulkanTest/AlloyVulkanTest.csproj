@@ -13,6 +13,7 @@
     <ProjectReference Include="../../TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
     <ProjectReference Include="../../TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />
     <ProjectReference Include="../../TrueMoon.Aether.Editor.UI/TrueMoon.Aether.Editor.UI.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Shaders/*.spv" />

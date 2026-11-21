@@ -1,5 +1,54 @@
 # TrueMoon.Nom: история исследования и проверок
 
+<a id="nom6-1-clean-checkout-2026-11-21"></a>
+## 2026-11-21 — NOM6.1. Исходники Backup отсутствуют в чистой копии
+
+При проверке поставки `20ed7f4` (`1.2611.21.7-alpha`) из чистой рабочей копии
+запуск тестового проекта `TrueMoon.Aether.Editor.Tests` остановился на CS0234
+в `TrueMoon.Nom/AppConfigurationExtensions.cs` и других потребителях
+пространства имён `TrueMoon.Nom.Backup`. В дереве Git отсутствуют
+`NomBackupCodec.cs`, `NomBackupException.cs`, `NomBackupOptions.cs`,
+`NomBackupTransfer.cs` и `RestoreAssetStoreArguments.cs`. Проверка
+`git check-ignore -v` указала на правило `Backup*/` в корневом `.gitignore`.
+
+В повторном запуске с копиями этих пяти локальных исходников прошли
+1 522 теста Editor в каждой конфигурации Debug и Release. Логи и TRX
+сохранены в `TestResults/GlassIcons-main-20261121-01`. Приёмка чистого
+checkout и отдельная проверка Nom остаются в [NOM6.1](PLAN.md#nom6-1-clean-checkout).
+
+<a id="nom6-1-verification-2026-11-21"></a>
+## 2026-11-21 — NOM6.1. Проверка восстановления исходников
+
+Корневой `.gitignore` разрешает C#-исходники непосредственно в
+`src/TrueMoon.Nom/Backup`. Проверено, что локальные артефакты в этой папке
+и каталоги Backup вне Nom продолжают игнорироваться. Пять файлов поставлены
+в индекс с исходным содержимым. Версия дерева — `1.2611.21.8-alpha`.
+
+Тестовая рабочая копия создана из дерева индекса
+`77ad18122019592709dc70e0bf29037215ce15eb` на базе `20ed7f4`.
+Пять файлов видны в `git ls-files`. Статус копии чистый до и после тестов.
+SDK 11.0.100, net11.0, xUnit/VSTest. В каждой конфигурации выполнены
+`dotnet build` тестового проекта и `dotnet test --no-build --no-restore`
+с тем же каталогом артефактов.
+
+| Проект | Debug | Release |
+| --- | ---: | ---: |
+| `TrueMoon.Nom.Tests` | 874/874 | 874/874 |
+| `TrueMoon.Aether.Editor.Tests` | 1 522/1 522 | 1 522/1 522 |
+
+Манифест файлов, логи и TRX лежат в `TestResults/NOM61-clean-checkout-20261121-01`.
+
+`ManualTests/TrueMoon.Nom.Probe/Verify.ps1 -Profile Backup` прошёл
+по 16 групп в Debug и published Release. `VerifyPackages.ps1` собрал
+четыре пакета и проверил 13 профилей, включая restore из отдельного локального
+feed, проверку зависимостей и негативные контроли. Штатный runner использовал
+собственную тестовую версию `0.2.5.1-alpha.nomstructure.20261121144036.r1880d1d5`.
+Дерево исходников совпало с основными проверками. Отчёты в подкаталогах
+`backup` и `packages` каталога проверки.
+
+Дерево поставлено коммитом `27129feb79202d1db67d9ef3167bca8f2b86373e`.
+После push удалённая `main` указывала на этот коммит.
+
 <a id="core85-2026-11-11"></a>
 ## CORE8.5: согласованная поставка — 2026-11-11
 

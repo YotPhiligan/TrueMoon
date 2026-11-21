@@ -10,6 +10,8 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     private readonly SKRectI _surfaceBounds = canvas.DeviceClipBounds;
     private static SKRect Rect(Rect r) => new(r.X, r.Y, r.X + r.Width, r.Y + r.Height);
     private static SKColor Color(Color c) => new(c.R, c.G, c.B, c.A);
+    internal void SetSubpixelPositioningForProbe(bool enabled) => resources.SetSubpixelPositioningForProbe(enabled);
+    internal void SetPlainSubpixelPositioningForProbe(bool enabled) => resources.SetPlainSubpixelPositioningForProbe(enabled);
     public void Save() => canvas.Save();
     public void Restore() => canvas.Restore();
     public void Clip(Rect rectangle) => canvas.ClipRect(Rect(rectangle));
@@ -194,10 +196,26 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
     private int _next;
     private bool _disposed;
     private SkiaRichTextFontMapper? _richFonts;
+    internal bool? SubpixelPositioning { get; private set; }
+    internal bool? ShapedSubpixelPositioning { get; private set; }
     internal SkiaRichTextFontMapper RichFonts { get { VerifyAvailable(); return _richFonts ??= new(fonts); } }
     internal void VerifyRichTextAccess() => VerifyAvailable();
     private readonly record struct FontKey(string Family, float Size, int Weight, bool Italic);
     internal readonly record struct FontEntry(SKFont Font, SKFontMetrics Metrics);
+
+    internal void SetSubpixelPositioningForProbe(bool enabled)
+    {
+        SetPlainSubpixelPositioningForProbe(enabled);
+        ShapedSubpixelPositioning = enabled;
+    }
+
+    internal void SetPlainSubpixelPositioningForProbe(bool enabled)
+    {
+        VerifyAvailable();
+        if (SubpixelPositioning.HasValue || _fonts.Count != 0 || _richFonts != null)
+            throw new InvalidOperationException("Set subpixel positioning before the first use of the surface's text layout.");
+        SubpixelPositioning = enabled;
+    }
 
     private void VerifyAvailable()
     {
@@ -242,6 +260,7 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
         var font = new SKFont(typeface, size);
         try
         {
+            if (SubpixelPositioning is bool enabled) font.Subpixel = enabled;
             entry = new FontEntry(font, font.Metrics);
             if (_fonts.Count == FontCapacity)
             {

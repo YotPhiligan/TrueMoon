@@ -142,6 +142,7 @@ internal sealed class SkiaRichTextLayout : IRichTextLayout
             var from = Math.Clamp(selectionStart - paragraph.Start, 0, paragraph.Text.Length);
             var to = Math.Clamp(selectionStart + selectionLength - paragraph.Start, 0, paragraph.Text.Length);
             var options = new TextPaintOptions { SelectionColor = Color(selectionColor) };
+            if (resources.ShapedSubpixelPositioning is bool enabled) options.SubpixelPositioning = enabled;
             if (to > from) options.Selection = new TextRange(CodePoint(paragraph, paragraph.Start + from), CodePoint(paragraph, paragraph.Start + to));
             paragraph.Block.Paint(canvas, new SKPoint(x, y + paragraph.Y), options);
             // A selected paragraph separator gets a visible cell even though it is outside the text block.

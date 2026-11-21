@@ -121,6 +121,15 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface, IUiRenderDiagnostics
         }
         _viewport = viewport; _hasFrame = false;
     }
+
+    internal (int Resources, long Bytes) GetGpuResourceCacheUsageForProbe()
+    {
+        VerifyAvailable();
+        VerifyContext();
+        _context.GetResourceCacheUsage(out var resources, out var bytes);
+        return (resources, bytes);
+    }
+
     /// <inheritdoc />
     public void Render(Element root, UiViewport viewport)
     {

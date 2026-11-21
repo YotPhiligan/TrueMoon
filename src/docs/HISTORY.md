@@ -9972,3 +9972,384 @@ Producer-local authoring sidecar не заменяет Nom catalog/CAS. PHYS8 ph
 loss, ED/AUD, other OS/AOT и release gates самостоятельны. Historical diagnostic
 drain cause открыт; чужие UIQA-DOC изменения сохранены.
 [Предыдущая сводка](HISTORY.md#common-status-before-g1c-2026-11-17).
+
+<a id="roadmap-before-2026-11-20"></a>
+
+## Архив общего плана до ревизии 20.11.2026
+
+**19.11.2026.** [ARCH1g.2l–m](engine/PLAN.md#arch1g2l-editor-reimport) завершены.
+В Editor доступны реимпорт
+выбранной модели и восстановление точных ревизий при открытии сцены.
+[Текущая очередь](PLAN.md#current-roadmap)
+
+Выполнено 2026-11-18. SkiaSharp обновлён до 4.157.0 вместе с расширенной
+Windows x64 DLL. [Приёмка Alloy](alloy/HISTORY.md#skiasharp-41570-2026-11-18).
+
+Выполнено 2026-11-18 [ARCH1g.2i](engine/PLAN.md#arch1g2i-import-freshness).
+Предсборочная проверка двух моделей определяет, какой импорт устарел при
+изменении внешнего BIN.
+
+Выполнено 2026-11-18 [ARCH1g.2h](engine/PLAN.md#arch1g2h-multiple-models).
+Две модели используют один артефакт. Замена точного снимка одной модели
+меняет только её геометрию на GPU.
+
+Выполнено 2026-11-18 [ARCH1g.2g](engine/PLAN.md#arch1g2g-dependency-settings-deletion).
+Изменение BIN и настройка масштаба дали разные сборки. Все сохранённые
+артефакты загрузили свою геометрию после удаления ресурсов из Nom.
+
+Выполнено 2026-11-18 [ARCH1g.2f](engine/PLAN.md#arch1g2f-fresh-editor-packages).
+Независимый Editor на свежих NuGet-пакетах прошёл выбор сборки, горячий Replace,
+отказ и откат на GPU.
+
+Выполнено 2026-11-18 [ARCH1g.2e](engine/PLAN.md#arch1g2e-build-selection-ui).
+Опубликованная сборка выбирается из меню Editor.
+
+Выполнено 2026-11-18 [ARCH1g.2d](engine/PLAN.md#arch1g2d-full-scene-replace).
+Editor меняет сборку полной сцены через Replace и восстанавливает прежнюю
+геометрию на GPU после отмены в дочернем процессе.
+
+Выполнено 2026-11-18 [ARCH1g.2c](engine/PLAN.md#arch1g2c-model-editor-builds).
+Один Editor запускает открытую сцену с обеими сборками через Stop/Start
+и показывает геометрию каждого BuildId на GPU.
+
+Выполнено 2026-11-18 [ARCH1g.2b](engine/PLAN.md#arch1g2b-model-scene-gpu).
+Одна сцена с импортированной моделью показывает точную геометрию выбранной сборки
+в Player на GPU.
+
+Выполнено 2026-11-18: [ARCH1g.2a](engine/PLAN.md#arch1g2a-model-delivery),
+Version1.2611.18.1-alpha. Одна модель проходит Nom → Build → Runtime.
+Две сборки сохраняют свои ревизии геометрии после реимпорта с теми же ID.
+
+
+Выполнено 2026-11-17: [ARCH1g.1c — permanent IDs и atomic candidate+ledger](engine/PLAN.md#arch1g1c-subasset-ledger),
+Version1.2611.17.4-alpha. [Контракт/проверки](engine/MODEL_SUBASSET_LEDGER.md).
+Ограниченный CPU g.1 завершён; далее g.2 Nom/build/runtime delivery и activation.
+
+Выполнено 2026-11-17: [ARCH1g.1b — isolated Assimp CPU import](engine/PLAN.md#arch1g1b-isolated-import),
+Version1.2611.17.3-alpha. [Политика/проверки](engine/MODEL_IMPORT_WORKER.md).
+Далее g.1c stable subasset IDs/ledger transaction, затем g.2; полный g.1 остаётся открытым.
+
+Выполнено 2026-11-17: [ARCH1g.1a — model source capture](engine/PLAN.md#arch1g1a-source-capture),
+Version1.2611.17.2-alpha. App/IFactory/immutable dependency bytes проверены; [границы/проверки](engine/MODEL_SOURCE_CAPTURE.md).
+Далее g.1 native parser/CPU candidates/ledger, затем g.2; полный importer не объявляется готовым.
+
+Выполнено 2026-11-17: [ENE6e — generated XML docs Enerit](enerit/PLAN.md#ene6e-generated-xml-docs),
+Version1.2611.17.1-alpha. Заявка Studio закрыта в framework scope; [проверки/границы](enerit/HISTORY.md#ene6e-2026-11-17). Функциональная очередь не менялась.
+
+Выполнено 2026-11-17: [PHYS8.4 — визуальный debug-consumer](physics/PLAN.md#phys84),
+[уровень/скриншот/проверки](physics/VISUAL_PLAYGROUND.md). 16 CPU/native профилей,
+96 CPU-групп/96 PNG на обоих DI, validation и cleanup проверены. Ручной Win32
+input/close открыт. Непакетируемый consumer, production Version 1.2611.16.4-alpha сохранена.
+
+Выполнено2026-11-16: [PHYS8.3 — deferred-команды контактов](physics/PLAN.md#phys83),
+[реализация/числа](physics/DEFERRED_COMMAND_ALLOCATIONS.md), Version1.2611.16.4-alpha.
+Shared Runtime buffer:~210КБ→6720Б/tick при256controllers; independent maps/preflight/ALC
+lifetime сохранены. Полные Aether/Kton/Kul D/R прошли; остальные PHYS8 gates открыты.
+
+Выполнено2026-11-16: [PHYS8.2 — allocation attribution/оптимизация](physics/PLAN.md#phys82),
+[источники/результат](physics/ALLOCATION_OPTIMIZATION.md), Version1.2611.16.3-alpha.
+Полный preflight/lifecycle/contacts сохранён. На этапе PHYS8.2 shared commands оставались открыты; следующий срез завершён в PHYS8.3 выше. Остальные PHYS8 release gates открыты.
+
+Выполнено2026-11-16: [PHYS8.1 — Windows x64 baseline](physics/PLAN.md#phys81),
+[метод/числа](physics/PERFORMANCE.md). Исторический baseline для PHYS8.2;
+production не менялся, Version1.2611.16.2-alpha сохранена; весь PHYS8 ещё открыт.
+
+Выполнено2026-11-16: [PHYS6 — контроллер капсулы и сессия Aether](physics/PLAN.md#phys6),
+версия1.2611.16.2-alpha. [Контракт/fixtures](physics/CHARACTERS.md),
+[результаты](physics/HISTORY.md#phys6-2026-11-16). PHYS8 и release gates отдельно.
+
+Выполнено2026-11-16: [ENG7b.3 — Editor/Player launch/delivery](engine/PLAN.md#eng7b3-launch-acceptance),
+версия1.2611.16.1-alpha. Повторный GPU Play исправлен; native/package и полная D/R
+регрессия прошли в bounded Windows x64 scope. Functional/release gates сохраняются.
+
+Принято2026-11-15: [VER1 — правило версий для агентов](core/PLAN.md#ver1-agent-versioning),
+`x.yyMM.d.rev[-postfix]`, UTC; инструкции TrueMoon, Studio и игры согласованы.
+Документационный этап не меняет текущие версии и функциональную очередь.
+
+Выполнено2026-11-15: **DEP1 dependency refresh** —6central versions обновлены до latest stable,
+extended native Skia4.156.1 пересобрана из exact sources;16suites по9110D/R,
+GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliveries прошли.
+[Единственная детальная задача/границы](core/PLAN.md#dep1-dependency-refresh).
+Функциональная engine/UI очередь и physical/release gates сохраняются.
+
+Выполнено2026-11-12: **SkiaSharp/native4.156.0** согласованы; source/published native, UI/Hosting/Editor D/R и fresh-package delivery проверены. [Единственная детальная задача и scope](alloy/PLAN.md#skiasharp-41560-completed). Engine/functional UI очередь и release gates сохраняются.
+
+**UI2026-11-08:** [UIA3d validation/shadows](alloy/PLAN.md#uia3d-validation-shadows) и [UIA3d.1 Vulkan frosted barrier](alloy/PLAN.md#uia3d1-vulkan-backdrop) реализованы и проверены в указанном scope. Детальная очередь у UI владельца; engine/Nom порядок сохранён.
+
+**UI typography2026-11-08:** по запросу пользователя Segoe UI Variable Text — default controls/text; Editor consumer подключён. Детальный task и границы — [UI PA8c.3b](alloy/PLAN.md#pa8c3b-default-fonts). Общий порядок engine/Nom не изменён.
+
+Выполнено2026-11-07: **SkiaSharp/native4.155.0** согласованы, extended DLL пересобрана
+из pinned sources. ABI, source/published Vulkan и fresh NuGet delivery проверены;
+подробные этапы и результаты — в [UI плане](alloy/PLAN.md#skiasharp-41550-completed).
+Прикладная очередь и открытая physical/release acceptance сохраняются.
+
+## Текущая очередь — актуализация 2026-11-19
+
+[ARCH1g.2n](engine/PLAN.md#arch1g2n-project-model-catalog) добавляет список
+импортированных моделей проекта и выбор ресурсов для открытой сцены.
+[ARCH1g.2o](engine/PLAN.md#arch1g2o-place-catalog-model) размещает модель из каталога в сцене.
+[Первый срез ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) в `main` позволяет выбрать меш и материал размещённого экземпляра.
+
+[Приёмка перезапуска ED4i](engine/EDITOR_PLAN.md#ed4i-render-binding-restart) подтвердила сохранение MeshRenderer и совпадение пикселей из новой сборки.
+
+[Сброс материала меша](engine/EDITOR_PLAN.md#ed4i-material-reset) реализован и проверен на Vulkan с Undo и Redo.
+
+[Диагностика отсутствующих ссылок](engine/EDITOR_PLAN.md#ed4i-reference-diagnostics) проверена в инспекторе и при Build.
+
+[Два слота ED4i](engine/EDITOR_PLAN.md#ed4i-material-slots) провели именованные
+слоты через импорт, Nom и Build и подтвердили замену одного материала на Vulkan.
+[Первичный импорт ARCH1g.2p](engine/PLAN.md#arch1g2p-initial-model-import) добавил
+команду Editor от glTF с внешним BIN до каталога и размещённой сцены на Vulkan.
+
+По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
+ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
+слои/ECS → ARCH3.6–9 моды/reload**. [Единственная подробная очередь](engine/PLAN.md#current-engine-queue).
+[ARCH3.0 карта завершена статически](engine/ARCH3_MAP.md): 385 файлов, 488 public
+types, 61 project graph; owners/compatibility и optional Editor.Tooling integration
+определены в исходной карте. ARCH3.1–5 теперь реализованы; import/audio/ED и release
+gates сохраняют свои IDs/критерии. Короткий diagnostics срез завершён 12 ноября:
+[baseline D/R](engine/HISTORY.md#arch2e4b-2026-11-12), 8568passed/configuration;
+причина старого timeout остаётся открыта. ARCH1f.4 завершён: [surface/fence и actual proofs](engine/HISTORY.md#arch1f4-2026-11-12). ENG7b.1–2 также завершены: [local Player и role/cleanup proofs](engine/HISTORY.md#eng7b12-2026-11-12). ARCH3.1 завершён: [независимый SDK](engine/ABSTRACTIONS.md). ARCH3.2 завершён: [real ECS binding и shared identity](engine/ECS_BINDING.md). ARCH3.3 завершён: [самостоятельный Runtime, App и schema2 ABI](engine/RUNTIME.md), [проверки](engine/ARCH33_BASELINE.json). ARCH3.4 завершён: [headless Tooling](engine/TOOLING.md), [приёмка](engine/ARCH34_BASELINE.json). ARCH3.5 завершён: [Editor UI/optional bridge](engine/EDITOR_LAYERS.md), [приёмка](engine/ARCH35_BASELINE.json). ARCH3.6 завершён: [managed Mod SDK/loader](engine/MODS.md), [приёмка](engine/ARCH36_BASELINE.json). ARCH3.7 завершён: [stable-component system replacement](engine/MOD_RELOAD.md), [приёмка](engine/ARCH37_BASELINE.json). ARCH3.8 завершён: [private components/new-World migration](engine/MOD_MIGRATION.md), [приёмка/SHA](engine/ARCH38_BASELINE.json). ARCH3.9 завершён 2026-11-15: [слои/guide/единая поставка](engine/ARCHITECTURE_GUIDE.md), [приёмка/SHA](engine/ARCH39_BASELINE.json). По запросу2026-11-15: [общий слой подсистем ARCH1j](engine/PLAN.md#arch1j-session-subsystems) и [Kton PHYS5](physics/ECS_BRIDGE.md) и [Kul ARCH1h.2a](audio/ECS_BRIDGE.md) завершены в своих профилях. ENG7b.3 завершён2026-11-16 в [launch/delivery scope](engine/LAUNCH_ACCEPTANCE.md); functional/release gates сохранены.
+
+Предыдущий сквозной этап — [CORE8: восстановление solution на .NET11](core/PLAN.md#core8-dotnet11), завершён 11 ноября.
+CORE8.0/8.1 managed inputs готовы: 61 net11 проекта, 45 runners на общем profile,
+external CPM restore исправлен, source build D/R0errors. Независимая поставка:
+16packages/15profiles, по230checks и4owned children на source/published/fresh.
+[Команды/ограничения](core/HISTORY.md#core81-profiles-2026-11-11).
+CORE8.2 завершён: Cobalt179/generator96 и Enerit354/generator114 каждый D/R,
+132fresh-package DI/IPCscenarios. [Scope/исправления](core/HISTORY.md#core82-generators-2026-11-11).
+CORE8.3 завершён: full Aether3243/Editor1496 D/R; SDK11-only source/published
+frozen game compile/reuse/load/Stop/reap. [Scope](core/HISTORY.md#core83-frozen-2026-11-11).
+CORE8.4 и CORE8.5 завершены: [полная регрессия](core/HISTORY.md#core84-runtime-2026-11-11), [свежая согласованная поставка и итоговые suites](core/HISTORY.md#core85-delivery-2026-11-11). Поддержанный профиль и переход — в [руководстве](core/DOTNET11_MIGRATION.md).
+Headless game proofs не заменяют surface/GPU/release acceptance.
+Детальные этапы и критерии — только у Core/build integration. Очередь engine f.4,
+import/audio/Nom и release ниже сохраняется после восстановления рабочего baseline.
+
+Основание: запрос общей ревизии после db5ea97, текущие PLAN/STATUS и адресное чтение
+Editor preview/Transform/Observer. Новых execution results эта запись не создаёт.
+По запросу2026-11-06 **ECS внесена в план**: [ARCH1e](engine/PLAN.md#arch1e-ecs),
+[проект](engine/ECS_DESIGN.md). Добавлены системные компоненты отображения и
+материалы: [ARCH1f](engine/PLAN.md#arch1f-rendering), [renderer/resource design](engine/RENDERING_DESIGN.md).
+Headless World storage и e.2 queries/phase commands/systems реализованы по
+[World v1](engine/ECS_DESIGN.md#world-v1) и [execution contract](engine/ECS_EXECUTION.md).
+E.3a [registry/headless scene loading](engine/ECS_LOADING.md) добавляет полный
+document envelope, exact bindings и private World materialization/owned cleanup.
+E.3b [initial Runtime activation](engine/ECS_RUNTIME_LOADING.md) добавляет capability,
+bounded chunks и explicit ECS game consumer; результаты проверок — у engine владельца.
+E.4 [Transform/movement/primitive profile](engine/ECS_PRIMITIVES.md) реализует
+bounded hierarchy и detached render snapshots; проверки — у engine владельца.
+F.0 [mesh/material contracts](engine/RENDERING_CONTRACTS.md) зафиксировал v1 profile,
+versions/slots/color pipeline и resource/snapshot budgets/owners до кода.
+F.1 CPU definitions/schemas/validation и canonical codec реализованы2026-11-07;
+f.2 добавляет [resource owners/leases/preparation](engine/RENDER_RESOURCES.md), bounded
+catalog/device lifecycle, atomic World rebind и standalone Vulkan upload/readback.
+F.3 owned render snapshots реализован 9 ноября. F.4 добавил Vulkan surface и
+Playing fence 12 ноября. Минимальный Player прошёл ENG7b.1–3 в принятом профиле.
+По запросу2026-11-07 добавлены исследования [загрузки моделей ARCH1g.0](engine/PLAN.md#arch1g-model-assets)
+и [аудиомодуля ARCH1h.0](engine/PLAN.md#arch1h-audio): выбор форматов/backends,
+content delivery, App/ECS integration, resource ownership и критерии прототипов.
+Порядок f.3→f.4 был выполнен до сквозной интеграции импорта. Аудиоинтеграция
+проверена в профиле ARCH1h.2a. Текущая очередь и границы указаны в таблице ниже.
+G.0 выбрал [AssimpNetter6.0.5 low-level](engine/MODEL_IMPORT_RESEARCH.md#decision-2026-11-07)
+для g.1 после8Debug/published Release comparative profiles.
+[Captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) проверен как research
+prototype: frozen dependency I/O, limits, persistent ID ledger и native worker cancel.
+Этот профиль лёг в основу ограниченного importer ARCH1g.1 и поставки ARCH1g.2.
+Отдельный план Aether фиксирует дальнейшую поддержку форматов.
+Самостоятельный модуль **TrueMoon.Nom** хранит assets вне Aether. Решение пользователя
+2026-11-07 обновлено: **полностью заменить LiteDB собственной реализацией** —
+transactional KV catalog, append-only journal, bounded key index и streamed immutable
+CAS bytes. [Решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07),
+[единственная очередь NOM0–NOM8](nom/PLAN.md#nom-own-queue).
+NOM0/1 format/KV и [NOM2 App/resource cutover](nom/CATALOG.md#nom2-catalog-2026-11-08)
+проверены: собственный backend используется UseNom, LiteDB source/tests/packages/vendor
+probes удалены. NOM3 deterministic IO/process acceptance проверена2026-11-08:
+[426cases/65groups и lifecycle fixes](nom/RECOVERY_ACCEPTANCE.md). Subsequent UAC proof
+подтвердил bounded real-volume disk-full/recovery. Actual VM verification отложена
+пользователем; аппаратный power-off исключён из текущего scope.
+NOM4 checkpoint/offline compaction и [NOM5 indexes/snapshots/pins/offline GC](nom/RETENTION.md) реализованы и проверены в IO/process scope; NOM6 [backup/restore](nom/BACKUP.md) и [limits/workload](nom/PERFORMANCE.md) проверены; [NOM7 package delivery/independent consumers](nom/DELIVERY.md) проверен в local Windows x64 portable/win-x64 framework-dependent scope. External publish/остальные платформы и physical gates открыты. Vendor fix/upgrade/worker и optional
+LiteDB provider отменены. Прежние AST результаты — история; текущие proofs и scope —
+[Nom STATUS](nom/STATUS.md). Первый потребитель Nom из Aether проверен в ARCH1g.2a.
+
+Детали import/audio этапов — в engine плане, storage — в Nom; массовая миграция не назначена. Маршрут ежедневного Editor,
+performance и release сохраняются ниже как независимые варианты продолжения.
+
+**Физика2026-11-12:** пользователь выбрал **TrueMoon.Kton** и BEPUphysics v2 как
+приоритетный backend. Самостоятельные Physics API/provider и ECS/session bridge
+Aether запланированы в [единственном плане PHYS0–8](physics/PLAN.md#current-physics-queue).
+Headless PHYS0 проверен на общем .NET11: exact beta.33, по114checks source Debug/
+published Release,64cleanup cycles/owners0/pools0; [границы и CCD/material предел](physics/HISTORY.md#phys0-2026-11-12).
+PHYS1 neutral BCL-only API/validation реализован:131checks source/fresh package
+D/published R; [контракт](physics/CONTRACTS.md). PHYS2 provider реализован:184checks
+source/fresh package D/published R, [scope](physics/PROVIDER.md); PHYS3 queries/
+events реализован:309checks/profile, [policy](physics/QUERIES_CONTACTS.md). PHYS4 App/
+configuration/DI реализован:192checks/profile обоих DI; [App guide](physics/APP.md),
+[evidence](physics/HISTORY.md#phys4-2026-11-12). PHYS5 подключил ECS bridge,
+PHYS6 добавил контроллер персонажа. Ближайший независимый срез PHYS8 — профили
+10 000 тел и воркеров. Простой ragdoll остаётся необязательным PHYS7.
+[Текущий статус Kton](physics/STATUS.md), [имя и источники](physics/NAMING.md).
+
+[CORE7 — единая конфигурация App и модулей](core/PLAN.md#core7-unified-configuration):
+2026-11-11 CORE7.0–7.6 завершены в configuration scope:
+[guide](core/CONFIGURATION_GUIDE.md), [139keys](core/CONFIGURATION_KEYS.md),
+предыдущий net10 source solution D/R0errors,7suites6945/6945 D/R и fresh16packages одной версии.
+Source/published/fresh: по230checks на обоих DI,4owned children/profile.
+[Точные результаты/ограничения](core/HISTORY.md#core76-2026-11-10); engine f.4 независим.
+
+| Направление | Следующий результат | План владельца |
+| --- | --- | --- |
+| Слои Aether и моды | ARCH3.1–9, ARCH1j и ENG7b.3 завершены в проверенных профилях. Критерии дальнейшей приёмки выпуска ведутся отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
+| .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
+| Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
+| ECS и отображение | ARCH1f.2–4 и минимальный Player проверены. ARCH1f.5 провёл внешнюю PNG из glTF через Nom и Build до Vulkan. Editor восстановил текстуру после перезапуска и провёл переимпорт, Build и горячий Replace в Playing из интерфейса. В ED4i инспектор выбирает меш и материал для одного MeshRenderer | [ARCH1f.5](engine/PLAN.md#arch1f5-editor-playing-texture-workflow), [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
+| Ассеты моделей | ARCH1g.2a–k проверили доставку точных ревизий через Nom, GPU, Replace и допуск Build. ARCH1g.2l–o добавили реимпорт, восстановление выбора, каталог и размещение в сцене. ARCH1g.2p добавил первичный импорт из Editor и восстановление каталога | [ARCH1g](engine/PLAN.md#arch1g-model-assets), [первичный импорт](engine/PLAN.md#arch1g2p-initial-model-import) |
+| Самостоятельное хранение ассетов | NOM0–8 проверены в указанных локальных профилях. Первый Aether consumer использует batch и точные снимки Nom в ARCH1g.2a. Другие платформы и профили выпуска открыты, VM acceptance отложена | [Nom queue](nom/PLAN.md#nom-own-queue), [статус](nom/STATUS.md) |
+| Kton / самостоятельная 3D-физика | PHYS0–6 готовы в проверенных профилях. PHYS8.1–3 закрыли baseline, аллокации и deferred-команды контактов. PHYS8.4 прошёл автоматическую приёмку визуального consumer. Далее профили 10 000 тел, воркеры, callbacks и stalls. Ручной Win32 input/close открыт | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md) |
+| Аудиомодуль | TrueMoon.Kul AUD1 и optional ARCH1h.2a ECS/captured-content bridge реализованы и проверены в Windows x64 scope; следующие AUD2–3 — device loss/RT/queues/other OS | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |
+| Editor, контракт готов | ED4g.3/4 завершены; ED5a.0 camera/selection contract зафиксирован2026-11-08 и проверен numerical probe20checks | [Контракт](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1), [scope](engine/HISTORY.md#ed5a0-contract-2026-11-08) |
+| Editor, численный срез готов | ED5a.1 immutable camera/projection/unprojection/ray/pick API;77newcases, Aether1857 D/R и Editor1353 Debug | [Scope](engine/HISTORY.md#ed5a1-values-2026-11-08) |
+| Editor, transport/receipt готов | ED5a.2 Control4/Frame2, same-child camera lane и actual receipt; Aether2103/Editor1363 D/R и source/published native в указанном scope | [Проверки/limitations](engine/HISTORY.md#ed5a2-view-2026-11-08) |
+| Editor, v1 acceptance завершена | ED5a.4 bounded Windows x64: Editor1412/Aether2104 D/R, source/published/fresh-package GPU и supported Windows input; physical held-button/multi-monitor gates отдельно | [Scope](engine/HISTORY.md#ed5a4-acceptance-2026-11-08) |
+| Editor, завершённый v1 срез | ED5b world translation: transient outline → один commit/Undo либо cancel; проверен09ноября. Local-oriented handles/snapping и rotation/scale требуют отдельного scope | [Единственный план Editor](engine/EDITOR_PLAN.md#ed5b-translation) |
+| Performance, завершённый срез | ED6b.2e.4f allocation objective проверен09ноября:−3.46/−3.51% workload при latency близкой к baseline; общий speedup не заявлен | [Единственный task](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost), [measurements](engine/OBSERVER_COST.md) |
+| Надёжность | Короткий ARCH2e.4b срез и current D/R baseline выполнены 12 ноября; причинное evidence старого timeout остаётся открыто | [Диагностика/проверки](engine/HISTORY.md#arch2e4b-2026-11-12), R2/R3 |
+| Visual quality | Baseline реальных дефектов текста/геометрии на текущем default Variable Text перед следующими rendering options | [PA8c.0](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31); [завершённая typography](alloy/PLAN.md#pa8c3b-default-fonts) |
+| Приёмка выпуска | Выбрать supported scope, повторить fresh packages/native и доступные physical/hardware gates | R1–R6 ниже, [UI STATUS](alloy/STATUS.md) |
+
+Numeric physical input проверяется отдельно при подходящем вводе. Unverified
+arrows/captured Esc не означают подтверждённый physical-keyboard defect; они не
+закрыты routed input и не превращают каждый UI feature в повтор native smoke.
+K7 остаётся release blocker в прежнем scope; остановленный пользователем поиск
+NVIDIA workaround не возобновляется этой ревизией. Сквозной release не объявляется
+готовым по сумме старых модульных запусков. Условия реализации новых UI срезов
+помечены как предложения; новые public API/ownership contracts заранее не вводятся.
+
+Прежние датированные маршруты ниже сохраняют архитектуру и историю решений.
+При выборе следующей работы использовать эту очередь и локальный STATUS; уже
+выполненные ARCH2/Window/Observer cache/open/console/report срезы не назначать заново.
+
+UI follow-up2026-11-05: [ED4g.2](engine/EDITOR_PLAN.md#ed4g2-numeric-gestures) и
+[UIA3c](alloy/PLAN.md#uia3c-numeric-gestures) добавляют numeric step/drag и linked
+scale с draft-only/cancel/identity contract. Scoped source/published native proof
+выполнен в [ED4g.2a](engine/EDITOR_PLAN.md#ed4g2a-native-numeric); физические arrows/
+captured Esc/pointer modifiers остаются открыты. ED4g.3/4 group reset/angle units завершены; далее ED5a;
+engine Observer и hardware/release gates отдельно.
+
+UI-срез 2026-11-05: компактный Transform инспектора ведётся в
+[ED4g](engine/EDITOR_PLAN.md#ed4g-compact-transform), общие числовые редакторы и
+цветовые состояния — в [UIA3](alloy/PLAN.md#uia3-компактные-редакторы-и-семантические-цвета--2026-11-05).
+Общие правила оформления зафиксированы в [дизайн-коде](alloy/DESIGN.md).
+Observer scheduling/allocation follow-up сохраняется отдельной engine-задачей.
+Продолжение [ED4g.1](engine/EDITOR_PLAN.md#ed4g1-generic-editors) применяет тот же язык
+к остальным scalar/nullable editors; общие Row/CheckBox/RichText capabilities — UIA3b.
+
+
+Создан 2026-10-09 по запросу разделить общий roadmap и планы модулей. [Корневой README](../../README.md), [индекс документации](README.md), [текущее состояние](STATUS.md), [формат ведения планов](PLANNING.md). Это план всего фреймворка; детальные задачи и проверки находятся в документах соответствующих модулей.
+
+<a id="common-status-before-review-2026-11-20"></a>
+
+## Общий STATUS до ревизии 20.11.2026
+
+# TrueMoon: общий статус
+
+**2026-11-20 — ARCH1f.5, обновление PNG из интерфейса во время Playing.**
+Editor переимпортирует выбранную модель, собирает кандидат и предлагает его
+для горячего Replace. На Vulkan исходный кадр сохраняется до подтверждения
+замены, затем видна новая ревизия с тем же ID.
+[Приёмка](engine/HISTORY.md#arch1f5-editor-playing-texture-workflow-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, горячий Replace после переимпорта PNG.**
+Публикация новой ревизии сохранила кадр активной сборки. Replace из меню
+применил новую текстуру на Vulkan в Playing без команды Stop.
+[Приёмка](engine/HISTORY.md#arch1f5-editor-texture-replace-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, переимпорт внешней PNG в открытом Editor.**
+Editor обнаружил изменение PNG и отклонил Build устаревшего импорта. После
+переимпорта сохранились ID, Vulkan показал новую ревизию текстуры и прежний
+соседний слот. [Приёмка](engine/HISTORY.md#arch1f5-editor-texture-reimport-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, текстурированная сцена после перезапуска Editor.**
+Штатный импорт, размещение и Save проверены в шести профилях. Новый процесс
+восстановил точные ключи из Nom. Build показал те же texels и тот же участок
+viewport на Vulkan. [Приёмка](engine/HISTORY.md#arch1f5-editor-texture-restart-2026-11-20).
+
+**2026-11-20 — ARCH1f.5, внешняя PNG из glTF.** Версия **1.2611.20.1-alpha**.
+Импорт, Nom, Build и Vulkan прошли A → B → A в трёх профилях. Изменение только
+PNG пометило исходный импорт устаревшим, реимпорт сохранил ID и сменил ревизию.
+Старый снимок Nom сохранил исходный ключ. [Приёмка](engine/HISTORY.md#arch1f5-imported-png-2026-11-20).
+
+**2026-11-19 — первый срез ARCH1f.5.** Версия **1.2611.19.12-alpha**.
+Две ревизии одной base-color текстуры прошли Build → Runtime → Vulkan с UV0
+и sampler `NearestClamp`. Проверка A → B → A подтвердила ревизии upload и
+пиксели в source Debug, published Release и свежих пакетах. Следующий срез —
+передача текстуры из импорта glTF. [Приёмка](engine/HISTORY.md#arch1f5-base-color-2026-11-19).
+
+**2026-11-19 — ARCH1g.2p, первичный импорт из Editor.** Версия **1.2611.19.11-alpha**.
+Двухслотовая glTF с внешним BIN импортирована и размещена из пустого каталога.
+После перезапуска совпали запись каталога, ID слотов и кадр на Vulkan.
+[Проверки](engine/HISTORY.md#arch1g2p-2026-11-19).
+
+**2026-11-19 — ED4i, два слота материала.** Версия **1.2611.19.10-alpha**.
+Реимпорт сохранил ID обоих слотов после перестановки примитивов. Замена одного
+материала в инспекторе сохранила ключ и пиксели второго слота на Vulkan.
+[Проверки](engine/HISTORY.md#ed4i-material-slots-2026-11-19).
+
+**2026-11-19 — ED4i, диагностика ссылок.** Версия **1.2611.19.9-alpha**.
+Инспектор и Build показывают ID отсутствующего меша или привязки.
+После возврата импортов восстановлены ключ привязки и кадр на Vulkan.
+[Проверки](engine/HISTORY.md#ed4i-reference-diagnostics-2026-11-19).
+
+**2026-11-19 — ED4i, вернуть материал меша.** Версия **1.2611.19.8-alpha**.
+Инспектор возвращает исходный материал текущего меша через Apply. На Vulkan
+Undo вернул переопределение, а Redo повторил сброс при том же ключе меша.
+[Проверки](engine/HISTORY.md#ed4i-material-reset-2026-11-19).
+
+**2026-11-19 — ED4i, приёмка перезапуска.** На версии **1.2611.19.7-alpha**
+новый Editor восстановил выбор меша и материала и ID привязки. Новая сборка
+показала те же пиксели видимой геометрии на Vulkan.
+[Проверки](engine/HISTORY.md#ed4i-render-binding-restart-2026-11-19).
+
+**2026-11-19 — ED4i, первый срез в `main`**, коммит `098fc53`, версия **1.2611.19.7-alpha**.
+Инспектор MeshRenderer выбирает меш и материал из ресурсов сцены.
+Смена геометрии и восстановление после Undo подтверждены на GPU.
+[План](engine/EDITOR_PLAN.md#ed4i-render-components), [проверки](engine/HISTORY.md#ed4i-render-inspector-2026-11-19).
+
+**2026-11-19 — ARCH1g.2o**, версия **1.2611.19.6-alpha**.
+Editor добавляет модель из каталога в сцену с Undo и Redo. После сохранения
+и повторного открытия новая сборка показала размещённую геометрию на GPU.
+[План](engine/PLAN.md#arch1g2o-place-catalog-model), [проверки](engine/HISTORY.md#arch1g2o-2026-11-19).
+
+**2026-11-19 — ARCH1g.2n**, версия **1.2611.19.5-alpha**.
+Editor показывает зарегистрированные модели проекта и сохраняет сделанный
+в каталоге выбор для открытой сцены. Неполный выбор ресурсов блокирует Build
+с диагностикой.
+[План](engine/PLAN.md#arch1g2n-project-model-catalog).
+
+**Предыдущий этап — ARCH1g.2k**, коммит `b92a6a9`, версия `1.2611.19.2-alpha`.
+[Проверки статусов импортов и Build](engine/HISTORY.md#arch1g2k-2026-11-19).
+
+**2026-11-18 — ARCH1g.2i**, version **1.2611.18.10-alpha**. Tooling сверяет
+опубликованный импорт с текущими зависимостями и настройками. Изменение
+внешнего BIN пометило устаревшей одну из двух моделей. После реимпорта
+обе прошли проверку перед новой сборкой. Player подтвердил обе версии
+на GPU в четырёх профилях. [Проверки](engine/HISTORY.md#arch1g2i-2026-11-18).
+
+**2026-11-18 — SkiaSharp 4.157.0**, version **1.2611.18.9-alpha**.
+Windows x64 DLL пересобрана из соответствующих исходников с Vulkan interop.
+Решение собрано в Debug и Release. Проверены Vulkan и независимые NuGet-потребители.
+[Приёмка](alloy/HISTORY.md#skiasharp-41570-2026-11-18).
+
+Объединение точных снимков Nom и запуск двух моделей из одного артефакта
+проверены в g.2h. [Проверки нескольких снимков](engine/HISTORY.md#arch1g2h-2026-11-18).
+
+Изменение зависимости и масштаба, удаление ресурсов и очистка CAS с
+сохранением опубликованных сборок проверены в g.2g.
+[Проверки удаления](engine/HISTORY.md#arch1g2g-2026-11-18).
+
+Выбор опубликованной сборки, горячий Replace, отказ и откат в независимом
+Editor на свежих пакетах проверены отдельно в g.2f.
+[Проверки Editor](engine/HISTORY.md#arch1g2f-2026-11-18).
+
+Kton завершил PHYS8.1–4 в зафиксированных профилях. Ближайший независимый
+физический срез — 10 000 тел и профили воркеров. Nom используется в ARCH1g.2
+через batch и точные снимки. [Kton](physics/STATUS.md), [Nom](nom/STATUS.md).

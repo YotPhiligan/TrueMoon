@@ -15,8 +15,10 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 
 [TrueMoon.Kton и BEPU provider: App/configuration/ownership](physics/APP.md),
 [контракт](physics/CONTRACTS.md), [план](physics/PLAN.md),
-[текущие проверки](physics/STATUS.md). PHYS0–4 завершены в указанном scope;
-Aether ECS bridge — отдельный PHYS5.
+[текущие проверки](physics/STATUS.md). PHYS0–6 завершены в проверенных профилях,
+включая [Aether ECS bridge](physics/ECS_BRIDGE.md) и контроллер персонажа.
+[PHYS8](physics/PLAN.md#phys8) содержит приёмку визуального consumer и дальнейшие
+профили нагрузки.
 
 ## Слои Aether и поставка
 
