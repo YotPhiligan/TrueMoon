@@ -3,6 +3,9 @@
 /// <summary>Budgets copied and validated before the application creates diagnostic resources.</summary>
 public sealed class DiagnosticPipelineOptions
 {
+    /// <summary>Collects only event sources created through this App's diagnostics and explicit imports.</summary>
+    public bool AppLocalSourcesOnly { get; set; }
+
     /// <summary>Initial minimum severity; may subsequently be changed on the pipeline.</summary>
     public DiagnosticLevel MinimumLevel { get; set; } = DiagnosticLevel.Information;
     /// <summary>Source prefix overrides; the longest matching prefix wins. At most 64 rules.</summary>
@@ -85,6 +88,7 @@ public sealed class DiagnosticPipelineOptions
             throw new ArgumentException("Invalid or excessive diagnostic filter rules.");
         return new()
         {
+            AppLocalSourcesOnly = AppLocalSourcesOnly,
             MinimumLevel = MinimumLevel, QueueCapacity = QueueCapacity, ReservedErrorCapacity = ReservedErrorCapacity,
             SourceMinimumLevels = sourceLevels, DisabledEvents = disabled, SinkMinimumLevels = sinkLevels,
             QueueByteCapacity = QueueByteCapacity, MemoryCapacity = MemoryCapacity, MemoryByteCapacity = MemoryByteCapacity,

@@ -459,6 +459,55 @@ public sealed class DiagnosticsPipelineTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task AppLocalSources_IsolateNamedAndTypedEventsAcrossApps(bool microsoftDI)
+    {
+        var name = UniqueName();
+        var eventName = name + ".Event";
+        IApp Build(bool scoped) => App.Builder(ctx => { if (microsoftDI) ctx.UseDI(); })
+            .Setup(ctx => ctx.UseDiagnostics(new DiagnosticPipelineOptions { AppLocalSourcesOnly = scoped },
+                config => config.Filters(name))).Build();
+
+        await using var first = Build(true);
+        await using var second = Build(true);
+        await using var global = Build(false);
+        using var external = new EventsSource(name);
+        var firstPipeline = first.Services.Resolve<DiagnosticPipeline>()!;
+        var secondPipeline = second.Services.Resolve<DiagnosticPipeline>()!;
+        var globalPipeline = global.Services.Resolve<DiagnosticPipeline>()!;
+        var firstNamed = first.Services.Resolve<IEventsSourceFactory>()!.Create(name);
+        var secondNamed = second.Services.Resolve<IEventsSourceFactory>()!.Create(name);
+        var firstTyped = first.Services.Resolve<IEventsSource<DiagnosticsPipelineTests>>()!;
+        var secondTyped = second.Services.Resolve<IEventsSourceFactory>()!.Create<DiagnosticsPipelineTests>();
+
+        firstNamed.Write(DiagnosticLevel.Information, 1, eventName, "first named");
+        firstTyped.Write(DiagnosticLevel.Information, 2, eventName, "first typed");
+        secondNamed.Write(DiagnosticLevel.Information, 3, eventName, "second named");
+        secondTyped.Write(DiagnosticLevel.Information, 4, eventName, "second typed");
+        external.Write(DiagnosticLevel.Information, 5, eventName, "process-wide");
+
+        Assert.Equal(new[] { 1, 2 }, ReadIds(firstPipeline));
+        Assert.Equal(new[] { 3, 4 }, ReadIds(secondPipeline));
+        Assert.Equal(new[] { 5 }, ReadIds(globalPipeline));
+        Assert.True(firstPipeline.ReadConfiguration().AppLocalSourcesOnly);
+        Assert.False(globalPipeline.ReadConfiguration().AppLocalSourcesOnly);
+
+        firstPipeline.SetEventEnabled(eventName, false);
+        firstTyped.Write(DiagnosticLevel.Information, 6, eventName, "disabled",
+            () => throw new InvalidOperationException("Disabled payload must stay lazy."));
+        Assert.Equal(new[] { 1, 2 }, ReadIds(firstPipeline));
+
+        await first.DisposeAsync();
+        secondNamed.Write(DiagnosticLevel.Information, 7, eventName, "second survives first shutdown");
+        Assert.Equal(new[] { 3, 4, 7 }, ReadIds(secondPipeline));
+        Assert.Equal(new[] { 5 }, ReadIds(globalPipeline));
+
+        int[] ReadIds(DiagnosticPipeline pipeline) =>
+            pipeline.Read().Where(record => record.EventName == eventName).Select(record => record.EventId).ToArray();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task RepeatedAppSetup_CreatesOnlyReplacementPipelineAndSink(bool microsoftDI)
     {
         var discardedCreations = 0; var activeCreations = 0; var active = new RecordingSink();
@@ -484,13 +533,17 @@ public sealed class DiagnosticsPipelineTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AppDispose_DrainsStopAndServiceCleanupEventsBeforeDisposingSinks(bool microsoftDI)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task AppDispose_DrainsStopAndServiceCleanupEventsBeforeDisposingSinks(bool microsoftDI, bool scoped)
     {
         var sink = new RecordingSink(); var name = UniqueName();
+        var options = Options(sink);
+        options.AppLocalSourcesOnly = scoped;
         var app = App.Builder(context => { if (microsoftDI) context.UseDI(); }).Setup(context => context
-            .UseDiagnostics(Options(sink), configuration => configuration.Filters(name))
+            .UseDiagnostics(options, configuration => configuration.Filters(name))
             .Services(services => services.Singleton<IStartable>(resolver =>
                 new CleanupEmitter(resolver.Resolve<IEventsSourceFactory>()!.Create(name))))).Build();
         try

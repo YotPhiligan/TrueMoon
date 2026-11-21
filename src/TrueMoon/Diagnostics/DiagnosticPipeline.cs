@@ -7,6 +7,7 @@ public sealed class DiagnosticPipeline : IDisposable, IAsyncDisposable
 {
     private readonly Lock _gate = new();
     private readonly DiagnosticPipelineOptions _options;
+    internal bool AppLocalSourcesOnly => _options.AppLocalSourcesOnly;
     private readonly List<DiagnosticSinkWorker> _workers = [];
     private readonly Queue<(DiagnosticRecord Record, long Bytes)> _memory = new();
     private readonly Dictionary<string, DiagnosticLevel> _sourceLevels;
@@ -30,7 +31,7 @@ public sealed class DiagnosticPipeline : IDisposable, IAsyncDisposable
     {
         lock (_gate) return new()
         {
-            ApplicationId = ApplicationId, MinimumLevel = MinimumLevel,
+            ApplicationId = ApplicationId, MinimumLevel = MinimumLevel, AppLocalSourcesOnly = AppLocalSourcesOnly,
             QueueCapacity = _options.QueueCapacity, ReservedErrorCapacity = _options.ReservedErrorCapacity, QueueByteCapacity = _options.QueueByteCapacity,
             MemoryCapacity = _options.MemoryCapacity, MemoryByteCapacity = _options.MemoryByteCapacity,
             MaxMessageChars = _options.MaxMessageChars, MaxExceptionChars = _options.MaxExceptionChars, MaxPropertyChars = _options.MaxPropertyChars,

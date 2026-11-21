@@ -64,9 +64,22 @@ exception type/message/stack, Caller и Activity TraceId/SpanId на момен�
 Произвольные payload graphs и exception objects в очередь не переносятся.
 Неизвестный legacy object отображается именем типа без вызова его ToString.
 
-`ApplicationId` идентифицирует **collecting pipeline**. DiagnosticListener остаётся
-process-global: подходящие источники других Apps могут наблюдаться по прежним
-discovery filters. Это не App-private routing и не remote producer identity.
+`ApplicationId` идентифицирует pipeline, принявший запись. По умолчанию
+`UseDiagnostics` подписывается на общий для процесса `DiagnosticListener`.
+Префиксы discovery могут совпадать у источников разных App.
+
+Чтобы изолировать события App, задайте `DiagnosticPipelineOptions.AppLocalSourcesOnly = true`
+или `Diagnostics:AppLocalSourcesOnly = true` при старте через `UseConfiguredDiagnostics`.
+Штатные `IEventsSource<T>` из DI и именованные и типизированные источники из
+`IEventsSourceFactory` направляют события только в pipeline и callbacks своего App.
+Отбор по префиксу источника и действующие фильтры уровня и имени события
+применяются в обоих режимах. В локальном режиме сохраняется явный
+`IDiagnosticRecordImporter`, например для доставки записей дочернего процесса.
+Публичные конструкторы без подписки по-прежнему создают общедоступные
+`DiagnosticListener`. Видимость `ActivitySource` и `Meter` определяется
+стандартными .NET listeners. Снимок `IDiagnosticConfigurationReader` показывает
+действующий режим.
+
 Sequence задаёт порядок в collector; UTC и sequence разных процессов не являются
 общими causal clocks. Для imported child records Origin хранит исходные
 ApplicationId/Sequence, а ProcessId и UTC остаются emitting process values.

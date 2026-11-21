@@ -5,10 +5,15 @@ public class EventsSourceFactory : IEventsSourceFactory, IDisposable
 {
     private readonly Lock _lock = new();
     private readonly List<EventsSource> _sources = [];
+    private readonly DiagnosticSubscription? _subscription;
     private bool _disposed;
 
-    public IEventsSource Create(string name) => CreateCore(() => new EventsSource(name));
-    public IEventsSource<T> Create<T>() => CreateCore(() => new EventsSource<T>());
+    public EventsSourceFactory() { }
+
+    internal EventsSourceFactory(DiagnosticSubscription subscription) => _subscription = subscription;
+
+    public IEventsSource Create(string name) => CreateCore(() => new EventsSource(name, _subscription));
+    public IEventsSource<T> Create<T>() => CreateCore(() => new EventsSource<T>(_subscription));
 
     private TSource CreateCore<TSource>(Func<TSource> create) where TSource : EventsSource
     {

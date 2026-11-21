@@ -78,8 +78,7 @@ public static class AppCreationContextExtensions
             .Singleton<IEventsSourceFactory>(resolver =>
             {
                 // Ensure subscription exists before creating sources. Resolver owns both singleton services.
-                resolver.Resolve<DiagnosticSubscription>();
-                return new EventsSourceFactory();
+                return new EventsSourceFactory(resolver.Resolve<DiagnosticSubscription>());
             });
         });
         return context;

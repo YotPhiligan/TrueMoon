@@ -137,6 +137,7 @@ configuration overrides. [Подключение](../audio/ECS_BRIDGE.md).
 
 | Key | Type | Default JSON | CLI aliases | Required |
 | --- | --- | --- | --- | --- |
+| `Diagnostics:AppLocalSourcesOnly` | `Boolean` | `false` |  | false |
 | `Diagnostics:ConsoleOutput` | `Boolean` | `false` |  | false |
 | `Diagnostics:DisabledEvents` | `String[]` | `[]` |  | false |
 | `Diagnostics:Emergency:Enabled` | `Boolean` | `true` |  | false |

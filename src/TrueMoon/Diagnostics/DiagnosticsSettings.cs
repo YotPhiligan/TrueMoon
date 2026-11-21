@@ -3,6 +3,9 @@ namespace TrueMoon.Diagnostics;
 /// <summary>Data-only startup defaults for the bounded diagnostic pipeline. Factories and listeners are separate composition inputs.</summary>
 public sealed record DiagnosticsSettings
 {
+    /// <summary>Whether to collect App-owned event sources and explicit imports.</summary>
+    public bool AppLocalSourcesOnly { get; set; }
+
     /// <summary>Initial minimum severity.</summary>
     public DiagnosticLevel MinimumLevel { get; set; } = DiagnosticLevel.Information;
     /// <summary>Maximum queued and executing records per sink.</summary>
@@ -80,6 +83,7 @@ public sealed record DiagnosticsSettings
 
     internal DiagnosticPipelineOptions ToOptions() => new()
     {
+        AppLocalSourcesOnly = AppLocalSourcesOnly,
         MinimumLevel = MinimumLevel,
         QueueCapacity = QueueCapacity,
         ReservedErrorCapacity = ReservedErrorCapacity,

@@ -250,6 +250,7 @@ public sealed class CoreConfigurationMigrationTests
             builder.AddSchema(DiagnosticsConfigurationSchema.Default);
             builder.AddValues("diagnostics", ConfigurationSourcePriority.Files,
             [
+                Entry("Diagnostics:AppLocalSourcesOnly", true),
                 Entry("Diagnostics:SourceMinimumLevels", new Dictionary<string, string> { ["Core74.Service"] = "Warning" }),
                 Entry("Diagnostics:SinkMinimumLevels", new Dictionary<string, string> { ["custom-0"] = "Error" }),
                 Entry("Diagnostics:DisabledEvents", new[] { "Core74.Disabled" }),
@@ -272,6 +273,8 @@ public sealed class CoreConfigurationMigrationTests
         var reader = Required<IConfigurationReader>(app);
         var options = reader.Current.GetOptions(DiagnosticsConfigurationSchema.Default);
         var pipeline = Required<DiagnosticPipeline>(app).ReadConfiguration();
+        Assert.True(options.AppLocalSourcesOnly);
+        Assert.True(pipeline.AppLocalSourcesOnly);
         Assert.Equal(DiagnosticLevel.Warning, options.SourceMinimumLevels["Core74.Service"]);
         Assert.Equal(DiagnosticLevel.Error, options.SinkMinimumLevels["custom-0"]);
         Assert.Equal(new[] { "Core74.Disabled" }, options.DisabledEvents);

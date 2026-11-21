@@ -3,6 +3,9 @@ namespace TrueMoon.Diagnostics;
 /// <summary>Effective scalar collector settings. Rule names, output paths and sink factories are intentionally omitted.</summary>
 public sealed record DiagnosticCollectorConfiguration
 {
+    /// <summary>Whether event routing is limited to App-owned sources and explicit imports.</summary>
+    public bool AppLocalSourcesOnly { get; init; }
+
     /// <summary>Collector identity.</summary>
     public Guid ApplicationId { get; init; }
     /// <summary>Current minimum level.</summary>

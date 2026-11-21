@@ -96,9 +96,10 @@ CORE7.0–7.6 завершены на прежнем net10 профиле: [guid
 CORE6 routing/metrics/quota, engine f.4 и wider physical/release gates сохранены;
 текущий общий baseline D/R прошёл 12 ноября: 11 suites по8568passed/configuration. [ARCH2e.4b](../engine/PLAN.md#arch2e4b-drain-diagnostics) добавил output progress/EOF и cleanup diagnostics без causal fix; далее engine f.4.
 
-CORE0–5 и bounded CORE6 сохраняют исторические proofs. App-private/bootstrap
-diagnostic routing, aggregate metrics CORE6d/generation CORE6e и artifact quota
-остаются самостоятельными задачами. Editor console/export/child health уже имеют
+CORE0–5 и bounded CORE6 сохраняют исторические proofs. Для событий реализована
+[изоляция между App](#core6-app-local-sources). Bootstrap до resolver, aggregate
+metrics CORE6d, генерация CORE6e и общая квота артефактов остаются открытыми.
+Editor console/export/child health уже имеют
 consumer; повторный post-reap drain требует causal evidence у engine owner.
 Общий engine/UI порядок — [roadmap](../PLAN.md#current-roadmap).
 
@@ -426,8 +427,23 @@ scalar settings без путей, rule names и callbacks. App остаётся
 filesystem maintenance не запускаются. Подробный контракт —
 [в guide](DIAGNOSTICS.md#архив-jsonl-и-действующие-настройки),
 [проверки](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
-Полный CORE6, App-private routing, aggregate metrics и release matrix остаются
-отдельными задачами. UI/report privacy policy ведётся только в Editor плане.
+Полный CORE6, aggregate metrics и release matrix остаются отдельными задачами.
+UI/report privacy policy ведётся только в Editor плане.
+
+<a id="core6-app-local-sources"></a>
+### CORE6a — изоляция событий App в одном процессе, 2026-11-21
+
+`AppLocalSourcesOnly` включает локальную доставку для штатных DI-источников
+`IEventsSource<T>` и обоих способов создания через `IEventsSourceFactory`.
+Одинаковые имена источника и события могут использоваться независимо в двух App.
+Режим выбирается при старте. По умолчанию работает прежняя подписка на
+`DiagnosticListener` всего процесса. Явный импорт и внешние listeners
+`ActivitySource`/`Meter` сохраняют свои контракты.
+[Подключение и фильтры](DIAGNOSTICS.md#события-и-фильтры).
+
+Следующий срез CORE6 — ограниченный сбор ошибки до создания resolver и передача
+её штатной диагностике после появления pipeline. Агрегаты CORE6d и генерация
+типизированных событий CORE6e остаются отдельными задачами.
 
 <a id="core7-unified-configuration"></a>
 <a id="core7-единая-конфигурация-app-и-всего-фреймворка--запланировано-2026-11-09"></a>

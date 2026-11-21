@@ -194,8 +194,10 @@ try {
             $reader = [IO.StreamReader]::new($archive.GetEntry('PACKAGE.md').Open())
             try { $readme = $reader.ReadToEnd() } finally { $reader.Dispose() }
         } finally { $archive.Dispose() }
-        $snippets = [regex]::Matches($readme, '(?s)```csharp\r?\n(.*?)\r?\n```')
-        if ($snippets.Count -ne 1) { throw "Expected one delivered C# example in $id." }
+        # Standalone examples start with using directives; other snippets depend on surrounding code.
+        $snippets = @([regex]::Matches($readme, '(?s)```csharp\r?\n(.*?)\r?\n```') |
+            Where-Object { $_.Groups[1].Value.StartsWith('using ', [StringComparison]::Ordinal) })
+        if ($snippets.Count -ne 1) { throw "Expected one standalone C# example in $id." }
         $example = Join-Path $run "readme-$id"; Copy-Consumer $example
         # Replace only this owned scratch copy; the package examples are not hand-adapted.
         foreach ($file in Get-ChildItem -LiteralPath $example -File | Where-Object { $_.Extension -in @('.cs','.csproj') }) { Remove-Item -LiteralPath $file.FullName }

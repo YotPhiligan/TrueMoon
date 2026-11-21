@@ -5,7 +5,7 @@ namespace TrueMoon.Diagnostics;
 
 public class EventsSource : IEventsSource, IDisposable
 {
-    private readonly DiagnosticListener _source;
+    private readonly DiagnosticSource _source;
     private int _disposed;
     public string Name { get; }
 
@@ -16,12 +16,14 @@ public class EventsSource : IEventsSource, IDisposable
         return Enum.IsDefined(level) && _source.IsEnabled(eventName ?? Name, level, null);
     }
     
-    public EventsSource(string name)
+    public EventsSource(string name) : this(name, null) { }
+
+    internal EventsSource(string name, DiagnosticSubscription? subscription)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
         
-        _source = new DiagnosticListener(Name);
+        _source = subscription?.CreateSource(Name) ?? new DiagnosticListener(Name);
     }
     
     public Activity StartActivity(string? details = default, string? category = default, [CallerMemberName] string? caller = default)
@@ -73,7 +75,7 @@ public class EventsSource : IEventsSource, IDisposable
     }
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0) _source.Dispose();
+        if (Interlocked.Exchange(ref _disposed, 1) == 0 && _source is IDisposable disposable) disposable.Dispose();
         GC.SuppressFinalize(this);
     }
 }
@@ -81,6 +83,13 @@ public class EventsSource : IEventsSource, IDisposable
 public class EventsSource<T> : EventsSource, IEventsSource<T>
 {
     public EventsSource() : base(typeof(T).FullName ?? typeof(T).Name)
+    {
+    }
+
+    /// <summary>Creates a typed source using the App's diagnostic routing.</summary>
+    /// <param name="subscription">The borrowed App diagnostic subscription, if configured.</param>
+    public EventsSource(DiagnosticSubscription? subscription)
+        : base(typeof(T).FullName ?? typeof(T).Name, subscription)
     {
     }
 }

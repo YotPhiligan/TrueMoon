@@ -9,6 +9,7 @@ public static class DiagnosticsConfigurationSchema
     public static IConfigurationSchema<DiagnosticsSettings> Default { get; } = ConfigurationSchemas.Create("Diagnostics",
         () => new DiagnosticsSettings(), value => value.Copy(), value => { _ = value.ToOptions().Snapshot(); }, fields =>
         {
+            fields.Field("AppLocalSourcesOnly", value => value.AppLocalSourcesOnly, (value, next) => value.AppLocalSourcesOnly = next);
             fields.Field("MinimumLevel", value => value.MinimumLevel, (value, next) => value.MinimumLevel = next);
             fields.Field("QueueCapacity", value => value.QueueCapacity, (value, next) => value.QueueCapacity = next);
             fields.Field("ReservedErrorCapacity", value => value.ReservedErrorCapacity, (value, next) => value.ReservedErrorCapacity = next);

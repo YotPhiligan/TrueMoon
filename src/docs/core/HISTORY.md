@@ -3851,3 +3851,26 @@ source/published GPU/typography validation0/0. MiniAudioEx upstream/pins/binary
 Следующий конкретный шаг — прежний [ENG7b.3 кандидат](../engine/PLAN.md#current-engine-queue)
 или выбранная пользователем module задача. Historical drain cause, CORE6 и physical/
 release/device-loss/soak/other OS остаются отдельными. [Предыдущий STATUS](HISTORY.md#core-status-before-dep1-2026-11-15).
+
+<a id="core6-app-local-sources-2026-11-21"></a>
+## CORE6a — изоляция событий App, 2026-11-21
+
+`1.2611.21.11-alpha` проверена в изолированной копии `7580c20` с изменениями
+этого среза. SDK 11.0.100, net11.0. `TrueMoon.Tests` прошёл по 666 тестов
+в Debug и Release без ошибок и пропусков. На Cobalt и Microsoft DI проверены
+два App с совпадающими именами событий и третий App с подпиской на весь процесс.
+Проверены отложенные свойства отключённого события, настройка режима через
+общую схему и доставка событий Stop/Dispose в обоих режимах.
+
+Четыре пакета Core из отдельного локального feed прошли 80 сценариев
+сборки и запуска потребителей, три самостоятельных примера из README
+и отрицательную проверку с отключённым генератором. Smoke-скрипт выбирает
+самостоятельный пример и пропускает фрагмент настройки, которому нужен контекст.
+Пути к TRX и package summary, SHA-256 и версии сохранены в локальном
+`TestResults/CORE6-AppLocal-20261121-01/verification.json`.
+
+В очереди TrueMoon.Tales.Game обе заявки ведёт Aether.
+[ENG7b.4](../requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Decision.md)
+принята, первый оконный срез проверен. Заявка на подсказки и журнал
+[ENG5c.4](../requests/engine/20261121-truemoontales-player-gameplay-hud-a4c97ed1/Request.md)
+предложена. HUD получает данные игровой сессии, зависимости от CORE6 в заявке нет.
