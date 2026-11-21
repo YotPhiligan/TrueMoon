@@ -447,3 +447,26 @@ of glyph coverage against the opaque case. The latter use source alpha for
 offscreen and estimate coverage from the red-channel contrast for opaque and
 translucent output. The report records each sample's ink bounds and peak
 coverage. All cases use the current Alloy text settings.
+
+## Small text rendering modes
+
+`--typography-rendering-modes --font-output fresh-directory --validation`
+uses the small text composition matrix with nine Skia font modes. Each mode
+changes one property from the current default. The probe compares aliased and
+grayscale edges, requests `SubpixelAntialias`, varies hinting, and toggles
+`SKFont.Subpixel` for glyph positioning. It draws each sample at its original
+integer device X and again 0.5 device pixels to the right. Layout and baseline
+coordinates come from the default font metrics.
+
+The probe draws directly into Skia raster, OpenGL and Vulkan surfaces so that
+it can vary the font properties independently of Alloy's text adapter. An
+unmodified `--typography-composition` run provides a check of the default
+mode at zero offset. OpenGL composites the intermediate texture in the same
+GPU context. Vulkan composites the leased image in the host pipeline. The
+LCD request is measured on the default targets of these backends.
+
+The report distinguishes backend parity from intentional mode and phase
+differences. It includes glyph bounds, partial alpha counts and per-sample
+horizontal centroids weighted by the alpha channel of the intermediate
+texture. Each configuration writes 324 frames at 1:1 with 4× text crops
+and 108 intermediate textures with alpha.
