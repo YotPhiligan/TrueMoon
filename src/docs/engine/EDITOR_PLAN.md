@@ -499,8 +499,9 @@ App shutdown закрывает admission окончательно и drains д�
 При подключённом ED2a ProjectSession также владеет document session; runtime
 products пока не принадлежат ему. Metadata-only регистрация остаётся доступной.
 
-Обычный запуск без аргументов — пустая workspace, game commands disabled;
-`--project path.aetherproj` выбирает project/build identity с пустой сценой до ED2.
+Ручной `AetherEditorHost` без аргументов создаёт отдельный временный проект и
+открывает `Empty.aetherscene`. Режим `--sandbox=false` открывает рабочую область
+без проекта. `--project path.aetherproj` выбирает project/build identity.
 `--check-project path.aetherproj` выполняет тот же App/Cobalt preflight без окна и
 выводит JSON diagnostics. Explicit legacy `--project game.csproj` сохраняет demo
 workflow; автоматического поиска checkout/demo больше нет.
@@ -797,6 +798,10 @@ Path draft и unsaved decision сохраняются; общие file picker/pr
 В PA8c.2b на общий каталог контуров перешли оконные кнопки, меню, дерево,
 инспектор, статус и валидация. Знак перед меню изображает Аргентис.
 [Каталог и результаты](../alloy/PLAN.md#pa8c2b-vector-catalog).
+
+Кнопки файловых команд, симуляции и управления окном проявляют фон на наведении
+и фокусе. Кнопки управления окном в обычном размере Editor занимают квадраты
+36×36 по верхней границе заголовка. [Оформление IconButton](../alloy/DESIGN.md#матовое-стекло).
 
 View/Data/Style и UI-owner factories — через App/Cobalt/IFactory. Общие Menu/
 Overlay/animation/icon contracts реализуются в [PA3a/PA4a/PA8b UI](../alloy/PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23).

@@ -180,7 +180,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
     }
 
     private IconButton Action(UiSymbol symbol, string name, IUiCommand command)
-        => Bind(new IconButton(symbol, name).WithRole(ToolbarButtonRole), command);
+        => Bind(new IconButton(symbol, name) { Height = float.NaN }.WithRole(ToolbarButtonRole), command);
 
     private IconButton Bind(IconButton button, IUiCommand command)
     {
@@ -342,8 +342,9 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             Children[1].Arrange(new(area.X + brandWidth, area.Y + (area.Height - 32) / 2, menuWidth, Math.Min(32, area.Height)));
             Children[2].Arrange(new(area.X + brandWidth + menuWidth + 10, area.Y, Math.Max(0, left - brandWidth - menuWidth - 20), area.Height));
             files.Arrange(new(area.X + left, area.Y, FileActions.WidthWithGap, area.Height));
-            var size = controls / 3;
-            for (var i = 0; i < 3; i++) Children[i + 4].Arrange(new(area.X + simulationStart + size * i, area.Y + (area.Height - size) / 2, size, size));
+            var buttonWidth = controls / 3;
+            for (var i = 0; i < 3; i++)
+                Children[i + 4].Arrange(new(area.X + simulationStart + buttonWidth * i, area.Y, buttonWidth, area.Height));
         }
     }
 
@@ -356,16 +357,23 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
         { foreach (var button in Children) button.Measure(available, text); return new(WidthWithGap, 32); }
         protected override void ArrangeCore(Rect area)
         {
-            var size = Math.Min(32, area.Height);
             for (var i = 0; i < Children.Count; i++)
-                Children[i].Arrange(new(area.X + i * 32, area.Y + (area.Height - size) / 2, 32, size));
+                Children[i].Arrange(new(area.X + i * 32, area.Y, 32, area.Height));
         }
     }
     private sealed class CaptionText(string value) : Text(value)
     {
         private ITextLayoutService? _text;
         private string _display = value;
-        protected override Size MeasureCore(Size available, ITextLayoutService text) { _text = text; return base.MeasureCore(available, text); }
+        private float? _inkCenter;
+        protected override Size MeasureCore(Size available, ITextLayoutService text)
+        {
+            _text = text;
+            // Use a capital and a descender so editing or eliding the caption leaves its baseline stable.
+            var ink = text.MeasureInkBounds("Hg", FontSize, FontFamily, FontWeight, FontItalic);
+            _inkCenter = ink.Y + ink.Height / 2;
+            return base.MeasureCore(available, text);
+        }
         protected override void ArrangeCore(Rect area)
         {
             _display = Value;
@@ -378,6 +386,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             _display = Value[..count] + ellipsis;
         }
         protected override void DrawCore(IDrawingContext context) =>
-            context.Text(_display, Bounds.X, Bounds.Y + (Bounds.Height - FontSize) / 2, Foreground, FontSize, FontFamily, FontWeight, FontItalic);
+            context.Text(_display, Bounds.X, Bounds.Y + Bounds.Height / 2 - (_inkCenter ?? FontSize / 2),
+                Foreground, FontSize, FontFamily, FontWeight, FontItalic);
     }
 }

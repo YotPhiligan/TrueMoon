@@ -3,7 +3,6 @@ namespace TrueMoon.Argentis;
 /// <summary>A labeled check box with a bindable boolean value.</summary>
 public sealed class CheckBox : Button
 {
-    private float _labelHeight;
     /// <summary>Read-only values retain focus/navigation but cannot be toggled or activate Click handlers.</summary>
     public static readonly UiProperty<bool> IsReadOnlyProperty = new("IsReadOnly", false);
     /// <summary>Whether user activation is suppressed while retaining focus.</summary>
@@ -20,6 +19,8 @@ public sealed class CheckBox : Button
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.ButtonPadding with { Left = Theme.ButtonPadding.Left + 24 };
     /// <inheritdoc />
+    protected override bool CentersLabel => false;
+    /// <inheritdoc />
     protected override float ThemeBorderWidth => 0;
     /// <inheritdoc />
     protected override Color ThemeForeground => Theme.Foreground;
@@ -31,21 +32,19 @@ public sealed class CheckBox : Button
     /// <inheritdoc />
     protected override void Activate() { if (IsReadOnly) return; IsChecked = !IsChecked; base.Activate(); }
     /// <inheritdoc />
-    protected override Size MeasureCore(Size available, ITextLayoutService text)
-    { var size = base.MeasureCore(available, text); _labelHeight = size.Height; return size; }
-    /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {
         var area = Bounds.Deflate(Padding);
-        context.Text(Value, area.X, area.Y + Math.Max(0, (area.Height - _labelHeight) / 2),
+        context.Text(Value, area.X, area.Y + Math.Max(0, (area.Height - LabelSize.Height) / 2),
             IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
         var box = new Rect(Bounds.X + 10, Bounds.Y + (Bounds.Height - 16) / 2, 16, 16);
+        var radius = Math.Min(CornerRadius, box.Width / 2);
         var color = !IsEffectivelyEnabled ? Theme.Disabled : IsReadOnly ? Theme.Border :
             ColorRole == EditorColorRole.Neutral ? Theme.Accent : Theme.EditorColor(ColorRole);
-        if (IsChecked) { context.Fill(box, color); UiSymbols.Draw(context, UiSymbol.Check, box.Deflate(new Thickness(3)),
+        if (IsChecked) { context.Fill(box, color, radius); UiSymbols.Draw(context, UiSymbol.Check, box.Deflate(new Thickness(3)),
             ColorRole == EditorColorRole.Neutral ? Theme.OnAccent : Theme.OnEditorAccent); }
         if (!IsChecked || ColorRole != EditorColorRole.Neutral || HasError || IsModified || IsFocused || IsHovered || IsReadOnly)
-            context.Stroke(box.Deflate(new Thickness(.5f)), BorderColor, 1);
+            context.Stroke(box.Deflate(new Thickness(.5f)), BorderColor, 1, Math.Max(0, radius - .5f));
     }
 }
 

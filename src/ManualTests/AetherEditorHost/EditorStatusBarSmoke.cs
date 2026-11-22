@@ -37,10 +37,11 @@ internal static class EditorStatusBarSmoke
             Require(!footer.SummaryButton.Value.Contains("Tick") && !footer.SummaryButton.Value.Contains("PID"), "Diagnostics leaked into the primary status.");
         }).WaitAsync(token);
         await Capture("status-bar.png");
-        await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, footer.Bar)).WaitAsync(token);
+        await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, footer.DetailsButton)).WaitAsync(token);
         // Native pointer samples may arrive between directed gestures and the rendered hover frame.
-        await EditorHeaderSmoke.UntilAsync(ui, () => footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate, token,
-            () => EditorHeaderSmoke.Move(ui, footer.Bar));
+        await EditorHeaderSmoke.UntilAsync(ui, () => footer.Bar.OverlayReveal == 1 && footer.DetailsButton.IsHovered && !ui.NeedsUpdate, token,
+            () => EditorHeaderSmoke.Move(ui, footer.DetailsButton));
+        Require(footer.DetailsButton.CornerRadius == 0, "Status actions must have square corners.");
         Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop &&
             footer.Bar.Opacity == 1 && footer.SummaryButton.Opacity == 1, "Status hover reframed the scene or faded its controls.");
         await Capture("status-hover.png");

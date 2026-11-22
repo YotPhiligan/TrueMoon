@@ -6,16 +6,17 @@ namespace TrueMoon.Argentis;
 /// <param name="CanResize">Whether native sizing is supported in the current state.</param>
 public sealed record WindowFrameState(bool Active, bool Maximized, bool CanMinimize, bool CanMaximize, bool CanResize);
 
-/// <summary>Default square title bar with caption, optional borrowed icon and standard window actions.</summary>
+/// <summary>Default title bar with caption, optional borrowed icon and standard window actions.</summary>
 public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputObserver
 {
+    internal override bool SquareDescendantButtons => true;
     private readonly ScalarTransition _overlay = new();
     private bool _pointerInside, _overlayTarget;
     /// <summary>Uses a translucent, hover-activated backdrop over full-area content.</summary>
-    public static readonly UiProperty<bool> OverlayContentProperty = new("OverlayContent", false, Invalidation.Render);
+    public static readonly UiProperty<bool> OverlayContentProperty = new("OverlayContent", false, Invalidation.Layout | Invalidation.Render);
     /// <summary>Whether this bar is painted over content rather than reserving a separate strip.</summary>
     public bool OverlayContent { get => Get(OverlayContentProperty); set => Set(OverlayContentProperty, value); }
-    /// <summary>Current background reveal progress; text, icons and hit regions remain unchanged.</summary>
+    /// <summary>Current reveal progress of the title bar backdrop.</summary>
     public float OverlayReveal => _overlay.Value;
     private bool OverlayActive => OverlayContent && (_pointerInside || _state.Active &&
         (FocusWithin(this) || _header is IWindowHeaderActivity { KeepsTitleBarActive: true }));
@@ -31,9 +32,9 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
     public WindowTitleBar(string title)
     {
         ArgumentNullException.ThrowIfNull(title); _title = title; Height = 36; WindowRegion = WindowRegionRole.Caption;
-        MinimizeButton = new(UiSymbol.Minimize, "Minimize window") { BorderWidth = 0 };
-        MaximizeButton = new(UiSymbol.Maximize, "Maximize window") { BorderWidth = 0, WindowRegion = WindowRegionRole.Maximize };
-        CloseButton = new(UiSymbol.Close, "Close window") { BorderWidth = 0, Tone = ControlTone.Danger };
+        MinimizeButton = new(UiSymbol.Minimize, "Minimize window") { Width = float.NaN, Height = float.NaN, BorderWidth = 0 };
+        MaximizeButton = new(UiSymbol.Maximize, "Maximize window") { Width = float.NaN, Height = float.NaN, BorderWidth = 0, WindowRegion = WindowRegionRole.Maximize };
+        CloseButton = new(UiSymbol.Close, "Close window") { Width = float.NaN, Height = float.NaN, BorderWidth = 0, Tone = ControlTone.Danger };
         Add(MinimizeButton); Add(MaximizeButton); Add(CloseButton); ApplyState(_state);
         AttachmentChanged += Attachment;
     }
@@ -85,7 +86,11 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
     protected override void OnPropertyChanged(object property)
     {
         base.OnPropertyChanged(property);
-        if (ReferenceEquals(property, OverlayContentProperty)) UpdateOverlay();
+        if (!ReferenceEquals(property, OverlayContentProperty)) return;
+        MinimizeButton.RevealOnInteraction = OverlayContent;
+        MaximizeButton.RevealOnInteraction = OverlayContent;
+        CloseButton.RevealOnInteraction = OverlayContent;
+        UpdateOverlay();
     }
     /// <inheritdoc />
     public bool PreviewInput(UiInput input, IInputContext context)
@@ -120,9 +125,11 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
-        var size = Math.Min(32, Math.Min(area.Height, area.Width / 3)); var start = area.X + area.Width - size * 3;
+        var size = Math.Min(OverlayContent ? area.Height : 32, Math.Min(area.Height, area.Width / 3));
+        var start = area.X + area.Width - size * 3;
+        var top = OverlayContent ? area.Y : area.Y + (area.Height - size) / 2;
         Element[] actions = [MinimizeButton, MaximizeButton, CloseButton];
-        for (var i = 0; i < actions.Length; i++) actions[i].Arrange(new(start + size * i, area.Y + (area.Height - size) / 2, size, size));
+        for (var i = 0; i < actions.Length; i++) actions[i].Arrange(new(start + size * i, top, size, size));
         _header?.Arrange(new(area.X + 6, area.Y, Math.Max(0, start - area.X - 12), area.Height));
     }
     /// <inheritdoc />

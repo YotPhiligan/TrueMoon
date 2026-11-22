@@ -6,7 +6,7 @@
 
   <!-- Independent consumers import only the shared target-framework properties. -->
   <PropertyGroup Condition="'$(_TrueMoonFrameworksOnly)' != 'true'">
-    <Version Condition="'$(Version)' == ''">1.2611.22.1-alpha</Version>
+    <Version Condition="'$(Version)' == ''">1.2611.22.7-alpha</Version>
     <Authors>yotphiligan</Authors>
     <Company>TrueMoon</Company>
     <Product>TrueMoon Framework</Product>

@@ -64,12 +64,26 @@ public sealed class OverlayWindowChromeTests
         Assert.Equal(new Element[] { body, title, frame.ResizeGrip! }, frame.Children);
         Assert.True(title.OverlayContent);
         Assert.Equal(new Rect(1, 1, 398, 198), body.Bounds);
+        IconButton[] actions = [title.MinimizeButton, title.MaximizeButton, title.CloseButton];
+        Assert.All(actions, button =>
+        {
+            Assert.Equal(title.Bounds.Y, button.Bounds.Y);
+            Assert.Equal(title.Bounds.Height, button.Bounds.Height);
+            Assert.Equal(button.Bounds.Height, button.Bounds.Width);
+            Assert.True(button.RevealOnInteraction);
+        });
         var grip = frame.ResizeGrip!.Bounds;
         Assert.Equal(399, grip.X + grip.Width); Assert.Equal(199, grip.Y + grip.Height);
         Assert.Equal(WindowRegionRole.ResizeBottomRight,
             WindowRegionMap.Create(frame).HitTest(grip.X + 4, grip.Y + 4));
-        frame.TitleBarOverContent = false;
+        frame.TitleBarOverContent = false; Arrange(frame);
         Assert.False(title.OverlayContent);
+        Assert.All(actions, button =>
+        {
+            Assert.Equal(32, button.Bounds.Height);
+            Assert.Equal(title.Bounds.Y + 2, button.Bounds.Y);
+            Assert.False(button.RevealOnInteraction);
+        });
     }
 
     [Fact]

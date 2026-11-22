@@ -115,6 +115,12 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
         => Measure(text, fontSize, fontFamily, 400, false);
     public Size Measure(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
     { var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic); return new Size(entry.Font.MeasureText(text), entry.Metrics.Descent - entry.Metrics.Ascent); }
+    public Rect MeasureInkBounds(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
+    {
+        var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic);
+        entry.Font.MeasureText(text, out var ink);
+        return new(ink.Left, ink.Top - entry.Metrics.Ascent, ink.Width, ink.Height);
+    }
     public void Image(IImageSource source, Rect destination)
     {
         if (source is not SkiaImageSource image) throw new ArgumentException("Image must be a SkiaImageSource.", nameof(source));

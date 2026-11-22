@@ -161,6 +161,51 @@ public sealed class BackdropRenderingTests
         Assert.Equal(Theme.Dark.Input, Assert.Single(unsupported.Fills));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RevealingIconButton_RendersOnlyGlyphAtRestAndWhileDisabled(bool light)
+    {
+        const float scale = 1.5f;
+        var theme = light ? Theme.Light : Theme.Dark;
+        var button = new IconButton(UiSymbol.Stop, "Stop") { RevealOnInteraction = true, BorderWidth = 0 };
+        var panel = new Panel(); panel.Add(button);
+        using var ui = Create(panel, scale);
+        ui.SetTheme(theme); ui.Update();
+        var bounds = button.Bounds;
+        var clicks = 0;
+        button.Click += () => clicks++;
+        using var idle = ui.SnapshotRasterImage();
+        var idleGlyph = Pixel(idle, 16, 16, scale);
+        Assert.Equal((byte)0, Pixel(idle, 6, 6, scale).Alpha);
+
+        ui.HandleInput(new(InputKind.PointerMove, 16, 16)); ui.Update();
+        Assert.True(button.IsHovered);
+        using var hovered = ui.SnapshotRasterImage();
+        Assert.InRange(Pixel(hovered, 6, 6, scale).Alpha, (byte)1, (byte)254);
+        var activeGlyph = Pixel(hovered, 16, 16, scale);
+        Assert.Equal(new SKColor(theme.Foreground.R, theme.Foreground.G, theme.Foreground.B), activeGlyph);
+        Assert.NotEqual(idleGlyph, activeGlyph);
+
+        ui.HandleInput(new(InputKind.PointerMove, 100, 80));
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Tab)); ui.Update();
+        Assert.True(button.IsFocused);
+        Assert.False(button.IsHovered);
+        using var focused = ui.SnapshotRasterImage();
+        Assert.Equal(Pixel(hovered, 6, 6, scale), Pixel(focused, 6, 6, scale));
+        Assert.Equal(activeGlyph, Pixel(focused, 16, 16, scale));
+
+        button.IsEnabled = false; ui.Update();
+        ui.HandleInput(new(InputKind.PointerDown, 16, 16));
+        ui.HandleInput(new(InputKind.PointerUp, 16, 16)); ui.Update();
+        Assert.False(button.IsFocused);
+        Assert.Equal(0, clicks);
+        Assert.Equal(bounds, button.Bounds);
+        using var disabled = ui.SnapshotRasterImage();
+        Assert.Equal((byte)0, Pixel(disabled, 6, 6, scale).Alpha);
+        Assert.Equal(new SKColor(theme.Disabled.R, theme.Disabled.G, theme.Disabled.B), Pixel(disabled, 16, 16, scale));
+    }
+
     [Fact]
     public void SkiaWithoutSurfaceOrUnsupportedTransform_ReturnsFalseWithoutPainting()
     {

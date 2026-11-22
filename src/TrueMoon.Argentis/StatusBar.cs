@@ -12,6 +12,7 @@ public interface IStatusBar
 /// <summary>One primary message/action, ordered optional segments, and an always-reserved details trigger.</summary>
 public sealed class StatusBar : ElementList, IStatusBar, IUiFrameParticipant, IUiInputObserver
 {
+    internal override bool SquareDescendantButtons => true;
     private readonly ScalarTransition _overlay = new();
     private bool _pointerInside, _overlayTarget;
     /// <summary>Uses a translucent idle surface and reveals the panel material on hover or keyboard focus.</summary>

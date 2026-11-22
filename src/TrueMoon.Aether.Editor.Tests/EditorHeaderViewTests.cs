@@ -309,7 +309,7 @@ public sealed class EditorHeaderViewTests
     }
 
     [Fact]
-    public void CaptionEllipsis_UsesTheStyledFaceForMeasurementAndDrawing()
+    public void CaptionEllipsis_UsesTheStyledFaceAndKeepsTheSameVerticalAlignment()
     {
         using var test = new HeaderFixture(); var caption = test.Header.Caption;
         caption.Value = new string('W', 80); caption.FontFamily = "typography-family"; caption.FontWeight = 600; caption.FontItalic = true;
@@ -319,6 +319,14 @@ public sealed class EditorHeaderViewTests
         Assert.Equal(new string('W', 14) + "…", drawn.Text);
         Assert.Equal((14f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
         Assert.All(probe.Measures, call => Assert.Equal((600, true), (call.Weight, call.Italic)));
+        var ink = Assert.Single(probe.InkMeasures);
+        Assert.Equal((14f, "typography-family", 600, true), (ink.Size, ink.Family, ink.Weight, ink.Italic));
+        Assert.Equal(9f, drawn.Y);
+
+        caption.Value = "g *"; probe.Texts.Clear();
+        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); caption.Draw(probe);
+        Assert.Equal(ink, probe.InkMeasures[1]);
+        Assert.Equal(drawn.Y, Assert.Single(probe.Texts).Y);
     }
 
     [Fact]

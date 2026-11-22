@@ -21,6 +21,9 @@ public sealed class MenuChromeTests
         Assert.Equal(close, title.CloseButton.Bounds);
         Assert.True(header.Bounds.X + header.Bounds.Width <= minimize.X);
         var map = WindowRegionMap.Create(title);
+        Assert.All(new[] { title.MinimizeButton, title.MaximizeButton, title.CloseButton, action }, button => Assert.Equal(0, button.CornerRadius));
+        action.Style = new Style().With(UiProperties.CornerRadius, 3f);
+        Assert.Equal(3, action.CornerRadius);
         Assert.Equal(WindowRegionRole.Client, map.HitTest(action.Bounds.X + 10, 18));
         Assert.Equal(WindowRegionRole.Caption, map.HitTest(caption.Bounds.X + 10, 18));
         Assert.Equal(WindowRegionRole.Maximize, map.HitTest(maximize.X + 10, 18));
@@ -33,13 +36,16 @@ public sealed class MenuChromeTests
     [Fact]
     public void HeaderReplacement_ValidatesBeforeRemovingAndTransfersOldContentToCaller()
     {
-        using var title = new WindowTitleBar("Project"); var first = new SizedElement();
+        using var title = new WindowTitleBar("Project"); var first = new Button("Action");
+        Assert.Equal(5, first.CornerRadius);
         title.SetHeader(first);
+        Assert.Equal(0, first.CornerRadius);
         using var other = new Panel(); var owned = new SizedElement(); other.Add(owned);
         Assert.Throws<InvalidOperationException>(() => title.SetHeader(owned));
         Assert.Same(first, title.HeaderContent); Assert.Same(title, first.Parent);
         var second = new SizedElement(); title.SetHeader(second);
         Assert.Null(first.Parent); Assert.False(first.IsDisposed); Assert.Same(second, title.HeaderContent);
+        Assert.Equal(5, first.CornerRadius);
         title.SetHeader(null); Assert.Null(title.HeaderContent); Assert.Null(second.Parent); Assert.False(second.IsDisposed);
         first.Dispose(); second.Dispose();
         var final = new SizedElement(); title.SetHeader(final); title.Dispose(); Assert.True(final.IsDisposed);

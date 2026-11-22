@@ -9,6 +9,33 @@ namespace TrueMoon.Aether.Editor.Tests;
 public sealed class EditorOverlayHeaderTests
 {
     [Fact]
+    public void ToolbarButtons_FillOverlayTitleBarHeight()
+    {
+        using var test = new HeaderFixture();
+        test.Frame.TitleBarOverContent = true;
+        using var ui = test.Ui(); ui.Update();
+
+        var header = test.Header;
+        var title = test.Frame.DefaultTitleBar!;
+        IconButton[] commands = [header.OpenButton, header.SaveButton, header.UndoButton, header.RedoButton,
+            header.RunButton, header.PauseButton, header.StopButton];
+        IconButton[] windowActions = [title.MinimizeButton, title.MaximizeButton, title.CloseButton];
+        Assert.Equal(test.Frame.Bounds.Y + test.Frame.BorderWidth, title.Bounds.Y);
+        Assert.All(commands.Concat(windowActions), button =>
+        {
+            Assert.Equal(title.Bounds.Y, button.Bounds.Y);
+            Assert.Equal(title.Bounds.Height, button.Bounds.Height);
+            Assert.True(button.RevealOnInteraction);
+            Assert.Equal(Color.Transparent, button.Background);
+            Assert.Equal(0, button.CornerRadius);
+        });
+        Assert.Equal(0, header.Menu.MoreButton.CornerRadius);
+        Assert.All(header.Menu.Headings.Values, button => Assert.Equal(0, button.CornerRadius));
+        Assert.All(commands, button => Assert.Equal(32, button.Bounds.Width));
+        Assert.All(windowActions, button => Assert.Equal(title.Bounds.Height, button.Bounds.Width));
+    }
+
+    [Fact]
     public void Caption_ShowsSceneAndDirtyMarkerWhileRetainingTheSameControlAndBaseProjectTitle()
     {
         using var test = new HeaderFixture(openDocument: true); test.Frame.TitleBarOverContent = true;
@@ -91,6 +118,7 @@ public sealed class EditorOverlayHeaderTests
         Assert.True(test.Header.Menu.IsMenuOpen); Assert.True(test.Header.KeepsTitleBarActive);
         Assert.Equal(1f, test.Frame.DefaultTitleBar!.OverlayReveal);
         var body = test.Frame.Content.Bounds;
+        Assert.Equal(5, test.Row("document.Open").CornerRadius);
         DocumentUiFixture.Click(ui, test.Row("document.Open")); ui.Update();
         Assert.Equal(DocumentCommand.Open, test.Documents.PathRequest); Assert.Empty(test.Owner.Store.Reads);
         Assert.Null(test.Overlays.Popup); Assert.Equal(body, test.Frame.Content.Bounds);

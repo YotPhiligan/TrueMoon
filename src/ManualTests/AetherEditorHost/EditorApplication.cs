@@ -37,6 +37,8 @@ internal static class EditorApplication
         if (smoke != null && Directory.Exists(smoke)) throw new IOException("Use a new smoke directory.");
         var directory = Path.GetFullPath(smoke ?? Path.Combine(Path.GetTempPath(), "TrueMoon", "Editor", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(directory);
+        var sandbox = options.Sandbox ? new EditorSandbox(Path.Combine(directory, "Sandbox")) : null;
+        if (sandbox != null) options = options with { ProjectPath = sandbox.ProjectPath };
         var buildDirectory=options.AcceptanceSmoke?Path.Combine(Path.GetTempPath(),"TrueMoon","ViewportAcceptance",Guid.NewGuid().ToString("N")):null;
         if(buildDirectory!=null)File.WriteAllText(Path.Combine(directory,"compiler-location.txt"),buildDirectory);
         var fallbackFonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string> { ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf") });
@@ -67,9 +69,11 @@ internal static class EditorApplication
             {
                 HostContractId = BuildIdentity.HostId, GameBuildId = new('0', 64),
                 RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime")
-            });
+            }, configureEditor: editor => editor.InitialScenePath = sandbox?.ScenePath);
             context.UseConfiguredAetherEditorWindow(fonts);
         });
+        if (sandbox != null)
+            await sandbox.PrepareAsync(app.Services.Resolve<IProjectStore>()!, app.Services.Resolve<ISceneDocumentStore>()!);
         var projects = app.Services.Resolve<EditorProjects>()!;
         var engine = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!;
         var sessions = app.Services.Resolve<HostedUiSessionFactory>()!;

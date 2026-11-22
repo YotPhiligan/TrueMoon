@@ -9,10 +9,17 @@ public class Button : Text
     public static Button Simple(string text = "") => new(text);
 
     private bool _pressed;
+    private float? _labelInkCenter;
+    /// <summary>Measured label dimensions in the current face.</summary>
+    protected Size LabelSize { get; private set; }
+    /// <summary>Whether to center the plain label inside the padded button area.</summary>
+    protected virtual bool CentersLabel => Theme.CenterButtonLabels;
     /// <summary>Creates a button with a label.</summary>
     public Button(string text = "") : base(text) { }
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.ButtonPadding;
+    /// <inheritdoc />
+    protected override float ThemeCornerRadius => Parent?.SquareDescendantButtons == true ? 0 : Theme.ButtonCornerRadius;
     /// <inheritdoc />
     protected override float ThemeBorderWidth => Theme.BorderWidth;
     /// <inheritdoc />
@@ -32,9 +39,31 @@ public class Button : Text
     /// <summary>Invokes the button action.</summary>
     protected virtual void Activate() => Click?.Invoke();
     /// <inheritdoc />
+    protected override Size MeasureCore(Size available, ITextLayoutService text)
+    {
+        LabelSize = base.MeasureCore(available, text);
+        _labelInkCenter = null;
+        if (CentersLabel && Value.Length > 0)
+        {
+            var ink = text.MeasureInkBounds("Hg", FontSize, FontFamily, FontWeight, FontItalic);
+            _labelInkCenter = ink.Y + ink.Height / 2;
+        }
+        return LabelSize;
+    }
+    /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {
-        base.DrawCore(context);
+        if (_labelInkCenter is not { } center)
+        {
+            base.DrawCore(context);
+            return;
+        }
+        var area = Bounds.Deflate(Padding);
+        var x = area.X + Math.Max(0, (area.Width - LabelSize.Width) / 2);
+        // Keep centering useful when a fixed height has no room for both vertical insets.
+        var y = area.Height > 0 ? area.Y + area.Height / 2 : Bounds.Y + Bounds.Height / 2;
+        context.Text(Value, x, y - center, IsEffectivelyEnabled ? Foreground : Theme.Disabled,
+            FontSize, FontFamily, FontWeight, FontItalic);
     }
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context)

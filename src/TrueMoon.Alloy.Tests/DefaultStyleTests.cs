@@ -10,14 +10,19 @@ public sealed class DefaultStyleTests
 {
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public void SquareDefaults_ApplyToConstructorsFactoriesAndEditors(bool light)
+    public void DefaultRadii_ApplyToConstructorsFactoriesAndEditors(bool light)
     {
-        var theme = (light ? Theme.Light : Theme.Dark) with { EditorCornerRadius = 0 };
-        Element[] controls = [new Button(), Button.Simple(), new TextBox(), TextBox.Create(), new RichTextEditor(),
-            new ProgressBar(), new Slider(), new CheckBox(), new Border(), new IconButton(UiSymbol.Close, "Close")];
-        foreach (var control in controls)
+        var theme = light ? Theme.Light : Theme.Dark;
+        (Element Control, float Radius)[] controls = [(new Button(), 5), (Button.Simple(), 5), (new TextBox(), 5),
+            (TextBox.Create(), 5), (new RichTextEditor(), 5), (new ProgressBar(), 0), (new Slider(), 0),
+            (new CheckBox(), 5), (new Border(), 0), (new IconButton(UiSymbol.Close, "Close"), 5)];
+        foreach (var (control, radius) in controls)
         {
-            using (control) { control.ApplyTheme(theme); Assert.Equal(0, control.CornerRadius); }
+            using (control)
+            {
+                control.ApplyTheme(theme); Assert.Equal(radius, control.CornerRadius);
+                control.ApplyTheme(theme with { CornerRadius = 0, EditorCornerRadius = 0 }); Assert.Equal(0, control.CornerRadius);
+            }
         }
         using var editor = new TextBox(); editor.ApplyTheme(theme);
         Assert.Equal(theme.Input, editor.Background); Assert.Equal(1, editor.BorderWidth);
@@ -33,7 +38,9 @@ public sealed class DefaultStyleTests
         Assert.Equal(7, button.CornerRadius); Assert.Equal(new Color(4, 5, 6), button.Background);
         button.Clear(UiProperties.CornerRadius); button.Clear(UiProperties.Background);
         Assert.Equal(3, button.CornerRadius); Assert.Equal(new Color(1, 2, 3), button.Background);
-        button.Style = null; Assert.Equal(0, button.CornerRadius); Assert.Equal(new Color(255, 255, 255), button.Background);
+        button.Style = null; Assert.Equal(5, button.CornerRadius); Assert.Equal(new Color(255, 255, 255), button.Background);
+        button.ApplyTheme(Theme.Light with { CornerRadius = 2 }); Assert.Equal(2, button.CornerRadius);
+        button.ApplyTheme(Theme.Light with { CornerRadius = 2, ButtonCornerRadius = 6 }); Assert.Equal(6, button.CornerRadius);
         button.Tone = ControlTone.Danger; Assert.Equal(new Color(190, 43, 61), button.Background); Assert.Equal(new Color(255, 255, 255), button.Foreground);
     }
 
@@ -45,7 +52,42 @@ public sealed class DefaultStyleTests
         Assert.Throws<ArgumentOutOfRangeException>(() => button.CornerRadius = value);
         Assert.Throws<ArgumentOutOfRangeException>(() => new Style().With(UiProperties.CornerRadius, value));
         Assert.Throws<ArgumentOutOfRangeException>(() => Theme.Dark with { CornerRadius = value });
-        Assert.Equal(0, button.CornerRadius); Assert.Equal(0, changes);
+        Assert.Throws<ArgumentOutOfRangeException>(() => Theme.Dark with { ButtonCornerRadius = value });
+        Assert.Equal(5, button.CornerRadius); Assert.Equal(0, changes);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void ButtonsCenterLabelsAndCheckBoxRoundsItsIndicatorInBothStates(bool light)
+    {
+        var theme = light ? Theme.Light : Theme.Dark;
+        var textLayout = new FixedTextLayout();
+        var size = new Size(160, 48);
+        var bounds = new Rect(10, 20, size.Width, size.Height);
+        using var button = new Button("OK") { Padding = new(10, 8, 30, 12) };
+        button.ApplyTheme(theme); button.Measure(size, textLayout); button.Arrange(bounds);
+        var buttonDrawing = new Drawing();
+        button.Draw(buttonDrawing);
+        Assert.Equal(("OK", 72f, 34f), Assert.Single(buttonDrawing.Texts));
+        Assert.Contains(buttonDrawing.Fills, fill => fill.Bounds == bounds && fill.Radius == 5);
+        button.ApplyTheme(theme with { CenterButtonLabels = false }); button.Measure(size, textLayout); button.Arrange(bounds);
+        var leftAlignedDrawing = new Drawing();
+        button.Draw(leftAlignedDrawing);
+        Assert.Equal(("OK", 20f, 28f), Assert.Single(leftAlignedDrawing.Texts));
+
+        using var check = new CheckBox("On");
+        check.ApplyTheme(theme); check.Measure(size, textLayout); check.Arrange(bounds);
+        var indicator = new Rect(20, 36, 16, 16);
+        var uncheckedDrawing = new Drawing();
+        check.Draw(uncheckedDrawing);
+        Assert.Contains(uncheckedDrawing.Fills, fill => fill.Bounds == bounds && fill.Radius == 5);
+        Assert.Contains(uncheckedDrawing.Strokes, stroke => stroke.Bounds == indicator.Deflate(new(.5f)) && stroke.Radius == 4.5f);
+        Assert.Equal(("On", 46f, 36f), Assert.Single(uncheckedDrawing.Texts));
+
+        check.IsChecked = true;
+        var checkedDrawing = new Drawing();
+        check.Draw(checkedDrawing);
+        Assert.Contains(checkedDrawing.Fills, fill => fill.Bounds == indicator && fill.Radius == 5 && fill.Color == theme.Accent);
     }
 
     [Theory]
@@ -207,9 +249,11 @@ public sealed class DefaultStyleTests
         public int Saves, Restores;
         public List<(Rect Bounds, Color Color, float Radius)> Fills { get; } = [];
         public List<(Rect Bounds, Color Color, float Width, float Radius)> Strokes { get; } = [];
+        public List<(string Value, float X, float Y)> Texts { get; } = [];
         public void Save() => Saves++; public void Restore() => Restores++; public void Clip(Rect rectangle) { } public void Translate(float x, float y) { }
         public void Fill(Rect rectangle, Color color, float radius = 0) => Fills.Add((rectangle, color, radius));
         public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0) => Strokes.Add((rectangle, color, width, radius));
-        public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily) { } public void Image(IImageSource source, Rect destination) { }
+        public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily) => Texts.Add((text, x, y));
+        public void Image(IImageSource source, Rect destination) { }
     }
 }

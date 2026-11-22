@@ -647,6 +647,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     {
         private bool _expanded = true;
         public bool Expanded { get => _expanded; set { if (_expanded == value) return; _expanded = value; Invalidate(Invalidation.Render); } }
+        protected override bool CentersLabel => false;
         protected override void DrawCore(IDrawingContext context)
         {
             base.DrawCore(context);

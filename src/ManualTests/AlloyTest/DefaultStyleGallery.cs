@@ -2,7 +2,7 @@ using TrueMoon.Argentis;
 
 namespace AlloyTest;
 
-/// <summary>Interactive inventory of the built-in square style; all widgets use public APIs.</summary>
+/// <summary>Interactive gallery of the built-in style using public widget APIs.</summary>
 public sealed class DefaultStyleGallery : ContentControl
 {
     /// <summary>Editable field used by the directed focus proof.</summary>
@@ -39,7 +39,7 @@ public sealed class DefaultStyleGallery : ContentControl
         var right = new VStack { Spacing = 10, Width = 440 }.WithChildren(
             Heading("Цветные действия"), new HStack { Spacing = 8 }.WithChildren(normal, accent, positive, danger),
             new HStack { Spacing = 8 }.WithChildren(new Button("Hover") { IsHovered = true }, new Button("Недоступно") { IsEnabled = false }),
-            new Text("Прямые углы · бордер 1 · фокус 2 · квадрат ошибки"),
+            new Text("Скругление 5 · рамка 1 · контур фокуса 2"),
             Heading("Значения"), slider, progress,
             Heading("Список и полоса прокрутки"), Scroller,
             new Border { Padding = new Thickness(12) }.Content(new VStack { Spacing = 4 }.WithChildren(

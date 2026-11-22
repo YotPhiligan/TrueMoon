@@ -57,6 +57,8 @@ internal static partial class EditorHeaderSmoke
             Require(header.RunButton.Bounds.X == run, "Disclosure moved fixed simulation controls.");
             Require(header.BrandIcon.Bounds == brand && header.Menu.MoreButton.Bounds == disclosure, "Disclosure moved the brand or its hit target.");
             Require(!header.Menu.IsMenuOpen, "Hover must reveal headings without opening a dropdown.");
+            Require(header.Menu.MoreButton.CornerRadius == 0 && header.Menu.Headings.Values.All(button => button.CornerRadius == 0),
+                "Title bar menu buttons must have square corners.");
             var title = ((WindowFrame)ui.Root).DefaultTitleBar!;
             Require(title.OverlayReveal == 1, $"Header hover did not reveal its frosted background: reveal={title.OverlayReveal}, active={title.State.Active}.");
         }).WaitAsync(token);
@@ -109,6 +111,29 @@ internal static partial class EditorHeaderSmoke
         await ui.InvokeAsync(() => { Move(ui, view.Canvas); ui.HandleInput(new(InputKind.FocusLost)); }).WaitAsync(token);
         await UntilAsync(ui, () => header.Menu.RevealProgress == 0 && view.Overlays.Popup == null && !ui.NeedsUpdate, token);
         await Capture("header-collapsed.png");
+
+        var close = ((WindowFrame)ui.Root).DefaultTitleBar!.CloseButton;
+        var pause = header.PauseButton;
+        await ui.InvokeAsync(() =>
+        {
+            Require(close.Background == Color.Transparent && close.Bounds.Width == close.Bounds.Height, "Idle Close button must be transparent and square.");
+            Require(close.CornerRadius == 0, "Window actions must have square corners.");
+            var idleGlyph = close.Foreground;
+            Move(ui, close);
+            Require(close.IsHovered && close.Background.A > 0 && close.Foreground != idleGlyph, "Close hover did not reveal its surface and emphasize the glyph.");
+        }).WaitAsync(token);
+        await Capture("header-button-hover.png");
+        await ui.InvokeAsync(() =>
+        {
+            ui.Focus(close);
+            Move(ui, pause);
+            Require(close.IsFocused && !close.IsHovered && close.Background.A > 0, "Close focus did not retain its surface after pointer leave.");
+            Require(!pause.IsEnabled && pause.Background == Color.Transparent && pause.Foreground == pause.Theme.Disabled,
+                "Disabled Pause must show a muted glyph without a surface.");
+        }).WaitAsync(token);
+        await Capture("header-button-focus.png");
+        await ui.InvokeAsync(() => { Move(ui, view.Canvas); ui.HandleInput(new(InputKind.FocusLost)); }).WaitAsync(token);
+
         await NativeCaptionMoveAsync(window, ui, header.BrandIcon, token);
         await NativeCaptionLeaveAsync(window, token);
         await UntilAsync(ui, () => ((WindowFrame)ui.Root).DefaultTitleBar!.OverlayReveal == 0 && !ui.NeedsUpdate, token);
@@ -117,7 +142,7 @@ internal static partial class EditorHeaderSmoke
             Passed = true, Hover = true, CaptionShift = true, FixedSimulationButtons = true, Keyboard = true,
             ThemeRetention = true, Tooltip = true, FocusLost = true, BrandMark = true, DisclosureOpensFirst = true,
             DisclosureToggle = true, FullAreaViewport = true, HoverBackdrop = true, NativeCaptionHover = true, IdleDocumentToolsHidden = true,
-            BrandBounds = brand, DisclosureBounds = disclosure, Captures = captures, Typography = typography
+            BrandBounds = brand, DisclosureBounds = disclosure, ButtonStates = true, Captures = captures, Typography = typography
         }, new JsonSerializerOptions { WriteIndented = true }));
 
         async Task Capture(string name)

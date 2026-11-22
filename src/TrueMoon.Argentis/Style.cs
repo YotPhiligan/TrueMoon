@@ -42,7 +42,8 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     public bool FontItalic { get; init; }
     private Thickness _buttonPadding = new(12, 8, 12, 8), _editorPadding = new(8);
     private float _stackSpacing;
-    private float _cornerRadius, _editorCornerRadius = 5, _borderWidth = 1, _controlBlurSigma = 4;
+    private float? _cornerRadius, _buttonCornerRadius;
+    private float _editorCornerRadius = 5, _borderWidth = 1, _controlBlurSigma = 4;
     /// <summary>Normal meaningful outline, also used for inactive window framing.</summary>
     public Color Border { get; init; } = new(104, 121, 144);
     /// <summary>Hovered neutral control surface.</summary>
@@ -110,7 +111,15 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     /// <summary>Text/icons on accent, positive and destructive action backgrounds.</summary>
     public Color OnAccent { get; init; } = new(255, 255, 255);
     /// <summary>Corner radius in logical units; default style has square corners.</summary>
-    public float CornerRadius { get => _cornerRadius; init { UiProperties.CornerRadius.Validate(value); _cornerRadius = value; } }
+    public float CornerRadius { get => _cornerRadius ?? 0; init { UiProperties.CornerRadius.Validate(value); _cornerRadius = value; } }
+    /// <summary>Radius of buttons and check boxes in logical units, defaulting to an explicitly set general radius or five.</summary>
+    public float ButtonCornerRadius
+    {
+        get => _buttonCornerRadius ?? _cornerRadius ?? 5;
+        init { UiProperties.CornerRadius.Validate(value); _buttonCornerRadius = value; }
+    }
+    /// <summary>Centers plain button labels within their padding.</summary>
+    public bool CenterButtonLabels { get; init; } = true;
     /// <summary>Default corner radius of single-line and rich text editors, in logical units.</summary>
     public float EditorCornerRadius { get => _editorCornerRadius; init { UiProperties.CornerRadius.Validate(value); _editorCornerRadius = value; } }
     /// <summary>Control outline width in logical units; drawn inside bounds.</summary>

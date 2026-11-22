@@ -8,7 +8,7 @@ using TrueMoon.Aether.Runtime.Diagnostics;
 
 namespace TrueMoon.ManualTests.AetherEditorHost;
 
-/// <summary>Explicit application launch inputs. An empty launch opens a workspace without selecting a demo project.</summary>
+/// <summary>Resolved application launch inputs. An interactive launch without a project opens a fresh sandbox by default.</summary>
 /// <param name="ProjectPath">Absolute .aetherproj, or an explicitly selected legacy game csproj.</param>
 /// <param name="CheckProjectPath">Absolute manifest for headless preflight.</param>
 /// <param name="SmokeDirectory">Fresh legacy UI regression output directory.</param>
@@ -28,6 +28,8 @@ namespace TrueMoon.ManualTests.AetherEditorHost;
 public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProjectPath, string? SmokeDirectory,
     string? EntryAssembly, string? EntryType, bool Light, bool Validation, string? CheckScenePath = null, bool DocumentSmoke = false, bool TransformSmoke = false, bool HierarchySmoke = false, bool InspectorSmoke = false, bool CameraSmoke = false, bool NavigationSmoke = false, bool AcceptanceSmoke = false, bool NativeInputSmoke = false)
 {
+    /// <summary>Opens a fresh sandbox project and a saved empty scene for manual editing.</summary>
+    public bool Sandbox { get; init; }
     /// <summary>Runs directed world translation/outline/commit/history acceptance on a disposable fixture.</summary>
     public bool TranslationSmoke { get; init; }
     /// <summary>Whether the command explicitly selected validation, including false.</summary>
@@ -61,9 +63,10 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
         public bool AcceptanceSmoke { get; set; }
         public bool NativeInputSmoke { get; set; }
         public bool TranslationSmoke { get; set; }
+        public bool Sandbox { get; set; }
     }
     private static readonly IConfigurationSchema<LaunchData> LaunchSchema = ConfigurationSchemas.Create("EditorLaunch", () => new LaunchData(),
-        value => new LaunchData { ProjectPath = value.ProjectPath, CheckProjectPath = value.CheckProjectPath, CheckScenePath = value.CheckScenePath, SmokeDirectory = value.SmokeDirectory, EntryAssembly = value.EntryAssembly, EntryType = value.EntryType, Light = value.Light, Validation = value.Validation, DocumentSmoke = value.DocumentSmoke, TransformSmoke = value.TransformSmoke, HierarchySmoke = value.HierarchySmoke, InspectorSmoke = value.InspectorSmoke, CameraSmoke = value.CameraSmoke, NavigationSmoke = value.NavigationSmoke, AcceptanceSmoke = value.AcceptanceSmoke, NativeInputSmoke = value.NativeInputSmoke, TranslationSmoke = value.TranslationSmoke }, value =>
+        value => new LaunchData { ProjectPath = value.ProjectPath, CheckProjectPath = value.CheckProjectPath, CheckScenePath = value.CheckScenePath, SmokeDirectory = value.SmokeDirectory, EntryAssembly = value.EntryAssembly, EntryType = value.EntryType, Light = value.Light, Validation = value.Validation, DocumentSmoke = value.DocumentSmoke, TransformSmoke = value.TransformSmoke, HierarchySmoke = value.HierarchySmoke, InspectorSmoke = value.InspectorSmoke, CameraSmoke = value.CameraSmoke, NavigationSmoke = value.NavigationSmoke, AcceptanceSmoke = value.AcceptanceSmoke, NativeInputSmoke = value.NativeInputSmoke, TranslationSmoke = value.TranslationSmoke, Sandbox = value.Sandbox }, value =>
         {
             if (value.ProjectPath is not null && string.IsNullOrWhiteSpace(value.ProjectPath)) throw new ArgumentException("An editor argument requires a value.");
             if (value.CheckProjectPath is not null && string.IsNullOrWhiteSpace(value.CheckProjectPath)) throw new ArgumentException("An editor argument requires a value.");
@@ -74,6 +77,7 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
         }, fields =>
         {
             fields.Field("ProjectPath", value => value.ProjectPath, (value, next) => value.ProjectPath = next, new(Aliases: ["--project"]));
+            fields.Field("Sandbox", value => value.Sandbox, (value, next) => value.Sandbox = next, new(Aliases: ["--sandbox"], Argument: ConfigurationArgumentKind.Flag));
             fields.Field("CheckProjectPath", value => value.CheckProjectPath, (value, next) => value.CheckProjectPath = next, new(Aliases: ["--check-project"]));
             fields.Field("CheckScenePath", value => value.CheckScenePath, (value, next) => value.CheckScenePath = next, new(Aliases: ["--check-scene"]));
             fields.Field("SmokeDirectory", value => value.SmokeDirectory, (value, next) => value.SmokeDirectory = next, new(Aliases: ["--smoke"]));
@@ -99,11 +103,12 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
     {
         ArgumentNullException.ThrowIfNull(arguments);
         LaunchData data;
-        bool validationSpecified;
+        bool validationSpecified, sandboxSpecified;
         try
         {
             var parsed = ConfigurationCommandLine.ParseSingleUse(arguments, LaunchSchema.Keys);
             validationSpecified = parsed.Entries.Any(entry => entry.Path == "EditorLaunch:Validation");
+            sandboxSpecified = parsed.Entries.Any(entry => entry.Path == "EditorLaunch:Sandbox");
             if (parsed.Positionals.Count != 0) throw new ArgumentException("Unexpected editor positional arguments. Use --help.");
             var profile = ConfigurationProfiles.Create(builder =>
             {
@@ -117,7 +122,9 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
         var result = new EditorLaunchOptions(FullPath(data.ProjectPath), FullPath(data.CheckProjectPath), FullPath(data.SmokeDirectory),
             data.EntryAssembly, data.EntryType, data.Light, data.Validation, data.CheckScenePath, data.DocumentSmoke, data.TransformSmoke,
             data.HierarchySmoke, data.InspectorSmoke, data.CameraSmoke, data.NavigationSmoke, data.AcceptanceSmoke, data.NativeInputSmoke)
-            { TranslationSmoke = data.TranslationSmoke, ValidationSpecified = validationSpecified };
+            { TranslationSmoke = data.TranslationSmoke, ValidationSpecified = validationSpecified, Sandbox = data.Sandbox };
+        if (result.Sandbox && (result.ProjectPath != null || result.CheckProjectPath != null || result.CheckScenePath != null || result.SmokeDirectory != null))
+            throw new ArgumentException("--sandbox opens its own project and cannot be combined with project, preflight or smoke options.");
         if (result.ProjectPath != null && !result.LegacyProject && !result.ProjectPath.EndsWith(".aetherproj", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("--project requires a .aetherproj manifest or explicit legacy .csproj.");
         if (result.CheckProjectPath != null && (!result.CheckProjectPath.EndsWith(".aetherproj", StringComparison.OrdinalIgnoreCase) ||
@@ -152,6 +159,9 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
             if (profiles.Count(p => p) != 1 || result.SmokeDirectory == null || result.ProjectPath == null || result.LegacyProject || result.CheckProjectPath != null || result.CheckScenePath != null)
                 throw new ArgumentException("Viewport acceptance requires one profile, --project fixture.aetherproj and --smoke fresh-directory.");
         }
-        return result;
+        return sandboxSpecified ? result : result with
+        {
+            Sandbox = result.ProjectPath == null && result.CheckProjectPath == null && result.SmokeDirectory == null
+        };
     }
 }

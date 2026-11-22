@@ -76,11 +76,17 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual BackdropMaterial? ThemeBackdrop => null;
     /// <summary>Whether to apply the theme's glass treatment to the default background.</summary>
     protected virtual bool UsesThemedControlBackdrop => false;
+    /// <summary>Opacity of the themed glass tint. Semantic action fills keep strong contrast with their labels by default.</summary>
+    protected virtual byte ThemedControlTintAlpha => IsEffectivelyEnabled && Tone != ControlTone.Neutral
+        ? Math.Max(Theme.ControlTintAlpha, (byte)250) : Theme.ControlTintAlpha;
     private BackdropMaterial? _themedControlBackdrop;
     /// <summary>Outer shadow when no local or styled value is supplied.</summary>
     protected virtual BoxShadow? ThemeShadow => null;
     /// <summary>Foreground when no local/style value is supplied.</summary>
     protected virtual Color ThemeForeground => Theme.Foreground;
+    /// <summary>Corner radius when no local or styled value is supplied.</summary>
+    protected virtual float ThemeCornerRadius => SupportsValidationIcon ? Theme.EditorCornerRadius : Theme.CornerRadius;
+    internal virtual bool SquareDescendantButtons => Parent?.SquareDescendantButtons ?? false;
     /// <summary>Semantic editor role inherited by composite parts unless explicitly overridden.</summary>
     protected virtual EditorColorRole ThemeColorRole => Parent?.ColorRole ?? EditorColorRole.Neutral;
     /// <summary>Inside outline width when no local/style value is supplied.</summary>
@@ -179,7 +185,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (ReferenceEquals(property, UiProperties.Backdrop)) return (T)(object?)ThemeBackdrop!;
         if (ReferenceEquals(property, UiProperties.Shadow)) return (T)(object?)ThemeShadow!;
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
-        if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)(SupportsValidationIcon ? Theme.EditorCornerRadius : Theme.CornerRadius);
+        if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)ThemeCornerRadius;
         if (ReferenceEquals(property, UiProperties.BorderWidth)) return (T)(object)ThemeBorderWidth;
         if (ReferenceEquals(property, UiProperties.BorderColor)) return (T)(object)ThemeBorderColor;
         if (ReferenceEquals(property, UiProperties.FontSize)) return (T)(object)Theme.FontSize;
@@ -576,10 +582,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (UsesThemedControlBackdrop && backdrop != null && color.A == 255 && Theme.ControlTintAlpha < 255 &&
             material == null && !OverridesAppearance(UiProperties.Backdrop) && !OverridesAppearance(UiProperties.Background))
         {
-            // Keep white action labels readable even when glass samples a bright backdrop.
-            var alpha = IsEffectivelyEnabled && Tone != ControlTone.Neutral
-                ? Math.Max(Theme.ControlTintAlpha, (byte)250) : Theme.ControlTintAlpha;
-            var tint = color with { A = alpha };
+            var tint = color with { A = ThemedControlTintAlpha };
             if (overBackdrop || Theme.ControlBlurSigma == 0)
             {
                 context.Fill(Bounds, tint, radius);

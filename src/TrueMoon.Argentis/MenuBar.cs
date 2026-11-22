@@ -14,6 +14,7 @@ public interface IMenu
 /// <summary>Compact hover/click/keyboard menu bar with reversible disclosure. Borrows an overlay host and commands.</summary>
 public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputObserver
 {
+    internal override bool SquareDescendantButtons => true;
     private readonly OverlayHost _overlays;
     private readonly MenuGroup[] _groups;
     private readonly Dictionary<string, Button> _headings = new(StringComparer.Ordinal);

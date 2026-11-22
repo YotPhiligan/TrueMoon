@@ -11,11 +11,18 @@ namespace TrueMoon.Aether.Editor.Tests.Projects;
 public sealed class EditorLaunchOptionsTests
 {
     [Fact]
-    public void EmptyLaunch_SelectsNoImplicitDemoAndNoProjectWorkspaceDisablesEveryCommand()
+    public void InteractiveLaunch_DefaultsToSandboxAndHonorsAnExplicitOptOut()
     {
-        var options = EditorLaunchOptions.Parse([]);
-        Assert.Equal(new EditorLaunchOptions(null, null, null, null, null, false, false), options);
-        Assert.False(options.LegacyProject);
+        var defaults = new EditorLaunchOptions(null, null, null, null, null, false, false);
+        Assert.Equal(defaults with { Sandbox = true }, EditorLaunchOptions.Parse([]));
+        Assert.Equal(defaults with { Sandbox = true, Light = true }, EditorLaunchOptions.Parse(["--light"]));
+        Assert.Equal(defaults with { Sandbox = true }, EditorLaunchOptions.Parse(["--sandbox"]));
+        Assert.Equal(defaults, EditorLaunchOptions.Parse(["--sandbox=false"]));
+    }
+
+    [Fact]
+    public void NoProjectWorkspace_DisablesEveryRuntimeCommand()
+    {
         var workspace = new EditorWorkspace(new SceneSnapshot("empty", 0, []), hasProject: false);
         Assert.False(workspace.HasProject);
         Assert.Empty(workspace.EntityIds);
@@ -42,6 +49,7 @@ public sealed class EditorLaunchOptionsTests
         Assert.True(options.Validation);
         Assert.Null(options.CheckProjectPath);
         Assert.Null(options.SmokeDirectory);
+        Assert.False(options.Sandbox);
     }
 
     [Fact]
@@ -53,6 +61,7 @@ public sealed class EditorLaunchOptionsTests
         Assert.Equal("Legacy.dll", options.EntryAssembly);
         Assert.Equal("Legacy.Game", options.EntryType);
         Assert.Null(options.CheckProjectPath);
+        Assert.False(options.Sandbox);
     }
 
     [Fact]
@@ -64,6 +73,7 @@ public sealed class EditorLaunchOptionsTests
         Assert.False(options.LegacyProject);
         Assert.True(options.Light);
         Assert.True(options.Validation);
+        Assert.False(options.Sandbox);
     }
 
     [Theory]
@@ -76,6 +86,7 @@ public sealed class EditorLaunchOptionsTests
         Assert.Equal(Path.GetFullPath("smoke"), options.SmokeDirectory);
         Assert.Equal(manifest ? Path.GetFullPath("room.aetherproj") : null, options.ProjectPath);
         Assert.False(options.LegacyProject);
+        Assert.False(options.Sandbox);
         Assert.Null(options.EntryAssembly);
         Assert.Null(options.EntryType);
     }
@@ -89,6 +100,9 @@ public sealed class EditorLaunchOptionsTests
         new[] { "--project", " " },
         new[] { "--project", "--light" },
         new[] { "--project", "room.sln" },
+        new[] { "--sandbox", "--project", "room.aetherproj" },
+        new[] { "--sandbox", "--check-project", "room.aetherproj" },
+        new[] { "--sandbox", "--smoke", "smoke" },
         new[] { "--assembly", "Game.dll" },
         new[] { "--project", "room.aetherproj", "--entry", "Override.Game" },
         new[] { "--project", "room.aetherproj", "--assembly", "Override.dll" },

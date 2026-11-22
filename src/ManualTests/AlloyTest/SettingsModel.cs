@@ -30,7 +30,9 @@ public sealed class SettingsModel : ViewModel
         ButtonPadding = IsCompact ? new Thickness(8, 4, 8, 4) : new Thickness(12, 8, 12, 8),
         EditorPadding = new Thickness(IsCompact ? 4 : 8), StackSpacing = IsCompact ? 6 : 12,
         ControlTintAlpha = UseSquareOpaqueAppearance ? (byte)255 : Theme.Dark.ControlTintAlpha,
-        EditorCornerRadius = UseSquareOpaqueAppearance ? 0 : Theme.Dark.EditorCornerRadius
+        EditorCornerRadius = UseSquareOpaqueAppearance ? 0 : Theme.Dark.EditorCornerRadius,
+        ButtonCornerRadius = UseSquareOpaqueAppearance ? 0 : Theme.Dark.ButtonCornerRadius,
+        CenterButtonLabels = !UseSquareOpaqueAppearance
     };
     /// <summary>Selects the light palette.</summary>
     public void UseLight() => IsLight = true;

@@ -8,12 +8,18 @@ internal sealed class TypographyRecordingContext : ITextLayoutService, IDrawingC
     internal sealed record TextCall(string Text, float X, float Y, float Size, string Family, int Weight, bool Italic);
     internal List<TextCall> Texts { get; } = [];
     internal List<TextCall> Measures { get; } = [];
+    internal List<TextCall> InkMeasures { get; } = [];
     internal List<(Rect Bounds, Color Color)> Fills { get; } = [];
     public Size Measure(string text, float fontSize, string fontFamily) => throw new InvalidOperationException("Typography was omitted from measurement.");
     public Size Measure(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
     {
         Measures.Add(new(text, 0, 0, fontSize, fontFamily, fontWeight, fontItalic));
         return new(text.Length * (fontSize / 2 + (fontWeight - 400) / 100f + (fontItalic ? 1 : 0)), fontSize + 4);
+    }
+    public Rect MeasureInkBounds(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
+    {
+        InkMeasures.Add(new(text, 0, 0, fontSize, fontFamily, fontWeight, fontItalic));
+        return new(0, 5, 10, 12);
     }
     public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily) => throw new InvalidOperationException("Typography was omitted from drawing.");
     public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily, int fontWeight, bool fontItalic) =>

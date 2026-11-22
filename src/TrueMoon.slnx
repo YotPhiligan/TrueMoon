@@ -44,19 +44,6 @@
     <Project Path="TrueMoon.Cobalt.Tests\TrueMoon.Cobalt.Tests.csproj" />
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
   </Folder>
-  <Folder Name="/Engine/">
-    <Project Path="ManualTests/Abstractions.Extension/Abstractions.Extension.csproj" />
-    <Project Path="ManualTests/Abstractions.Host/Abstractions.Host.csproj" />
-    <Project Path="ManualTests/EcsContractHost/EcsContractHost.csproj" />
-    <Project Path="ManualTests/RuntimeConsumer/RuntimeConsumer.csproj" />
-    <Project Path="ManualTests/RuntimeArtifactTool/RuntimeArtifactTool.csproj" />
-    <Project Path="ManualTests/PlayerProbe/PlayerProbe.csproj" />
-    <Project Path="ManualTests/EditorUiConsumer/EditorUiConsumer.csproj" />
-    <Project Path="ManualTests/AetherEditorHost/AetherEditorHost.csproj" />
-    <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
-    <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
-    <Project Path="ManualTests/RenderSurface.Game/RenderSurface.Game.csproj" />
-  </Folder>
   <Folder Name="/Examples/">
     <Project Path="Examples/AetherPlayer/AetherPlayer.csproj" />
     <Project Path="Examples/AetherHost/AetherHost.csproj" />
@@ -70,6 +57,14 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/ManualTests/">
+    <Project Path="ManualTests/AetherEditorHost/AetherEditorHost.csproj" />
+    <Project Path="ManualTests/Abstractions.Host/Abstractions.Host.csproj" />
+    <Project Path="ManualTests/EcsContractHost/EcsContractHost.csproj" />
+    <Project Path="ManualTests/RuntimeConsumer/RuntimeConsumer.csproj" />
+    <Project Path="ManualTests/RuntimeArtifactTool/RuntimeArtifactTool.csproj" />
+    <Project Path="ManualTests/PlayerProbe/PlayerProbe.csproj" />
+    <Project Path="ManualTests/EditorUiConsumer/EditorUiConsumer.csproj" />
+    <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <Project Path="ManualTests/TrueMoon.Nom.Probe/TrueMoon.Nom.Probe.csproj" />
     <Project Path="ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj" />
     <Project Path="ManualTests/MithrilTest/MithrilTest.csproj" />
@@ -80,6 +75,11 @@
     <Project Path="ManualTests/AppUnitsPipesProbe/AppUnitsPipesProbe.csproj" />
     <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" />
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
+  </Folder>
+  <Folder Name="/ManualTests/Fixtures/">
+    <Project Path="ManualTests/Abstractions.Extension/Abstractions.Extension.csproj" />
+    <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
+    <Project Path="ManualTests/RenderSurface.Game/RenderSurface.Game.csproj" />
   </Folder>
   <Folder Name="/Kton/">
     <Project Path="TrueMoon.Aether.Kton/TrueMoon.Aether.Kton.csproj" />

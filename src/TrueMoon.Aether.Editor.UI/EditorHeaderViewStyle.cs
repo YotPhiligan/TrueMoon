@@ -12,6 +12,7 @@ public sealed class EditorHeaderViewStyle : IViewStyle<EditorHeaderView>
         styles.Part(view => view.BrandIcon).Foreground(theme => theme.Accent);
         styles.Part(view => view.Caption).FontSize(14).FontWeight(600);
         styles.Role(EditorHeaderView.ToolbarButtonRole).Set(IconButton.IconSizeProperty, 16f)
+            .Set(IconButton.RevealOnInteractionProperty, true)
             .BorderWidth(0);
         styles.Part(view => view.RunButton).Tone(ControlTone.Positive);
         styles.Part(view => view.StopButton).Tone(ControlTone.Danger);

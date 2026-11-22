@@ -9,14 +9,26 @@ This test host keeps its legacy CLI, demo and smoke scenarios for regressions.
 
 ```powershell
 dotnet run --project ManualTests/AetherEditorHost
+dotnet run --project ManualTests/AetherEditorHost -- --sandbox=false
 dotnet run --project ManualTests/AetherEditorHost -- --project E:/games/MyGame/MyGame.aetherproj
 dotnet run --project ManualTests/AetherEditorHost -- --check-project E:/games/MyGame/MyGame.aetherproj
 ```
 
-An empty launch opens an empty workspace without SDK/compiler/game startup.
+Run `AetherEditorHost` from Rider, open its executable, or run it without
+arguments to create a fresh sandbox project with `Empty.aetherscene` open.
+`--sandbox` explicitly selects the same mode. In the Hierarchy, click **+** to
+create an object with Transform or click the cube icon to start with a visible
+primitive. Select an object and
+click **+** in the Inspector to add a component, such as MeshRenderer or a
+camera. The status bar toggles Edit Preview. Ctrl+S saves to the sandbox's
+scene file. Each launch creates a distinct directory under
+`%TEMP%/TrueMoon/Editor/<run>/Sandbox`. To reopen a saved sandbox, pass
+`--project <path-to-Sandbox.aetherproj>` and open its scene from the File menu.
+
+Use `--sandbox=false` to open the workspace without a project. The base
+`--smoke <directory>` profile also starts without a project. An explicit
 `.aetherproj` opens during App startup before the standard window. Explicit legacy
-`.csproj` launches retain the old demo/build/play workflow. All existing CLI
-options and smoke profiles are preserved; the package contains none of their types.
+`.csproj` launches retain the demo, build and play workflow.
 
 The host calls `UseAetherEditor(...)` and `UseAetherEditorWindow(...)`; it creates no
 services outside App registration factories. The App owns engine/project/document

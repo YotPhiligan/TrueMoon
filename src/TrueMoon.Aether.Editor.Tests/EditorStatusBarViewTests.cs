@@ -72,6 +72,9 @@ public sealed class EditorStatusBarViewTests
         Assert.Equal(28, view.Bounds.Height); Assert.Equal(24, view.DetailsButton.Bounds.Width);
         Assert.Equal(24, view.Bar.Padding.Right); // Reserve the native resize grip.
         Assert.All(new Element[] { summary, preview, entities, view.CancelButton }, element => Assert.Equal(12, element.FontSize));
+        Button[] actions = [summary, preview, view.CancelButton, view.SourceButton, view.DetailsButton];
+        Assert.All(actions, button => Assert.Equal(0, button.CornerRadius));
+        Assert.Equal(5, test.BodyButton.CornerRadius);
         Assert.False(view.CancelButton.IsVisible); Assert.Equal(0, summary.BorderWidth); Assert.Equal(0, preview.BorderWidth);
         var drawing = new RecordingDrawing(); summary.Draw(drawing);
         var text = Assert.Single(drawing.Texts);
@@ -96,6 +99,7 @@ public sealed class EditorStatusBarViewTests
         ui.HandleInput(new(InputKind.PointerMove, 100, 100)); test.Settle(ui);
         ui.SetTheme(Theme.Light); ui.Update();
         Assert.Same(summary, view.SummaryButton); Assert.Same(preview, view.PreviewButton); Assert.Same(entities, view.Entities);
+        Assert.All(actions, button => Assert.Equal(0, button.CornerRadius));
         Assert.Equal(Color.Transparent, view.Background); Assert.Equal(Theme.Light.Foreground, summary.Foreground);
         Assert.True(view.Bar.OverlayContent); Assert.Equal(0, view.Bar.Backdrop!.BlurSigma);
         Assert.Equal(12, summary.FontSize); Assert.False(ui.Update());
