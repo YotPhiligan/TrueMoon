@@ -27,6 +27,7 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
     private RuntimeProtocol? _protocol;
     private GpuLocalSurfaceSession? _surface;
     private ViewportPresentation? _presentation;
+    private GameHudSnapshot? _hud;
     private ulong _sequence;
     private bool _resumePrimitive;
     private int _closing;
@@ -44,6 +45,8 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
     public PlayerStatus Status=>Volatile.Read(ref _status);
     /// <summary>Current local presentation, hidden after closing admission.</summary>
     public ViewportPresentation? Presentation=>Volatile.Read(ref _closing)==0?Volatile.Read(ref _presentation):null;
+    /// <summary>Latest detached HUD for the active game. Closing immediately hides the snapshot.</summary>
+    public GameHudSnapshot? Hud=>Volatile.Read(ref _closing)==0?Volatile.Read(ref _hud):null;
     /// <summary>Whether the selected game supplies the primitive or mesh rendering capability.</summary>
     public bool SupportsRendering=>_game?.Session is IRenderGameSession or Rendering.Snapshots.IRenderSnapshotGameSession;
     /// <summary>Last local native owner; keep the UI context alive until it reports released.</summary>
@@ -67,8 +70,9 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
             else await SendAsync(CommandKind.LoadScene,request=>
             {request.SceneId=_start.Snapshot!.Id;request.Revision=_start.Snapshot.Revision;request.Entities=_start.Snapshot.CopyEntities();},linked.Token).ConfigureAwait(false);
             await RefreshAsync(linked.Token).ConfigureAwait(false);
+            RefreshHud();
         }
-        catch(Exception error)when(activation){failure=error;Publish(Status with{State=PlayerState.Faulted,Error=error});}
+        catch(Exception error)when(activation){failure=error;Volatile.Write(ref _hud,null);Publish(Status with{State=PlayerState.Faulted,Error=error});}
         finally{_gate.Release();}
         if(failure!=null)
         {
@@ -162,15 +166,34 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
     public async Task<PlayerStatus> FixedTickAsync(CancellationToken token=default)
     {
         await _gate.WaitAsync(token).ConfigureAwait(false);
-        try{Ready();_protocol!.FixedTick();return await RefreshAsync(token).ConfigureAwait(false);}
-        catch(Exception error){Publish(Status with{State=PlayerState.Faulted,Error=error});throw;}
+        try
+        {
+            Ready();
+            var previousTick=Status.Tick;
+            _protocol!.FixedTick();
+            await RefreshAsync(token).ConfigureAwait(false);
+            if(Status.Tick!=previousTick)RefreshHud();
+            return Status;
+        }
+        catch(Exception error){Volatile.Write(ref _hud,null);Publish(Status with{State=PlayerState.Faulted,Error=error});throw;}
         finally{_gate.Release();}
     }
     private async Task<PlayerStatus> CommandAsync(CommandKind kind,Action<ControlRequest>? configure,CancellationToken token)
-    {await _gate.WaitAsync(token).ConfigureAwait(false);try{Ready();var reply=await SendAsync(kind,configure,token).ConfigureAwait(false);Apply(reply);return Status;}finally{_gate.Release();}}
+    {
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            Ready();var previousTick=Status.Tick;
+            var reply=await SendAsync(kind,configure,token).ConfigureAwait(false);Apply(reply);
+            if(Status.Tick!=previousTick)RefreshHud();
+            return Status;
+        }
+        finally{_gate.Release();}
+    }
     private async Task<ControlReply> SendAsync(CommandKind kind,Action<ControlRequest>? configure,CancellationToken token)
     {var next=checked(_sequence+1);var request=ControlRequest.Create(Identity,next,kind);configure?.Invoke(request);var reply=await _protocol!.SendAsync(request,token).ConfigureAwait(false);_sequence=next;return reply;}
     private async Task<PlayerStatus> RefreshAsync(CancellationToken token){Apply(await SendAsync(CommandKind.GetStatus,null,token).ConfigureAwait(false));return Status;}
+    private void RefreshHud()=>Volatile.Write(ref _hud,(_game?.Session as IGameHudSource)?.ReadHud());
     private void Apply(ControlReply reply)=>Publish(new(reply.Phase=="Playing"?PlayerState.Playing:PlayerState.Paused,checked((ulong)reply.Tick),reply.RenderViewReady,Status.Error));
     private void Publish(PlayerStatus status)=>Volatile.Write(ref _status,status);
     private void Guard()=>ObjectDisposedException.ThrowIf(Volatile.Read(ref _closing)!=0,this);
@@ -198,6 +221,7 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
         try
         {
             Publish(Status with{State=PlayerState.Stopping});
+            Volatile.Write(ref _hud,null);
             if(_surface!=null)await _surface.DisposeAsync().ConfigureAwait(false);
             await _meshes.DisposeAsync().ConfigureAwait(false);
             _protocol?.Dispose();_protocol=null;_game?.Dispose();_game=null;

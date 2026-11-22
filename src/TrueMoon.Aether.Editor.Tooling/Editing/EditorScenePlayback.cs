@@ -29,6 +29,7 @@ public sealed class EditorScenePlayback
     private readonly Func<long, CancellationToken, Task> _replace;
     private readonly Func<GameBuildArtifact, long, CancellationToken, Task>? _selectBuild;
     private readonly Func<string, GameBuildArtifact>? _openBuild;
+    private readonly AetherEditorOptions? _startup;
     private readonly CancellationToken _lifetime;
     private readonly Task _ready;
     private CancellationTokenSource? _cancellation;
@@ -52,6 +53,10 @@ public sealed class EditorScenePlayback
             (version, token) => editor.StartBuildAsync(960, 540, version, token), lifetime, ready,
             (version, token) => editor.ReplaceBuildAsync(version, token),
             (build, version, token) => editor.SelectBuildForContextAsync(build, version, token), editor.OpenPublishedBuild) { }
+
+    internal EditorScenePlayback(EditorDocumentCommands documents, EditorPreview preview, GameEditor editor,
+        Func<SessionStatus> runtime, Task ready, CancellationToken lifetime, AetherEditorOptions startup)
+        : this(documents, preview, editor, runtime, ready, lifetime) => _startup = startup;
 
     internal EditorScenePlayback(EditorDocumentCommands documents, EditorPreview preview, Func<SessionStatus> runtime,
         Func<GameEditorStatus> editor, Action<GameEditorContext> setContext,
@@ -221,8 +226,19 @@ public sealed class EditorScenePlayback
                 if (usesRunningGame) VerifyRunning(project, content, runningOrigin, token);
                 var selectedBuild = build ?? openBuild?.Invoke(project, content, token);
                 token.ThrowIfCancellationRequested();
-                var modelContent = selectedBuild == null && project.Documents is { } document
-                    ? await document.CheckModelImportsAsync(document.Read().OpeningId, token).ConfigureAwait(false) : null;
+                var startupProject = _startup?.ProjectPath is { } path && string.Equals(path, project.Project.ManifestPath,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+                if (_startup?.SingleProject == true && !startupProject)
+                    throw new InvalidOperationException("This development host can build and play only its configured game project.");
+                GameBuildRenderContent? modelContent = null;
+                if (selectedBuild == null)
+                {
+                    modelContent = startupProject ? _startup!.ProjectRenderContent : null;
+                    if (modelContent != null && modelContent.AssetKeys[0].ProjectId != project.Project.Description.Id)
+                        throw new InvalidDataException("Development render content belongs to another project.");
+                    if (modelContent == null && project.Documents is { } document)
+                        modelContent = await document.CheckModelImportsAsync(document.Read().OpeningId, token).ConfigureAwait(false);
+                }
                 VerifyCapture(project, content, token);
                 var fullScene = selectedBuild != null || modelContent != null;
                 var scene = fullScene ? null : PrimitiveSceneAdapter.Project(content.Resolved, token);

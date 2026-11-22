@@ -34,6 +34,32 @@ public sealed record AetherLaunchOptions(AetherLaunchRole Role, bool Help, strin
         fields.Field("Validation", x => x.Validation, (x,v) => x.Validation=v, new(Aliases:["--validation"],Argument:ConfigurationArgumentKind.Flag));
         fields.Field("ConsoleDiagnostics", x => x.ConsoleDiagnostics, (x,v) => x.ConsoleDiagnostics=v, new(Aliases:["--console-diagnostics"],Argument:ConfigurationArgumentKind.Flag));
     });
+
+    /// <summary>Resolves the Editor role of a single-game development host to its explicitly configured project.</summary>
+    /// <param name="arguments">Explicit tokens excluding executable.</param>
+    /// <param name="projectPath">Absolute project manifest from the host's build or launch metadata.</param>
+    /// <param name="defaultRole">Role when no explicit selector is supplied.</param>
+    /// <param name="hasRuntimeBootstrap">Presence of captured protected child identity.</param>
+    /// <param name="token">Cancellation before publication.</param>
+    /// <returns>Validated role and, for Editor, the fixed project.</returns>
+    public static async Task<AetherLaunchOptions> ParseSingleProjectAsync(IReadOnlyList<string> arguments, string projectPath,
+        AetherLaunchRole defaultRole = AetherLaunchRole.Editor, bool hasRuntimeBootstrap = false, CancellationToken token = default)
+    {
+        var options = await ParseAsync(arguments, defaultRole, hasRuntimeBootstrap, token).ConfigureAwait(false);
+        if (options.Role != AetherLaunchRole.Editor || options.Help) return options;
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        if (!Path.IsPathFullyQualified(projectPath) || !Path.GetExtension(projectPath).Equals(".aetherproj", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Development launch requires an absolute .aetherproj path in its profile.", nameof(projectPath));
+        var expected = Path.GetFullPath(projectPath);
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (options.ProjectPath is { } supplied && !expected.Equals(supplied, comparison))
+            throw new ArgumentException("This development host is bound to a different game project.", nameof(arguments));
+        if (options.RuntimeHostPath is not null)
+            throw new ArgumentException("A single-game development host uses its own runtime executable.", nameof(arguments));
+        if (!File.Exists(expected)) throw new FileNotFoundException("Development game project was not found.", expected);
+        return options with { ProjectPath = expected };
+    }
+
     /// <summary>Uses the standard single-use CLI parser/schema. Reserved bootstrap presence prevents user-role fallback.</summary>
     /// <param name="arguments">Explicit tokens excluding executable.</param><param name="defaultRole">Editor for combined hosts, Player for Player-only hosts.</param>
     /// <param name="hasRuntimeBootstrap">Presence of captured protected child identity, including malformed/empty values.</param>

@@ -19,6 +19,8 @@ internal static class Program
     {
         if (args is ["--orthographic-route", var artifact, var routeScene, var routeReport])
             return await OrthographicRouteProof.RunAsync(artifact, routeScene, routeReport);
+        if (args is ["--outpost-hud", var outpostArtifact, var outpostScene, var outpostReport])
+            return await OutpostHudProof.RunAsync(outpostArtifact, outpostScene, outpostReport);
         if (args.Length is <2 or >4 || args.Length>=3 && args[2] is not ("microsoft" or "cobalt")) throw new ArgumentException("PlayerProbe <compiled-game-directory> <report-directory> [cobalt|microsoft] [selected-snapshot]");
         var microsoft=args.Length>=3 && args[2]=="microsoft";
         var report = Path.GetFullPath(args[1]); Directory.CreateDirectory(report);

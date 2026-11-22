@@ -1,5 +1,14 @@
 # Aether / Editor: состояние и точка продолжения
 
+22.11.2026 — локальная поставка `1.2611.22.1-alpha` для TrueMoon.Tales.
+Standalone Player показывает [HUD заставы](PLAN.md#eng5c4-tales-outpost-hud);
+resize и Stop проверены Vulkan-кадрами и счётчиками ресурсов. Debug EXE
+открывает [привязанные проект и сцену](PLAN.md#eng7b-tales-debug-editor) из
+другого рабочего каталога, Release сохранил Player-only граф. После отказа
+на сцене без игровых сущностей повторный запуск Release прошёл.
+Открыты горячая смена сцены/сборки в standalone Player и проверка перехода
+между мониторами с разным DPI. [Приёмка](HISTORY.md#tales-requests-2026-11-22).
+
 21.11.2026 — [ARCH1f.7](PLAN.md#arch1f7-orthographic-camera). В локальной
 поставке `1.2611.21.10-alpha` пакетный Player показал изометрический
 маршрут TrueMoon.Tales из готового Build. Vulkan подтвердил сохранение

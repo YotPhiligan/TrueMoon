@@ -7,6 +7,31 @@ namespace TrueMoon.Aether.Tests.Hosting;
 public sealed class AetherLaunchOptionsTests
 {
     [Fact]
+    public async Task DevelopmentRole_BindsOnlyEditorToItsConfiguredProject()
+    {
+        var path=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")+".aetherproj");
+        var missing=await Assert.ThrowsAsync<FileNotFoundException>(()=>AetherLaunchOptions.ParseSingleProjectAsync([],path));
+        Assert.Equal(path,missing.FileName);
+        await File.WriteAllTextAsync(path,"{}");
+        try
+        {
+            var editor=await AetherLaunchOptions.ParseSingleProjectAsync(["--editor"],path,AetherLaunchRole.Player);
+            Assert.Equal(AetherLaunchRole.Editor,editor.Role);
+            Assert.Equal(path,editor.ProjectPath);
+            await Assert.ThrowsAsync<ArgumentException>(()=>AetherLaunchOptions.ParseSingleProjectAsync(["--project=other.aetherproj"],path));
+            await Assert.ThrowsAsync<ArgumentException>(()=>AetherLaunchOptions.ParseSingleProjectAsync(["--runtime-host=other.exe"],path));
+            await Assert.ThrowsAsync<InvalidDataException>(()=>AetherLaunchOptions.ParseSingleProjectAsync(["--editor"],path,hasRuntimeBootstrap:true));
+            var player=await AetherLaunchOptions.ParseSingleProjectAsync(["--player","--artifact=a","--scene=b"],path);
+            var child=await AetherLaunchOptions.ParseSingleProjectAsync(["--runtime"],path,hasRuntimeBootstrap:true);
+            Assert.Equal(AetherLaunchRole.Player,player.Role);
+            Assert.Equal(AetherLaunchRole.RuntimeChild,child.Role);
+            Assert.Null(player.ProjectPath);
+            Assert.Null(child.ProjectPath);
+        }
+        finally{File.Delete(path);}
+    }
+
+    [Fact]
     public async Task CombinedDefaultsToEditor_PlayerOnlyRequiresExplicitCapturedInputs_WithoutOpeningPaths()
     {
         Assert.Equal(AetherLaunchRole.Editor,(await AetherLaunchOptions.ParseAsync([])).Role);

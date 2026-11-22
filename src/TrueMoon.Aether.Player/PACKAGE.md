@@ -10,7 +10,9 @@ come from DI. App startup loads one local game, shows its first actual current f
 then admits Playing. No owned child, parent environment, pipe or source/SDK lookup.
 Click the viewport to capture WASD/E and bounded mouse look; Escape/focus loss clears
 input. Stop/close drains GPU use before World/game/context teardown; failed cleanup
-retains ownership for retry. HUD and live launch-role switching are not supplied.
+retains ownership for retry. A game implementing `IGameHudSource` can supply
+a bounded text prompt, status and journal for the active scene. The HUD is drawn
+over the existing Player viewport and shares its scale without receiving input.
 
 `UseConfiguredAetherPlayer` uses the exact `PlayerOptions.Schema` in an explicit
 common configuration profile. Artifact/scene identity and renderer callbacks stay

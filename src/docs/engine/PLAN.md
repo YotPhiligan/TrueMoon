@@ -36,6 +36,9 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 surface принята. Первый оконный сценарий проверен в самой игре.
 [ENG7b.4](#eng7b4-tales-consumer).
 
+Заявки игры от 21.11 ведутся отдельными срезами [HUD заставы](#eng5c4-tales-outpost-hud)
+и [Debug Editor для одного проекта](#eng7b-tales-debug-editor).
+
 [Два независимых переопределения ED4i](EDITOR_PLAN.md#ed4i-independent-slot-overrides)
 проверены в версии `1.2611.20.3-alpha` с Undo и перезапуском Editor.
 [Перенос переопределений](EDITOR_PLAN.md#ed4i-material-transfer) проверен
@@ -1564,10 +1567,21 @@ ENG7b.3 matrix была отдельным этапом и завершена202
 - [x] Собрать TrueMoon.Tales из пакетов, показать техническую сцену и два
   действия `E` в окне, сверить контрольный объект и штатное закрытие.
   [Приёмка 21.11.2026](HISTORY.md#eng7b4-tales-consumer-2026-11-21).
-- [ ] Для standalone Player определить смену сцены или сборки и явные
-  outcomes rollback. Проверить repeated launch и failed startup на игровом
-  потребителе, сверяя освобождение ресурсов. Device loss остаётся отдельным
-  профилем.
+- [x] В игре на `1.2611.22.1-alpha` отказ при загрузке сцены без игровых
+  сущностей и последующий успешный запуск корректной заставы. Профиль
+  HUD прошёл resize и Stop с нулевыми открытыми handles и живыми слотами.
+- [ ] Для standalone Player определить смену сцены или сборки и исходы
+  отката при отказе кандидата. Device loss остаётся отдельным профилем.
+
+<a id="eng7b-tales-debug-editor"></a>
+#### ENG7b — Debug Editor, привязанный к TrueMoon.Tales
+
+[TALES-20261121-7774189b](../requests/engine/20261121-truemoontales-debug-editor-launch-7774189b/Decision.md).
+В явном профиле разработки игровой EXE передаёт абсолютный путь проекта
+из метаданных сборки. Aether проводит роль через прежний парсер и открывает
+указанный проект и начальную сцену. Play использует штатные Build и
+RuntimeChild того же EXE. Хост ограничивает Build и Play своим проектом.
+Пакеты Editor и подготовка исходной сцены входят только в Debug граф игры.
 
 ### Модель мира и наследование
 
@@ -2959,6 +2973,20 @@ native Debug/published Release. Затем [ENG5c.4: Alloy HUD и pause](#eng5c4
 raw cursor и full World/edit/MCP остаются отдельными задачами.
 
 ### ENG5c.4: Runtime HUD поверх Alloy/Argentis — 2026-10-29
+
+<a id="eng5c4-tales-outpost-hud"></a>
+#### HUD заставы в standalone Player
+
+[TALES-20261121-a4c97ed1](../requests/engine/20261121-truemoontales-player-gameplay-hud-a4c97ed1/Decision.md)
+использует текстовый снимок `IGameHudSource` той же игровой сессии. Aether читает
+его после загрузки и применённого тика; Player рисует поверх текущего кадра
+через существующий Alloy canvas. Пять строк журнала, подсказка и статус
+передаются отдельно от технической диагностики. Прежний путь ввода и кадра
+используется и без HUD. Stop закрывает admission и очищает снимок.
+
+Этот срез покрывает неинтерактивный Player HUD. Общий HUD Editor RuntimeChild,
+пауза, интерактивность и очистка при горячей смене сессии остаются в следующих
+срезах ENG5c.4 и ENG7b.4.
 
 Пользователь задал HUD внутри игрового Runtime на нашем UI модуле. Принята
 архитектурная граница ниже; конкретные renderer hooks, input packet additions,

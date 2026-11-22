@@ -30,6 +30,31 @@ namespace TrueMoon.Aether.Tests.Runtime;
 public sealed class LocalPlayerSessionTests
 {
     private const string Hash="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    [Fact]
+    public async Task Hud_FollowsTicksAndIsClearedWhenPlayerStops()
+    {
+        using var artifact=new Artifact();
+        var game=new HudGame();
+        await using var app=App.Build(context=>
+        {
+            context.Services(services=>services.Singleton<IFactory<IGameSession,Type>>(_=>new Factory<IGameSession,Type>(_=>game)));
+            context.UseAetherLocalRuntime(PlayerStart.FromSnapshot(artifact.Build,new("local",7,[])));
+        });
+        var player=app.Services.Resolve<PlayerSession>()!;
+        Assert.Null(player.Hud);
+        await app.StartAsync();
+        var initial=Assert.IsType<GameHudSnapshot>(player.Hud);
+        Assert.Equal("Observe",initial.Prompt);
+        await player.SetPlayingAsync(true);
+        await player.InputAsync(new(true,GameButtons.Forward,InteractPressed:true));
+        await player.FixedTickAsync();
+        Assert.Null(player.Hud!.Prompt);
+        Assert.Equal("Reported",Assert.Single(player.Hud.Journal));
+        Assert.Equal("Observe",initial.Prompt);
+        await app.StopAsync();
+        Assert.Null(player.Hud);
+    }
+
     [Theory]
     [InlineData(false)][InlineData(true)]
     public async Task BothProviders_CreateOneLazyLocalGraph_WithoutHostCompilerParentOrIpc(bool microsoft)
@@ -146,6 +171,12 @@ public sealed class LocalPlayerSessionTests
         public void Tick()=>Tick(default);
         public void Tick(GameInputTick input){LastInput=input;TickNumber++;}
         public virtual void Dispose(){Disposals++;if(DisposeFailures-->0)throw new IOException("game cleanup marker");Released=true;}
+    }
+    private sealed class HudGame:Game,IGameHudSource
+    {
+        public GameHudSnapshot ReadHud()=>TickNumber==0
+            ? new("Observe","Open",[])
+            : new(null,"Inspecting",[LastInput.InteractPressed?"Reported":"Waiting"]);
     }
     private sealed class MeshGame:Game,IRenderSnapshotGameSession
     {

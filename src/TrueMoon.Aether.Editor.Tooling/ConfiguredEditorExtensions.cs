@@ -35,7 +35,9 @@ public static class ConfiguredEditorExtensions
             frozen.ApplyTo(options); engine!.ApplyTo(options);
         }, options =>
         {
-            options.ProjectPath = value.ProjectPath; options.SourceTracking = value.SourceTracking.Snapshot();
+            options.ProjectPath = value.ProjectPath; options.InitialScenePath = value.InitialScenePath;
+            options.SingleProject = value.SingleProject; options.ProjectRenderContent = value.ProjectRenderContent;
+            options.SourceTracking = value.SourceTracking.Snapshot();
         }, options =>
         {
             options.MaxHistoryEntries = authoring!.MaxHistoryEntries; options.MaxBatchEdits = authoring.MaxBatchEdits; options.MaxOperations = authoring.MaxOperations;

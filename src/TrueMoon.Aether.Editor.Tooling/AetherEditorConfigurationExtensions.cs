@@ -117,7 +117,7 @@ public static class AetherEditorConfigurationExtensions
             {
                 var engine = r.Resolve<AetherHost>();
                 return new(r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorPreview>(), engine.Editor,
-                    () => engine.Supervisor.Status, r.Resolve<RuntimeViewportBinding>().Ready, r.Resolve<IAppLifetime>().AppCancellationToken);
+                    () => engine.Supervisor.Status, r.Resolve<RuntimeViewportBinding>().Ready, r.Resolve<IAppLifetime>().AppCancellationToken, snapshot);
             });
             if (!services.Exist<IViewStyle<EditorDocumentView>>()) services.Singleton<IViewStyle<EditorDocumentView>>(_ => new EditorDocumentViewStyle());
             if (!services.Exist<IFactory<EditorDocumentView>>()) services.Singleton<IFactory<EditorDocumentView>>(r =>

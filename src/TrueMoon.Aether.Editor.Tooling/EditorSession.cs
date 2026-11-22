@@ -54,6 +54,16 @@ public sealed class EditorSession : IStartable, IStoppable
             cancellationToken.ThrowIfCancellationRequested();
             if (_documents.Read().Error is { } error) throw error;
             if (_projects.Active == null) throw new OperationCanceledException(cancellationToken);
+            if (_options.InitialScenePath is {} scenePath)
+            {
+                if (!_documents.Execute(DocumentCommand.Open, scenePath))
+                    throw new InvalidOperationException("Initial scene startup was not admitted.");
+                await _documents.Pending.ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_documents.Read().Error is { } sceneError) throw sceneError;
+                if (_documents.Read().Document?.Content == null)
+                    throw new InvalidOperationException("The initial scene did not open.");
+            }
         }
         catch (Exception failure)
         {

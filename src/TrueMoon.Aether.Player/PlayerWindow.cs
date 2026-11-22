@@ -103,7 +103,7 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     {
         if(_ui==null||_view==null||!ReferenceEquals(_session.Presentation,source.Frame.Presentation)||Volatile.Read(ref _closing)!=0)return;
         var image=((SkiaOpenGLSurface)_ui.Rendering).CopyTexture(source.Texture.Name,source.Texture.Width,source.Texture.Height);
-        try{_view.Canvas.Upload(image,source.Frame,()=>ReferenceEquals(_session.Presentation,source.Frame.Presentation));CopiedFrames++;}
+        try{_view.Canvas.Upload(image,source.Frame,_session.Hud,()=>ReferenceEquals(_session.Presentation,source.Frame.Presentation));CopiedFrames++;}
         catch{image.Dispose();throw;}
         _window.RequestFrame();
     }
