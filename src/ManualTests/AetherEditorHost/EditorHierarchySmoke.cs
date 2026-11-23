@@ -7,6 +7,7 @@ using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Hierarchy;
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.UI.Hierarchy;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Diagnostics;

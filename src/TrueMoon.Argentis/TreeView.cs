@@ -45,8 +45,10 @@ public sealed class TreeView : Element, ITreeView
     /// <summary>Enables before/after edge drops and Ctrl+Up/Down placement requests. Parent-only behavior is the default.</summary>
     public static readonly UiProperty<bool> ReorderEnabledProperty = new("ReorderEnabled", false);
     /// <summary>Logical row height.</summary>
+    [FluentStyleProperty]
     public static readonly UiProperty<float> RowHeightProperty = new("RowHeight", 24, Invalidation.Layout, v => float.IsFinite(v) && v > 0 && v <= 128);
     /// <summary>Logical indentation per level.</summary>
+    [FluentStyleProperty]
     public static readonly UiProperty<float> IndentProperty = new("Indent", 16, Invalidation.Layout, v => float.IsFinite(v) && v >= 0 && v <= 64);
     private IReadOnlyList<TreeItem> _items = Array.Empty<TreeItem>(), _visible = Array.Empty<TreeItem>();
     private Dictionary<string, TreeItem> _byId = new(StringComparer.Ordinal);
@@ -75,6 +77,7 @@ public sealed class TreeView : Element, ITreeView
     /// <summary>Gets or sets parent-move admission.</summary>
     public bool MoveEnabled { get => Get(MoveEnabledProperty); set => Set(MoveEnabledProperty, value); }
     /// <summary>Gets or sets optional sibling placement input.</summary>
+    [FluentSetter]
     public bool ReorderEnabled { get => Get(ReorderEnabledProperty); set => Set(ReorderEnabledProperty, value); }
     /// <summary>Gets or sets logical row height.</summary>
     public float RowHeight { get => Get(RowHeightProperty); set => Set(RowHeightProperty, value); }
@@ -83,12 +86,15 @@ public sealed class TreeView : Element, ITreeView
     /// <inheritdoc />
     public override bool Focusable => true;
     /// <inheritdoc />
+    [FluentEvent("tree")]
     public event Action<string?>? SelectionChanged;
     /// <summary>Raised when branch expansion changes.</summary>
     public event Action<string, bool>? ExpansionChanged;
     /// <inheritdoc />
+    [FluentEvent("tree")]
     public event Action<TreeMove>? MoveRequested;
     /// <summary>Raised for admitted before/after requests; consumers commit their own ordering.</summary>
+    [FluentEvent("tree")]
     public event Action<TreePlacement>? PlacementRequested;
 
     /// <inheritdoc />

@@ -69,6 +69,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
         }
         var removed = previous.Where(node => !newSet.Contains(node)).ToArray();
         var added = desired.Where(node => !oldSet.Contains(node)).ToArray();
+        owner.FindStyleOwner()?.ValidatePartChanges(added, removed);
         List<Exception>? errors = null;
         using (var change = new TreeChange(previous.Concat(desired).Prepend(owner).ToArray()))
         {
@@ -95,6 +96,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
     {
         VerifyMutation();
         owner.ValidateChild(item);
+        owner.FindStyleOwner()?.ValidatePartChanges([item], []);
         using var change = new TreeChange(owner, item);
         base.InsertItem(index, item);
         owner.Adopt(item, change);
@@ -107,6 +109,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
         if (ReferenceEquals(this[index], item)) return;
         owner.ValidateChild(item);
         var previous = this[index];
+        owner.FindStyleOwner()?.ValidatePartChanges([item], [previous]);
         using var change = new TreeChange(owner, previous, item);
         base.SetItem(index, item);
         owner.Orphan(previous, change);

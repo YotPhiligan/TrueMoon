@@ -8,14 +8,17 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
 {
     private readonly Element _element;
     private readonly UiProperty<TValue> _property;
-    private readonly TSource _source;
+    private readonly TSource? _source;
+    private readonly IDataContext<TSource>? _context;
     private readonly Func<TSource, TValue> _read;
     private readonly Action<TSource, TValue>? _write;
     private readonly string _sourceProperty;
     private Connection? _connection;
+    private bool _observingContext;
     private bool _disposed;
 
-    internal PropertyBinding(Element element, UiProperty<TValue> property, TSource source, Expression<Func<TSource, TValue>> selector, bool twoWay = false)
+    internal PropertyBinding(Element element, UiProperty<TValue> property, TSource? source,
+        Expression<Func<TSource, TValue>> selector, bool twoWay = false, IDataContext<TSource>? context = null)
     {
         Expression body = selector.Body;
         while (!twoWay && body is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked, Method: null } conversion)
@@ -25,6 +28,7 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         _element = element;
         _property = property;
         _source = source;
+        _context = context;
         _read = selector.Compile(preferInterpretation: true);
         _sourceProperty = member.Member.Name;
         if (twoWay)
@@ -37,28 +41,67 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
             var value = Expression.Parameter(typeof(TValue), "value");
             _write = Expression.Lambda<Action<TSource, TValue>>(Expression.Assign(member, value), selector.Parameters[0], value).Compile(preferInterpretation: true);
         }
-        _element.AttachmentChanged += Reconnect;
-        try { Reconnect(); }
-        catch { Dispose(); throw; }
+        _element.AttachmentChanged += AttachmentChanged;
+        try { AttachmentChanged(); }
+        catch (Exception original)
+        {
+            try { Dispose(); }
+            catch (Exception cleanup) { throw new AggregateException(original, cleanup); }
+            throw;
+        }
+    }
+
+    private void AttachmentChanged()
+    {
+        if (!_element.IsAttached)
+        {
+            Disconnect();
+            return;
+        }
+        if (_context != null && !_observingContext)
+        {
+            _observingContext = true;
+            _context.DataContextChanged += Reconnect;
+        }
+        Reconnect();
     }
 
     private void Reconnect()
     {
-        _connection?.Dispose();
-        _connection = null;
         if (_disposed || !_element.IsAttached) return;
-        var connection = new Connection(this);
+        _element.VerifyAccess();
+        var source = _context != null ? _context.DataContext : _source;
+        var previous = _connection;
+        if (previous != null && ReferenceEquals(previous.Source, source)) return;
+        _connection = null;
+        previous?.Dispose();
+        if (source == null) return;
+
+        var connection = new Connection(this, source);
         _connection = connection;
-        try
+        try { connection.Connect(); }
+        catch (Exception original)
         {
-            _element.OwnAttachment(connection);
-            connection.Connect();
-        }
-        catch
-        {
-            connection.Dispose();
-            _connection = null;
+            if (ReferenceEquals(_connection, connection)) _connection = null;
+            try { connection.Dispose(); }
+            catch (Exception cleanup) { throw new AggregateException(original, cleanup); }
             throw;
+        }
+        connection.Synchronize();
+    }
+
+    private void Disconnect()
+    {
+        var previous = _connection;
+        _connection = null;
+        try { previous?.Dispose(); }
+        finally
+        {
+            if (_observingContext)
+            {
+                _observingContext = false;
+                _context!.DataContextChanged -= Reconnect;
+            }
         }
     }
 
@@ -66,12 +109,11 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
     {
         if (_disposed) return;
         _disposed = true;
-        _element.AttachmentChanged -= Reconnect;
-        _connection?.Dispose();
-        _connection = null;
+        _element.AttachmentChanged -= AttachmentChanged;
+        Disconnect();
     }
 
-    private sealed class Connection(PropertyBinding<TSource, TValue> binding) : IDisposable
+    private sealed class Connection(PropertyBinding<TSource, TValue> binding, TSource source) : IDisposable
     {
         private int _active = 1;
         private int _pending;
@@ -80,20 +122,22 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         private bool _writingSource;
         private readonly int _ownerThread = Environment.CurrentManagedThreadId;
         private readonly Action<Action> _dispatch = binding._element.CaptureAttachmentDispatcher();
+        internal TSource Source { get; } = source;
         private bool Active => Volatile.Read(ref _active) != 0 && binding._element.IsAttached;
+        // Consult the context on the owner thread, including during the change notification itself.
+        private bool Current => Active && (binding._context == null || ReferenceEquals(Source, binding._context.DataContext));
 
         internal void Connect()
         {
             _subscribed = true;
-            binding._source.PropertyChanged += Changed;
+            Source.PropertyChanged += Changed;
             if (binding._write != null) binding._element.PropertyChanged += UiChanged;
-            Synchronize();
         }
 
-        private void Synchronize()
+        internal void Synchronize()
         {
             // Both the captured dispatcher generation and the connection lifetime guard stale work.
-            if (!Active || _busy) return;
+            if (!Current || _busy) return;
             _busy = true;
             try { ApplyCanonicalValue(); }
             finally { _busy = false; }
@@ -101,14 +145,14 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
 
         private void ApplyCanonicalValue()
         {
-            if (!Active) return;
-            var value = binding._read(binding._source);
-            if (Active) binding._element.Set(binding._property, value);
+            if (!Current) return;
+            var value = binding._read(Source);
+            if (Current) binding._element.Set(binding._property, value);
         }
 
         private void UiChanged(Element element, object property)
         {
-            if (!ReferenceEquals(property, binding._property) || !Active || _busy) return;
+            if (!ReferenceEquals(property, binding._property) || !Current || _busy) return;
             element.VerifyAccess();
             _busy = true;
             List<Exception>? errors = null;
@@ -117,11 +161,11 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
                 try
                 {
                     var value = element.Get(binding._property);
-                    var previous = binding._read(binding._source);
-                    if (Active && !EqualityComparer<TValue>.Default.Equals(previous, value))
+                    var previous = binding._read(Source);
+                    if (Current && !EqualityComparer<TValue>.Default.Equals(previous, value))
                     {
                         _writingSource = true;
-                        try { binding._write!(binding._source, value); }
+                        try { binding._write!(Source, value); }
                         finally { _writingSource = false; }
                     }
                 }
@@ -152,7 +196,7 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         {
             if (Interlocked.Exchange(ref _active, 0) == 0) return;
             if (binding._write != null) binding._element.PropertyChanged -= UiChanged;
-            if (_subscribed) binding._source.PropertyChanged -= Changed;
+            if (_subscribed) Source.PropertyChanged -= Changed;
         }
     }
 }

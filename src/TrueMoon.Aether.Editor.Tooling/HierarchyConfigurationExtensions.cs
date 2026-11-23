@@ -25,7 +25,7 @@ public static class HierarchyConfigurationExtensions
                 resolver.Resolve<EditorDocumentCommands>()!, resolver.Resolve<EditorInspectorViewModel>()!));
             if (!services.Exist<IViewStyle<EditorHierarchyView>>()) services.Singleton<IViewStyle<EditorHierarchyView>>(_ => new EditorHierarchyViewStyle());
             services.Singleton<IFactory<EditorHierarchyView>>(resolver => new Factory<EditorHierarchyView>(() =>
-                new(resolver.Resolve<EditorHierarchyViewModel>()!, resolver.Resolve<IViewStyle<EditorHierarchyView>>()!)));
+                EditorHierarchyView.Create(resolver.Resolve<EditorHierarchyViewModel>()!, resolver.Resolve<IViewStyle<EditorHierarchyView>>()!)));
         });
         return context;
     }

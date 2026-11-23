@@ -15,6 +15,7 @@ using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.UI.Diagnostics;
 using TrueMoon.Aether.Editor.Tooling.Diagnostics;
 using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.UI.Hierarchy;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Hosting;

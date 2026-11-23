@@ -11,6 +11,7 @@ using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.UI.Hierarchy;
 using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;

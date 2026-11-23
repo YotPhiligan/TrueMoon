@@ -8231,3 +8231,64 @@ Editor прошёл по 1 522 теста с локальными исходн
 raster, OpenGL и Vulkan. Vulkan Validation 0/0. SHA загруженной native Skia
 совпал с DLL в репозитории. Пути к кадрам и исходным отчётам с SHA-256
 сохранены в `TestResults/Remaining-20261121-12/verification.json`.
+
+<a id="uia1f4f-style-generation-study-2026-11-23"></a>
+## 2026-11-23 — UIA1f.4f. Исследование генерации стилей View
+
+Сравнили отдельные C# классы `EditorHierarchyViewStyle` и
+`EditorDiagnosticsViewStyle` с `.viewstyle`. Прототип incremental generator
+читает `AdditionalFiles` и выпускает отдельный класс `IViewStyle<TView>`
+со стандартными вызовами `Root`, `Part`, `TypedPart` и `Role`. Тела правил
+используют те же Fluent-методы и выражения Theme. Тестовые файлы подключаются
+локальным MSBuild import. Тестовая сборка и её промежуточные файлы остаются
+в каталоге исследования.
+
+| Экран | Правил в обоих вариантах | C# без пробелов и комментариев | Декларация без пробелов |
+| --- | ---: | ---: | ---: |
+| Обозреватель | 14 | 1549 | 1102 |
+| Диагностика | 13 | 1168 | 696 |
+
+В Debug и Release прошли по три теста сравнения, а также по 28 штатных
+`ViewStyleTests` Alloy. Профиль — Windows x64, SDK `11.0.100`, `net11.0`,
+C# 15, `runtime-async=on`, версия рабочей копии `1.2611.23.10-alpha`.
+
+- `Hierarchy_ManualAndGeneratedMatchRasterLayoutAndStylePrecedence`
+  подтвердил совпадение эффективных свойств, геометрии и SHA-256 PNG в
+  Light и Dark при 250×200 и 420×320. Проверены сохранение фокуса и приоритет
+  local → Style элемента → стиль View.
+- `Diagnostics_ManualAndGeneratedMatchRasterLayoutAndRetainSelectionAndScroll`
+  подтвердил то же совпадение кадров и layout при 880×360 и 1280×480 в обеих
+  темах. Смена стиля сохранила выбранное событие, фокус поля и прокрутку на паузе.
+- `GeneratedStyle_UsesExistingRuleOrderAndRejectsNestedViewParts` проверил
+  порядок пересекающихся правил роли и части. Ошибочный доступ к внутреннему
+  контролу вложенного View отклоняется при применении и сохраняет прежний стиль.
+
+Семь отрицательных компиляций сопоставили диагностику со строкой `.viewstyle`.
+Проверены неизвестные часть, роль, свойство и токен Theme, несовместимый
+получатель `RowHeight`, неверный тип значения и синтаксис прототипа.
+`#line` указывает файл и строку декларации. Колонку вычисляет компилятор
+по сформированному C#.
+
+Rider Find Usages разрешил обычные C# ссылки `EditorDiagnosticsView.ExportPath`
+и `EditorHierarchyView.ActionRole`. В текущем индексе Rider запрос по
+сгенерированному `view.Title` вернул «No symbol», а `.viewstyle` из
+изолированного CLI-прогона отсутствует в модели решения. Тест переименования
+не запускался. Компиляция сгенерированного кода подтверждена отдельно.
+
+Решение — использовать `IViewStyle<TView>` для правил экранов. Генерация
+типизированных Fluent-методов и свойств частей сокращает C# в местах
+использования. Полная генерация сокращает запись самих селекторов и обвязку
+класса. Для поддержки собственного формата потребовались бы правила
+синтаксиса и работа с IDE. Версия поставки в рамках исследования не менялась.
+
+Локальный каталог `TestResults/UIA1f4f-20261123-161411` содержит исходники
+прототипа, входные декларации, сгенерированный C#, диагностические логи,
+`AuthoringMetrics.json`, `RiderChecks.json` и TRX.
+
+```powershell
+$study = (Resolve-Path 'TestResults/UIA1f4f-20261123-161411').Path
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore "-p:CustomBeforeMicrosoftCommonTargets=$study/StyleStudy.targets" --filter 'FullyQualifiedName~StyleStudy.StyleComparisonTests'
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~ViewStyleTests'
+}
+```

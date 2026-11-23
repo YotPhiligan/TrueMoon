@@ -107,8 +107,13 @@ public class Window : View
 /// <typeparam name="TData">Plain data or view-model type; the Window does not dispose it.</typeparam>
 public class Window<TData> : Window, IView<TData>
 {
+    private readonly DataContextState<TData> _data = new();
+
     /// <inheritdoc />
-    public TData? DataContext { get; set; }
+    public TData? DataContext { get => _data.Value; set => _data.Set(this, value); }
+    /// <inheritdoc />
+    public event Action? DataContextChanged { add => _data.Changed += value; remove => _data.Changed -= value; }
+
     /// <summary>Assigns typed data and composes content once. Later updates should use bindings or targeted subtree changes.</summary>
     /// <param name="data">Borrowed screen data.</param><param name="factory">Creates the fresh content.</param>
     public void Content(TData? data, Func<TData?, object> factory)

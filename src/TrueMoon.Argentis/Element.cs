@@ -55,6 +55,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Explicit height; NaN selects automatic sizing.</summary>
     public float Height { get => Get(UiProperties.Height); set => Set(UiProperties.Height, value); }
     /// <summary>Minimum width.</summary>
+    [FluentSetter]
     public float MinWidth { get => _minWidth; set { VerifySize(value); if (value > MaxWidth) throw new ArgumentOutOfRangeException(nameof(value)); _minWidth = value; Invalidate(Invalidation.Layout); } }
     /// <summary>Minimum height.</summary>
     public float MinHeight { get => _minHeight; set { VerifySize(value); if (value > MaxHeight) throw new ArgumentOutOfRangeException(nameof(value)); _minHeight = value; Invalidate(Invalidation.Layout); } }
@@ -130,6 +131,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         }
     }
     /// <summary>Semantic name for icon-only controls and future accessibility adapters.</summary>
+    [FluentSetter]
     public string AccessibleName { get => Get(UiProperties.AccessibleName); set => Set(UiProperties.AccessibleName, value); }
     /// <summary>Effective corner radius.</summary>
     public float CornerRadius { get => Get(UiProperties.CornerRadius); set => Set(UiProperties.CornerRadius, value); }
@@ -311,6 +313,17 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             if (node.ChangingTree || node._disposing) throw new InvalidOperationException("UI tree changes cannot be reentrant.");
     }
 
+    internal string? PartName { get; private set; }
+
+    internal void SetPartName(string name)
+    {
+        VerifyTreeAccess();
+        if (Parent != null || IsAttached)
+            throw new InvalidOperationException("Name a part before adding it to a parent or attaching it.");
+        if (this is View view) view.ValidateRootPartName(name);
+        PartName = name;
+    }
+
     internal void ValidateChild(Element child)
     {
         VerifyTreeAccess();
@@ -334,6 +347,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     internal void Adopt(Element child, TreeChange change)
     {
         child.Parent = this;
+        FindStyleOwner()?.RegisterParts(child);
         child.ApplyThemeCore(Theme, change);
         if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, change);
         change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
@@ -341,6 +355,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     internal void Orphan(Element child, TreeChange change)
     {
         child.Parent = null;
+        FindStyleOwner()?.UnregisterParts(child);
         child.RefreshViewStyles();
         child.DetachCore(change);
         change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using TrueMoon.Alloy.Runtime;
+using System.Collections.ObjectModel;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -10,6 +11,185 @@ public sealed class ViewStyleTests
     private static readonly ViewStyleRole<Button> ActionRole = new("action"), AccentRole = new("accent");
     private static readonly ViewStyleRole<View> ViewRole = new("view");
     private static readonly UiProperty<int> Marker = new("Marker", 5);
+
+    [Fact]
+    public void ViewCreation_BuildsOnceAfterConstructionAndBeforeStyle()
+    {
+        using var draft = new FactoryView("ready", data => Text.Plain(data ?? "missing").Named("Label"));
+        Assert.Null(draft.Child);
+        var style = new Declaration<FactoryView>(styles =>
+            styles.Part(view => view.GetRequiredPart<Text>("Label")).FontWeight(700));
+
+        Assert.Same(draft, ViewCreation.Prepare(draft, style));
+        var label = draft.GetRequiredPart<Text>("Label");
+        Assert.Equal("ready", label.Value);
+        Assert.Equal(700, label.FontWeight);
+        Assert.Same(label, draft.PreparedChild);
+
+        ViewCreation.Prepare(draft, style);
+        Assert.Same(label, draft.Child);
+        Assert.Equal(1, draft.Builds);
+        Assert.Equal(1, draft.Preparations);
+    }
+
+    [Fact]
+    public void ViewCreation_PreservesExplicitContent()
+    {
+        using var draft = new FactoryView("ready", _ => throw new InvalidOperationException("Unexpected build."));
+        draft.Content(() => Text.Plain("explicit").Named("Label"));
+        var label = draft.GetRequiredPart<Text>("Label");
+
+        ViewCreation.Prepare(draft);
+
+        Assert.Same(label, draft.Child);
+        Assert.Equal(0, draft.Preparations);
+    }
+
+    [Fact]
+    public void ViewCreation_DisposesDraftAndUnadoptedRootWhenInstallationFails()
+    {
+        var first = Text.Plain("first").Named("Label");
+        var second = Text.Plain("second").Named("Label");
+        var root = Panel.Create().WithChildren(first, second);
+        using var draft = new FactoryView("ready", _ => root);
+
+        var failure = Assert.Throws<InvalidOperationException>(() => ViewCreation.Prepare(draft));
+
+        Assert.Contains("already contains a part named 'Label'", failure.Message);
+        Assert.True(draft.IsDisposed);
+        Assert.True(root.IsDisposed);
+        Assert.True(first.IsDisposed);
+        Assert.True(second.IsDisposed);
+        Assert.Equal(0, draft.Preparations);
+    }
+
+    [Fact]
+    public void NamedParts_UseNearestViewForTypedLookupAndStyles()
+    {
+        using var parent = new PartView().Named("Root");
+        var outer = new TextBox().Named("Search");
+        var inner = new PartView().Named("Root");
+        var innerSearch = new TextBox().Named("Search");
+        inner.SetContent(new Panel().WithChildren(innerSearch, Text.Plain("private").Named("OnlyInner")));
+        parent.SetContent(new Panel().WithChildren(outer, inner, Text.Plain("separate case").Named("search")));
+
+        parent.WithViewStyle(new Declaration<PartView>(style => style.Part(view => view.GetRequiredPart<TextBox>("Search")).FontSize(19)));
+        inner.WithViewStyle(new Declaration<PartView>(style => style.Part(view => view.GetRequiredPart<TextBox>("Search")).FontSize(23)));
+        Assert.Same(parent, parent.GetRequiredPart<View>("Root"));
+        Assert.Same(inner, inner.GetRequiredPart<View>("Root"));
+        Assert.Same(outer, parent.GetRequiredPart<TextBox>("Search"));
+        Assert.Same(innerSearch, inner.GetRequiredPart<TextBox>("Search"));
+        Assert.True(parent.TryGetPart<Text>("search", out var lowerCase));
+        Assert.Equal("separate case", lowerCase.Value);
+        Assert.Equal(19, outer.FontSize);
+        Assert.Equal(23, innerSearch.FontSize);
+        Assert.False(parent.TryGetPart<Text>("OnlyInner", out _));
+        Assert.False(parent.TryGetPart<Button>("Search", out _));
+        Assert.Throws<KeyNotFoundException>(() => parent.GetRequiredPart<Text>("OnlyInner"));
+        Assert.Throws<InvalidOperationException>(() => parent.GetRequiredPart<Button>("Search"));
+    }
+
+    [Fact]
+    public void NamedParts_RejectDuplicatesBeforeMutationAndFollowReplacementAndTransfer()
+    {
+        using var first = new PartView();
+        using var second = new PartView();
+        var part = new TextBox().Named("Search");
+        var body = new Panel().WithChildren(part);
+        first.SetContent(body);
+
+        using var duplicate = new TextBox().Named("Search");
+        Assert.Throws<InvalidOperationException>(() => body.Items.Add(duplicate));
+        Assert.Null(duplicate.Parent);
+        Assert.Throws<InvalidOperationException>(() => part.Named("Changed"));
+        Assert.Same(part, first.GetRequiredPart<TextBox>("Search"));
+
+        using var invalidContent = new Panel().WithChildren(new TextBox().Named("Search"), new TextBox().Named("Search"));
+        Assert.Throws<InvalidOperationException>(() => first.SetContent(invalidContent));
+        Assert.Same(body, first.Child);
+        Assert.Same(part, first.GetRequiredPart<TextBox>("Search"));
+
+        var replacement = new TextBox().Named("Search");
+        body.Items[0] = replacement;
+        Assert.Null(part.Parent);
+        Assert.Same(replacement, first.GetRequiredPart<TextBox>("Search"));
+        part.Dispose();
+        Assert.True(body.Items.Remove(replacement));
+        Assert.False(first.TryGetPart<TextBox>("Search", out _));
+        second.SetContent(replacement);
+        Assert.Same(replacement, second.GetRequiredPart<TextBox>("Search"));
+        var newContent = new TextBox().Named("Search");
+        second.SetContent(newContent);
+        Assert.Same(newContent, second.GetRequiredPart<TextBox>("Search"));
+        Assert.Null(replacement.Parent);
+        replacement.Dispose();
+    }
+
+    [Fact]
+    public void NamedParts_BoundBatchRejectsDuplicateDraftsAndAllowsReuseAfterRemoval()
+    {
+        var source = new ObservableCollection<NamedRow> { new("Search") };
+        var drafts = new List<Element>();
+        var rows = new Panel().BindItems(source, item =>
+        {
+            var draft = new TextBox().Named(item.Name);
+            drafts.Add(draft);
+            return draft;
+        });
+        var view = new PartView();
+        view.SetContent(rows);
+        using var ui = Create(view);
+        ui.Update();
+        var original = view.GetRequiredPart<TextBox>("Search");
+
+        source.Clear();
+        source.Add(new("Search"));
+        source.Add(new("Search"));
+        Assert.Throws<InvalidOperationException>(() => ui.Update());
+        Assert.Same(original, Assert.Single(rows.Items));
+        Assert.Same(original, view.GetRequiredPart<TextBox>("Search"));
+        Assert.All(drafts.Skip(1), draft => Assert.True(draft.IsDisposed));
+
+        source.RemoveAt(1);
+        ui.Update();
+        Assert.True(original.IsDisposed);
+        Assert.Same(drafts[^1], view.GetRequiredPart<TextBox>("Search"));
+    }
+
+    [Fact]
+    public void NamedParts_HeaderAndPopupPreflightKeepsExistingPartsOnConflict()
+    {
+        var view = new PartView();
+        var titleBar = new WindowTitleBar("Window");
+        var initialHeader = new TextBox().Named("Header");
+        titleBar.SetHeader(initialHeader);
+        var anchor = Button.Simple("Open");
+        var host = new OverlayHost(new Panel().WithChildren(titleBar, anchor));
+        view.SetContent(host);
+        using var ui = Create(view);
+        ui.Update();
+        var initialPopup = new TextBox().Named("Popup");
+        host.Open(anchor, initialPopup, anchor.Bounds, ui);
+
+        using var conflictingHeader = new TextBox().Named("Popup");
+        using var conflictingPopup = new TextBox().Named("Header");
+        Assert.Throws<InvalidOperationException>(() => titleBar.SetHeader(conflictingHeader));
+        Assert.Throws<InvalidOperationException>(() => host.Open(anchor, conflictingPopup, anchor.Bounds, ui));
+        Assert.Same(initialHeader, titleBar.HeaderContent);
+        Assert.Same(initialPopup, host.Popup);
+        Assert.Same(initialHeader, view.GetRequiredPart<TextBox>("Header"));
+        Assert.Same(initialPopup, view.GetRequiredPart<TextBox>("Popup"));
+
+        var nextHeader = new TextBox().Named("Header");
+        var nextPopup = new TextBox().Named("Popup");
+        titleBar.SetHeader(nextHeader);
+        host.Open(anchor, nextPopup, anchor.Bounds, ui);
+        Assert.Same(nextHeader, view.GetRequiredPart<TextBox>("Header"));
+        Assert.Same(nextPopup, view.GetRequiredPart<TextBox>("Popup"));
+        Assert.Null(initialHeader.Parent);
+        Assert.True(initialPopup.IsDisposed);
+        initialHeader.Dispose();
+    }
 
     [Fact]
     public void FontWeightAndItalic_RespectStylePrecedenceAndRecomputeWithTheme()
@@ -73,6 +253,68 @@ public sealed class ViewStyleTests
         Assert.Equal(23, view.Action.FontSize); Assert.Equal(11, view.Action.Get(Marker));
         view.WithViewStyle<SampleView>(null);
         Assert.Equal(17, view.Action.FontSize); Assert.Equal(5, view.Action.Get(Marker));
+    }
+
+    [Fact]
+    public void GeneratedTreeStyle_PreservesRuleOrderPrecedenceAndThemeRefresh()
+    {
+        using var view = new PartView();
+        var tree = TreeView.Create().Named("Tree");
+        view.SetContent(tree);
+        view.ApplyTheme(Theme.Dark with { FontSize = 16 });
+        view.WithViewStyle(new Declaration<PartView>(styles =>
+        {
+            styles.Part(v => v.GetRequiredPart<TreeView>("Tree")).Set(TreeView.RowHeightProperty, 28f);
+            styles.TypedPart(v => v.GetRequiredPart<TreeView>("Tree"))
+                .FontSize(18)
+                .RowHeight(theme => theme.FontSize + 16)
+                .Indent(20);
+        }));
+
+        Assert.Equal(18, tree.FontSize);
+        Assert.Equal(32, tree.RowHeight);
+        Assert.Equal(20, tree.Indent);
+        tree.Style = new Style().With(TreeView.RowHeightProperty, 36f);
+        tree.RowHeight = 40;
+        Assert.Equal(40, tree.RowHeight);
+        tree.Clear(TreeView.RowHeightProperty);
+        Assert.Equal(36, tree.RowHeight);
+        tree.Style = null;
+        Assert.Equal(32, tree.RowHeight);
+
+        view.ApplyTheme(Theme.Light with { FontSize = 22 });
+        Assert.Equal(38, tree.RowHeight);
+        Assert.Equal(18, tree.FontSize);
+        Assert.Equal(20, tree.Indent);
+        Assert.Same(tree, view.GetRequiredPart<TreeView>("Tree"));
+        view.WithViewStyle<PartView>(null);
+        Assert.Equal(24, tree.RowHeight);
+        Assert.Equal(16, tree.Indent);
+        Assert.Equal(22, tree.FontSize);
+    }
+
+    [Fact]
+    public void TypedPart_RejectsNestedTreeAndKeepsActiveStyles()
+    {
+        using var view = new PartView();
+        var outerTree = TreeView.Create().Named("Tree");
+        var inner = new PartView();
+        var innerTree = TreeView.Create().Named("Tree");
+        inner.SetContent(innerTree);
+        view.SetContent(new Panel().WithChildren(outerTree, inner));
+        view.WithViewStyle(new Declaration<PartView>(styles =>
+            styles.TypedPart(v => v.GetRequiredPart<TreeView>("Tree")).RowHeight(30)));
+        inner.WithViewStyle(new Declaration<PartView>(styles =>
+            styles.TypedPart(v => v.GetRequiredPart<TreeView>("Tree")).RowHeight(34)));
+
+        Assert.Throws<ArgumentException>(() => view.WithViewStyle(new Declaration<PartView>(styles =>
+        {
+            styles.TypedPart(v => v.GetRequiredPart<TreeView>("Tree")).RowHeight(42);
+            styles.TypedPart(_ => innerTree).Indent(25);
+        })));
+        Assert.Equal(30, outerTree.RowHeight);
+        Assert.Equal(34, innerTree.RowHeight);
+        Assert.Equal(16, innerTree.Indent);
     }
 
     [Fact]
@@ -245,6 +487,35 @@ public sealed class ViewStyleTests
         model.Dispose(); Assert.Equal(1, model.Disposals);
     }
 
+    private sealed class FactoryView : View<string>
+    {
+        private readonly Func<string?, Element> _build;
+
+        public FactoryView(string data, Func<string?, Element> build)
+        {
+            DataContext = data;
+            _build = build;
+        }
+
+        public int Builds { get; private set; }
+        public int Preparations { get; private set; }
+        public Element? PreparedChild { get; private set; }
+
+        protected override Element BuildContent()
+        {
+            Builds++;
+            return _build(DataContext);
+        }
+
+        protected override void OnContentPrepared()
+        {
+            Preparations++;
+            PreparedChild = GetRequiredPart<Text>("Label");
+        }
+    }
+
+    private sealed class PartView : View { }
+    private sealed record NamedRow(string Name);
     private static UiSession Create(Element root) => new(root, new Surface(), new(400, 480));
     private sealed class Declaration<TView>(Action<IViewStyleBuilder<TView>> configure) : IViewStyle<TView> where TView : View
     { public void Configure(IViewStyleBuilder<TView> styles) => configure(styles); }

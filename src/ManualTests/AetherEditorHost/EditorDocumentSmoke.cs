@@ -7,6 +7,7 @@ using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.UI.Hierarchy;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Diagnostics;

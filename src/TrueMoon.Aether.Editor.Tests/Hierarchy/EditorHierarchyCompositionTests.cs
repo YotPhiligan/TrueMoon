@@ -41,11 +41,12 @@ public sealed class EditorHierarchyCompositionTests
         Assert.Equal(HierarchyFixture.Parent, second.Tree.SelectedId); Assert.Equal("2", test.Transform.Fields[0].Value);
         ui1.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed); Assert.False(test.Owner.Commands.Read().Closed);
         model.Select(HierarchyFixture.Child); Assert.True(model.Move(HierarchyFixture.Child, null)); ui2.Update();
-        Assert.Null(second.Tree.Items.Single(item => item.Id == HierarchyFixture.Child).ParentId); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
+        var secondTree = second.Tree;
+        Assert.Null(secondTree.Items.Single(item => item.Id == HierarchyFixture.Child).ParentId); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         app.Dispose();
         Assert.Throws<ObjectDisposedException>(model.Refresh); Assert.False(second.IsDisposed); Assert.True(test.Owner.Commands.Read().Closed);
         Assert.Equal(1, test.Owner.Authoring.Products[0].Disposals);
-        ui2.Dispose(); app.Dispose(); Assert.True(second.Tree.IsDisposed); Assert.Equal(2, style.Configurations);
+        ui2.Dispose(); app.Dispose(); Assert.True(secondTree.IsDisposed); Assert.Equal(2, style.Configurations);
     }
 
     [Theory]

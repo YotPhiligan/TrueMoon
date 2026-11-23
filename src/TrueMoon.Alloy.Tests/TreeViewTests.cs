@@ -16,6 +16,36 @@ public sealed class TreeViewTests
     ];
 
     [Fact]
+    public void FluentSelectionHandlersKeepRegistrationOrderAndAreRetainedAcrossReattachment()
+    {
+        var calls = new List<(int Handler, string? Selection)>();
+        var tree = new TreeView();
+        var configured = tree
+            .OnSelectionChanged(id => calls.Add((1, id)))
+            .OnSelectionChanged(id => calls.Add((2, id)));
+        Assert.Same(tree, configured);
+        tree.SetItems(Graph());
+
+        var parent = new Panel().WithChildren(tree);
+        using var ui = Create(parent);
+        ui.Update();
+        tree.Select("root");
+        tree.Select("root");
+        Assert.Equal(new (int, string?)[] { (1, "root"), (2, "root") }, calls);
+
+        Assert.True(parent.Items.Remove(tree));
+        parent.Items.Add(tree);
+        ui.Update();
+        tree.Select(null);
+        Assert.Equal(new (int, string?)[] { (1, "root"), (2, "root"), (1, null), (2, null) }, calls);
+
+        ui.Dispose();
+        Assert.True(tree.IsDisposed);
+        Assert.Throws<ObjectDisposedException>(() => tree.OnSelectionChanged(_ => { }));
+        Assert.Equal(4, calls.Count);
+    }
+
+    [Fact]
     public void SetItems_FreezesCallerDataAndFlattensUnorderedHierarchyBySiblingOrder()
     {
         using var tree = new TreeView();
@@ -336,7 +366,7 @@ public sealed class TreeViewTests
     {
         var tree = new TreeView { MoveEnabled = true, ReorderEnabled = true }; tree.SetItems(Graph()); tree.SetExpanded("root", true);
         using var ui = Create(tree); ui.Update(); var placements = new List<TreePlacement>(); var moves = new List<TreeMove>();
-        tree.PlacementRequested += placements.Add; tree.MoveRequested += moves.Add;
+        tree.OnPlacementRequested(placements.Add).OnMoveRequested(moves.Add);
         var source = Row(tree, "other"); var target = Row(tree, "sibling");
         ui.HandleInput(new(InputKind.PointerDown, source.X + 80, source.Y + 12));
         Assert.True(ui.HandleInput(new(InputKind.PointerMove, target.X + 80, target.Y + offset)).PointerCaptured);

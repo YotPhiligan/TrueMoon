@@ -1,4 +1,5 @@
 ﻿using TrueMoon.Aether.Editor.Tests.Documents;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Editor.UI.Hierarchy;
@@ -33,6 +34,74 @@ public sealed class EditorHierarchyViewTests
     }
 
     [Fact]
+    public void NamedHierarchyParts_PreserveStylesAndRoutedFocusInsideAnotherView()
+    {
+        const string searchName = "Search", treeName = "Tree", nameEditorName = "NameEditor";
+        using var test = new HierarchyFixture();
+        var hierarchy = new EditorHierarchyView(test.Model, new EditorHierarchyViewStyle());
+        var host = new PartHost();
+        var outerSearch = new TextBox().Named(searchName);
+        var outerTree = new TreeView().Named(treeName);
+        var outerNameEditor = new TextBox().Named(nameEditorName);
+        host.SetContent(new Panel().WithChildren(outerSearch, outerTree, outerNameEditor, hierarchy));
+        using var ui = DocumentUiFixture.Ui(host);
+        ui.Update();
+
+        var search = hierarchy.GetRequiredPart<TextBox>(searchName);
+        var tree = hierarchy.GetRequiredPart<TreeView>(treeName);
+        var nameEditor = hierarchy.GetRequiredPart<TextBox>(nameEditorName);
+        var title = hierarchy.GetRequiredPart<Text>("Title");
+        var actions = hierarchy.GetRequiredPart<HStack>("Actions");
+        var searchRow = hierarchy.GetRequiredPart<HStack>("SearchRow");
+        Assert.Same(title, hierarchy.Title);
+        Assert.Same(actions, hierarchy.Actions);
+        Assert.Same(searchRow, hierarchy.SearchRow);
+        Assert.Same(hierarchy.Search, search);
+        Assert.Same(hierarchy.Tree, tree);
+        Assert.Same(hierarchy.NameEditor, nameEditor);
+        Assert.Same(outerSearch, host.GetRequiredPart<TextBox>(searchName));
+        Assert.Same(outerTree, host.GetRequiredPart<TreeView>(treeName));
+        Assert.Same(outerNameEditor, host.GetRequiredPart<TextBox>(nameEditorName));
+        Assert.Equal("Поиск по имени или ID · Enter следующее совпадение", search.AccessibleName);
+        Assert.Equal("Обозреватель сущностей", tree.AccessibleName);
+        Assert.Equal("Имя сущности", nameEditor.AccessibleName);
+        Assert.Equal(0, search.MinWidth);
+        Assert.Equal(0, nameEditor.MinWidth);
+        Assert.True(tree.ReorderEnabled);
+        Assert.Equal(156, search.Width);
+        Assert.Equal(24, tree.RowHeight);
+        Assert.Equal(new Thickness(2, 0, 2, 0), nameEditor.Padding);
+        Assert.True(float.IsNaN(outerSearch.Width));
+        Assert.Equal(13, title.FontSize);
+        Assert.Equal(4, actions.Spacing);
+        Assert.Equal(4, searchRow.Spacing);
+
+        ui.Focus(tree);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F, Control: true));
+        Assert.True(search.IsFocused);
+        Assert.False(outerSearch.IsFocused);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape));
+        Assert.True(tree.IsFocused);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F2));
+        ui.Update();
+        Assert.True(nameEditor.IsFocused);
+        Assert.False(outerNameEditor.IsFocused);
+
+        ui.SetTheme(Theme.Light);
+        hierarchy.WithViewStyle(new EditorHierarchyViewStyle());
+        ui.Update();
+        Assert.True(nameEditor.IsFocused);
+        Assert.Same(nameEditor, hierarchy.NameEditor);
+        Assert.Equal(new Thickness(2, 0, 2, 0), nameEditor.Padding);
+        Assert.Same(title, hierarchy.Title);
+        Assert.Same(actions, hierarchy.Actions);
+        Assert.Same(searchRow, hierarchy.SearchRow);
+        Assert.Equal(13, title.FontSize);
+        Assert.Equal(4, actions.Spacing);
+        Assert.Equal(4, searchRow.Spacing);
+    }
+
+    [Fact]
     public void View_ThemeStyleAndRepeatedRefreshPreserveRetainedPartsExpansionSelectionAndFocus()
     {
         using var test = new HierarchyFixture();
@@ -47,6 +116,182 @@ public sealed class EditorHierarchyViewTests
         test.Transform.Fields[0].Value = "44"; test.Model.Refresh(); ui.Update();
         Assert.False(view.Tree.MoveEnabled); Assert.False(view.RootButton.IsEnabled); Assert.Equal("Завершите правку свойств перед переносом", view.Hint.Value);
         test.Transform.Cancel(); test.Model.Refresh(); ui.Update(); Assert.True(view.Tree.MoveEnabled); Assert.True(view.RootButton.IsEnabled);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DataContextSwap_RetainsFocusedEditorAndDiscardsPreviousModelUpdates(bool rename)
+    {
+        using var previous = new HierarchyFixture();
+        using var next = new HierarchyFixture();
+        previous.Model.SearchText = "previous search";
+        next.Model.SearchText = "next search";
+        if (rename)
+        {
+            next.Model.Select(HierarchyFixture.Parent);
+            Assert.True(previous.Model.BeginRename());
+            Assert.True(next.Model.BeginRename());
+            previous.Model.RenameText = "previous draft";
+            next.Model.RenameText = "next draft";
+        }
+
+        var view = EditorHierarchyView.Create(previous.Model, new EditorHierarchyViewStyle());
+        using var ui = DocumentUiFixture.Ui(view);
+        ui.Update();
+        var editor = rename ? view.NameEditor : view.Search;
+        ui.Focus(editor);
+        Assert.True(editor.IsFocused);
+        Assert.Equal(rename ? "previous draft" : "previous search", editor.Value);
+        previous.Model.SearchText = "queued search";
+        if (rename) previous.Model.RenameText = "queued draft";
+        Assert.Equal(rename ? "previous draft" : "previous search", editor.Value);
+
+        view.DataContext = next.Model;
+        Assert.Same(editor, rename ? view.NameEditor : view.Search);
+        Assert.True(editor.IsFocused);
+        Assert.Equal(rename ? "next draft" : "next search", editor.Value);
+        ui.Update();
+        Assert.True(editor.IsFocused);
+        Assert.Equal(rename ? "next draft" : "next search", editor.Value);
+
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        ui.HandleInput(new(InputKind.Text, Text: "edited in next"));
+        Assert.Equal("edited in next", rename ? next.Model.RenameText : next.Model.SearchText);
+        Assert.Equal("queued search", previous.Model.SearchText);
+        if (rename)
+        {
+            Assert.Equal("queued draft", previous.Model.RenameText);
+            Assert.NotNull(view.Tree.GetItemBounds(HierarchyFixture.Parent));
+            Assert.Equal(view.Tree.GetItemBounds(HierarchyFixture.Parent)!.Value.Y, editor.Bounds.Y);
+            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
+            Assert.Equal(1, next.Owner.Document.Read().Content!.UndoCount);
+            Assert.Equal(0, previous.Owner.Document.Read().Content!.UndoCount);
+            Assert.True(view.Tree.IsFocused);
+        }
+    }
+
+    [Fact]
+    public void ContextObserver_ResumesWithCurrentSelectionAndCommandAfterDetach()
+    {
+        using var previous = new HierarchyFixture();
+        using var next = new HierarchyFixture();
+        var view = EditorHierarchyView.Create(previous.Model, new EditorHierarchyViewStyle());
+        var root = new Panel().WithChildren(view);
+        using var ui = DocumentUiFixture.Ui(root);
+        ui.Update();
+        Assert.Equal(HierarchyFixture.Child, view.Tree.SelectedId);
+
+        previous.Model.Select(HierarchyFixture.Parent);
+        Assert.True(root.Items.Remove(view));
+        view.DataContext = next.Model;
+        root.Items.Add(view);
+        ui.Update();
+        Assert.Equal(HierarchyFixture.Child, view.Tree.SelectedId);
+        Assert.True(view.RootButton.IsEnabled);
+
+        DocumentUiFixture.Click(ui, view.RootButton);
+        ui.Update();
+        Assert.Null(next.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].ParentId);
+        Assert.Equal(DocumentData.Parent, previous.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].ParentId);
+    }
+
+    [Fact]
+    public void Search_RevealsCollapsedOffscreenMatchAndRetainsScrollAcrossThemeAndStyleChanges()
+    {
+        var scene = DocumentData.Scene();
+        var parent = scene.Entities.Single(entity => entity.Id == DocumentData.Parent);
+        var child = scene.Entities.Single(entity => entity.Id == DocumentData.Child);
+        var siblings = Enumerable.Range(1, 12)
+            .Select(index => new EntityInstance(new(DocumentData.Id(100 + index)), DocumentData.Hidden))
+            .ToArray();
+        using var test = new HierarchyFixture(new SceneDocument(scene.Id, scene.Revision,
+            [.. siblings, new EntityInstance(parent.Id, parent.DefinitionId, parent.Changes, null, parent.Name, siblings.Length), child],
+            scene.Definitions, scene.Schemas));
+        test.Model.Select(siblings[0].Id.Value.ToString("D"));
+
+        var view = new EditorHierarchyView(test.Model, new EditorHierarchyViewStyle());
+        using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(250, 200));
+        ui.Update();
+        ui.Focus(view.Tree);
+        Assert.Null(view.Tree.GetItemBounds(HierarchyFixture.Child));
+        Assert.False(view.Tree.IsExpanded(HierarchyFixture.Parent));
+        Assert.Equal(0, view.Scroll.Offset);
+        var clip = view.Scroll.ChildClipBounds;
+        Assert.True(clip.Height >= view.Tree.RowHeight);
+        var parentRow = view.Tree.GetItemBounds(HierarchyFixture.Parent)!.Value;
+        Assert.True(parentRow.Y >= clip.Y + clip.Height);
+
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F, Control: true));
+        Assert.True(view.Search.IsFocused);
+        ui.HandleInput(new(InputKind.Text, Text: HierarchyFixture.Child));
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
+        ui.Update();
+        ui.Update();
+        Assert.Equal(HierarchyFixture.Child, view.Tree.SelectedId);
+        Assert.True(view.Tree.IsExpanded(HierarchyFixture.Parent));
+        Assert.True(view.Search.IsFocused);
+        var revealedOffset = view.Scroll.Offset;
+        Assert.True(revealedOffset > 0);
+        var row = view.Tree.GetItemBounds(HierarchyFixture.Child)!.Value;
+        Assert.InRange(row.Y, clip.Y, clip.Y + clip.Height - row.Height);
+
+        var x = clip.X + clip.Width / 2;
+        var y = clip.Y + clip.Height / 2;
+        Assert.True(ui.HandleInput(new(InputKind.Wheel, x, y, WheelDelta: 1)).Handled);
+        ui.Update();
+        Assert.True(view.Scroll.Offset < revealedOffset);
+        Assert.True(ui.HandleInput(new(InputKind.Wheel, x, y, WheelDelta: -1)).Handled);
+        ui.Update();
+        Assert.Equal(revealedOffset, view.Scroll.Offset);
+
+        ui.SetTheme(Theme.Light);
+        view.WithViewStyle(new EditorHierarchyViewStyle());
+        ui.Update();
+        Assert.Equal(revealedOffset, view.Scroll.Offset);
+        Assert.True(view.Tree.IsExpanded(HierarchyFixture.Parent));
+        Assert.True(view.Search.IsFocused);
+
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape));
+        ui.Update();
+        Assert.Empty(view.Search.Value);
+        Assert.True(view.Tree.IsFocused);
+        Assert.Equal(HierarchyFixture.Child, view.Tree.SelectedId);
+    }
+
+    [Fact]
+    public void View_HeaderAndScrollKeepTheirSlotsWhenViewportShrinks()
+    {
+        using var test = new HierarchyFixture();
+        var view = new EditorHierarchyView(test.Model, new EditorHierarchyViewStyle());
+        using var ui = DocumentUiFixture.Ui(view);
+        AssertGeometry(250, 200);
+        var headerWithoutFullGap = (int)MathF.Ceiling(view.RootButton.DesiredSize.Width + view.Padding.Horizontal + 2);
+        AssertGeometry(headerWithoutFullGap, 160);
+        AssertGeometry(160, 115);
+        AssertGeometry(40, 100);
+
+        void AssertGeometry(int width, int height)
+        {
+            ui.Resize(new(width, height));
+            ui.Update();
+            var area = view.Layout.Bounds;
+            var headerHeight = Math.Min(area.Height, Math.Max(view.Title.DesiredSize.Height, view.RootButton.DesiredSize.Height));
+            var buttonWidth = Math.Min(area.Width, view.RootButton.DesiredSize.Width);
+            Assert.Equal(new Rect(area.X, area.Y, Math.Max(0, area.Width - buttonWidth - 4), headerHeight), view.Title.Bounds);
+            Assert.Equal(new Rect(area.X + area.Width - buttonWidth, area.Y, buttonWidth, headerHeight), view.RootButton.Bounds);
+
+            var spacing = view.Layout.Get(UiProperties.Spacing);
+            var bottom = area.Y + area.Height;
+            var actionsY = Math.Min(bottom, view.Caption.Bounds.Y + view.Caption.Bounds.Height + spacing);
+            Assert.Equal(new Rect(area.X, actionsY, area.Width, Math.Min(bottom - actionsY, view.Actions.DesiredSize.Height)), view.Actions.Bounds);
+            var searchY = Math.Min(bottom, view.Actions.Bounds.Y + view.Actions.Bounds.Height + spacing);
+            Assert.Equal(new Rect(area.X, searchY, area.Width, Math.Min(bottom - searchY, view.SearchRow.DesiredSize.Height)), view.SearchRow.Bounds);
+            var rowsHeight = view.Caption.DesiredSize.Height + view.Actions.DesiredSize.Height + view.SearchRow.DesiredSize.Height
+                + view.Hint.DesiredSize.Height + 5 * spacing;
+            var scrollY = area.Y + Math.Min(area.Height, headerHeight + rowsHeight);
+            Assert.Equal(new Rect(area.X, scrollY, area.Width, area.Y + area.Height - scrollY), view.Scroll.Bounds);
+        }
     }
 
     [Fact]
@@ -95,10 +340,11 @@ public sealed class EditorHierarchyViewTests
     {
         using var test = new HierarchyFixture();
         var view = new EditorHierarchyView(test.Model, new EditorHierarchyViewStyle()); var ui = DocumentUiFixture.Ui(view); ui.Update();
-        var initial = view.Tree.Items.ToArray(); ui.Dispose();
-        Assert.True(view.IsDisposed); Assert.True(view.Tree.IsDisposed); Assert.True(view.Scroll.IsDisposed);
+        var tree = view.Tree; var initial = tree.Items.ToArray(); ui.Dispose();
+        Assert.True(view.IsDisposed); Assert.True(tree.IsDisposed); Assert.True(view.Scroll.IsDisposed);
+        Assert.Throws<ObjectDisposedException>(() => { _ = view.Tree; });
         Assert.True(test.Model.Move(HierarchyFixture.Child, null));
-        Assert.Equal(initial, view.Tree.Items); Assert.Null(test.Model.Items.Single(item => item.Id == HierarchyFixture.Child).ParentId);
+        Assert.Equal(initial, tree.Items); Assert.Null(test.Model.Items.Single(item => item.Id == HierarchyFixture.Child).ParentId);
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Equal(0, test.Owner.Authoring.Products[0].Disposals);
         test.Transform.Fields[0].Value = "52"; test.Transform.Apply(); Assert.Equal(52, DocumentData.X(test.Owner.Document.Read().Content!));
     }
@@ -109,14 +355,22 @@ public sealed class EditorHierarchyViewTests
     public void StyleFailure_DisposesUnpublishedTreeAndPreservesBorrowedModelsAndPrimaryException(bool cleanupFailure)
     {
         using var test = new HierarchyFixture(); var failure = new IOException("hierarchy style failed"); var cleanup = new IOException("hierarchy cleanup failed");
-        EditorHierarchyView unpublished = null!; var resource = new Resource(cleanupFailure ? cleanup : null);
-        var error = Record.Exception(() => new EditorHierarchyView(test.Model, new FailingStyle(view => { unpublished = view; view.Own(resource); }, failure)));
+        EditorHierarchyView unpublished = null!; TreeView unpublishedTree = null!;
+        var resource = new Resource(cleanupFailure ? cleanup : null);
+        var error = Record.Exception(() => new EditorHierarchyView(test.Model, new FailingStyle(view =>
+        {
+            unpublished = view;
+            unpublishedTree = view.Tree;
+            view.Own(resource);
+        }, failure)));
         if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, cause => Assert.Same(failure, cause), cause => Assert.Same(cleanup, cause));
         else Assert.Same(failure, error);
-        Assert.Equal(1, resource.Disposals); Assert.True(unpublished.IsDisposed); Assert.True(unpublished.Tree.IsDisposed); Assert.True(unpublished.Scroll.IsDisposed);
+        Assert.Equal(1, resource.Disposals); Assert.True(unpublished.IsDisposed); Assert.True(unpublishedTree.IsDisposed); Assert.True(unpublished.Scroll.IsDisposed);
         test.Model.Select(HierarchyFixture.Parent); Assert.Equal(HierarchyFixture.Parent, test.Workspace.SelectedId); Assert.False(test.Owner.Commands.Read().Closed);
         Assert.True(test.Model.Move(HierarchyFixture.Child, null)); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
     }
+
+    private sealed class PartHost : View { }
 
     private sealed class FailingStyle(Action<EditorHierarchyView> capture, Exception error) : IViewStyle<EditorHierarchyView>
     {

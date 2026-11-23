@@ -77,6 +77,67 @@ public sealed class LayoutTests
         Assert.Equal(new Size(30, 20), stack.DesiredSize);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void StackFill_SharesFiniteRemainderAndMeasuresNaturallyWhenUnbounded(bool vertical)
+    {
+        var fixedChild = new SizedElement(30, 30);
+        var first = new SizedElement(10, 10).Fill();
+        var second = new SizedElement(10, 10).Fill();
+        using StackBase stack = vertical ? VStack.Create(fixedChild, first, second) : HStack.Create(fixedChild, first, second);
+        stack.Spacing = 5;
+        Assert.Collection(stack.Children,
+            child => Assert.Same(fixedChild, child),
+            child => Assert.Same(first, child),
+            child => Assert.Same(second, child));
+        Assert.All(stack.Children, child => Assert.Same(stack, child.Parent));
+
+        stack.Measure(new Size(100, 100), TextLayout);
+        Assert.Equal(vertical ? new Size(100, 30) : new Size(30, 100), first.Available);
+        Assert.Equal(first.Available, second.Available);
+        stack.Arrange(new Rect(0, 0, 100, 100));
+        Assert.Equal(vertical ? new Rect(0, 35, 100, 30) : new Rect(35, 0, 30, 100), first.Bounds);
+        Assert.Equal(vertical ? new Rect(0, 70, 100, 30) : new Rect(70, 0, 30, 100), second.Bounds);
+
+        first.IsVisible = false;
+        stack.Measure(new Size(100, 100), TextLayout);
+        stack.Arrange(new Rect(0, 0, 100, 100));
+        Assert.Equal(default, first.Bounds);
+        Assert.Equal(vertical ? new Rect(0, 35, 100, 65) : new Rect(35, 0, 65, 100), second.Bounds);
+
+        stack.Measure(vertical ? new Size(100, float.PositiveInfinity) : new Size(float.PositiveInfinity, 100), TextLayout);
+        Assert.Equal(vertical ? new Size(30, 45) : new Size(45, 30), stack.DesiredSize);
+        Assert.Equal(vertical ? new Size(100, float.PositiveInfinity) : new Size(float.PositiveInfinity, 100), second.Available);
+
+        stack.Measure(new Size(20, 20), TextLayout);
+        stack.Arrange(new Rect(0, 0, 20, 20));
+        Assert.Equal(new Rect(0, 0, 20, 20), fixedChild.Bounds);
+        Assert.Equal(vertical ? new Rect(0, 20, 20, 0) : new Rect(20, 0, 0, 20), second.Bounds);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void StackFactory_RejectsAnOwnedChildAndReleasesEarlierChildren(bool vertical)
+    {
+        using var first = new SizedElement(10, 10);
+        var owned = new SizedElement(20, 20);
+        using var owner = new Panel().WithChildren(owned);
+
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            using StackBase invalid = vertical ? VStack.Create(first, owned) : HStack.Create(first, owned);
+        });
+
+        Assert.Null(first.Parent);
+        Assert.False(first.IsDisposed);
+        Assert.Same(owner, owned.Parent);
+        Assert.Same(owned, Assert.Single(owner.Children));
+        using StackBase stack = vertical ? VStack.Create(first) : HStack.Create(first);
+        Assert.Same(first, Assert.Single(stack.Children));
+    }
+
     [Fact]
     public void Panel_ChildrenSharePaddedSlot_DesiredSizeUsesMaximum()
     {

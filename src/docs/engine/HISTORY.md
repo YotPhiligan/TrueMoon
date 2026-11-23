@@ -17172,3 +17172,553 @@ Debug EXE открыл проект и сцену из другого рабоч
 Playing с поколениями RuntimeChild 1 и 2. Каждое нажатие Stop вернуло Stopped.
 Ссылки на результаты зафиксированы в `verification.json`. Отладчик IDE и
 горячая смена standalone-сессии остаются открытыми.
+
+<a id="uia1f1-hierarchy-view-2026-11-22"></a>
+## 2026-11-22 — UIA1f.1. Fluent-композиция обозревателя
+
+В версии `1.2611.22.8-alpha` сборка `EditorHierarchyView` описана одним
+деревом в конструкторе. Состояние, подписки и геометрия inline rename
+используют прежние контракты. Layout называет свои части и выделяет
+прокрутке остаток высоты. Публичные свойства сохраняют доступ к тем же
+контролам, которые созданы в дереве.
+
+На Windows x64, SDK 11.0.100, `net11.0`, VSTest и xUnit 2 прошли по
+84 теста иерархии в каждой конфигурации, без отказов и пропусков.
+Запуск со штатным restore встретил отказ доступа к пользовательскому
+`NuGet.Config`. Финальные сборки и тесты использовали существующие
+восстановленные зависимости.
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy'
+```
+
+Новый сценарий использует маршрутизируемый ввод и Skia CPU raster в
+`UiSession` на 250×200. Он проверяет раскрытие свёрнутой ветви и прокрутку
+до найденной строки, колесо, сохранение позиции и фокуса при смене темы
+и стиля, очистку поиска и возврат фокуса по Escape. Отдельные тесты
+проверяют переименование по F2, положение поля в строке, commit и cancel.
+TRX и логи сохранены в `TestResults/UIA1f1-20261122-163344`.
+Нативный оконный профиль и попиксельное сравнение в этот прогон не входили.
+
+<a id="uia1f2-fill-command-2026-11-22"></a>
+## 2026-11-22 — UIA1f.2. Распределение места и привязка команд
+
+В `1.2611.22.9-alpha` проверены два потребителя на `UiSession`.
+В обозревателе проверены границы заголовка и кнопки при разной ширине,
+включая промежуток, который не помещается целиком, и остаток высоты
+для прокрутки. Прежние сценарии поиска, inline rename, фокуса и команд прошли.
+В консоли подтверждены равные колонки с прежним промежутком и расположением
+между шапкой и нижними строками. Проверены изменение режима, доступность
+и выполнение «Очистить вид» с клавиатуры и прежние сценарии консоли.
+
+В Alloy проверены обе оси, скрытые части, сжатие и неограниченное измерение,
+а также повторная проверка `CanExecute` перед активацией, повторный attach,
+отписка и устаревшие уведомления. Использованы Windows x64, SDK 11.0.100,
+`net11.0`, VSTest и уже восстановленные пакеты. В каждой конфигурации
+прошли 1 232 теста Alloy и 170 тестов иерархии и диагностики Editor.
+
+```powershell
+foreach ($mode in @('Release', 'Debug')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Diagnostics'
+}
+```
+
+Логи и TRX находятся в `TestResults/UIA1f2-20261122-165301`.
+Проверки включают геометрию в логических координатах и маршрутизируемый
+ввод. Нативное окно и попиксельное сравнение в эту приёмку не входили.
+
+<a id="uia1f2a-fluent-events-2026-11-22"></a>
+## 2026-11-22 — UIA1f.2a. Fluent-подписки TreeView
+
+В `1.2611.22.10-alpha` обозреватель подключает выбор, перенос и
+позиционирование строк в Fluent-дереве. Консоль подключает выбор события.
+Методы добавляют обработчики к существующим событиям `TreeView`.
+Тест Alloy подтвердил порядок вызова, отсутствие повтора для того же
+выбора и сохранение одной регистрации при detach и повторном attach.
+Существующий тест размещения использует новые Fluent-вызовы.
+
+Windows x64, SDK 11.0.100, `net11.0`, VSTest. Прошли по 49 тестов
+`TreeViewTests` и 170 тестов Editor в каждой конфигурации.
+
+```powershell
+foreach ($mode in @('Release', 'Debug')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.TreeViewTests'
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Diagnostics'
+}
+```
+
+TRX и логи находятся в `TestResults/UIA1f2a-20261122-170534`.
+Приёмка охватывает логику событий и маршрутизируемый ввод. Нативное окно
+и отдельная упаковка в прогон не входили.
+
+<a id="uia1f2b-viewmodel-observer-2026-11-22"></a>
+## 2026-11-22 — UIA1f.2b. Fluent-подписка консоли на ViewModel
+
+В `1.2611.22.11-alpha` `EditorDiagnosticsView` использует
+`ObservePropertyChanged` с начальной синхронизацией при каждом подключении.
+В тесте с реальной ViewModel после detach в её событии нет подписчиков.
+При переносе в другую `UiSession` и повторном подключении в ней число
+подписчиков совпадает с первоначальным. Новые строки и подпись экспорта,
+изменённые во время detach, появляются после reattach. Уведомления
+о режиме из старой очереди и из захваченного до detach списка обработчиков
+не сбрасывают прокрутку, а свежее уведомление в текущем подключении сбрасывает.
+
+Тесты Alloy подтвердили порядок доставки на UI owner thread и очистку
+после ошибки начальной синхронизации, включая повторное подключение
+внутри неё. Windows x64, SDK 11.0.100, `net11.0`, VSTest.
+Прошли по 30 тестов привязок Alloy и 171 тесту Editor в Debug и Release.
+
+```powershell
+foreach ($mode in @('Release', 'Debug')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.PropertyBindingTests'
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Diagnostics|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy'
+}
+```
+
+TRX и логи находятся в `TestResults/UIA1f2b-20261122-172001`.
+Профиль охватывает attachment, очередь и состояние консоли в `UiSession`.
+Нативное окно и отдельная упаковка в прогон не входили.
+
+<a id="uia1f3-named-parts-2026-11-23"></a>
+## 2026-11-23 — UIA1f.3. Именованные части обозревателя
+
+В `1.2611.23.1-alpha` `EditorHierarchyView` объявляет `Search`, `Tree`
+и `NameEditor` через `.Named(nameof(...))`. После принятия дерева
+типизированные свойства получают найденные экземпляры. Тест помещает
+обозреватель во внешний View с теми же тремя именами и проверяет поиск
+частей, параметры стиля, маршрутизируемые `Ctrl+F`, `Escape`, `F2`
+и сохранение фокуса после смены темы и стиля.
+
+Тесты Alloy проверили вложенные области, отсутствующее имя и неверный тип,
+дубликаты до мутации, перенос, замену и удаление, а также предварительную
+проверку при замене заголовка, popup и строк `BindItems`.
+На Windows x64, SDK 11.0.100, `net11.0`, VSTest прошли по 1 240 тестов
+Alloy и 172 теста Editor в Debug и Release.
+
+```powershell
+foreach ($mode in @('Release', 'Debug')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Diagnostics'
+}
+```
+
+TRX и логи находятся в `TestResults/UIA1f3-20261123-065013`.
+Профиль охватывает области имён, стиль и маршрутизируемый ввод в `UiSession`.
+Нативное окно и отдельная упаковка в прогон не входили.
+
+<a id="uia1f4a-fluent-setters-2026-11-23"></a>
+## 2026-11-23 — UIA1f.4a. Генерируемые Fluent-сеттеры обозревателя
+
+В `1.2611.23.2-alpha` атрибут `[FluentSetter]` включает генерацию
+`.AccessibleName()`, `.MinWidth()` и `.ReorderEnabled()` в Argentis.
+`EditorHierarchyView` использует методы для `Search`, `Tree` и
+`NameEditor`. Тест `NamedHierarchyParts_PreserveStylesAndRoutedFocusInsideAnotherView`
+проверяет заданные имена, минимальные ширины и разрешённый перенос вместе
+со стилем, областями имён и маршрутизируемым фокусом. В профиль вошли
+поиск за пределами viewport, раскрытие ветви, сохранение прокрутки, перенос
+строк с клавиатуры и мышью, принятие и отмена переименования.
+
+На Windows x64, SDK 11.0.100, `net11.0`, VSTest прошло по 86 тестов
+иерархии с нулём ошибок и пропусков в Debug и Release.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy' -p:EmitCompilerGeneratedFiles=true
+}
+dotnet pack TrueMoon.Argentis/TrueMoon.Argentis.csproj -c Release --no-restore --no-build
+```
+
+Отдельный клиент с `/langversion:13` скомпилирован и запущен через .NET 11.
+Он подтвердил тот же экземпляр и конкретный тип, присваивания и
+`ArgumentOutOfRangeException` для отрицательной минимальной ширины.
+Компиляции с генератором подтвердили отсутствие метода у свойства без
+атрибута, nullable-параметр, тип наследника, `ARG001` для private setter
+и `CS0111` для дублирующего ручного расширения. В локальном `.nupkg`
+проверены версия, `lib/net11.0/TrueMoon.Argentis.dll` и отсутствие ссылки
+на генератор в manifest.
+
+TRX, логи, исходники compiler probes и пакет находятся в
+`TestResults/UIA1f4a-20261123-072006`. Restore и pack потребовали запуска
+с расширенными правами после отказов песочницы при чтении `NuGet.Config`
+и записи `nuspec`. Осталось предупреждение Roslyn `RS1041` для analyzer
+с целью `net11.0`, как у существующих генераторов фреймворка.
+Инспекция Rider в открытой solution вернула `Method, delegate, or event is expected`
+на новых цепочках. Обновление проекта и навигация в IDE не подтверждены.
+Профиль проходил через `UiSession`, нативное окно не запускалось.
+
+<a id="uia1f4b-fluent-events-factory-2026-11-23"></a>
+## 2026-11-23 — UIA1f.4b. Fluent-события и статическая фабрика TreeView
+
+В `1.2611.23.3-alpha` `[FluentEvent]` генерирует адаптеры выбора,
+переноса и позиционирования строк для `TreeView`. Адаптеры проверяют
+аргументы и доступ к контролу, подписываются на существующее CLR-событие
+и возвращают тот же контрол. События очищаются в `TreeView.Dispose`.
+Обозреватель объявляет дерево через `TreeView.Create()` и поля через
+имеющееся `TextBox.Create()`.
+
+На Windows x64, SDK 11.0.100, `net11.0`, VSTest прошли по 49 тестов `TreeView`
+и по 172 теста иерархии и диагностики Editor в Debug и Release. По всем
+прогонам ошибок и пропусков нет. Проверены порядок регистрации, detach и
+reattach, запрет подписки после Dispose, позиционирование с мыши и клавиатуры,
+состояние обозревателя и выбор строки диагностики. Debug-сборка полной solution
+прошла с 227 предупреждениями и нулём ошибок. Roslyn выдаёт `RS1041` для
+анализатора с целью `net11.0`.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.TreeViewTests' -p:EmitCompilerGeneratedFiles=true
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Diagnostics' -p:EmitCompilerGeneratedFiles=true
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore -v quiet -clp:ErrorsOnly
+```
+
+Клиент C# 13 успешно собран с именованными параметрами `tree` и `handler`
+против прежней и новой сборок. Тот же клиент, изначально собранный против
+ручных расширений версии `1.2611.23.2-alpha`, запущен с новой сборкой без
+перекомпиляции. Отдельный клиент C# 14 подтвердил, что статическое расширение
+создаёт независимые контролы с настройками конструктора. Режим C# 13 выдаёт
+`CS9260` на вызове `TreeView.Create()`. Генератор сохраняет тип наследника
+и nullable-аннотацию параметра события, генерирует методы только по атрибуту и
+выдаёт `ARG002` на статическом CLR-событии с этим атрибутом.
+
+TRX, логи и исходники compiler probes находятся в
+`TestResults/UIA1f4b-20261123-075621`. Профиль проверки интерфейса использовал
+`UiSession`. Навигация в Rider остаётся отдельным вопросом.
+
+<a id="uia1f4c-typed-bindings-2026-11-23"></a>
+## 2026-11-23 — UIA1f.4c. Типизированные привязки Search и NameEditor
+
+В `1.2611.23.4-alpha` `[FluentTwoWayBinding]` на `TextBox.ValueProperty`
+генерирует `BindValueTwoWay<TSource>(source, selector)`. Расширение
+использует штатный `BindTwoWay` с `TextBox.ValueProperty`. В обозревателе
+`Search` связывается с `SearchText`, а `NameEditor` с `RenameText`.
+
+В Debug и Release прошли по 41 тесту `TwoWayBindingTests` и по 86 тестов
+иерархии Editor. Во всех прогонах ошибок и пропусков нет. Тесты
+`Search_RevealsCollapsedOffscreenMatchAndRetainsScrollAcrossThemeAndStyleChanges`
+и `Rename_EnterCommitsUnicodeAndUndoRedoPreserveSelectionAndStableControls`
+проверили оба контрола с маршрутизируемым вводом через `UiSession`.
+Профиль переименования также проверяет отмену при смене фокуса или владельца
+и сохранение черновика при ошибке валидации. Тесты привязок покрыли повторное
+подключение, старые уведомления, дубликаты и восстановление после ошибок.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.TwoWayBindingTests' -p:EmitCompilerGeneratedFiles=true
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy' -p:EmitCompilerGeneratedFiles=true
+}
+```
+
+На SDK `11.0.100` компилятор подтвердил `LangVersion=latest (15.0)`.
+Отдельные компиляции подтвердили генерацию только по атрибуту, возвращаемый
+тип наследника, nullable-сигнатуру, `ARG003` для изменяемого поля и поля
+другого типа и ошибку компиляции для `int`-селектора у `TextBox`.
+В сборке генератора сохраняется `RS1041` для analyzer с целью `net11.0`.
+
+TRX, логи и исходники compiler probes находятся в `TestResults/UIA1f4c-20261123-081522`.
+
+<a id="uia1f4d-typed-styles-2026-11-23"></a>
+## 2026-11-23 — UIA1f.4d. Типизированное правило стиля TreeView
+
+В `1.2611.23.5-alpha` `TypedPart` возвращает `ViewStyleRule<TElement>` с
+типом выбранной части и делегирует регистрацию штатному `Part`.
+`[FluentStyleProperty]` генерирует `RowHeight` и `Indent` из полей
+`UiProperty<float>` с перегрузками для прямого значения и функции от темы.
+Стиль обозревателя использует обе сгенерированные операции через `Set`.
+
+В Debug и Release прошли по 66 тестов Alloy, из них 25 тестов стилей
+и 41 тест двусторонних привязок, и по 86 тестов иерархии Editor. Ошибок и
+пропусков нет. `GeneratedTreeStyle_PreservesRuleOrderPrecedenceAndThemeRefresh`
+проверил порядок правил, приоритет локальных значений и стиля элемента,
+пересчёт темы, сохранение экземпляра и снятие стиля.
+`TypedPart_RejectsNestedTreeAndKeepsActiveStyles` проверил, что неудачная
+попытка выбрать контрол вложенного View сохраняет активные стили обоих View.
+Профиль Editor проверил сохранение поведения в `UiSession`.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.ViewStyleTests|FullyQualifiedName~TrueMoon.Alloy.Tests.TwoWayBindingTests' -p:EmitCompilerGeneratedFiles=true
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy' -p:EmitCompilerGeneratedFiles=true
+}
+```
+
+На SDK `11.0.100` внешний клиент с C# 15 скомпилировал цепочку для
+`TreeView`. Компилятор выдал `CS1929` на вызове `RowHeight` для
+`TextBox`. Компиляции с генератором подтвердили opt-in, сохранение
+nullable-аннотации и типа наследника, а также `ARG004` для изменяемого поля.
+Предупреждение анализатора Roslyn `RS1041` для `net11.0` сохраняется.
+
+TRX, логи и исходники compiler probes находятся в `TestResults/UIA1f4d-20261123-082552`.
+
+<a id="uia1f4e-generated-parts-2026-11-23"></a>
+## 2026-11-23 — UIA1f.4e. Генерируемый доступ к именованным частям
+
+В `1.2611.23.6-alpha` `[GenerateViewParts]` генерирует
+`EditorHierarchyViewParts` с extension properties `Search`, `Tree` и
+`NameEditor`. Имена задаются константами в прямых вызовах `Named` в
+конструкторе. Тип берётся из результата Fluent-вызова. Свойства вызывают
+`GetRequiredPart<T>` и разрешают текущий экземпляр в области живого View.
+Генерация работает с обычными классами. Рукописное разделение обозревателя
+на два файла использует `partial` для дерева и поведения.
+
+Обозреватель снимает подписку с исходного `NameEditor`, захваченного при
+подключении. Проверки освобождения в тестах читают сохранённые ссылки на
+контролы. Потребители расширений в Editor Host и пакетном GUI получили
+импорт `TrueMoon.Aether.Editor.UI.Hierarchy`. Именованные проверки используют
+строки вместо `nameof` на extension property, которое компилятор отклоняет
+с `CS9316`. Анализатор подключён при сборке `Editor.UI`. Его сборка
+отсутствует в `Editor.UI.deps.json` в обеих конфигурациях.
+
+В Debug и Release прошли по 297 тестов Editor, из них 86 по иерархии и 211
+по инспектору, и по 25 тестов стилей Alloy. Ошибок и пропусков нет.
+`NamedHierarchyParts_PreserveStylesAndRoutedFocusInsideAnotherView`
+проверил одноимённые части, фокус и повторное применение стиля.
+`ViewDisposal_UnsubscribesUiAndPreservesBorrowedModelTransformAndDocument`
+проверил освобождение и контракт доступа к части после Dispose. Прогон включает
+проверки поиска, клавиатурного и мышиного переноса, переименования и
+освобождения при ошибке построения стиля.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Inspector' -p:EmitCompilerGeneratedFiles=true
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.ViewStyleTests' -p:EmitCompilerGeneratedFiles=true
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore -v quiet -clp:ErrorsOnly
+```
+
+Полная Debug-сборка прошла с нулём ошибок и 46 предупреждениями. После
+отказа песочницы при записи `apphost.exe` и DLL повтор выполнен с
+расширенными правами. Анализатор Roslyn выдаёт `RS1041` для `net11.0`.
+
+На SDK `11.0.100` отдельный клиент C# 15 собран и запущен с двумя обычными
+View. Одноимённые части остались независимыми, замена контента меняет
+результат доступа, а класс без атрибута не получил расширений. Отдельная
+компиляция подтвердила `ARG005–ARG008` для неподдерживаемого View, имени,
+дубликата и коллизии с существующим членом.
+
+TRX, логи и исходники compiler probes находятся в `TestResults/UIA1f4e-20261123-084848`.
+
+<a id="uia1f6-build-content-2026-11-23"></a>
+## 2026-11-23 — UIA1f.6. Подготовка дерева View в фабрике
+
+Модель и команды обозревателя инициализируются в конструкторе. DI-фабрика
+вызывает `ViewCreation.Prepare` после конструктора. Этот вызов регистрирует
+именованные части, выполняет `OnContentPrepared()` и применяет стиль.
+Потребители публичного конструктора `EditorHierarchyView(model, style)`
+используют тот же механизм подготовки. Сгенерированные части продолжают
+получаться из реестра живого View.
+
+На Windows x64, SDK `11.0.100`, `net11.0`, C# 15 и `runtime-async=on`,
+версия `1.2611.23.7-alpha`, в Debug и Release прошли по 28 тестов Alloy
+и 306 тестов Editor, без падений и пропусков. Новые тесты подтвердили порядок
+подготовки, однократное построение, сохранение явно заданного корня и очистку
+при отказе принять дерево. В Editor прошли проверки поиска в свёрнутых ветвях,
+прокрутки, фокуса, стиля, переименования и создания через оба DI-провайдера.
+Debug-сборка solution завершилась с 0 ошибок и 227 предупреждениями.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~ViewStyleTests'
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~Hierarchy|FullyQualifiedName~Inspector' -p:EmitCompilerGeneratedFiles=true
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore
+```
+
+Компиляция с анализатором подтвердила три варианта генерации для обычных
+классов: прямой override без атрибута, override с оставшимся атрибутом
+без дублирования результата и opt-in из конструктора. Для `EditorHierarchyView`
+проверены файлы с `Search`, `Tree` и `NameEditor` в обеих конфигурациях.
+TRX, логи и исходники проверок находятся в `TestResults/UIA1f6-20261123-200212`.
+
+<a id="uia1f7-context-bindings-2026-11-23"></a>
+## 2026-11-23 — UIA1f.7. Перепривязка к DataContext
+
+`Bind`, `BindTwoWay`, `BindText` и сгенерированный `BindValueTwoWay` получили
+перегрузки с `IDataContext<TData>` и `Expression`. `View<TData>` и `Window<TData>`
+реализуют уведомление `DataContextChanged`. Собственные реализации интерфейса
+должны вызывать его после замены источника на UI owner thread. Явные перегрузки
+с фиксированной моделью сохранены. Перепривязка срабатывает на текущих
+контролах. `EditorHierarchyView` использует актуальный источник для привязок,
+команд, выбора и геометрии редактора имени.
+
+На Windows x64, SDK `11.0.100`, `net11.0`, C# 15, `runtime-async=on`,
+версия `1.2611.23.8-alpha`, в Debug и Release прошли по 158 тестов Alloy
+и 308 тестов Editor, без падений и пропусков. Полная Debug-сборка solution
+завершилась с 0 ошибок и 227 предупреждениями.
+
+- `DataContextSwap_RetainsFocusedEditorAndDiscardsPreviousModelUpdates` проверил
+  `Search` и `NameEditor` в отдельных сценариях. Контролы сохранили фокус и
+  идентичность, старые уведомления не перезаписали значения, ввод изменил новый
+  источник. Для переименования проверены геометрия строки новой модели и запись
+  в историю её документа по Enter.
+- `ContextBindings_DiscardQueuedAndInFlightNotificationsAfterRoundTrip`
+  проверил обе формы `Expression` с контекстом вне View. A → B → A
+  выбрасывает прежнюю очередь и захваченный старый обработчик.
+- `ContextBindings_DetachAndNullSuspendWritesUntilLatestSourceIsAvailable`
+  подтвердил паузу при null, отписку при detach и dispose, чтение последнего
+  контекста и ровно одну подписку при reattach.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~PropertyBindingTests|FullyQualifiedName~TwoWayBindingTests|FullyQualifiedName~WindowComponentTests|FullyQualifiedName~ViewStyleTests'
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~Hierarchy|FullyQualifiedName~Inspector' -p:EmitCompilerGeneratedFiles=true
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore
+```
+
+TRX и логи находятся в `TestResults/UIA1f7-20261123-201855`.
+
+<a id="uia1f8-layout-reduction-2026-11-23"></a>
+## 2026-11-23 — UIA1f.8. Короткие фабрики стеков и именованные строки
+
+`HStack.Create(params Element[] children)` и `VStack.Create(params Element[] children)`
+собирают стек в порядке аргументов через обычное владение элементами. Если
+добавление ребёнка не удалось, ранее принятые дети освобождаются от владения
+неопубликованным стеком. Обозреватель использует короткую фабрику для трёх
+строк. `Title`, `Actions` и `SearchRow` объявлены через `Named`, стиль
+обращается к ним через свойства-расширения. Потребителям, скомпилированным
+со старыми экземплярными свойствами, нужна пересборка с новой `Editor.UI`.
+
+На Windows x64, SDK `11.0.100`, `net11.0`, C# 15, `runtime-async=on`,
+версия `1.2611.23.9-alpha`, прошли по 43 теста Alloy и 308 тестов Editor
+в Debug и Release. Ошибок и пропусков нет. Полная Debug-сборка завершилась
+с 0 ошибок и 227 предупреждениями.
+
+- `StackFill_SharesFiniteRemainderAndMeasuresNaturallyWhenUnbounded` проверил
+  оба стека, порядок и владение детьми, а также расчёт остатка по каждой оси.
+  `StackFactory_RejectsAnOwnedChildAndReleasesEarlierChildren` проверил очистку.
+- `View_HeaderAndScrollKeepTheirSlotsWhenViewportShrinks` проверил шапку,
+  панель действий, строку поиска и область прокрутки на четырёх размерах панели.
+- `NamedHierarchyParts_PreserveStylesAndRoutedFocusInsideAnotherView` сверил
+  все три сгенерированные части, размер шрифта, отступы и фокус после смены темы
+  и повторного применения стиля. Проверен сгенерированный C# для обеих сборок.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~LayoutTests|FullyQualifiedName~ViewStyleTests'
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~Hierarchy|FullyQualifiedName~Inspector' -p:EmitCompilerGeneratedFiles=true
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore
+```
+
+TRX и логи находятся в `TestResults/UIA1f8-20261123-203538`.
+
+<a id="uia1f9-context-actions-2026-11-23"></a>
+## 2026-11-23 — UIA1f.9. Команды и наблюдение за DataContext
+
+`WithCommand(context, selector)` подключает готовую команду текущей модели.
+Селектор выполняется при attach и смене модели. Команда остаётся заимствованной.
+`ObservePropertyChanged(context, handler, synchronize)` выполняет синхронизацию
+при подключении и смене модели, а уведомления доставляет через очередь UI.
+Обе перегрузки освобождают прежнее подключение при замене источника и detach.
+Обозреватель перешёл на этот наблюдатель. Селектор команды протестирован
+через клавиатурный ввод `UiSession`. Обозреватель использует общий каталог
+команд для кнопок, меню и клавиатуры.
+
+Первый прогон обнаружил закрытие только что открытого контекстного меню
+уведомлением о выборе его строки. Исправлена проверка актуальности снимка
+меню, исходный тест прошёл при повторном прогоне.
+
+На Windows x64, SDK `11.0.100`, `net11.0`, C# 15, `runtime-async=on`,
+версия `1.2611.23.10-alpha`, прошли по 76 тестов Alloy и 402 теста Editor
+в Debug и Release. Ошибок и пропусков нет. Полная Debug-сборка завершилась
+с 0 ошибок и 227 предупреждениями.
+
+- `ButtonCommand_FollowsCurrentContextAndDiscardsOldAvailabilityNotifications`
+  подтвердил доступность и ввод в текущую команду, отсутствие обращений от
+  прежнего подключения при A → B → A, недоступность при null и снятие подписок.
+- `ObservePropertyChanged_ReconnectsContextAndRejectsPreviousSourcesAndAttachments`
+  подтвердил порядок подключения, очистку и отбрасывание отложенных событий.
+- `ContextObserver_ResumesWithCurrentSelectionAndCommandAfterDetach` подтвердил
+  выделение и кнопку переноса в корень после смены модели на отсоединённом
+  обозревателе. Команда изменила только документ текущей модели.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~ControlInteractionTests|FullyQualifiedName~PropertyBindingTests'
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~Hierarchy|FullyQualifiedName~Diagnostics|FullyQualifiedName~Inspector'
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore
+```
+
+Обновлённый пример `truemoon-ui` скомпилирован с анализатором Argentis.
+Генератор создал пять свойств частей из `BuildContent()`. Ссылки в скилле
+и примере проверены. TRX, логи и исходник примера находятся в
+`TestResults/UIA1f9-20261123-205143`.
+
+<a id="uia1f10-diagnostics-view-2026-11-23"></a>
+## 2026-11-23 — UIA1f.10. Fluent-композиция консоли диагностики
+
+DI-фабрика готовит консоль через `ViewCreation.Prepare`. Консоль объявляет
+дерево в `BuildContent()`, использует текущую модель для привязок, действий,
+выбора, уведомлений и наблюдения за поверхностью при экспорте. При reattach
+консоль перечитывает текущий режим и доступность команд. При неизменном
+режиме пауза сохраняет прокрутку.
+
+В обеих сборках проверены 27 сгенерированных свойств частей. Кнопка
+`ClearButton` имеет совместимый getter `Clear` из-за коллизии имени
+с базовым `Element.Clear<T>`. Другие прежние экземплярные getters
+заменены свойствами-расширениями. Для уже скомпилированных потребителей
+нужна пересборка с новой `Editor.UI`.
+
+- `Console_ResizeKeepsEqualColumnsAndClearUsesModeAdmission` проверил
+  деление доступной ширины поровну, зазор 8 и вертикальные границы. Размеры
+  1280×360 и 720×215 прошли с фиксированными текстовыми метриками,
+  1280×360 и 720×360 — с CPU raster Skia.
+- `RefreshFilterAndTheme_PreserveControlsFocusSelectionAndPausedScroll`
+  подтвердил фокус поля, выбор события и детали при фильтрации и смене темы.
+- `ModelSubscription_DetachesResynchronizesAndRejectsOldConsoleNotifications`
+  подтвердил сохранение прокрутки на паузе, снятие подписки и отбрасывание
+  отложенных уведомлений старого подключения.
+- `DataContextSwap_RetainsFocusedFilterAndClearTargetsCurrentModelAfterReattach`
+  проверил ввод и выбор через `UiSession`, переключение доступности очистки
+  при reattach и очистку только текущего представления. Журнал источника
+  сохранил запись.
+
+В `1.2611.23.11-alpha`, Windows x64, SDK `11.0.100`, `net11.0`, C# 15,
+`runtime-async=on` прошли по 221 тесту Editor в Debug и Release.
+Полная Debug-сборка завершилась с 0 ошибок и 227 предупреждениями.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $mode --no-restore -p:EmitCompilerGeneratedFiles=true --filter 'FullyQualifiedName~Diagnostics|FullyQualifiedName~Hierarchy|FullyQualifiedName~EditorConfigurationMigrationTests'
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore
+```
+
+TRX и логи находятся в `TestResults/Diagnostics-Fluent-20261123-213750`.
+
+<a id="uia1f-delivery-2026-11-23"></a>
+## 2026-11-23 — UIA1f. Итоговая регрессия
+
+На `1.2611.23.11-alpha` проверены оба экрана, фабричная подготовка View,
+именование частей, привязки и наблюдение за текущим контекстом.
+Завершённое исследование [UIA1f.4f](../alloy/HISTORY.md#uia1f4f-style-generation-study-2026-11-23)
+фиксирует выбор типизированных C# стилей и границы полной генерации.
+
+Первый полный прогон выявил четыре падения тестов фабрик стеков.
+Поиск `Create` только по имени стал неоднозначен после добавления перегрузок.
+Тесты выбирают фабрику, вызываемую без аргументов. Отдельные тесты layout
+проверяют перегрузки с детьми, их порядок и владение.
+
+| Проект | Debug | Release |
+| --- | ---: | ---: |
+| Alloy.Tests | 1251 | 1251 |
+| Alloy.Hosting.Tests | 171 | 171 |
+| Aether.Editor.Tests | 1537 | 1537 |
+
+Windows x64, SDK `11.0.100`, `net11.0`, C# 15, `runtime-async=on`,
+xUnit 2/VSTest. В итоговом прогоне ошибок и пропусков нет.
+Сборка `TrueMoon.slnx` в Debug прошла.
+`TestResults/UIA1f-Delivery-20261123-223518` содержит TRX и логи.
+
+```powershell
+foreach ($mode in @('Debug', 'Release')) {
+    foreach ($project in @('TrueMoon.Alloy.Tests', 'TrueMoon.Alloy.Hosting.Tests', 'TrueMoon.Aether.Editor.Tests')) {
+        dotnet test "$project/$project.csproj" -c $mode --no-restore
+    }
+}
+dotnet build TrueMoon.slnx -c Debug --no-restore
+```

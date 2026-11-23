@@ -45,6 +45,7 @@ public sealed partial class OverlayHost : ElementList, IUiInputObserver, IUiFram
         if (!float.IsFinite(anchor.X) || !float.IsFinite(anchor.Y) || !float.IsFinite(anchor.Width) || !float.IsFinite(anchor.Height) || anchor.Width < 0 || anchor.Height < 0)
             throw new ArgumentOutOfRangeException(nameof(anchor));
         ValidateChild(popup);
+        FindStyleOwner()?.ValidatePartChanges([popup], _popup == null ? [] : [_popup]);
         if (!ReferenceEquals(popup, _validationPopup)) CancelValidationHint();
         Close(false);
         _owner = owner; _anchor = anchor; _context = context; _returnFocus = returnFocus; _tooltip = tooltip;

@@ -41,6 +41,124 @@ public sealed class ControlInteractionTests
     }
 
     [Fact]
+    public void ButtonCommand_RechecksAdmissionAndReconnectsWithoutLeakingTheBorrowedCommand()
+    {
+        var command = new CountingCommand();
+        var button = Button.Simple("command").WithCommand(command);
+        Assert.False(button.IsEnabled);
+        Assert.Equal(0, command.Subscribers);
+        Assert.Throws<InvalidOperationException>(() => button.WithCommand(command));
+
+        var root = new Panel().WithChildren(button);
+        using var ui = Create(root);
+        ui.Update();
+        Assert.Equal(1, command.Subscribers);
+        command.SetAvailable(true);
+        ui.Update();
+        Assert.True(button.IsEnabled);
+
+        ui.HandleInput(new UiInput(InputKind.PointerDown, 20, 20));
+        command.SetAvailable(false);
+        // Availability was queued for the next update. Releasing now must still check the command.
+        ui.HandleInput(new UiInput(InputKind.PointerUp, 20, 20));
+        Assert.Equal(0, command.Executions);
+        ui.Update();
+        Assert.False(button.IsEnabled);
+
+        command.SetAvailable(true);
+        Assert.True(root.Items.Remove(button));
+        Assert.Equal(0, command.Subscribers);
+        ui.Update();
+        Assert.False(button.IsEnabled);
+        root.Items.Add(button);
+        ui.Update();
+        Assert.True(button.IsEnabled);
+        Assert.Equal(1, command.Subscribers);
+        ui.Focus(button);
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Enter));
+        ui.HandleInput(new UiInput(InputKind.KeyUp, Key: UiKey.Enter));
+        ui.HandleInput(new UiInput(InputKind.PointerDown, 20, 20));
+        ui.HandleInput(new UiInput(InputKind.PointerUp, 20, 20));
+        Assert.Equal(2, command.Executions);
+
+        ui.Dispose();
+        Assert.Equal(0, command.Subscribers);
+        command.Execute();
+        Assert.Equal(3, command.Executions);
+    }
+
+    [Fact]
+    public void ButtonCommand_FollowsCurrentContextAndDiscardsOldAvailabilityNotifications()
+    {
+        var old = new CountingCommand();
+        var next = new CountingCommand();
+        old.SetAvailable(true);
+        next.SetAvailable(true);
+        var first = new CommandData(old);
+        var context = new CommandContext { DataContext = first };
+        var button = Button.Simple("command").WithCommand(context, data => data.Command);
+        context.SetContent(button);
+        using var ui = Create(context);
+        ui.Update();
+        Assert.True(button.IsEnabled);
+        Assert.Equal(1, old.Subscribers);
+
+        var inFlight = old.CaptureNotification();
+        old.SetAvailable(false);
+        context.DataContext = new CommandData(next);
+        Assert.Equal(0, old.Subscribers);
+        Assert.Equal(1, next.Subscribers);
+        Assert.True(button.IsEnabled);
+        ui.Focus(button);
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Enter));
+        ui.HandleInput(new UiInput(InputKind.KeyUp, Key: UiKey.Enter));
+        Assert.Equal(0, old.Executions);
+        Assert.Equal(1, next.Executions);
+
+        old.SetAvailable(true);
+        context.DataContext = first;
+        var reads = old.AvailabilityReads;
+        inFlight();
+        ui.Update();
+        Assert.Equal(reads, old.AvailabilityReads);
+        Assert.Equal(0, next.Subscribers);
+        Assert.True(button.IsEnabled);
+
+        context.DataContext = null;
+        Assert.False(button.IsEnabled);
+        Assert.Equal(0, old.Subscribers);
+        context.SetContent(null);
+        context.DataContext = new CommandData(next);
+        Assert.Equal(0, next.Subscribers);
+        context.SetContent(button);
+        ui.Update();
+        Assert.Equal(1, next.Subscribers);
+        Assert.True(button.IsEnabled);
+        ui.Dispose();
+        Assert.Equal(0, next.Subscribers);
+    }
+
+    private sealed record CommandData(IUiCommand Command);
+    private sealed class CommandContext : View<CommandData>;
+
+    private sealed class CountingCommand : IUiCommand
+    {
+        private bool _available;
+        public bool CanExecute { get { AvailabilityReads++; return _available; } }
+        public int AvailabilityReads { get; private set; }
+        public int Executions { get; private set; }
+        public int Subscribers => CanExecuteChanged?.GetInvocationList().Length ?? 0;
+        public event Action? CanExecuteChanged;
+        public void Execute() => Executions++;
+        public Action CaptureNotification() => CanExecuteChanged ?? (() => { });
+        public void SetAvailable(bool value)
+        {
+            _available = value;
+            CanExecuteChanged?.Invoke();
+        }
+    }
+
+    [Fact]
     public void Button_NonprimaryPointerAndHalfOpenReleaseEdgeDoNotActivate()
     {
         var clicks = 0; var button = new Button("action").Width(100).Height(40).OnClick(() => clicks++);

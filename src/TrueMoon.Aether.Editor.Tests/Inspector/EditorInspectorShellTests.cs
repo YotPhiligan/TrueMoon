@@ -54,7 +54,7 @@ public sealed class EditorInspectorShellTests
         Assert.Equal("pending ECS", Assert.IsType<RichTextEditor>(inspector.Properties[(DocumentData.Custom, "text")].Input).Text);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Z, Control: true)); Refresh();
         Assert.False(test.Owner.Document.Read().IsDirty); Assert.Equal(DocumentData.Text, test.Property(DocumentData.Custom, "text").Value);
-        ui.SetTheme(Theme.Light); ui.Update(); Assert.Same(inspector, view.Inspector); Assert.Same(tree, view.Hierarchy.Tree);
+        ui.SetTheme(Theme.Light); ui.Update(); Assert.Same(inspector, view.Inspector); Assert.Same(tree, view.Hierarchy!.Tree);
         ui.Dispose(); Assert.True(inspector.IsDisposed); Assert.False(test.Owner.Commands.Read().Closed);
         Assert.True(test.Model.CanChangeComponents);
 

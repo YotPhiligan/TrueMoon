@@ -10,6 +10,7 @@ public sealed class TextBox : Element
     public static TextBox Create() => new();
 
     /// <summary>The editable string.</summary>
+    [FluentTwoWayBinding]
     public static readonly UiProperty<string> ValueProperty = new("Value", "", Invalidation.Layout, v => v != null && !v.Contains('\r') && !v.Contains('\n'));
     /// <summary>Requests single-line shaping when the renderer provides rich text layout and drawing.</summary>
     public static readonly UiProperty<bool> UseShapedTextProperty = new("UseShapedText", false, Invalidation.Layout);

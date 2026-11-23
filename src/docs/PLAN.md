@@ -174,6 +174,14 @@ Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии
 production consumer — Aether.Editor. DI/owner-thread factory route сохранён;
 новых межмодульных dependencies это изменение не добавляет.
 
+23.11.2026 завершён [UIA1f](alloy/PLAN.md#uia1f-minimal-view-authoring) на
+[обозревателе и диагностике](engine/EDITOR_PLAN.md#ed4c-view-authoring-pilot).
+Штатный подход для новых и целенаправленно обновляемых View использует
+`BuildContent()`, типизированные именованные части, привязки и команды
+текущего `DataContext`. Общие правила и примеры собраны в
+[truemoon-ui](../../.agents/skills/truemoon-ui/SKILL.md). Решение по стилям
+зафиксировано в [UIA1f.4f](alloy/PLAN.md#uia1f4f-style-generation-study).
+
 ### Window UIA2 и engine consumer — обновлено 2026-11-04
 
 [Window/Window<TData> UIA2](alloy/PLAN.md#uia2-window) реализованы; independent

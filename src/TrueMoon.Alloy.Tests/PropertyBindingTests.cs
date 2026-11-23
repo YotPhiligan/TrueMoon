@@ -11,6 +11,202 @@ public sealed class PropertyBindingTests
     private static UiSession Create(Element root) => new(root, new HeadlessSurface(), new UiViewport(240, 140));
 
     [Fact]
+    public void ContextBindings_DiscardQueuedAndInFlightNotificationsAfterRoundTrip()
+    {
+        var first = new Model { Value = "first" };
+        var second = new Model { Value = "second" };
+        var context = new BindingContext { DataContext = first };
+        Expression<Func<Model, string>> selector = model => model.Value;
+        var label = new Text().Bind(Text.ValueProperty, context, selector);
+        var editor = new TextBox().BindTwoWay(TextBox.ValueProperty, context, selector);
+        using var session = Create(new Panel().WithChildren(label, editor));
+        Assert.Equal(2, first.Subscribers);
+        Assert.Equal("first", editor.Value);
+
+        var inFlightFromFirst = first.CaptureNotification();
+        first.Value = "queued first";
+        context.DataContext = second;
+        Assert.Equal(0, first.Subscribers);
+        Assert.Equal(2, second.Subscribers);
+        Assert.Equal("second", label.Value);
+        Assert.Equal("second", editor.Value);
+        editor.Value = "edited second";
+        Assert.Equal("queued first", first.Value);
+        Assert.Equal("edited second", second.Value);
+
+        context.DataContext = first;
+        Assert.Equal(2, first.Subscribers);
+        Assert.Equal(0, second.Subscribers);
+        var firstReads = first.Reads;
+        var secondReads = second.Reads;
+        RunOnWorker(inFlightFromFirst);
+        session.Update();
+
+        Assert.Equal(firstReads, first.Reads);
+        Assert.Equal(secondReads, second.Reads);
+        Assert.Equal("queued first", label.Value);
+        Assert.Equal("queued first", editor.Value);
+        first.Value = "current first";
+        session.Update();
+        Assert.Equal("current first", label.Value);
+        Assert.Equal("current first", editor.Value);
+    }
+
+    [Fact]
+    public void ContextBindings_DetachAndNullSuspendWritesUntilLatestSourceIsAvailable()
+    {
+        var first = new Model { Value = "first" };
+        var second = new Model { Value = "second" };
+        var context = new BindingContext { DataContext = first };
+        using var editor = new TextBox().BindValueTwoWay(context, model => model.Value);
+        var queue = new Queue<Action>();
+        Assert.Equal(0, context.Subscribers);
+        editor.Attach(() => { }, queue.Enqueue);
+        Assert.Equal(1, context.Subscribers);
+        Assert.Equal("first", editor.Value);
+
+        context.DataContext = null;
+        Assert.Equal(0, first.Subscribers);
+        Assert.Equal("first", editor.Value);
+        editor.Value = "unsourced";
+        Assert.Equal("first", first.Value);
+        editor.Detach();
+        Assert.Equal(0, context.Subscribers);
+
+        context.DataContext = second;
+        Assert.Equal(0, second.Subscribers);
+        Assert.Equal("unsourced", editor.Value);
+        editor.Attach(() => { }, queue.Enqueue);
+        Assert.Equal(1, context.Subscribers);
+        Assert.Equal(1, second.Subscribers);
+        Assert.Equal("second", editor.Value);
+        editor.Value = "edited";
+        Assert.Equal("edited", second.Value);
+        editor.Dispose();
+        Assert.Equal(0, context.Subscribers);
+        Assert.Equal(0, second.Subscribers);
+    }
+
+    [Fact]
+    public void ObservePropertyChanged_ReconnectsContextAndRejectsPreviousSourcesAndAttachments()
+    {
+        var first = new Model();
+        var next = new Model();
+        var context = new BindingContext { DataContext = first };
+        var delivered = new List<(object? Sender, string? Property)>();
+        var synchronized = new List<Model?>();
+        var element = new Text().ObservePropertyChanged(context, (sender, args) =>
+            delivered.Add((sender, args.PropertyName)), () => synchronized.Add(context.DataContext));
+        var root = new Panel().WithChildren(element);
+        using var ui = Create(root);
+
+        var inFlight = first.CaptureNotification();
+        first.Notify("Old first");
+        context.DataContext = next;
+        Assert.Equal(0, first.Subscribers);
+        Assert.Equal(1, next.Subscribers);
+        next.Notify("Old next");
+        context.DataContext = first;
+        inFlight();
+        first.Notify("Current first");
+        ui.Update();
+        Assert.Equal(new (object?, string?)[] { (first, "Current first") }, delivered);
+
+        first.Notify("Old attachment");
+        Assert.True(root.Items.Remove(element));
+        Assert.Equal(0, context.Subscribers);
+        Assert.Equal(0, first.Subscribers);
+        context.DataContext = next;
+        Assert.Equal(0, next.Subscribers);
+        root.Items.Add(element);
+        Assert.Equal(1, context.Subscribers);
+        Assert.Equal(1, next.Subscribers);
+        next.Notify("New attachment");
+        ui.Update();
+        context.DataContext = null;
+        Assert.Equal(0, next.Subscribers);
+        Assert.Equal(new (object?, string?)[] { (first, "Current first"), (next, "New attachment") }, delivered);
+        Assert.Equal(new[] { first, next, first, next, null }, synchronized);
+    }
+
+    [Fact]
+    public void ObservePropertyChanged_DeliversOnOwnerInOrderAndDiscardsTheOldAttachment()
+    {
+        var source = new Model();
+        var root = new Panel();
+        var owner = Environment.CurrentManagedThreadId;
+        var observed = new List<(int Thread, string? Property)>();
+        var synchronizations = 0;
+        var element = new Text().ObservePropertyChanged(source,
+            (_, change) => observed.Add((Environment.CurrentManagedThreadId, change.PropertyName)),
+            () => synchronizations++);
+        using var ui = Create(root);
+        Assert.Equal(0, source.Subscribers);
+        root.Items.Add(element);
+        Assert.Equal(1, source.Subscribers);
+        Assert.Equal(1, synchronizations);
+
+        RunOnWorker(() =>
+        {
+            source.Notify("First");
+            source.Notify("Second");
+        });
+        Assert.Empty(observed);
+        ui.Update();
+        Assert.Equal(new (int, string?)[] { (owner, "First"), (owner, "Second") }, observed);
+
+        var inFlight = source.CaptureNotification();
+        source.Notify("Queued before detach");
+        Assert.True(root.Items.Remove(element));
+        Assert.Equal(0, source.Subscribers);
+        root.Items.Add(element);
+        Assert.Equal(1, source.Subscribers);
+        Assert.Equal(2, synchronizations);
+        inFlight();
+        source.Notify("Live");
+        ui.Update();
+        Assert.Equal(new (int, string?)[] { (owner, "First"), (owner, "Second"), (owner, "Live") }, observed);
+
+        ui.Dispose();
+        Assert.Equal(0, source.Subscribers);
+        Assert.Equal(2, source.Adds);
+        Assert.Equal(2, source.Removes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ObservePropertyChanged_FailedSynchronizationReleasesTheSourceAndItsQueuedNotification(bool reattach)
+    {
+        var source = new Model();
+        var deliveries = 0;
+        var synchronizations = 0;
+        var element = new Text();
+        var root = new Panel().WithChildren(element);
+        using var ui = Create(root);
+
+        var expected = new TestException();
+        var error = Assert.Throws<TestException>(() => element.ObservePropertyChanged(source, (_, _) => deliveries++, () =>
+        {
+            if (++synchronizations != 1) return;
+            source.Notify("Queued during registration");
+            if (reattach)
+            {
+                root.Items.Remove(element);
+                root.Items.Add(element);
+                source.Notify("Queued after reattachment");
+            }
+            throw expected;
+        }));
+        Assert.Same(expected, error);
+        Assert.Equal(0, source.Subscribers);
+        ui.Update();
+        Assert.Equal(0, deliveries);
+        Assert.Equal(reattach ? 2 : 1, source.Adds);
+        Assert.Equal(source.Adds, source.Removes);
+    }
+
+    [Fact]
     public void NotificationFlood_CoalescesLatestValueWithoutConsumingTheCommandQueue()
     {
         var source = new Model { Value = "initial" }; var text = new Text().BindText(source, x => x.Value);
@@ -433,6 +629,19 @@ public sealed class PropertyBindingTests
     }
 
     private sealed class TestException : Exception;
+
+    private sealed class BindingContext : IDataContext<Model>
+    {
+        private Model? _data;
+        public Model? DataContext
+        {
+            get => _data;
+            set { _data = value; DataContextChanged?.Invoke(); }
+        }
+        public int Subscribers => DataContextChanged?.GetInvocationList().Length ?? 0;
+        public event Action? DataContextChanged;
+    }
+
     private sealed class Model : INotifyPropertyChanged
     {
         private PropertyChangedEventHandler? _changed;

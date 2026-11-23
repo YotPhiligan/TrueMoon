@@ -38,8 +38,12 @@ public class ContentControl : Element
     {
         VerifyTreeAccess();
         if (ReferenceEquals(content, _content)) return;
-        if (content != null) ValidateChild(content);
         var previous = _content;
+        if (content != null)
+        {
+            ValidateChild(content);
+            FindStyleOwner()?.ValidatePartChanges([content], previous == null ? [] : [previous]);
+        }
         using var change = new TreeChange(this, previous, content);
         _content = content;
         _children = content == null ? [] : [content];

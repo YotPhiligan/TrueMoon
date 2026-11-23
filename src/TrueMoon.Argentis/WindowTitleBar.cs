@@ -51,8 +51,12 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
     public void SetHeader(Element? header)
     {
         VerifyAccess(); if (ReferenceEquals(_header, header)) return;
-        if (header != null) ValidateChild(header);
         var previous = _header;
+        if (header != null)
+        {
+            ValidateChild(header);
+            FindStyleOwner()?.ValidatePartChanges([header], previous == null ? [] : [previous]);
+        }
         if (previous != null) Items.Remove(previous);
         _header = header;
         if (header != null) Add(header);

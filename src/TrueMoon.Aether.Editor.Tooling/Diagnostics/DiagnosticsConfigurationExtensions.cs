@@ -44,7 +44,8 @@ public static class DiagnosticsConfigurationExtensions
             services.Singleton<EditorDiagnosticsViewModel>(r => new(r.TryResolve<IDiagnosticRecordReader>(), snapshot, r.Resolve<EditorDiagnosticReportWriter>(),
                 r.TryResolve<IDiagnosticHealthReader>(), r.TryResolve<IProcessDiagnosticsSource>(), r.TryResolve<ISourceFileNavigator>()));
             if (!services.Exist<IFactory<EditorDiagnosticsView>>()) services.Singleton<IFactory<EditorDiagnosticsView>>(r =>
-                new Factory<EditorDiagnosticsView>(() => new(r.Resolve<EditorDiagnosticsViewModel>(), r.Resolve<IViewStyle<EditorDiagnosticsView>>())));
+                new Factory<EditorDiagnosticsView>(() =>
+                    EditorDiagnosticsView.Create(r.Resolve<EditorDiagnosticsViewModel>(), r.Resolve<IViewStyle<EditorDiagnosticsView>>())));
             services.Singleton<IStoppable>(r => new DiagnosticsLifetime(r.Resolve<EditorDiagnosticsViewModel>()));
         });
         return context;

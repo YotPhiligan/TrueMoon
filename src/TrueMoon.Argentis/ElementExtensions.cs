@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 namespace TrueMoon.Argentis;
 
 /// <summary>Fluent composition and configuration helpers.</summary>
-public static class ElementExtensions
+public static partial class ElementExtensions
 {
     /// <summary>Binds an empty container to the latest collection contents, preserving rows by object reference.</summary>
     /// <param name="element">The container whose children are exclusively managed by this binding.</param>
@@ -56,6 +56,15 @@ public static class ElementExtensions
     { element.Backdrop = material; return element; }
     /// <summary>Sets a typed property.</summary>
     public static T SetValue<T, TValue>(this T element, UiProperty<TValue> property, TValue value) where T : Element { element.Set(property, value); return element; }
+    /// <summary>Names an unowned, unattached element in the nearest view's part scope.</summary>
+    /// <remarks>Names use ordinal comparison. A nested View begins its own scope, including its root name.</remarks>
+    public static T Named<T>(this T element, string name) where T : Element
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        element.SetPartName(name);
+        return element;
+    }
     /// <summary>Binds a typed UI property to one directly selected source property until element disposal.</summary>
     /// <param name="element">The element, preserving its concrete type in the Fluent chain.</param>
     /// <param name="property">The destination UI property; only one binding per property is allowed.</param>
@@ -90,6 +99,33 @@ public static class ElementExtensions
         element.OwnBinding(property, () => new PropertyBinding<TSource, TValue>(element, property, source, selector, twoWay: true));
         return element;
     }
+
+    /// <summary>Binds a UI property to the currently selected property of a notifying data context.</summary>
+    /// <remarks>While attached, a context replacement reads the new source immediately. A null context suspends the binding and retains the current UI value.</remarks>
+    public static T Bind<T, TData, TValue>(this T element, UiProperty<TValue> property,
+        IDataContext<TData> context, Expression<Func<TData, TValue>> selector)
+        where T : Element where TData : class, INotifyPropertyChanged =>
+        BindContext(element, property, context, selector, twoWay: false);
+
+    /// <summary>Binds a UI property in both directions to a writable property of the current data context.</summary>
+    /// <remarks>Only the current source receives edits. Detach and context replacement disconnect the old source and fence its queued notifications.</remarks>
+    public static T BindTwoWay<T, TData, TValue>(this T element, UiProperty<TValue> property,
+        IDataContext<TData> context, Expression<Func<TData, TValue>> selector)
+        where T : Element where TData : class, INotifyPropertyChanged =>
+        BindContext(element, property, context, selector, twoWay: true);
+
+    private static T BindContext<T, TData, TValue>(T element, UiProperty<TValue> property,
+        IDataContext<TData> context, Expression<Func<TData, TValue>> selector, bool twoWay)
+        where T : Element where TData : class, INotifyPropertyChanged
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(property);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(selector);
+        element.OwnBinding(property, () => new PropertyBinding<TData, TValue>(element, property, null, selector, twoWay, context));
+        return element;
+    }
+
     /// <summary>Binds plain text to a directly selected notifying source property.</summary>
     /// <param name="element">The text element.</param>
     /// <param name="source">The notifying source.</param>
@@ -97,6 +133,9 @@ public static class ElementExtensions
     /// <returns>The same concrete text element.</returns>
     public static T BindText<T, TSource>(this T element, TSource source, Expression<Func<TSource, string>> selector)
         where T : Text where TSource : class, INotifyPropertyChanged => element.Bind(Text.ValueProperty, source, selector);
+    /// <summary>Binds plain text to a directly selected property of the current data context.</summary>
+    public static T BindText<T, TData>(this T element, IDataContext<TData> context, Expression<Func<TData, string>> selector)
+        where T : Text where TData : class, INotifyPropertyChanged => element.Bind(Text.ValueProperty, context, selector);
     /// <summary>Applies arbitrary strongly typed configuration.</summary>
     public static T Configure<T>(this T element, Action<T> configure) where T : Element { configure(element); return element; }
     /// <summary>Applies internal spacing.</summary>
@@ -113,8 +152,84 @@ public static class ElementExtensions
     public static T Background<T>(this T element, Color color) where T : Element { element.Background = color; return element; }
     /// <summary>Adds child elements in paint order.</summary>
     public static T WithChildren<T>(this T element, params Element[] children) where T : ElementList { foreach (var child in children) element.Items.Add(child); return element; }
+    /// <summary>Lets the child share a stack's remaining space equally with its other visible fill children.</summary>
+    /// <remarks>During measurement an unbounded axis uses natural sizes. The arranged slot observes the child's own size and alignment rules.</remarks>
+    public static T Fill<T>(this T element, bool enabled = true) where T : Element =>
+        element.SetValue(StackBase.FillProperty, enabled);
     /// <summary>Assigns replaceable content.</summary>
     public static T Content<T>(this T element, Element? content) where T : ContentControl { element.SetContent(content); return element; }
     /// <summary>Registers a button action.</summary>
     public static T OnClick<T>(this T element, Action action) where T : Button { element.Click += action; return element; }
+    extension(TreeView)
+    {
+        /// <summary>Creates a fresh, unowned tree using its default settings.</summary>
+        public static TreeView Create() => new();
+    }
+
+    /// <summary>Observes a borrowed source's property notifications while the element is attached.</summary>
+    /// <remarks>Notifications are delivered in queue order on the UI owner thread. Synchronization runs on each attachment after subscribing.</remarks>
+    public static T ObservePropertyChanged<T>(this T element, INotifyPropertyChanged source,
+        PropertyChangedEventHandler handler, Action? synchronize = null) where T : Element
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(handler);
+        return OwnObserver(element, () => new AttachmentPropertyObserver(element, source, handler, synchronize));
+    }
+
+    /// <summary>Observes property notifications from the current notifying data context while attached.</summary>
+    /// <remarks>Notifications are queued on the UI owner thread. Synchronization runs at attach and on context replacement, including null.</remarks>
+    public static T ObservePropertyChanged<T, TData>(this T element, IDataContext<TData> context,
+        PropertyChangedEventHandler handler, Action? synchronize = null)
+        where T : Element where TData : class, INotifyPropertyChanged
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(handler);
+        return OwnObserver(element, () => new AttachmentDataContext<TData>(element, context,
+            (source, current) => new AttachmentPropertyObserver(element, source, handler, null, current),
+            _ => synchronize?.Invoke()));
+    }
+
+    private static T OwnObserver<T>(T element, Func<IDisposable> create) where T : Element
+    {
+        element.VerifyAccess();
+        var observer = create();
+        try { element.Own(observer); }
+        catch (Exception error)
+        {
+            try { observer.Dispose(); }
+            catch (Exception cleanup) { throw new AggregateException(error, cleanup); }
+            throw;
+        }
+        return element;
+    }
+
+    /// <summary>Connects the button to the borrowed command and binds its enabled value to command availability.</summary>
+    /// <remarks>Use one enabled binding per button. The command is observed only while attached, and the button owns cleanup.</remarks>
+    public static T WithCommand<T>(this T button, IUiCommand command) where T : Button
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(command);
+        button.OwnBinding(UiProperties.Enabled, () => new ButtonCommandBinding(button, command));
+        return button;
+    }
+
+    /// <summary>Connects the button to a borrowed command selected from the current data context.</summary>
+    /// <remarks>The selector runs on attach and context replacement. Null data or a null command disables the button.</remarks>
+    public static T WithCommand<T, TData>(this T button, IDataContext<TData> context, Func<TData, IUiCommand?> selector)
+        where T : Button where TData : class
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(selector);
+        button.OwnBinding(UiProperties.Enabled, () =>
+        {
+            if (!button.IsAttached) button.IsEnabled = false;
+            return new AttachmentDataContext<TData>(button, context,
+                (data, current) => selector(data) is { } command ? new ButtonCommandBinding(button, command, current) : null,
+                connected => { if (!connected) button.IsEnabled = false; });
+        });
+        return button;
+    }
 }

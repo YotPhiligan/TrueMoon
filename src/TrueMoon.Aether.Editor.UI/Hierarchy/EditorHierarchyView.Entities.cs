@@ -7,6 +7,7 @@ public sealed partial class EditorHierarchyView
     private readonly Dictionary<string, DelegateUiCommand> _entityCommands = new(StringComparer.Ordinal);
     private IReadOnlyList<MenuAction> _menuActions = [];
     private OverlayHost? _contextHost;
+    private Func<bool>? _contextIsCurrent;
     private bool _pendingContext, _pendingRenameFocus;
     /// <summary>Semantic role for compact hierarchy action icons.</summary>
     public static ViewStyleRole<IconButton> ActionRole { get; } = new("HierarchyAction");
@@ -14,10 +15,6 @@ public sealed partial class EditorHierarchyView
     public IReadOnlyDictionary<string, DelegateUiCommand> EntityCommands => _entityCommands;
     /// <summary>Owned fallback popup host; a surrounding editor overlay is preferred when available.</summary>
     public OverlayHost Overlays { get; private set; } = null!;
-    /// <summary>Retained object-action row.</summary>
-    public HStack Actions { get; } = HStack.Create();
-    /// <summary>Retained search row.</summary>
-    public HStack SearchRow { get; } = HStack.Create();
     /// <summary>Object creation, also available with Insert.</summary>
     public IconButton CreateButton { get; private set; } = null!;
     /// <summary>Visible cube creation.</summary>
@@ -28,23 +25,21 @@ public sealed partial class EditorHierarchyView
     public IconButton DeleteButton { get; private set; } = null!;
     /// <summary>Keyboard-accessible context actions.</summary>
     public IconButton ContextButton { get; private set; } = null!;
-    /// <summary>Single-line name/ID query; Enter navigates to the next match.</summary>
-    public TextBox Search { get; } = new();
     /// <summary>Next-match action.</summary>
     public Button FindButton { get; private set; } = null!;
     /// <inheritdoc />
     public bool NeedsFrame => _pendingContext || _pendingRenameFocus;
-    private void InitializeEntityControls()
+    private void InitializeEntityCommands()
     {
-        Add("create.empty", () => _model.CreateEntity(EditorEntityKind.Empty), () => _model.CanCreate);
-        Add("create.cube", () => _model.CreateEntity(EditorEntityKind.Cube), () => _model.CanCreate);
-        Add("create.child", () => _model.CreateEntity(EditorEntityKind.Empty, true), () => _model.CanCreate && _model.CanEditSelected);
-        Add("create.childCube", () => _model.CreateEntity(EditorEntityKind.Cube, true), () => _model.CanCreate && _model.CanEditSelected);
-        Add("duplicate", () => _model.DuplicateSelected(), () => _model.CanEditSelected);
-        Add("delete", () => _model.DeleteSelected(), () => _model.CanEditSelected);
-        Add("rename", () => { if (_model.BeginRename()) _pendingRenameFocus = true; }, () => _model.CanRename);
-        Add("root", _model.MoveToRoot, () => _model.CanMoveToRoot);
-        Add("find", _model.FindNext, () => _model.CanFindNext);
+        Add("create.empty", model => model.CreateEntity(EditorEntityKind.Empty), model => model.CanCreate);
+        Add("create.cube", model => model.CreateEntity(EditorEntityKind.Cube), model => model.CanCreate);
+        Add("create.child", model => model.CreateEntity(EditorEntityKind.Empty, true), model => model.CanCreate && model.CanEditSelected);
+        Add("create.childCube", model => model.CreateEntity(EditorEntityKind.Cube, true), model => model.CanCreate && model.CanEditSelected);
+        Add("duplicate", model => model.DuplicateSelected(), model => model.CanEditSelected);
+        Add("delete", model => model.DeleteSelected(), model => model.CanEditSelected);
+        Add("rename", model => { if (model.BeginRename()) _pendingRenameFocus = true; }, model => model.CanRename);
+        Add("root", model => model.MoveToRoot(), model => model.CanMoveToRoot);
+        Add("find", model => model.FindNext(), model => model.CanFindNext);
         _menuActions = Array.AsReadOnly(new MenuAction[]
         {
             new("create.empty", "Создать объект", _entityCommands["create.empty"], UiSymbol.Add, "Insert"),
@@ -56,33 +51,33 @@ public sealed partial class EditorHierarchyView
             new("delete", "Удалить ветвь", _entityCommands["delete"], UiSymbol.Delete, "Delete"),
             new("root", "Перенести в корень", _entityCommands["root"])
         });
-        CreateButton = BindCommand(new IconButton(UiSymbol.Add, "Создать объект · Insert").WithRole(ActionRole), "create.empty");
-        CubeButton = BindCommand(new IconButton(UiSymbol.Cube, "Создать куб").WithRole(ActionRole), "create.cube");
-        DuplicateButton = BindCommand(new IconButton(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").WithRole(ActionRole), "duplicate");
-        DeleteButton = BindCommand(new IconButton(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").WithRole(ActionRole), "delete");
-        ContextButton = new IconButton(UiSymbol.More, "Действия объекта · Shift+F10").WithRole(ActionRole);
-        foreach (var button in new[] { CreateButton, CubeButton, DuplicateButton, DeleteButton, ContextButton })
-        { button.Clear(UiProperties.Width); button.Clear(UiProperties.Height); }
-        ContextButton.OnClick(() => { _pendingContext = true; Invalidate(); });
-        Actions.WithChildren(CreateButton, CubeButton, DuplicateButton, DeleteButton, ContextButton);
-        Search.AccessibleName = "Поиск по имени или ID · Enter следующее совпадение"; Search.MinWidth = 0;
-        Search.BindTwoWay(TextBox.ValueProperty, _model, model => model.SearchText);
-        FindButton = BindCommand(Button.Simple("Найти"), "find");
-        SearchRow.WithChildren(Search, FindButton);
-
-        void Add(string id, Action execute, Func<bool> available) => _entityCommands.Add(id, new(execute, available));
+        void Add(string id, Action<IEditorHierarchyViewModel> execute, Func<IEditorHierarchyViewModel, bool> available) =>
+            _entityCommands.Add(id, new(
+                () => { if (DataContext is { } model) execute(model); },
+                () => DataContext is { } model && available(model)));
     }
-    private T BindCommand<T>(T button, string id) where T : Button
+
+    private static IconButton ActionIcon(UiSymbol symbol, string accessibleName)
     {
-        var command = _entityCommands[id]; button.IsEnabled = command.CanExecute;
-        void Changed() => Dispatch(() => button.IsEnabled = command.CanExecute);
-        void Execute() => command.Execute();
-        command.CanExecuteChanged += Changed; button.Click += Execute;
-        Own(new Release(() => { command.CanExecuteChanged -= Changed; button.Click -= Execute; }));
+        var button = new IconButton(symbol, accessibleName).WithRole(ActionRole);
+        button.Clear(UiProperties.Width);
+        button.Clear(UiProperties.Height);
         return button;
     }
+
+    private void RequestContext()
+    {
+        _pendingContext = true;
+        Invalidate();
+    }
+
     private void RefreshEntityCommands(string? property)
     {
+        if (string.IsNullOrEmpty(property))
+        {
+            foreach (var command in _entityCommands.Values) command.Refresh();
+            return;
+        }
         string[] ids = property switch
         {
             nameof(IEditorHierarchyViewModel.CanCreate) => ["create.empty", "create.cube", "create.child", "create.childCube"],
@@ -102,53 +97,68 @@ public sealed partial class EditorHierarchyView
     private void SynchronizeRenameFocus(IInputContext context)
     {
         if (!_pendingRenameFocus) return; _pendingRenameFocus = false;
-        if (!_model.IsRenaming) return;
+        if (DataContext is not { IsRenaming: true } model) return;
         // Input may arrive before queued bindings. Install the current draft before transferring focus.
-        NameEditor.Value = _model.RenameText; NameEditor.IsVisible = true;
-        context.Focus(NameEditor); NameEditor.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true), context);
+        var nameEditor = this.NameEditor;
+        nameEditor.Value = model.RenameText; nameEditor.IsVisible = true;
+        context.Focus(nameEditor); nameEditor.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true), context);
     }
     private bool HandleEntityInput(UiInput input, IInputContext context)
     {
-        if (input.Kind == InputKind.PointerDown && input.Button == 1 && Scroll.ChildClipBounds.Contains(input.X, input.Y) && Tree.Bounds.Contains(input.X, input.Y))
+        if (DataContext is not { } model) return false;
+        var tree = this.Tree;
+        if (input.Kind == InputKind.PointerDown && input.Button == 1 && Scroll.ChildClipBounds.Contains(input.X, input.Y) && tree.Bounds.Contains(input.X, input.Y))
         {
-            var item = Tree.VisibleItems.FirstOrDefault(item => Tree.GetItemBounds(item.Id)?.Contains(input.X, input.Y) == true);
-            context.Focus(Tree); _model.Select(item?.Id); Tree.Select(_model.SelectedId);
+            var item = tree.VisibleItems.FirstOrDefault(item => tree.GetItemBounds(item.Id)?.Contains(input.X, input.Y) == true);
+            context.Focus(tree); model.Select(item?.Id); tree.Select(model.SelectedId);
             OpenContext(context, new(input.X, input.Y, 0, 0)); return true;
         }
         if (input.Kind != InputKind.KeyDown) return false;
-        if (Search.IsFocused)
+        var search = this.Search;
+        if (search.IsFocused)
         {
             if (input.Key == UiKey.Enter) { _entityCommands["find"].Execute(); return true; }
-            if (input.Key == UiKey.Escape) { _model.SearchText = ""; context.Focus(Tree); return true; }
+            if (input.Key == UiKey.Escape) { model.SearchText = ""; context.Focus(tree); return true; }
         }
-        if (!Tree.IsFocused) return false;
-        if (input.Control && input.Key == UiKey.F) { context.Focus(Search); return true; }
+        if (!tree.IsFocused) return false;
+        if (input.Control && input.Key == UiKey.F) { context.Focus(search); return true; }
         if (input.Control && input.Key == UiKey.D) { _entityCommands["duplicate"].Execute(); return true; }
         if (input.Key == UiKey.Delete) { _entityCommands["delete"].Execute(); return true; }
         if (input.Key == UiKey.Insert) { _entityCommands[input.Control ? "create.child" : "create.empty"].Execute(); return true; }
-        if (input.Shift && input.Key == UiKey.F10) { OpenContext(context, Tree.GetItemBounds(_model.SelectedId ?? "") ?? Tree.Bounds); return true; }
+        if (input.Shift && input.Key == UiKey.F10) { OpenContext(context, tree.GetItemBounds(model.SelectedId ?? "") ?? tree.Bounds); return true; }
         return false;
     }
     private void OpenContext(IInputContext context, Rect anchor)
     {
-        CloseContext(); var host = Overlays;
+        CloseContext();
+        if (DataContext is not { } model) return;
+        var host = Overlays;
         for (var parent = Parent; parent != null; parent = parent.Parent) if (parent is OverlayHost outer) host = outer;
-        var version = _model.SnapshotVersion; var selection = _model.SelectedId;
-        bool Current() => version == _model.SnapshotVersion && selection == _model.SelectedId;
+        var contextVersion = _contextVersion;
+        var version = model.SnapshotVersion; var selection = model.SelectedId; var canMove = model.CanMove;
+        bool Current() => contextVersion == _contextVersion && version == model.SnapshotVersion &&
+            selection == model.SelectedId && canMove == model.CanMove;
         var actions = _menuActions.Select(action => action with { Command = new DelegateUiCommand(() => { if (Current()) action.Command.Execute(); }, () => Current() && action.Command.CanExecute) });
         var popup = new MenuPopup(actions, () => host.Close());
-        try { host.Open(this, popup, anchor, context, Tree); _contextHost = host; popup.FocusFirst(context); }
+        try
+        {
+            host.Open(this, popup, anchor, context, this.Tree);
+            _contextHost = host;
+            _contextIsCurrent = Current;
+            popup.FocusFirst(context);
+        }
         catch { if (popup.Parent == null && !popup.IsDisposed) popup.Dispose(); throw; }
     }
     private void CloseContext()
     {
         var host = _contextHost; _contextHost = null;
+        _contextIsCurrent = null;
         if (host is { IsDisposed: false, IsAttached: true } && ReferenceEquals(host.PopupOwner, this)) host.Close(false);
     }
     private void RequestContextClose()
     {
         var host = _contextHost; var popup = host?.Popup;
-        if (host == null || popup == null || !ReferenceEquals(host.PopupOwner, this)) return;
+        if (host == null || popup == null || !ReferenceEquals(host.PopupOwner, this) || _contextIsCurrent?.Invoke() == true) return;
         Dispatch(() => { if (ReferenceEquals(_contextHost, host) && ReferenceEquals(host.Popup, popup)) CloseContext(); });
     }
 }

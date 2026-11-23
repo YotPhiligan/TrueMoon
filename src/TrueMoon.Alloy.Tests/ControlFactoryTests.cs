@@ -30,11 +30,9 @@ public class ControlFactoryTests
     [MemberData(nameof(Factories))]
     public void Factories_DeclareConcreteReturnTypes(Type type, string name)
     {
-        var method = type.GetMethod(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
-        Assert.NotNull(method);
+        var method = DefaultFactory(type, name);
         Assert.Equal(type, method.ReturnType);
         Assert.Equal(type, method.DeclaringType);
-        Assert.All(method.GetParameters(), parameter => Assert.True(parameter.IsOptional));
     }
 
     [Theory]
@@ -42,8 +40,9 @@ public class ControlFactoryTests
     public void Factories_MatchConstructorsAndKeepIndependentLifetime(Type type, string name)
     {
         using var expected = (Element)Invoke(type.GetConstructors().Single());
-        using var first = (Element)Invoke(type.GetMethod(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)!);
-        using var second = (Element)Invoke(type.GetMethod(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)!);
+        var factory = DefaultFactory(type, name);
+        using var first = (Element)Invoke(factory);
+        using var second = (Element)Invoke(factory);
         Assert.IsType(type, first);
         Assert.IsType(type, second);
         Assert.NotSame(first, second);
@@ -67,7 +66,7 @@ public class ControlFactoryTests
         Assert.False(second.IsDisposed);
         Assert.Null(second.Parent);
         // A call after disposal must still create a live element, never return a cached instance.
-        using var third = (Element)Invoke(type.GetMethod(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)!);
+        using var third = (Element)Invoke(factory);
         Assert.NotSame(first, third);
         Assert.NotSame(second, third);
         Assert.False(third.IsDisposed);
@@ -147,6 +146,10 @@ public class ControlFactoryTests
         Assert.True(released.Handled);
         Assert.False(released.PointerCaptured);
     }
+
+    private static MethodInfo DefaultFactory(Type type, string name) =>
+        type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Single(method => method.Name == name && method.GetParameters().All(parameter => parameter.IsOptional));
 
     private static object Invoke(MethodBase method) =>
         method switch

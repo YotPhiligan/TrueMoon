@@ -95,10 +95,17 @@ public sealed class EditorHierarchyShellTests
     {
         using var test = new HierarchyFixture();
         using var model = new EditorViewModel(test.Workspace, new((_, _) => Task.CompletedTask, CancellationToken.None));
-        EditorHierarchyView created = null!; var cleanup = new Cleanup(); var failure = new IOException("shell style failed");
+        EditorHierarchyView created = null!; TreeView createdTree = null!;
+        var cleanup = new Cleanup(); var failure = new IOException("shell style failed");
         var error = Assert.Throws<IOException>(() => new EditorView(model, new FailingStyle(failure), null, null, false, null,
-            new Factory<EditorHierarchyView>(() => { created = new(test.Model, new EditorHierarchyViewStyle()); created.Own(cleanup); return created; })));
-        Assert.Same(failure, error); Assert.True(created.IsDisposed); Assert.True(created.Tree.IsDisposed); Assert.Equal(1, cleanup.Count);
+            new Factory<EditorHierarchyView>(() =>
+            {
+                created = new(test.Model, new EditorHierarchyViewStyle());
+                createdTree = created.Tree;
+                created.Own(cleanup);
+                return created;
+            })));
+        Assert.Same(failure, error); Assert.True(created.IsDisposed); Assert.True(createdTree.IsDisposed); Assert.Equal(1, cleanup.Count);
         Assert.True(test.Model.Move(HierarchyFixture.Child, null)); Assert.False(test.Owner.Commands.Read().Closed);
     }
 

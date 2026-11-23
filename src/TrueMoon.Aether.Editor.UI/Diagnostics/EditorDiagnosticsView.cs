@@ -1,9 +1,12 @@
 using System.ComponentModel;
+using System.Linq.Expressions;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Editor.UI.Diagnostics;
 
-/// <summary>Parent-owned retained console. The App model/collector are borrowed; all input and updates run on the UI owner.</summary>
+/// <summary>Parent-owned diagnostic console over the current borrowed App model.</summary>
 public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, IUiFrameParticipant
 {
     public static ViewStyleRole<TextBox> FilterRole { get; } = new("DiagnosticFilter");
@@ -11,94 +14,118 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
     public static ViewStyleRole<Button> CommandRole { get; } = new("DiagnosticCommand");
     public static ViewStyleRole<Text> LabelRole { get; } = new("DiagnosticLabel");
     public static ViewStyleRole<CheckBox> ExportChoiceRole { get; } = new("DiagnosticExportChoice");
-    private readonly IEditorDiagnosticsViewModel _model;
+
+    private readonly DelegateUiCommand _clear;
+    private readonly DelegateUiCommand _refreshDetails;
     private bool _synchronizing, _followPending, _followReady;
+    private EditorDiagnosticMode _appliedMode;
     private bool _presentationPending = true;
-    private TrueMoon.Alloy.Runtime.UiSession? _presentationSession;
-    public TreeView Events { get; } = new() { AccessibleName = "Диагностические события" };
-    public ScrollViewer Scroll { get; } = new();
-    public RichTextEditor Details { get; } = new(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true });
-    public TextBox Search { get; }
-    public TextBox Source { get; }
-    public TextBox EventName { get; }
-    public TextBox Session { get; }
-    public TextBox Generation { get; }
-    public TextBox RuntimeRole { get; }
-    public TextBox ExportPath { get; }
-    public Button Follow { get; }
-    public Button Group { get; }
-    public Button Level { get; }
-    public Button Clear { get; }
-    public Button Close { get; }
-    public Button Export { get; }
-    public Button Mode { get; }
-    public Button RefreshDetails { get; }
-    public Button OpenSource { get; }
-    public Text NavigationStatus { get; }
-    public Text Summary { get; }
-    public Text ExportStatus { get; }
-    public CheckBox IncludeText { get; }
-    public CheckBox IncludeHistory { get; }
-    public Button CancelExport { get; }
-    public Text ExportPrivacy { get; }
-    public HStack Actions { get; }
-    public bool NeedsFrame => (_followPending || _presentationPending) && IsVisible;
+    private UiSession? _presentationSession;
 
+    /// <summary>Gets the Clear View button through its retained part.</summary>
+    public Button Clear => this.ClearButton;
+
+    /// <summary>Creates a prepared console for callers that construct it directly.</summary>
     public EditorDiagnosticsView(IEditorDiagnosticsViewModel model, IViewStyle<EditorDiagnosticsView> style)
+        : this(model)
     {
-        ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style); _model = model;
-        try
-        {
-            Search = Input("Поиск по событию", x => x.Search); Source = Input("Source", x => x.Source);
-            EventName = Input("EventName", x => x.EventName); Session = Input("SessionId (точно)", x => x.Session);
-            Generation = Input("Generation (точно)", x => x.Generation); RuntimeRole = Input("RuntimeRole (точно)", x => x.RuntimeRole);
-            foreach (var filter in new[] { Search, Source, Session, Generation, RuntimeRole }) filter.Bind(UiProperties.Enabled, model, x => x.CanFilter);
-            EventName.Bind(UiProperties.Enabled, model, x => x.CanClear);
-            Follow = Button.Simple().OnClick(() => model.FollowTail = !model.FollowTail);
-            Group = Button.Simple().OnClick(() => model.GroupRepeats = !model.GroupRepeats);
-            Level = Button.Simple().OnClick(() => model.MinimumLevel = model.MinimumLevel switch
-            { null => TrueMoon.Diagnostics.DiagnosticLevel.Trace, TrueMoon.Diagnostics.DiagnosticLevel.Critical => null, var level => level + 1 });
-            Clear = Button.Simple("Очистить вид").Bind(UiProperties.Enabled, model, x => x.CanClear).OnClick(model.Clear);
-            Group.Bind(UiProperties.Enabled, model, x => x.CanClear); Level.Bind(UiProperties.Enabled, model, x => x.CanClear);
-            Mode = Button.Simple().OnClick(() => model.Mode = model.Mode == EditorDiagnosticMode.Compiler ? EditorDiagnosticMode.Structured : model.Mode + 1);
-            RefreshDetails = Button.Simple("Обновить детали").Bind(UiProperties.Enabled, model, x => x.CanRefreshDetails).OnClick(model.RefreshDetails);
-            Close = Button.Simple("Закрыть").OnClick(() => model.IsOpen = false);
-            Summary = Text.Plain().BindText(model, x => x.Summary);
-            Details.AccessibleName = "Детали события · выделение и Ctrl+C"; Details.Bind(RichTextEditor.TextProperty, model, x => x.Details);
-            ExportPath = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.ExportPath).SetValue(UiProperties.AccessibleName, "Путь нового отчёта JSON");
-            Export = Button.Simple("Экспорт без текста").Bind(UiProperties.Enabled, model, x => x.CanExport).OnClick(() =>
-            {
-                if (_presentationSession is { } ui) ObservePresentation(ui);
-                model.Export();
-            });
-            IncludeText = CheckBox.Create("Включить текст").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.ExportIncludesText)
-                .Bind(UiProperties.Enabled, model, x => x.CanChangeExportOptions);
-            IncludeHistory = CheckBox.Create("История запусков").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.ExportIncludesHistory)
-                .Bind(UiProperties.Enabled, model, x => x.CanChangeExportOptions);
-            CancelExport = Button.Simple("Отменить экспорт").Bind(UiProperties.Enabled, model, x => x.CanCancelExport).OnClick(model.CancelExport);
-            ExportPrivacy = Text.Plain().WithRole(LabelRole).BindText(model, x => x.ExportPrivacyNotice);
-            ExportPath.Bind(UiProperties.Enabled, model, x => x.CanChangeExportOptions);
-            ExportStatus = Text.Plain().BindText(model, x => x.ExportStatus);
-            OpenSource = Button.Simple("Открыть исходник").Bind(UiProperties.Enabled, model, x => x.CanOpenSource).OnClick(model.OpenSource);
-            NavigationStatus = Text.Plain().WithRole(LabelRole).BindText(model, x => x.NavigationStatus);
-            Actions = Row(Text.Plain("ДИАГНОСТИКА"), Mode, Level, Follow, Group, Clear, RefreshDetails, Close);
-            var filters = Row(Text.Plain("Поиск"), Search, Text.Plain("Source"), Source, Text.Plain("Event"), EventName);
-            var context = Row(Text.Plain("Session"), Session, Text.Plain("Generation"), Generation, Text.Plain("Role"), RuntimeRole);
-            Scroll.SetContent(Events);
-            Content(model, _ => new ConsoleLayout([Actions, filters, context, Summary], Scroll, Details,
-                VStack.Create().WithChildren(Row(IncludeText, IncludeHistory, CancelExport, ExportPrivacy), Row(OpenSource, ExportPath, Export)),
-                VStack.Create().WithChildren(NavigationStatus, ExportStatus.WithRole(LabelRole))));
-            this.Bind(UiProperties.Visible, model, x => x.IsOpen); this.WithViewStyle(style);
-            Events.SelectionChanged += Selected; model.PropertyChanged += Changed;
-            Own(new Subscription(() => { model.PropertyChanged -= Changed; Events.SelectionChanged -= Selected; _presentationSession = null; }));
-            UpdateActions(); Synchronize();
-
-            TextBox Input(string name, System.Linq.Expressions.Expression<Func<IEditorDiagnosticsViewModel, string>> property) =>
-                TextBox.Create().WithRole(FilterRole).BindTwoWay(TextBox.ValueProperty, model, property).SetValue(UiProperties.AccessibleName, name);
-        }
-        catch (Exception failure)
-        { try { Dispose(); } catch (Exception cleanup) { throw new AggregateException(failure, cleanup); } throw; }
+        ArgumentNullException.ThrowIfNull(style);
+        ViewCreation.Prepare(this, style);
     }
+
+    /// <summary>Prepares the console and applies its style before the factory publishes it.</summary>
+    public static EditorDiagnosticsView Create(IEditorDiagnosticsViewModel model, IViewStyle<EditorDiagnosticsView> style)
+    {
+        ArgumentNullException.ThrowIfNull(style);
+        return ViewCreation.Prepare(new EditorDiagnosticsView(model), style);
+    }
+
+    private EditorDiagnosticsView(IEditorDiagnosticsViewModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        DataContext = model;
+        _clear = new(() => DataContext?.Clear(), () => DataContext?.CanClear == true);
+        _refreshDetails = new(() => DataContext?.RefreshDetails(), () => DataContext?.CanRefreshDetails == true);
+    }
+
+    protected override Element BuildContent() => new ConsoleLayout(
+        [
+            Row(
+                Text.Plain("ДИАГНОСТИКА"),
+                Button.Simple().Named("Mode").OnClick(AdvanceMode),
+                Button.Simple().Named("Level").Bind(UiProperties.Enabled, this, data => data.CanClear).OnClick(AdvanceLevel),
+                Button.Simple().Named("Follow").OnClick(() =>
+                {
+                    if (DataContext is { } data) data.FollowTail = !data.FollowTail;
+                }),
+                Button.Simple().Named("Group").Bind(UiProperties.Enabled, this, data => data.CanClear).OnClick(() =>
+                {
+                    if (DataContext is { } data) data.GroupRepeats = !data.GroupRepeats;
+                }),
+                Button.Simple("Очистить вид").Named("ClearButton").WithCommand(_clear),
+                Button.Simple("Обновить детали").Named("RefreshDetails").WithCommand(_refreshDetails),
+                Button.Simple("Закрыть").Named("Close").OnClick(() =>
+                {
+                    if (DataContext is { } data) data.IsOpen = false;
+                })).Named("Actions"),
+            Row(
+                Text.Plain("Поиск"), Filter("Поиск по событию", data => data.Search).Named("Search"),
+                Text.Plain("Source"), Filter("Source", data => data.Source).Named("Source"),
+                Text.Plain("Event"), Filter("EventName", data => data.EventName, data => data.CanClear).Named("EventName")),
+            Row(
+                Text.Plain("Session"), Filter("SessionId (точно)", data => data.Session).Named("Session"),
+                Text.Plain("Generation"), Filter("Generation (точно)", data => data.Generation).Named("Generation"),
+                Text.Plain("Role"), Filter("RuntimeRole (точно)", data => data.RuntimeRole).Named("RuntimeRole")),
+            Text.Plain().Named("Summary").BindText(this, data => data.Summary)
+        ],
+        HStack.Create(
+            ScrollViewer.Create().Named("Scroll").Fill().Content(
+                TreeView.Create().Named("Events").AccessibleName("Диагностические события").OnSelectionChanged(Selected)),
+            new RichTextEditor(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true })
+                .Named("Details")
+                .AccessibleName("Детали события · выделение и Ctrl+C")
+                .Bind(RichTextEditor.TextProperty, this, data => data.Details)
+                .Fill())
+            .SetValue(UiProperties.Spacing, 8f),
+        VStack.Create(
+            Row(
+                CheckBox.Create("Включить текст").Named("IncludeText")
+                    .BindTwoWay(CheckBox.IsCheckedProperty, this, data => data.ExportIncludesText)
+                    .Bind(UiProperties.Enabled, this, data => data.CanChangeExportOptions),
+                CheckBox.Create("История запусков").Named("IncludeHistory")
+                    .BindTwoWay(CheckBox.IsCheckedProperty, this, data => data.ExportIncludesHistory)
+                    .Bind(UiProperties.Enabled, this, data => data.CanChangeExportOptions),
+                Button.Simple("Отменить экспорт").Named("CancelExport")
+                    .Bind(UiProperties.Enabled, this, data => data.CanCancelExport)
+                    .OnClick(() => DataContext?.CancelExport()),
+                Text.Plain().Named("ExportPrivacy").BindText(this, data => data.ExportPrivacyNotice)),
+            Row(
+                Button.Simple("Открыть исходник").Named("OpenSource")
+                    .Bind(UiProperties.Enabled, this, data => data.CanOpenSource)
+                    .OnClick(() => DataContext?.OpenSource()),
+                TextBox.Create().Named("ExportPath").AccessibleName("Путь нового отчёта JSON")
+                    .BindValueTwoWay(this, data => data.ExportPath)
+                    .Bind(UiProperties.Enabled, this, data => data.CanChangeExportOptions),
+                Button.Simple("Экспорт без текста").Named("Export")
+                    .Bind(UiProperties.Enabled, this, data => data.CanExport)
+                    .OnClick(ExportReport))),
+        VStack.Create(
+            Text.Plain().Named("NavigationStatus").WithRole(LabelRole).BindText(this, data => data.NavigationStatus),
+            Text.Plain().Named("ExportStatus").WithRole(LabelRole).BindText(this, data => data.ExportStatus)));
+
+    protected override void OnContentPrepared()
+    {
+        this.Bind(UiProperties.Visible, this, data => data.IsOpen)
+            .ObservePropertyChanged(this, Changed, SynchronizeFromModel);
+        AttachmentChanged += ResetPresentation;
+        SynchronizeFromModel();
+    }
+
+    private TextBox Filter(string name, Expression<Func<IEditorDiagnosticsViewModel, string>> value,
+        Expression<Func<IEditorDiagnosticsViewModel, bool>>? available = null) =>
+        TextBox.Create().WithRole(FilterRole).AccessibleName(name)
+            .BindValueTwoWay(this, value)
+            .Bind(UiProperties.Enabled, this, available ?? (data => data.CanFilter));
 
     private static HStack Row(params Element[] elements)
     {
@@ -108,85 +135,173 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
             else if (element is Button button) button.WithRole(CommandRole);
             else if (element is Text text) text.WithRole(LabelRole);
         }
-        return HStack.Create().WithRole(RowRole).WithChildren(elements);
+        return HStack.Create(elements).WithRole(RowRole);
     }
-    private void Selected(string? id) { if (!_synchronizing) _model.Select(id); }
+
+    private void AdvanceMode()
+    {
+        if (DataContext is { } model)
+            model.Mode = model.Mode == EditorDiagnosticMode.Compiler ? EditorDiagnosticMode.Structured : model.Mode + 1;
+    }
+
+    private void AdvanceLevel()
+    {
+        if (DataContext is { } model)
+            model.MinimumLevel = model.MinimumLevel switch
+            {
+                null => DiagnosticLevel.Trace,
+                DiagnosticLevel.Critical => null,
+                var level => level + 1
+            };
+    }
+
+    private void ExportReport()
+    {
+        if (DataContext is not { } model) return;
+        if (_presentationSession is { } ui) ObservePresentation(ui, model);
+        model.Export();
+    }
+
+    private void Selected(string? id)
+    {
+        if (!_synchronizing) DataContext?.Select(id);
+    }
+
     private void Changed(object? sender, PropertyChangedEventArgs change)
     {
-        if (change.PropertyName is nameof(IEditorDiagnosticsViewModel.Rows) or nameof(IEditorDiagnosticsViewModel.IsOpen))
-            Dispatch(() => { if (_model.IsOpen) Synchronize(); });
+        if (string.IsNullOrEmpty(change.PropertyName))
+        {
+            SynchronizeFromModel();
+            return;
+        }
+
+        if (DataContext is not { } model) return;
+        if (change.PropertyName == nameof(IEditorDiagnosticsViewModel.CanClear))
+            _clear.Refresh();
+        if (change.PropertyName == nameof(IEditorDiagnosticsViewModel.CanRefreshDetails))
+            _refreshDetails.Refresh();
+        if ((change.PropertyName is nameof(IEditorDiagnosticsViewModel.Rows) or nameof(IEditorDiagnosticsViewModel.IsOpen)) && model.IsOpen)
+            Synchronize(model);
         if (change.PropertyName is nameof(IEditorDiagnosticsViewModel.FollowTail) or nameof(IEditorDiagnosticsViewModel.GroupRepeats) or nameof(IEditorDiagnosticsViewModel.MinimumLevel) or nameof(IEditorDiagnosticsViewModel.Mode) or nameof(IEditorDiagnosticsViewModel.ExportIncludesText))
-            Dispatch(() =>
-            {
-                UpdateActions(); _followPending = _model.FollowTail && _model.Mode != EditorDiagnosticMode.Health;
-                _followReady = false; if (change.PropertyName == nameof(IEditorDiagnosticsViewModel.Mode)) Scroll.Offset = 0;
-                if (_followPending) Invalidate();
-            });
-        if (change.PropertyName == nameof(IEditorDiagnosticsViewModel.SelectedId)) Dispatch(SelectVisible);
+            RefreshActions(model, change.PropertyName == nameof(IEditorDiagnosticsViewModel.Mode));
+        if (change.PropertyName == nameof(IEditorDiagnosticsViewModel.SelectedId)) SelectVisible(model);
     }
-    private void Synchronize()
+
+    private void SynchronizeFromModel()
+    {
+        _clear.Refresh();
+        _refreshDetails.Refresh();
+        _presentationPending = true;
+        if (DataContext is not { } model)
+        {
+            _followPending = _followReady = false;
+            IsVisible = false;
+            this.Events.SetItems([]);
+            return;
+        }
+
+        RefreshActions(model, _appliedMode != model.Mode);
+        Synchronize(model);
+    }
+
+    private void RefreshActions(IEditorDiagnosticsViewModel model, bool resetScroll)
+    {
+        this.Follow.Value = model.FollowTail ? "Автопрокрутка: вкл" : "Автопрокрутка: пауза";
+        this.Group.Value = model.GroupRepeats ? "Повторы: группы" : "Повторы: отдельно";
+        this.Level.Value = "Уровень: " + (model.MinimumLevel?.ToString() ?? "все");
+        this.Export.Value = model.ExportIncludesText ? "Экспорт с текстом" : "Экспорт без текста";
+        _appliedMode = model.Mode;
+        this.Mode.Value = _appliedMode switch
+        {
+            EditorDiagnosticMode.Structured => "Structured",
+            EditorDiagnosticMode.StandardOutput => "RAW stdout",
+            EditorDiagnosticMode.StandardError => "RAW stderr",
+            EditorDiagnosticMode.Compiler => "Compiler",
+            _ => "Health"
+        };
+
+        if (resetScroll) this.Scroll.Offset = 0;
+        _followPending = model.FollowTail && _appliedMode != EditorDiagnosticMode.Health;
+        _followReady = false;
+        if (_followPending) Invalidate();
+    }
+
+    private void ResetPresentation()
+    {
+        _presentationSession = null;
+        _presentationPending = true;
+    }
+
+    private void Synchronize(IEditorDiagnosticsViewModel model)
     {
         _synchronizing = true;
         try
         {
-            Events.SetItems(_model.Rows.Select(entry => new TreeItem(entry.Id, null, entry.Label, entry.Warning ? UiSymbol.Warning : UiSymbol.Info)));
-            SelectVisible();
-            if (_model.FollowTail && _model.Mode != EditorDiagnosticMode.Health) { _followPending = true; _followReady = false; Invalidate(); }
+            this.Events.SetItems(model.Rows.Select(entry => new TreeItem(entry.Id, null, entry.Label, entry.Warning ? UiSymbol.Warning : UiSymbol.Info)));
+            SelectVisible(model);
+            if (model.FollowTail && model.Mode != EditorDiagnosticMode.Health) { _followPending = true; _followReady = false; Invalidate(); }
         }
         finally { _synchronizing = false; }
     }
-    private void SelectVisible()
+
+    private void SelectVisible(IEditorDiagnosticsViewModel model)
     {
-        var previous = _synchronizing; _synchronizing = true;
+        var previous = _synchronizing;
+        _synchronizing = true;
         try
         {
-            var target = _model.SelectedId is { } id && Events.Items.Any(item => item.Id == id) ? id : null;
-            if (Events.SelectedId != target) Events.Select(target);
+            var events = this.Events;
+            var target = model.SelectedId is { } id && events.Items.Any(item => item.Id == id) ? id : null;
+            if (events.SelectedId != target) events.Select(target);
         }
         finally { _synchronizing = previous; }
     }
-    private void UpdateActions()
-    {
-        Follow.Value = _model.FollowTail ? "Автопрокрутка: вкл" : "Автопрокрутка: пауза";
-        Group.Value = _model.GroupRepeats ? "Повторы: группы" : "Повторы: отдельно";
-        Level.Value = "Уровень: " + (_model.MinimumLevel?.ToString() ?? "все");
-        Export.Value = _model.ExportIncludesText ? "Экспорт с текстом" : "Экспорт без текста";
-        Mode.Value = _model.Mode switch { EditorDiagnosticMode.Structured => "Structured", EditorDiagnosticMode.StandardOutput => "RAW stdout", EditorDiagnosticMode.StandardError => "RAW stderr", EditorDiagnosticMode.Compiler => "Compiler", _ => "Health" };
-    }
+
+    public bool NeedsFrame => (_followPending || _presentationPending) && IsVisible;
+
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        if (context is TrueMoon.Alloy.Runtime.UiSession ui)
+        if (DataContext is not { } model) return;
+        if (context is UiSession ui)
         {
-            _presentationSession = ui; _presentationPending = false; ObservePresentation(ui);
+            _presentationSession = ui;
+            _presentationPending = false;
+            ObservePresentation(ui, model);
         }
         if (!_followPending || !IsVisible) return;
         // Participants run before layout. Allow the new row extent to be measured before following it.
         if (!_followReady) { _followReady = true; Invalidate(Invalidation.Layout); return; }
         _followPending = false;
-        if (_model.FollowTail) Scroll.Offset = _model.Mode == EditorDiagnosticMode.Structured ? Math.Max(0, Scroll.Extent - Scroll.Bounds.Height) : 0;
+        var scroll = this.Scroll;
+        if (model.FollowTail) scroll.Offset = model.Mode == EditorDiagnosticMode.Structured ? Math.Max(0, scroll.Extent - scroll.Bounds.Height) : 0;
     }
-    private void ObservePresentation(TrueMoon.Alloy.Runtime.UiSession ui)
+
+    private static void ObservePresentation(UiSession ui, IEditorDiagnosticsViewModel model)
     {
-        var device = (ui.Rendering as TrueMoon.Alloy.Runtime.IUiRenderDiagnostics)?.DeviceInfo;
-        _model.ObservePresentation(ui.Rendering.GetType().FullName ?? ui.Rendering.GetType().Name, ui.Viewport.Width, ui.Viewport.Height, ui.Viewport.Scale,
+        var device = (ui.Rendering as IUiRenderDiagnostics)?.DeviceInfo;
+        model.ObservePresentation(ui.Rendering.GetType().FullName ?? ui.Rendering.GetType().Name, ui.Viewport.Width, ui.Viewport.Height, ui.Viewport.Scale,
             device == null ? null : $"{device.Api} / {device.Name} / {device.Vendor} / {device.Version}");
     }
+
     public override bool HandleInput(UiInput input, IInputContext context)
     {
-        if (input.Kind == InputKind.KeyDown && input.Control && input.Key == UiKey.C && Events.IsFocused)
-        { context.SetClipboardText(_model.Details); return true; }
+        if (input.Kind == InputKind.KeyDown && input.Control && input.Key == UiKey.C && this.Events.IsFocused && DataContext is { } model)
+        {
+            context.SetClipboardText(model.Details);
+            return true;
+        }
         return false;
     }
-    private sealed class Subscription(Action release) : IDisposable { public void Dispose() => release(); }
+
     private sealed class ConsoleLayout : ElementList
     {
         private readonly int _headers;
-        public ConsoleLayout(Element[] headers, Element list, Element details, Element export, Element status)
-        { _headers = headers.Length; foreach (var child in headers.Concat([list, details, export, status])) Add(child); }
+        public ConsoleLayout(Element[] headers, HStack columns, Element export, Element status)
+        { _headers = headers.Length; foreach (var child in headers.Concat([columns, export, status])) Add(child); }
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
-            for (var i = 0; i < Children.Count; i++) Children[i].Measure(i == _headers || i == _headers + 1
-                ? new(Math.Max(0, (available.Width - 8) / 2), Math.Max(0, available.Height - 170)) : available, text);
+            for (var i = 0; i < Children.Count; i++) Children[i].Measure(i == _headers
+                ? new(available.Width, Math.Max(0, available.Height - 170)) : available, text);
             return new(available.Width, Math.Min(360, available.Height));
         }
         protected override void ArrangeCore(Rect area)
@@ -198,8 +313,8 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
                 Children[i].Arrange(new(area.X, y, area.Width, height)); y += height; remaining -= height;
             }
             var exportHeight = Math.Min(remaining, Children[^2].DesiredSize.Height + Children[^1].DesiredSize.Height + 8);
-            var middle = Math.Max(0, remaining - exportHeight); var width = Math.Max(0, (area.Width - 8) / 2);
-            Children[_headers].Arrange(new(area.X, y, width, middle)); Children[_headers + 1].Arrange(new(area.X + width + 8, y, width, middle));
+            var middle = Math.Max(0, remaining - exportHeight);
+            Children[_headers].Arrange(new(area.X, y, area.Width, middle));
             y += middle;
             var row = Math.Min(exportHeight, Children[^2].DesiredSize.Height + 4);
             Children[^2].Arrange(new(area.X, y, area.Width, row));
