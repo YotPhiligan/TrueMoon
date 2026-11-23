@@ -3870,7 +3870,7 @@ release/device-loss/soak/other OS остаются отдельными. [Пре
 `TestResults/CORE6-AppLocal-20261121-01/verification.json`.
 
 В очереди TrueMoon.Tales.Game обе заявки ведёт Aether.
-[ENG7b.4](../requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Decision.md)
+[ENG7b.4](../engine/PLAN.md#eng7b4-tales-consumer)
 принята, первый оконный срез проверен. Заявка на подсказки и журнал
-[ENG5c.4](../requests/engine/20261121-truemoontales-player-gameplay-hud-a4c97ed1/Request.md)
+[ENG5c.4](../engine/PLAN.md#eng5c4-tales-outpost-hud)
 предложена. HUD получает данные игровой сессии, зависимости от CORE6 в заявке нет.

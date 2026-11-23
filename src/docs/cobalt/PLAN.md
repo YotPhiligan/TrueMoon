@@ -456,9 +456,8 @@ contracts и корректные errors/ownership остаются обязат
 <a id="cob6e-generator-consumer-fixes"></a>
 ### COB6e: две адресные правки Cobalt generator — 2026-11-09
 
-Принято по запросу пользователя из заявок
-[generated hint names](../requests/cobalt/20261107-studio-generated-hint-names-87952664/Request.md) и
-[generated XML docs](../requests/cobalt/20261107-studio-generated-xml-docs-56375bd8/Request.md).
+По запросу пользователя приняты две правки генератора: ограничение generated hint names
+и добавление generated XML docs.
 
 - Меняется только hint name AddSource: ASCII-префикс implementation до36символов,
   SHA-256 полного прежнего resolver key и суффикс Resolver/AliasResolver; компонент

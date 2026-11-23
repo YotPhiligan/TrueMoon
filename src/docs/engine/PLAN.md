@@ -672,9 +672,8 @@ ARCH1f.4 mesh surface/Playing fence, g.1 import, h.0 audio, ED1–ED8 и reliabi
 условием объявления чистого разделения assemblies. Старые source/package/native
 passes не переносятся на новые границы автоматически.
 
-Proposed [заявка игры](../requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Request.md)
-учитывается как входящий контекст; её Request/Claim/Decision не меняются этим планом.
-Runtime-only Player и modding не закрывают её actual surface/render acceptance.
+Оконная приёмка потребителя описана в [ENG7b.4](#eng7b4-tales-consumer).
+Она требует проверки фактической поверхности и рендера.
 
 Основание .NET: [shared type identity и ALC dependencies](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/understanding-assemblyloadcontext),
 [cooperative unload и причины удержания контекста](https://learn.microsoft.com/en-us/dotnet/standard/assembly/unloadability).
@@ -1556,8 +1555,7 @@ ENG7b.3 matrix была отдельным этапом и завершена202
 <a id="eng7b4-tales-consumer"></a>
 #### ENG7b.4 — пакетный оконный сценарий TrueMoon.Tales
 
-[TALES-20261110-ae80510f](../requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Decision.md)
-использует существующие ARCH1f.4 и ENG7b.1–3. Приложение вызывает
+Сценарий использует существующие ARCH1f.4 и ENG7b.1–3. Приложение вызывает
 `UseAetherPlayer` через App/Cobalt, получает готовый артефакт игровой DLL и
 загружает выбранную сцену в World. Вход из Player проходит через публичный
 `IInputGameSession`. Владелец окна и графики — композиция Player.
@@ -1576,7 +1574,6 @@ ENG7b.3 matrix была отдельным этапом и завершена202
 <a id="eng7b-tales-debug-editor"></a>
 #### ENG7b — Debug Editor, привязанный к TrueMoon.Tales
 
-[TALES-20261121-7774189b](../requests/engine/20261121-truemoontales-debug-editor-launch-7774189b/Decision.md).
 В явном профиле разработки игровой EXE передаёт абсолютный путь проекта
 из метаданных сборки. Aether проводит роль через прежний парсер и открывает
 указанный проект и начальную сцену. Play использует штатные Build и
@@ -2977,8 +2974,7 @@ raw cursor и full World/edit/MCP остаются отдельными зада
 <a id="eng5c4-tales-outpost-hud"></a>
 #### HUD заставы в standalone Player
 
-[TALES-20261121-a4c97ed1](../requests/engine/20261121-truemoontales-player-gameplay-hud-a4c97ed1/Decision.md)
-использует текстовый снимок `IGameHudSource` той же игровой сессии. Aether читает
+HUD использует текстовый снимок `IGameHudSource` той же игровой сессии. Aether читает
 его после загрузки и применённого тика; Player рисует поверх текущего кадра
 через существующий Alloy canvas. Пять строк журнала, подсказка и статус
 передаются отдельно от технической диагностики. Прежний путь ввода и кадра

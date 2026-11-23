@@ -2,8 +2,7 @@
 
 `TrueMoon.Argentis.SplitView` размещает два retained `ContentControl` и focusable
 divider. `Horizontal` означает слева/справа, `Vertical` — сверху/снизу. Вложенные
-SplitView дают navigation/workspace/inspector/timeline. Задача: [UIA3e](PLAN.md#uia3e-split-view),
-[заявка Studio](../requests/alloy/20261107-studio-resizable-panes-5d593644/Request.md).
+SplitView дают navigation/workspace/inspector/timeline. Задача [UIA3e](PLAN.md#uia3e-split-view).
 
 ```csharp
 var split = new SplitView(navigation, workspace)

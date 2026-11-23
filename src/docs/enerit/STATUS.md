@@ -1,7 +1,7 @@
 # Enerit: состояние и точка продолжения
 
-**2026-11-17 — ENE6e: заявка Studio на generated XML docs реализована и проверена.**
-[Задача](PLAN.md#ene6e-generated-xml-docs), [заявка/решение](../requests/enerit/20261116-studio-generated-xml-docs-f2ad173c/Decision.md),
+**2026-11-17 — ENE6e: generated XML docs реализованы и проверены.**
+[Задача](PLAN.md#ene6e-generated-xml-docs),
 [команды/границы](HISTORY.md#ene6e-2026-11-17), [manifest/SHA](ENE6E_RESULTS.json).
 
 Version **1.2611.17.1-alpha**. Generated public clients/handlers/DTO serializers и

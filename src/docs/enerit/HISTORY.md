@@ -1373,8 +1373,8 @@ Runtime/API/dependencies в CORE8.5 не менялись; обновлены ru
 <a id="ene6e-2026-11-17"></a>
 ## ENE6e: XML-документация generated-кода — 2026-11-17
 
-По [заявке Studio](../requests/enerit/20261116-studio-generated-xml-docs-f2ad173c/Request.md)
-добавлены summary для generated client/handler, constructors, DTO serializers и
+В [ENE6e](PLAN.md#ene6e-generated-xml-docs) добавлены summary для generated
+client/handler, constructors, DTO serializers и
 module initializer; методы реализации наследуют документацию интерфейса.
 Public visibility/signatures, registration factories и тела методов не менялись;
 NoWarn/pragma suppression не добавлены. CS8669 остаётся отдельным backlog.

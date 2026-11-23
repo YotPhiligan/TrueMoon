@@ -1,8 +1,0 @@
-{
-    "owner":  "Aether / Codex",
-    "task":  "TALES-20261121-a4c97ed1",
-    "branch":  "main",
-    "worktree":  "E:/source/my/TrueMoon.Tales/TrueMoon",
-    "utc":  "2026-11-22T10:53:35.1379757Z",
-    "scope":  "Bounded non-interactive Player HUD sourced from the active game session; verify Tales outpost consumer."
-}

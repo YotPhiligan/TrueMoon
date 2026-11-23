@@ -35,7 +35,7 @@ acceptance остаются отдельными, не обязательным�
 <a id="ene6e-generated-xml-docs"></a>
 ### ENE6e — XML-документация generated-кода
 
-Принята 17.11.2026 [заявка Studio](../requests/enerit/20261116-studio-generated-xml-docs-f2ad173c/Request.md).
+Задача принята 17.11.2026.
 Публичные generated client/handler/serializer и module initializer получают XML docs.
 Критерии: GenerateDocumentationFile и CS1591 как ошибка в Debug/Release; регистрация
 module initializer и typed IPC сохраняются; собственный undocumented public member

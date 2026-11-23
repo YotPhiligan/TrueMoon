@@ -1786,9 +1786,7 @@ GenericTypeArguments/MakeGenericType allocations и synthesized enumerable metad
 <a id="cob6e-generator-2026-11-09"></a>
 ## COB6e: две адресные правки Cobalt generator — 2026-11-09
 
-По прямому запросу пользователя приняты и выполнены заявки Studio
-[hint names](../requests/cobalt/20261107-studio-generated-hint-names-87952664/Request.md) и
-[XML docs](../requests/cobalt/20261107-studio-generated-xml-docs-56375bd8/Request.md).
+По прямому запросу пользователя выполнены правки generated hint names и XML docs.
 Claim созданы через FileMode.CreateNew; один task/план — [COB6e](PLAN.md#cob6e-generator-consumer-fixes).
 Исходные Request.md сохранены. Перед работой был локально изменён только общий
 Version в Directory.Build.props:0.2.5.2-alpha; эта правка пользователя сохранена.

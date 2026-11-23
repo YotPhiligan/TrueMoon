@@ -84,7 +84,7 @@ K1–K9, PA1–PA10, net10.0/xUnit и их критерии сохранены. 
 <a id="uia3e-split-view"></a>
 ## UIA3e. Разделение панелей — реализовано и проверено 2026-11-09
 
-Владелец `codex-alloy-split-view`, [Claim/Decision заявки Studio](../requests/alloy/20261107-studio-resizable-panes-5d593644/Decision.md).
+Владелец реализации — Alloy. [Результаты проверок](HISTORY.md#split-view-2026-11-09).
 Детальный план ведётся только здесь. Две retained ContentControl-панели и focusable
 divider; horizontal/vertical axis, preferred first-pane logical size (NaN = half).
 Axis Min/Max на pane hosts; при дефиците места minima сжимаются пропорционально,
@@ -2230,9 +2230,7 @@ zero-copy/performance или K3/K7/K8/VRAM/final UI acceptance.
 
 ## Входящие заявки приложений — 07.11.2026
 
-Дополнительная очередь для разбора владельцем UI — [каталог заявок Alloy](../requests/alloy/).
-[Правила владения и параллельной работы](../requests/README.md).
-Первый consumer — [регулируемые панели Studio](../requests/alloy/20261107-studio-resizable-panes-5d593644/Request.md).
-Запрос выполнен во framework/local-delivery scope2026-11-09: [UIA3e](#uia3e-split-view),
-[Decision](../requests/alloy/20261107-studio-resizable-panes-5d593644/Decision.md).
-Интеграция Studio остаётся у consumer. Новые заявки добавляются отдельными каталогами.
+Владелец UI проверяет локальную очередь модуля `alloy` по
+[правилам заявок](../requests/README.md).
+Регулируемые панели поставлены локально 09.11.2026 в [UIA3e](#uia3e-split-view).
+Потребитель проверяет интеграцию в своём приложении.
