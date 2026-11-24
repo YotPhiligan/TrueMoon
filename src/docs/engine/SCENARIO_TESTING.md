@@ -165,3 +165,39 @@ await File.WriteAllBytesAsync(framePath, step.Frame!.Png.AsMemory(), token);
 ```powershell
 dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --filter 'FullyQualifiedName~EditorSceneScenarioTests' --logger 'trx;LogFileName=editor-scenario.trx'
 ```
+
+<a id="editor-scenario-comparison"></a>
+### Сравнение прогонов Editor
+
+`SceneRoundTrip_ComparesIndependentRunsAndWritesDifferences` дважды
+исполняет сценарий в независимых сессиях и сравнивает контрольные точки
+по ID. Контрольный вариант вводит `53` вместо `37` и увеличивает ширину
+viewport с 1500 до 1580. Запустите тест из `src` с переменной
+`TRUEMOON_EDITOR_SCENARIO_RESULTS`, чтобы сохранить отчёты.
+
+```powershell
+$env:TRUEMOON_EDITOR_SCENARIO_RESULTS = Join-Path $PWD 'TestResults/EditorScenarioComparison'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --filter 'FullyQualifiedName~SceneRoundTrip_ComparesIndependentRunsAndWritesDifferences'
+```
+
+Тест создаёт уникальный каталог с подкаталогами `repeat` и `variant`.
+В каждом лежат `baseline.json`, `candidate.json` и `comparison.json`.
+Отчёт показывает значения слева и справа в `stateChanges` и
+`geometryChanges`, количество отличающихся пикселей и пути к кадрам.
+Сравниваются состояние документа, фокус и доступность именованных узлов,
+их `Bounds` и `VisibleBounds`, размеры viewport и масштаб. В отчёте
+созданные объект и Transform используют постоянные обозначения. Внутри
+каждого прогона тест проверяет реальные ID через закрытие и открытие сцены.
+
+Кадры CPU Skia снимаются после раскрытия или закрытия панели инспектора.
+В сравнении пикселей пропускается строка с сокращённым случайным GUID
+выбранного объекта. Координаты строки указаны в `selectionIdLabel`,
+а исходные PNG содержат её целиком. Остальные декодированные
+премультиплицированные RGBA сравниваются без допуска. Кадры разных размеров
+дополняются прозрачными пикселями до общих границ.
+
+Для каждой несовпавшей пары сохраняются исходные PNG и diff PNG. Яркость
+пурпурного показывает величину отличия, чёрный обозначает равные и
+исключённые пиксели. Если контрольная точка есть только в одном прогоне,
+отчёт указывает отсутствующую сторону и сохраняет доступный кадр.
+Без переменной тест удаляет временный каталог после проверки.

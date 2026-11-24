@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SkiaSharp;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Editing;
@@ -18,6 +19,7 @@ using TrueMoon.Aether.Tooling.Editing;
 using TrueMoon.Aether.Tooling.Preview;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
+using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime.Semantics;
 using TrueMoon.Argentis;
 using Xunit;
@@ -31,7 +33,85 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
     private const string TreeId = "editor.hierarchy.tree";
 
     [Fact]
-    public void SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform()
+    public void SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform() => Replay(LoadScenario());
+
+    [Fact]
+    public void SceneRoundTrip_ComparesIndependentRunsAndWritesDifferences()
+    {
+        var scenario = LoadScenario();
+        var outputRoot = Environment.GetEnvironmentVariable("TRUEMOON_EDITOR_SCENARIO_RESULTS");
+        var root = string.IsNullOrWhiteSpace(outputRoot)
+            ? Directory.CreateTempSubdirectory("TrueMoon-EditorScenario-").FullName
+            : Path.Combine(Path.GetFullPath(outputRoot), Guid.NewGuid().ToString("N"));
+        output.WriteLine($"Comparison results: {root}");
+
+        try
+        {
+            var baseline = Replay(scenario, capture: true);
+            var repeat = Replay(scenario, capture: true);
+            var identical = EditorScenarioComparison.Compare(baseline, repeat, Path.Combine(root, "repeat"));
+            Assert.True(identical.Passed, string.Join(", ", identical.Checkpoints.Where(c => !c.Passed).Select(c => c.Id)));
+            Assert.Equal(scenario.Checkpoints.Length, identical.Checkpoints.Length);
+            Assert.All(identical.Checkpoints, checkpoint =>
+            {
+                Assert.Empty(checkpoint.StateChanges);
+                Assert.Empty(checkpoint.GeometryChanges);
+                Assert.Equal(0, checkpoint.Pixels!.DifferentPixels);
+                Assert.Null(checkpoint.Frames);
+            });
+
+            var variant = scenario with
+            {
+                Width = scenario.Width + 80,
+                Checkpoints = scenario.Checkpoints.Select(checkpoint => checkpoint with
+                {
+                    Input = checkpoint.Input.Select(step => step.Target == "$transform-x" && step.Kind == ActionKind.Text
+                        ? step with { Text = "53" } : step).ToArray(),
+                    PositionX = checkpoint.PositionX == 37 ? 53 : checkpoint.PositionX,
+                    EditorX = checkpoint.EditorX == "37" ? "53" : checkpoint.EditorX
+                }).ToArray()
+            };
+            var changed = Replay(variant, capture: true);
+            var comparison = EditorScenarioComparison.Compare(baseline, changed, Path.Combine(root, "variant"));
+            Assert.False(comparison.Passed);
+            Assert.Equal(scenario.Checkpoints.Length, comparison.Checkpoints.Length);
+            var reopened = Assert.Single(comparison.Checkpoints, checkpoint => checkpoint.Id == "reopened");
+            var position = Assert.Single(reopened.StateChanges, change => change.Path == "document.positionX");
+            Assert.Equal(37, position.Baseline.GetDouble());
+            Assert.Equal(53, position.Candidate.GetDouble());
+            var width = Assert.Single(reopened.GeometryChanges, change => change.Path == "viewport.width");
+            Assert.Equal(scenario.Width, width.Baseline.GetInt32());
+            Assert.Equal(variant.Width, width.Candidate.GetInt32());
+            Assert.Contains(reopened.GeometryChanges, change => change.Path == "editor.inspector.apply.bounds");
+            Assert.True(reopened.Pixels!.DifferentPixels > 0);
+            var frames = Assert.IsType<EditorScenarioComparison.Frames>(reopened.Frames);
+            var variantDirectory = Path.Combine(root, "variant");
+            using var before = SKBitmap.Decode(Path.Combine(variantDirectory, frames.Baseline!));
+            using var after = SKBitmap.Decode(Path.Combine(variantDirectory, frames.Candidate!));
+            using var diff = SKBitmap.Decode(Path.Combine(variantDirectory, frames.Diff!));
+            Assert.Equal(scenario.Width, before.Width);
+            Assert.Equal(variant.Width, after.Width);
+            Assert.Equal(variant.Width, diff.Width);
+            Assert.Equal(scenario.Height, diff.Height);
+            Assert.True(diff.GetPixel(reopened.Pixels.FirstX!.Value, reopened.Pixels.FirstY!.Value).Red > 0);
+            using var savedReport = JsonDocument.Parse(File.ReadAllText(Path.Combine(variantDirectory, "comparison.json")));
+            Assert.False(savedReport.RootElement.GetProperty("passed").GetBoolean());
+            var savedPoints = savedReport.RootElement.GetProperty("checkpoints");
+            Assert.Equal(scenario.Checkpoints.Length, savedPoints.GetArrayLength());
+            var savedReopened = Assert.Single(savedPoints.EnumerateArray(), point => point.GetProperty("id").GetString() == "reopened");
+            Assert.Equal(frames.Diff, savedReopened.GetProperty("frames").GetProperty("diff").GetString());
+            var savedPosition = Assert.Single(savedReopened.GetProperty("stateChanges").EnumerateArray(),
+                change => change.GetProperty("path").GetString() == "document.positionX");
+            Assert.Equal(53, savedPosition.GetProperty("candidate").GetDouble());
+            output.WriteLine($"Reopened checkpoint changed {reopened.Pixels.DifferentPixels} pixels.");
+        }
+        finally
+        {
+            if (string.IsNullOrWhiteSpace(outputRoot)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static Scenario LoadScenario()
     {
         using var source = typeof(EditorSceneScenarioTests).Assembly.GetManifestResourceStream(
             "TrueMoon.Aether.Editor.Tests.DocumentsUi.scene-round-trip.scenario.json");
@@ -40,7 +120,11 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
         options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
         var scenario = Assert.IsType<Scenario>(JsonSerializer.Deserialize<Scenario>(source, options));
         Assert.Equal(1, scenario.FormatVersion);
+        return scenario;
+    }
 
+    private EditorScenarioComparison.Checkpoint[] Replay(Scenario scenario, bool capture = false)
+    {
         var codec = new SceneFileCodec(DocumentData.Factory());
         var store = new JsonSceneDocumentStore(codec);
         using var owner = new DocumentUiFixture(sceneStore: store);
@@ -69,7 +153,8 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
             new(view.Overlays, window.Title, () => throw new InvalidOperationException("The scenario must keep the editor open.")));
         frame.DefaultTitleBar!.SetHeader(header);
         view.Header = header;
-        using var ui = InspectorFixture.Ui(frame, width: scenario.Width, height: scenario.Height);
+        var clock = capture ? new HeaderClock() : null;
+        using var ui = InspectorFixture.Ui(frame, clock: clock, width: scenario.Width, height: scenario.Height);
         Refresh();
 
         var deadline = Stopwatch.StartNew();
@@ -78,6 +163,7 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
         long? savedRevision = null;
         EntityId? entity = null;
         ComponentId? transform = null;
+        var checkpoints = new List<EditorScenarioComparison.Checkpoint>();
         foreach (var checkpoint in scenario.Checkpoints)
         {
             output.WriteLine($"Checkpoint {checkpoint.Id}");
@@ -114,7 +200,8 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
             var state = owner.Document.Read();
             var content = state.Content;
             double? x = null;
-            Assert.Equal(checkpoint.Scene, content == null ? SceneState.Closed : state.IsDirty ? SceneState.Dirty : SceneState.Clean);
+            var actualScene = content == null ? SceneState.Closed : state.IsDirty ? SceneState.Dirty : SceneState.Clean;
+            Assert.Equal(checkpoint.Scene, actualScene);
             if (content != null)
             {
                 Assert.Equal(path, state.Path);
@@ -141,6 +228,12 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
                     if (checkpoint.EditorX is { } editorX)
                         Assert.Equal(editorX, Assert.IsType<TextBox>(view.Inspector!.Properties[(transform.Value, "x")].Input).Value);
                 }
+            }
+
+            if (clock != null && view.InspectorIsland.NeedsFrame)
+            {
+                clock.Advance(200);
+                ui.Update();
             }
 
             var snapshot = ui.CaptureSemantics();
@@ -184,7 +277,22 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
             var focusedId = snapshot.Nodes.SingleOrDefault(node => node.IsFocused)?.Id;
             output.WriteLine($"  {checkpoint.Scene}, entities={content?.Document.Entities.Length ?? 0}, " +
                 $"x={x}, undo={content?.UndoCount ?? 0}, redo={content?.RedoCount ?? 0}, focus={focusedId}");
+            if (capture)
+            {
+                Assert.Equal(view.InspectorIsland.IsOpen ? 1f : 0f, view.InspectorIsland.Reveal);
+                var inspectorX = transform is { } componentId && view.Inspector!.Properties.TryGetValue((componentId, "x"), out var row)
+                    ? Assert.IsType<TextBox>(row.Input).Value : null;
+                var selected = entity.HasValue && model.SelectedId == entity.Value.Value.ToString("D");
+                var document = new EditorScenarioComparison.Document(actualScene.ToString(), content?.Document.Revision,
+                    content?.Document.Entities.Length ?? 0, x, inspectorX, content?.UndoCount ?? 0, content?.RedoCount ?? 0,
+                    selected ? "$entity" : model.SelectedId);
+                Rect? selectionIdLabel = selected && view.InspectorIsland.IsOpen && view.Selection.IsVisible &&
+                    view.Selection.Value == EditorScene.Name(entity!.Value.Value.ToString("D")) ? view.Selection.Bounds : null;
+                using var image = ui.SnapshotRasterImage();
+                checkpoints.Add(EditorScenarioComparison.Capture(checkpoint.Id, document, snapshot, transform?.Value, selectionIdLabel, image));
+            }
         }
+        return checkpoints.ToArray();
 
         void Refresh()
         {

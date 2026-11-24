@@ -11,6 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="../ManualTests/AlloyVulkanTest/PixelDifference.cs" Link="DocumentsUi/PixelDifference.cs" />
     <EmbeddedResource Include="DocumentsUi/scene-round-trip.scenario.json" />
   </ItemGroup>
   <ItemGroup>

@@ -17789,3 +17789,31 @@ GPU-слотов и дескрипторов. Контракт наблюден�
 dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Debug --logger 'trx;LogFileName=editor-debug.trx' --results-directory $run
 dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Release --logger 'trx;LogFileName=editor-release.trx' --results-directory $run
 ```
+
+<a id="eng9b3-editor-comparison-2026-11-24"></a>
+## 2026-11-24 — ENG9b.3. Сравнение контрольных точек Editor
+
+`SceneRoundTrip_ComparesIndependentRunsAndWritesDifferences` исполнил
+два независимых прогона сценария ENG9b.2. Состояние, геометрия именованных
+элементов и сравниваемые пиксели совпали во всех девяти контрольных точках.
+Тест использует CPU Skia, продвигает тестовые часы до завершения перехода
+инспектора и пропускает строку со случайным GUID в пиксельном сравнении.
+Исходные PNG сохраняют эту строку.
+
+Контрольный вариант использовал ширину 1580 вместо 1500 и ввод X=53
+вместо X=37. После повторного открытия зафиксированы оба значения X,
+изменение ширины viewport и сдвиг Apply с 1173 до 1253 логических пикселей
+по горизонтали. В Release у этой точки 1 193 188 отличающихся пикселей.
+Сохранены 27 PNG для девяти несовпавших пар, включая исходные кадры и
+diff каждой пары. [Запуск и поля отчёта](SCENARIO_TESTING.md#editor-scenario-comparison).
+
+Прошли по 1 544 теста Editor в Debug и Release с SDK `11.0.100`
+на версии `1.2611.24.3-alpha`. Рабочие артефакты лежат в ignored-каталоге
+`TestResults/ENG9b3-20261124-2335ba78`. Профиль сравнивает кадры CPU Skia.
+
+```powershell
+foreach ($configuration in 'Release', 'Debug') {
+    $env:TRUEMOON_EDITOR_SCENARIO_RESULTS = Join-Path $run $configuration.ToLowerInvariant()
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c $configuration --logger "trx;LogFileName=editor-$($configuration.ToLowerInvariant()).trx" --results-directory $run
+}
+```
