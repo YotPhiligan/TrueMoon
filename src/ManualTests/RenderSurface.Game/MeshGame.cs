@@ -20,7 +20,7 @@ namespace RenderSurface.Game;
 
 // Selected game fixture: the parent never loads this assembly. All resource/device
 // ownership belongs to the runtime view; the game owns only its factory-created World.
-public sealed class MeshGame : IRenderSnapshotGameSession, IInputGameSession, IGameSessionEntry
+public sealed class MeshGame : IRenderSnapshotGameSession, IInputGameSession, IGameSessionEntry, IGameScenarioObservationSource
 {
     private readonly IFactory<World> _worlds;
     private World? _world;
@@ -82,5 +82,14 @@ public sealed class MeshGame : IRenderSnapshotGameSession, IInputGameSession, IG
     }
     public RenderSceneSource ReadRenderScene() => new(_world ?? throw new InvalidOperationException("Load first."), _content,
         new(new Guid("458ddc79-8803-4dc0-b24b-9445695d980a")), Revision, RenderCameraSource.External(Matrix4x4.CreateTranslation(0, 0, 6), PerspectiveCamera.Default));
+
+    public GameScenarioSnapshot? ReadScenarioObservation()
+    {
+        if (_world is not {} world || !world.IsAlive(_first)) return null;
+        var renderer = world.GetComponent<MeshRenderer>(_first);
+        return new(TickNumber, 1,
+            [KeyValuePair.Create("first-cube.red", new GameScenarioNumber(renderer.TintEnabled ? renderer.TintLinear.X : 1, "linear-channel"))]);
+    }
+
     public void Dispose() { _world?.Dispose(); _world = null; }
 }

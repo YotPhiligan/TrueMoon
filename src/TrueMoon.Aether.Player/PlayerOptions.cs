@@ -13,10 +13,12 @@ public sealed class PlayerOptions
     public string Title{get;set;}="Aether Player";
     /// <summary>Requires an installed Vulkan core/synchronization validation layer.</summary>
     public bool Validation{get;set;}
+    /// <summary>Opts a test host into explicit fixed ticks and capture requests after the first presentation.</summary>
+    public bool ManualTicks { get; set; }
     internal PlayerOptions Snapshot()
     {
         if(Width is <16 or >1920||Height is <16 or >1080||string.IsNullOrWhiteSpace(Title)||Title.Length>256)throw new ArgumentOutOfRangeException(nameof(PlayerOptions));
-        return new(){Width=Width,Height=Height,Title=Title,Validation=Validation};
+        return new(){Width=Width,Height=Height,Title=Title,Validation=Validation,ManualTicks=ManualTicks};
     }
     /// <summary>Standard immutable window schema; explicitly add this exact instance and sources in the composition root.</summary>
     public static IConfigurationSchema<PlayerOptions> Schema{get;}=ConfigurationSchemaDefinitions.Create("Aether:Player",()=>new PlayerOptions(),value=>value.Snapshot(),value=>{_ = value.Snapshot();},fields=>

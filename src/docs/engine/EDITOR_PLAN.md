@@ -26,6 +26,12 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 в Debug и Release. Стекло, подложка и иконки Editor вошли в `20ed7f4`.
 [Проверки Alloy](../alloy/HISTORY.md#alloy-main-glass-icons-2026-11-21).
 
+Проверки Editor по сценарию в отдельной песочнице запланированы в
+[ENG9b.2](PLAN.md#eng9b2-ui-scenarios). Семантический снимок и выбор
+целей для ввода описаны в [UIQA](../alloy/PLAN.md#uiqa-agent-checks).
+Работа агента с открытым Editor через [локальный MCP](PLAN.md#eng9b-mcp-adapter)
+следует за приёмкой этого сценария.
+
 В `main` на `a1764fb` проверены первичный импорт из пустого каталога,
 размещение модели и восстановление сцены после перезапуска.
 [ARCH1g.2p](PLAN.md#arch1g2p-initial-model-import).

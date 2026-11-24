@@ -241,6 +241,25 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
             (!RequiresMeshView || _renderView.IsReady)) TickGame(); } }
         finally { _worldSerial.Release(); }
     }
+
+    internal async Task<GameScenarioSnapshot?> ReadScenarioObservationAsync(ulong tick, CancellationToken token)
+    {
+        await _worldSerial.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            lock (_gate)
+            {
+                RequireReady();
+                if (_stopping || game.TickNumber != tick)
+                    throw new InvalidOperationException($"The game is not at scenario tick {tick}.");
+                var snapshot = (game as IGameScenarioObservationSource)?.ReadScenarioObservation();
+                if (snapshot != null && snapshot.Tick != tick)
+                    throw new InvalidDataException($"Game observation tick {snapshot.Tick} differs from requested tick {tick}.");
+                return snapshot;
+            }
+        }
+        finally { _worldSerial.Release(); }
+    }
     /// <summary>Clears transient input at a host focus/surface lifecycle boundary without changing game/checkpoint state.</summary>
     public void ResetInput() { lock (_gate) _input.Clear(); }
     public (ulong Tick, uint Color) CaptureFrame()

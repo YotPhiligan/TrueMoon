@@ -178,6 +178,21 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
         catch(Exception error){Volatile.Write(ref _hud,null);Publish(Status with{State=PlayerState.Faulted,Error=error});throw;}
         finally{_gate.Release();}
     }
+    /// <summary>Reads the optional game observation at exactly the requested completed tick.</summary>
+    /// <param name="tick">Tick already completed by this Player session.</param>
+    /// <param name="token">Cancels waiting to read the session.</param>
+    /// <returns>A detached snapshot, or null when the game supplies no observation.</returns>
+    public async Task<GameScenarioSnapshot?> ReadScenarioObservationAsync(ulong tick, CancellationToken token = default)
+    {
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            Ready();
+            return await _protocol!.ReadScenarioObservationAsync(tick, token).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
     private async Task<PlayerStatus> CommandAsync(CommandKind kind,Action<ControlRequest>? configure,CancellationToken token)
     {
         await _gate.WaitAsync(token).ConfigureAwait(false);

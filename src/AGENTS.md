@@ -238,6 +238,12 @@ configuration proofs не заменяют native/GPU/release acceptance.
 Старые callbacks остаются совместимым путём; наличие инструкции не переводит
 автоматически все приложения и не подтверждает native/release readiness.
 
+## Сценарии Player
+
+Для повторяемых прогонов на пакетном Player используйте проектный скилл
+[truemoon-scenarios](../.agents/skills/truemoon-scenarios/SKILL.md) и
+[руководство по сценариям](docs/engine/SCENARIO_TESTING.md).
+
 ## UI направление
 
 Для проектирования, реализации и ревью экранов Argentis/Alloy используйте

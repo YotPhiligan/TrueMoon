@@ -32,6 +32,9 @@ file после capture; показывает два cube, независимы�
 combined/separate hosts, повторные Play/Stop/crash, документы/history, CLI и SDK-free
 Player. Этот runner сохраняет отдельный минимальный Player scope.
 
+Для фиксированных тиков, PNG и отчёта используйте `PlayerProbe --scenario`.
+[Формат сценария и пакетный пример](../../docs/engine/SCENARIO_TESTING.md).
+
 <a id="orthographic-route"></a>
 ## Ортографический маршрут TrueMoon.Tales
 

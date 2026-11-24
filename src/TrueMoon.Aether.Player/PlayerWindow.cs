@@ -1,4 +1,9 @@
 
+using System.Collections.Immutable;
+using System.Threading.Channels;
+using SkiaSharp;
+using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Gpu;
@@ -18,6 +23,7 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     private readonly PlayerSession _session;
     private readonly PlayerInput _input;
     private readonly PlayerOptions _options;
+    private readonly Channel<ScenarioRequest>? _scenario;
     private readonly CancellationTokenSource _end=new();
     private readonly TaskCompletionSource _first=new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _ready=new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -31,7 +37,11 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     private Action? _current;
     private int _owner,_closing;
     internal PlayerWindow(HostedUiWindow window,PlayerSession session,PlayerInput input,PlayerOptions options)
-    {_window=window;_session=session;_input=input;_options=options;window.FramePresented+=OnPresented;window.Closing+=OnClosing;}
+    {
+        _window=window;_session=session;_input=input;_options=options;window.FramePresented+=OnPresented;window.Closing+=OnClosing;
+        if (options.ManualTicks)
+            _scenario = Channel.CreateBounded<ScenarioRequest>(new BoundedChannelOptions(1) { SingleReader = true });
+    }
     /// <summary>Completes only after actual current presentation and admission to Playing.</summary>
     public Task Ready=>_ready.Task;
     /// <summary>Owned fixed/render loop; a fault is terminal until App cleanup.</summary>
@@ -59,11 +69,39 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
             });
             await initialized.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             var surface=await _session.AttachSurfaceAsync(adapter,_context!,_options.Validation,cancellationToken).ConfigureAwait(false);
-            _loop=RunAsync(surface,_end.Token);
+            _loop=_scenario is {} scenario ? RunScenarioAsync(surface,scenario,_end.Token) : RunAsync(surface,_end.Token);
             await _first.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             await _session.SetPlayingAsync(true,cancellationToken).ConfigureAwait(false);_ready.TrySetResult();
         }
         catch(Exception error){_ready.TrySetException(error);_end.Cancel();throw;}
+    }
+
+    /// <summary>Stages input through the Player protocol, advances one fixed tick, and optionally captures its presented window frame.</summary>
+    /// <param name="input">Complete held state and one-tick changes.</param>
+    /// <param name="capture">Capture scene and HUD at this tick.</param>
+    /// <param name="cancellationToken">Cancels admission and the caller's wait. Stop the owned Player to abort admitted work.</param>
+    /// <returns>The exact completed tick. At most one request can wait behind the active request.</returns>
+    public Task<PlayerScenarioStep> AdvanceScenarioAsync(GameInputState input, bool capture = false,
+        CancellationToken cancellationToken = default)
+        => AdvanceScenarioAsync(input, capture, observe: false, cancellationToken);
+
+    /// <summary>Advances one fixed tick and optionally reads game state before capturing the presented frame for that tick.</summary>
+    /// <param name="input">Complete held state and one-tick changes.</param>
+    /// <param name="capture">Capture scene and HUD at this tick.</param>
+    /// <param name="observe">Read the game's optional observation at this tick.</param>
+    /// <param name="cancellationToken">Cancels admission and the caller's wait. Stop the owned Player to abort admitted work.</param>
+    /// <returns>The exact completed tick with any requested data.</returns>
+    public async Task<PlayerScenarioStep> AdvanceScenarioAsync(GameInputState input, bool capture, bool observe,
+        CancellationToken cancellationToken)
+    {
+        var scenario = _scenario ?? throw new InvalidOperationException("The Player was not configured for manual ticks.");
+        await Ready.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        input.Validate();
+        var request = new ScenarioRequest(input, capture, observe);
+        if (Volatile.Read(ref _closing) != 0 || !scenario.Writer.TryWrite(request))
+            throw new InvalidOperationException("The scenario queue is full or closed.");
+        return await request.Result.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
     /// <summary>Fits a physical extent within the existing GPU profile, preserving aspect. Tiny/zero/extreme extents suspend.</summary>
     /// <param name="width">Framebuffer width.</param><param name="height">Framebuffer height.</param><returns>Bounded render extent.</returns>
@@ -99,6 +137,103 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
         catch(OperationCanceledException)when(token.IsCancellationRequested){}
         catch(Exception error){_first.TrySetException(error);throw;}
     }
+
+    private async Task RunScenarioAsync(GpuLocalSurfaceSession surface, Channel<ScenarioRequest> requests,
+        CancellationToken token)
+    {
+        ScenarioRequest? active = null;
+        try
+        {
+            (int Width, int Height) extent = default;
+            await Invoke(() =>
+            {
+                var viewport = _native!.Viewport;
+                extent = FitExtent(viewport.Width, viewport.Height);
+            }).ConfigureAwait(false);
+            if (extent.Width == 0)
+                throw new InvalidOperationException("A manual Player requires a nonempty window.");
+            var presentation = await _session.ConfigureSurfaceAsync(extent.Width, extent.Height, token).ConfigureAwait(false);
+            await surface.ProduceAsync(0, presentation, Consume, token).ConfigureAwait(false);
+            var slot = 1;
+            await foreach (var request in requests.Reader.ReadAllAsync(token).ConfigureAwait(false))
+            {
+                active = request;
+                token.ThrowIfCancellationRequested();
+                var expectedTick = checked(_session.Status.Tick + 1);
+                var input = await _session.InputAsync(request.Input, token).ConfigureAwait(false);
+                var status = await _session.FixedTickAsync(token).ConfigureAwait(false);
+                if (status.Tick != expectedTick)
+                    throw new InvalidOperationException($"Expected Player tick {expectedTick}, observed {status.Tick} ({status.State}).");
+                var observation = request.Observe
+                    ? await _session.ReadScenarioObservationAsync(expectedTick, token).ConfigureAwait(false)
+                    : null;
+                PlayerScenarioFrame? frame = null;
+                if (request.Capture)
+                {
+                    frame = await CaptureScenarioFrameAsync(surface, presentation, slot, expectedTick, token).ConfigureAwait(false);
+                    slot = (slot + 1) % 3;
+                }
+                request.Result.TrySetResult(new(status, input, frame) { Observation = observation });
+                active = null;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            active?.Result.TrySetCanceled(token);
+            _first.TrySetCanceled(token);
+        }
+        catch (Exception error)
+        {
+            active?.Result.TrySetException(error);
+            _first.TrySetException(error);
+            throw;
+        }
+        finally
+        {
+            requests.Writer.TryComplete();
+            while (requests.Reader.TryRead(out var pending))
+                pending.Result.TrySetCanceled();
+        }
+    }
+
+    private async Task<PlayerScenarioFrame> CaptureScenarioFrameAsync(GpuLocalSurfaceSession surface,
+        ViewportPresentation presentation, int slot, ulong tick, CancellationToken token)
+    {
+        var presented = new TaskCompletionSource<PlayerScenarioFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ViewportFrame? expected = null;
+        _window.FramePresented += OnScenarioPresented;
+        try
+        {
+            var frame = await surface.ProduceAsync(slot, presentation, source =>
+            {
+                expected = source.Frame;
+                Consume(source);
+            }, token).ConfigureAwait(false);
+            if (frame == null || frame.Metadata.Tick != tick)
+                throw new InvalidDataException($"Player did not produce a frame for tick {tick}.");
+            var capture = await presented.Task.WaitAsync(token).ConfigureAwait(false);
+            if (!await AcknowledgeAsync(frame).ConfigureAwait(false))
+                throw new InvalidDataException($"Player rejected presentation of frame {frame.Metadata.FrameId} at tick {tick}.");
+            return capture;
+        }
+        finally { _window.FramePresented -= OnScenarioPresented; }
+
+        void OnScenarioPresented(UiSession ui)
+        {
+            if (presented.Task.IsCompleted || expected is not {} drawn ||
+                !ReferenceEquals(drawn, ((PlayerView)ui.Root).Canvas.Drawn)) return;
+            try
+            {
+                if (!ReferenceEquals(drawn.Presentation, _session.Presentation) || drawn.Metadata.Tick != tick)
+                    throw new InvalidDataException($"Player presented a stale frame while capturing tick {tick}.");
+                using var image = ((SkiaOpenGLSurface)ui.Rendering).ReadbackImage();
+                using var png = image.Encode(SKEncodedImageFormat.Png, 100) ?? throw new IOException("Could not encode Player frame.");
+                presented.TrySetResult(new(tick, drawn.Metadata.FrameId, presentation.Surface.Generation,
+                    image.Width, image.Height, ui.Viewport.Scale, ImmutableArray.Create(png.ToArray())));
+            }
+            catch (Exception error) { presented.TrySetException(error); }
+        }
+    }
     private void Consume(GpuViewportImage source)
     {
         if(_ui==null||_view==null||!ReferenceEquals(_session.Presentation,source.Frame.Presentation)||Volatile.Read(ref _closing)!=0)return;
@@ -111,10 +246,15 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     {
         if(Volatile.Read(ref _closing)!=0)return;
         _ui=ui;_view=(PlayerView)ui.Root;
-        if(_ack.IsCompleted&&_view.Canvas.Drawn is {} frame)_ack=AcknowledgeAsync(frame);
+        if((_scenario==null||!_first.Task.IsCompleted)&&_ack.IsCompleted&&_view.Canvas.Drawn is {} frame)_ack=AcknowledgeAsync(frame);
     }
-    private async Task AcknowledgeAsync(ViewportFrame frame)
-    {if(await _session.PresentedAsync(frame,_end.Token).ConfigureAwait(false)){PresentedFrames++;_first.TrySetResult();}}
+    private async Task<bool> AcknowledgeAsync(ViewportFrame frame)
+    {
+        if (!await _session.PresentedAsync(frame,_end.Token).ConfigureAwait(false)) return false;
+        PresentedFrames++;
+        _first.TrySetResult();
+        return true;
+    }
     private Task Invoke(Action action)
     {
         if(Environment.CurrentManagedThreadId==_owner){_current!();action();return Task.CompletedTask;}
@@ -145,4 +285,9 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     }
     /// <summary>App fallback for the same owned loop and subscriptions.</summary>
     public ValueTask DisposeAsync()=>new(StopAsync());
+
+    private sealed record ScenarioRequest(GameInputState Input, bool Capture, bool Observe)
+    {
+        public TaskCompletionSource<PlayerScenarioStep> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 }

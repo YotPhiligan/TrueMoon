@@ -84,8 +84,8 @@ try{
         $refs=($spec.References | ForEach-Object {'<PackageReference Include="'+$_+'" Version="'+$version+'"/>'}) -join '';$output=if($spec.Exe){'<OutputType>Exe</OutputType>'}else{''}
         [IO.File]::WriteAllText("$fresh/$($spec.Name)/Consumer.csproj",'<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'+$output+'<AssemblyName>'+$spec.Assembly+'</AssemblyName><RootNamespace>'+$spec.Namespace+'</RootNamespace></PropertyGroup><ItemGroup>'+$refs+'</ItemGroup></Project>')
         if($spec.Name -eq 'probe'){
-            foreach($source in @('Program.cs','OrthographicRouteProof.cs')){
-                Copy-Item -LiteralPath "$PSScriptRoot/$source" -Destination "$fresh/probe/$source"
+            foreach($source in Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.cs' -File){
+                Copy-Item -LiteralPath $source.FullName -Destination "$fresh/probe/$($source.Name)"
             }
         }
         elseif($spec.Name -eq 'publisher'){Copy-Item -LiteralPath "$workspace/ManualTests/RuntimeArtifactTool/Program.cs" -Destination "$fresh/publisher/Program.cs"}
