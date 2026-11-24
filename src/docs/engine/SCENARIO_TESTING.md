@@ -1,5 +1,7 @@
 # Сценарный запуск оконного Player
 
+Для автоматизации Editor используйте [сценарий с вводом по ID](#editor-scenario).
+
 `PlayerProbe --scenario` запускает готовый Build и сцену в тестовом приложении.
 Оно подаёт `GameInputState` через протокол Player и выполняет фиксированные тики
 по запросу. На контрольном тике следующий шаг ждёт фактического представления
@@ -135,3 +137,31 @@ await File.WriteAllBytesAsync(framePath, step.Frame!.Png.AsMemory(), token);
 При отмене ожидания тестовый хост завершает App вне UI owner thread.
 Режим `ManualTicks` использует начальную область рендера. Сохраняйте размер
 окна и держите его открытым до конца прогона.
+
+<a id="editor-scenario"></a>
+## Сценарий Editor с вводом по ID
+
+[Сценарий повторного открытия сцены](../../TrueMoon.Aether.Editor.Tests/DocumentsUi/scene-round-trip.scenario.json)
+исполняется в тестовом проекте Editor. Он использует общие поля сценариев
+`formatVersion`, `timeoutMs`, `width`, `height` и именованные `checkpoints`.
+В профиле Editor у каждой контрольной точки есть упорядоченные события
+`input` с `target` и `kind`, а также ожидания к документу и семантическому
+снимку. Размер задан в логических единицах, срок выполнения — в миллисекундах.
+
+Хост создаёт настоящие header, обозреватель и инспектор с CPU Skia. `Click`
+вычисляет точку в видимой области семантического узла. `KeyDown` и `Text`
+проходят через проверку фокуса. `$transform-x` подставляет ID поля X по ID
+компонента, полученному после создания объекта. Операции документа завершаются
+в пределах дедлайна. Контрольные точки сверяют состояние после layout
+и записывают фактические значения в вывод теста.
+
+Сцена находится во временном каталоге и сохраняется через
+`JsonSceneDocumentStore`. Сценарий закрывает документ, проверяет исчезновение
+поля Transform и заново открывает файл через header. После открытия он
+сверяет ID объекта и компонента, значение X и сброшенную историю.
+
+Запустите тест из каталога `src`.
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --filter 'FullyQualifiedName~EditorSceneScenarioTests' --logger 'trx;LogFileName=editor-scenario.trx'
+```

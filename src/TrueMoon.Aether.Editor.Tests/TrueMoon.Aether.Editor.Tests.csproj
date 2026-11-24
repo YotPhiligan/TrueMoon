@@ -11,6 +11,9 @@
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="DocumentsUi/scene-round-trip.scenario.json" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../ManualTests/AetherEditorHost/AetherEditorHost.csproj" />
     <ProjectReference Include="../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />

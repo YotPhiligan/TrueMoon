@@ -5,6 +5,9 @@
 цель при маршрутизации. На обозревателе и инспекторе проверены отдельные
 исходы для старого снимка, popup и отключённой команды.
 [Контракт](UI_TESTING.md#ui-semantic-input) · [Проверки](HISTORY.md#uiqa2-semantic-input-2026-11-24).
+На `1.2611.24.3-alpha` этот API использован в
+[сценарии Editor](../engine/SCENARIO_TESTING.md#editor-scenario) для создания
+объекта, Apply/Undo/Redo и повторного открытия сохранённой сцены.
 
 24.11.2026 — [UIQA.1](PLAN.md#uiqa-agent-checks) проверен на `1.2611.24.1-alpha`
 в CPU raster. Снимок обозревателя и инспектора после layout подтверждает

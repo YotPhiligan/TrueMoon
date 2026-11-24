@@ -1,21 +1,17 @@
 # Aether / Editor: состояние и точка продолжения
 
-24.11.2026 — [UIQA.2](../alloy/HISTORY.md#uiqa2-semantic-input-2026-11-24)
-проверил ввод по ID на обозревателе и инспекторе с `1.2611.24.2-alpha`.
-Устаревшее поле Transform, перекрытые поиск и Apply и отключённые команды
-проверены на живой `UiSession`. Следующий шаг — собрать цепочку действий
-редактора в [ENG9b.2](PLAN.md#eng9b2-ui-scenarios).
-
-24.11.2026 — для [ENG9b.2](PLAN.md#eng9b2-ui-scenarios) снято семантическое
-дерево обозревателя и инспектора на `1.2611.24.1-alpha`. Проверены фокус,
-устойчивый ID поля Transform после пересоздания и доступность команд при
-выборе и правке. [UIQA.1](../alloy/HISTORY.md#uiqa1-semantic-snapshot-2026-11-24).
+24.11.2026 — [ENG9b.2](PLAN.md#eng9b2-ui-scenarios) завершён на
+`1.2611.24.3-alpha`. Сценарий Editor через ввод по ID создаёт объект, меняет
+Transform, выполняет Apply/Undo/Redo и открывает сохранённый файл после
+закрытия сцены. После открытия совпали ID объекта и компонента и значение
+X. [Запуск](SCENARIO_TESTING.md#editor-scenario) ·
+[Результаты](HISTORY.md#eng9b2-editor-scenario-2026-11-24).
+Следующий шаг ENG9b.3 — сравнение результатов двух прогонов.
 
 24.11.2026 — [ENG9b.1](PLAN.md#eng9b1-player-scenario-capture) завершён на
 `1.2611.23.13-alpha`. Пакетный Player сопоставляет числовые наблюдения и PNG
 на одном фиксированном тике. Проверены диапазоны, отсутствующий ключ и
-несовпадение версии и единиц. Следующий сценарный профиль —
-[Editor в ENG9b.2](PLAN.md#eng9b2-ui-scenarios). [Руководство](SCENARIO_TESTING.md),
+несовпадение версии и единиц. [Руководство](SCENARIO_TESTING.md),
 [результаты](HISTORY.md#eng9b1-observations-2026-11-24).
 
 23.11.2026 — [пилот UIA1f](EDITOR_PLAN.md#ed4c-view-authoring-pilot)

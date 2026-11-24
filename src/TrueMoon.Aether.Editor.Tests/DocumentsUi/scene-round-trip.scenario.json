@@ -1,0 +1,131 @@
+{
+  "formatVersion": 1,
+  "timeoutMs": 10000,
+  "width": 1500,
+  "height": 900,
+  "checkpoints": [
+    {
+      "id": "initial-open",
+      "input": [
+        { "target": "editor.header.open-scene", "kind": "Click" },
+        { "target": "editor.document.path", "kind": "KeyDown", "key": "A", "control": true },
+        { "target": "editor.document.path", "kind": "Text", "text": "uiqa-round-trip.aetherscene" },
+        { "target": "editor.document.confirm-path", "kind": "Click" }
+      ],
+      "scene": "Clean",
+      "ready": ["editor.hierarchy.create"],
+      "entityCount": 0,
+      "undoCount": 0,
+      "redoCount": 0
+    },
+    {
+      "id": "created",
+      "input": [{ "target": "editor.hierarchy.create", "kind": "Click" }],
+      "scene": "Dirty",
+      "entityCount": 1,
+      "positionX": 0,
+      "undoCount": 1,
+      "redoCount": 0,
+      "selected": true,
+      "ready": ["$transform-x", "editor.inspector.undo", "editor.header.save-scene"],
+      "disabled": ["editor.inspector.apply", "editor.inspector.redo"]
+    },
+    {
+      "id": "drafted",
+      "input": [
+        { "target": "$transform-x", "kind": "Click" },
+        { "target": "$transform-x", "kind": "KeyDown", "key": "A", "control": true },
+        { "target": "$transform-x", "kind": "Text", "text": "37" }
+      ],
+      "scene": "Dirty",
+      "entityCount": 1,
+      "positionX": 0,
+      "editorX": "37",
+      "undoCount": 1,
+      "redoCount": 0,
+      "selected": true,
+      "focused": "$transform-x",
+      "ready": ["editor.inspector.apply"]
+    },
+    {
+      "id": "applied",
+      "input": [{ "target": "editor.inspector.apply", "kind": "Click" }],
+      "scene": "Dirty",
+      "entityCount": 1,
+      "positionX": 37,
+      "editorX": "37",
+      "undoCount": 2,
+      "redoCount": 0,
+      "selected": true,
+      "ready": ["editor.inspector.undo"],
+      "disabled": ["editor.inspector.apply", "editor.inspector.redo"]
+    },
+    {
+      "id": "undone",
+      "input": [{ "target": "editor.inspector.undo", "kind": "Click" }],
+      "scene": "Dirty",
+      "entityCount": 1,
+      "positionX": 0,
+      "editorX": "0",
+      "undoCount": 1,
+      "redoCount": 1,
+      "selected": true,
+      "ready": ["editor.inspector.redo"],
+      "disabled": ["editor.inspector.apply"]
+    },
+    {
+      "id": "redone",
+      "input": [{ "target": "editor.inspector.redo", "kind": "Click" }],
+      "scene": "Dirty",
+      "entityCount": 1,
+      "positionX": 37,
+      "editorX": "37",
+      "undoCount": 2,
+      "redoCount": 0,
+      "selected": true,
+      "ready": ["editor.header.save-scene"],
+      "disabled": ["editor.inspector.apply", "editor.inspector.redo"]
+    },
+    {
+      "id": "saved",
+      "input": [{ "target": "editor.header.save-scene", "kind": "Click" }],
+      "scene": "Clean",
+      "entityCount": 1,
+      "positionX": 37,
+      "undoCount": 2,
+      "redoCount": 0
+    },
+    {
+      "id": "closed",
+      "input": [
+        { "target": "editor.hierarchy.tree", "kind": "Click" },
+        { "target": "editor.hierarchy.tree", "kind": "KeyDown", "key": "W", "control": true, "intercepted": true }
+      ],
+      "scene": "Closed",
+      "ready": ["editor.header.open-scene"],
+      "disabled": ["editor.header.save-scene"],
+      "missing": ["$transform-x"]
+    },
+    {
+      "id": "reopened",
+      "input": [
+        { "target": "editor.header.open-scene", "kind": "Click" },
+        { "target": "editor.document.path", "kind": "KeyDown", "key": "A", "control": true },
+        { "target": "editor.document.path", "kind": "Text", "text": "uiqa-round-trip.aetherscene" },
+        { "target": "editor.document.confirm-path", "kind": "Click" },
+        { "target": "editor.hierarchy.tree", "kind": "Click" },
+        { "target": "editor.hierarchy.tree", "kind": "KeyDown", "key": "Home" }
+      ],
+      "scene": "Clean",
+      "entityCount": 1,
+      "positionX": 37,
+      "editorX": "37",
+      "undoCount": 0,
+      "redoCount": 0,
+      "selected": true,
+      "focused": "editor.hierarchy.tree",
+      "ready": ["$transform-x"],
+      "disabled": ["editor.inspector.apply", "editor.inspector.undo", "editor.inspector.redo"]
+    }
+  ]
+}

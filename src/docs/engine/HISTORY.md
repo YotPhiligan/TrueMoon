@@ -17754,3 +17754,38 @@ GPU-слотов и дескрипторов. Контракт наблюден�
 отсутствующий ключ и несовместимая схема вернули `7`. Сценарий версии `1`
 без наблюдений завершился с кодом `0`. Проверен пакетный потребитель в
 изолированной копии. [Контракт и пример](SCENARIO_TESTING.md#synthetic-scenario).
+
+<a id="eng9b2-editor-scenario-2026-11-24"></a>
+## 2026-11-24 — ENG9b.2. Сценарий сохранения и открытия сцены Editor
+
+На `1.2611.24.3-alpha` сценарий версии `1` прошёл девять контрольных точек
+в `SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform`.
+Добавлены стабильные ID кнопок открытия и сохранения сцены в header,
+поля пути и подтверждения пути. Сценарий построен на штатных View,
+`UiSession`, CPU Skia и реальном `JsonSceneDocumentStore`.
+[Запуск и формат](SCENARIO_TESTING.md#editor-scenario).
+
+| Контрольная точка | X в документе | X в поле | Undo / Redo |
+| --- | ---: | ---: | ---: |
+| Создание объекта | 0 | | 1 / 0 |
+| Ввод в сфокусированное поле | 0 | 37 | 1 / 0 |
+| Apply | 37 | 37 | 2 / 0 |
+| Undo | 0 | 0 | 1 / 1 |
+| Redo | 37 | 37 | 2 / 0 |
+| Повторное открытие | 37 | 37 | 0 / 0 |
+
+После закрытия поле исчезло из семантического снимка. После открытия
+редактор прочитал ту же ревизию с новым `OpeningId`, сохранил ID объекта
+и компонента и показал значение в инспекторе. Повторный выбор объекта
+оставил фокус в обозревателе. Проверки доступности Apply/Undo/Redo
+использовали эффективное состояние в снимке после layout.
+
+Полный проект Editor прошёл по 1 543 теста в Debug и Release с SDK
+`11.0.100`. Профиль проверяет routed input и layout на CPU, файловое
+хранилище и восстановление документа. Нативное окно и GPU в этом
+прогоне не использовались.
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Debug --logger 'trx;LogFileName=editor-debug.trx' --results-directory $run
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Release --logger 'trx;LogFileName=editor-release.trx' --results-directory $run
+```

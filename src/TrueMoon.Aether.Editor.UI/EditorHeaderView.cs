@@ -147,8 +147,10 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             BrandIcon = new BrandMark();
             Caption = new CaptionText(arguments.Title);
             UpdateCaption();
-            OpenButton = Action(UiSymbol.Folder, "Открыть сцену по пути", _documents[DocumentCommand.Open]);
-            SaveButton = Action(UiSymbol.Save, "Сохранить сцену · Ctrl+S", _documents[DocumentCommand.Save]);
+            OpenButton = Action(UiSymbol.Folder, "Открыть сцену по пути", _documents[DocumentCommand.Open])
+                .SemanticId("editor.header.open-scene");
+            SaveButton = Action(UiSymbol.Save, "Сохранить сцену · Ctrl+S", _documents[DocumentCommand.Save])
+                .SemanticId("editor.header.save-scene");
             UndoButton = Action(UiSymbol.Undo, "Отменить изменение · Ctrl+Z", undo);
             RedoButton = Action(UiSymbol.Redo, "Повторить изменение · Ctrl+Y", redo);
             RunButton = Action(UiSymbol.Play, "Запустить / продолжить симуляцию", RunCommand);

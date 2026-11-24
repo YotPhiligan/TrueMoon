@@ -55,7 +55,7 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
         try
         {
             model.Refresh(); DataContext = model;
-            PathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.RequestedPath)
+            PathInput = TextBox.Create().SemanticId("editor.document.path").BindTwoWay(TextBox.ValueProperty, model, x => x.RequestedPath)
                 .Bind(UiProperties.Enabled, model, x => x.CanEditPath).Bind(UiProperties.AccessibleName, model, x => x.PathInputLabel);
             SavePathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.SavePathDraft)
                 .SetValue(UiProperties.AccessibleName, "Сохранить новую сцену как");
@@ -69,7 +69,8 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
             Add(DocumentCommand.SaveAs, "Сохранить как", x => x.CanSaveAs);
             Add(DocumentCommand.Close, "Закрыть", x => x.CanClose);
             Actions.Add(Button.Simple("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel));
-            ConfirmPath = Button.Simple("Продолжить").Bind(UiProperties.Enabled, model, x => x.CanConfirmPath).OnClick(model.ConfirmPath);
+            ConfirmPath = Button.Simple("Продолжить").SemanticId("editor.document.confirm-path")
+                .Bind(UiProperties.Enabled, model, x => x.CanConfirmPath).OnClick(model.ConfirmPath);
             CancelPath = Button.Simple("Отмена").OnClick(model.CancelPath);
             DismissTools = Button.Simple("Закрыть").OnClick(model.CancelPath);
             if (compactHeader)
