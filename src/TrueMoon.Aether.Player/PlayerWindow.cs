@@ -159,21 +159,15 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
             {
                 active = request;
                 token.ThrowIfCancellationRequested();
-                var expectedTick = checked(_session.Status.Tick + 1);
-                var input = await _session.InputAsync(request.Input, token).ConfigureAwait(false);
-                var status = await _session.FixedTickAsync(token).ConfigureAwait(false);
-                if (status.Tick != expectedTick)
-                    throw new InvalidOperationException($"Expected Player tick {expectedTick}, observed {status.Tick} ({status.State}).");
-                var observation = request.Observe
-                    ? await _session.ReadScenarioObservationAsync(expectedTick, token).ConfigureAwait(false)
-                    : null;
-                PlayerScenarioFrame? frame = null;
+                var step = await PlayerScenarioTick.AdvanceAsync(_session, request.Input, request.Observe, paused: false, token)
+                    .ConfigureAwait(false);
                 if (request.Capture)
                 {
-                    frame = await CaptureScenarioFrameAsync(surface, presentation, slot, expectedTick, token).ConfigureAwait(false);
+                    var frame = await CaptureScenarioFrameAsync(surface, presentation, slot, step.Status.Tick, token).ConfigureAwait(false);
+                    step = step with { Frame = frame };
                     slot = (slot + 1) % 3;
                 }
-                request.Result.TrySetResult(new(status, input, frame) { Observation = observation });
+                request.Result.TrySetResult(step);
                 active = null;
             }
         }

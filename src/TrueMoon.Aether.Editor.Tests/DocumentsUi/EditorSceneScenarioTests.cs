@@ -40,7 +40,26 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
     };
 
     [Fact]
-    public void SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform() => Replay(LoadScenario());
+    public void SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform()
+    {
+        var scenarioPath = Environment.GetEnvironmentVariable("TRUEMOON_EDITOR_SCENARIO_INPUT");
+        if (string.IsNullOrWhiteSpace(scenarioPath))
+        {
+            Replay(LoadScenario());
+            return;
+        }
+
+        var parameterPath = Environment.GetEnvironmentVariable("TRUEMOON_EDITOR_SCENARIO_PARAMETERS");
+        Dictionary<string, string>? parameters = null;
+        if (!string.IsNullOrWhiteSpace(parameterPath))
+        {
+            using var values = File.OpenRead(parameterPath);
+            parameters = JsonSerializer.Deserialize<Dictionary<string, string>>(values, ScenarioJson)
+                ?? throw new InvalidDataException("The scenario parameter file must contain an object.");
+        }
+        using var input = File.OpenRead(scenarioPath);
+        Replay(ReadScenario(input), parameters: parameters);
+    }
 
     [Fact]
     public void SceneRoundTrip_ComparesIndependentRunsAndWritesDifferences()
@@ -135,8 +154,15 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
         using var source = typeof(EditorSceneScenarioTests).Assembly.GetManifestResourceStream(
             "TrueMoon.Aether.Editor.Tests.DocumentsUi.scene-round-trip.scenario.json");
         Assert.NotNull(source);
+        return ReadScenario(source);
+    }
+
+    private static Scenario ReadScenario(Stream source)
+    {
+        if (source.Length is <= 0 or > 1024 * 1024) throw new InvalidDataException("Invalid Editor scenario size.");
         var scenario = Assert.IsType<Scenario>(JsonSerializer.Deserialize<Scenario>(source, ScenarioJson));
         Assert.Equal(1, scenario.FormatVersion);
+        Assert.NotEmpty(scenario.Checkpoints);
         return scenario;
     }
 

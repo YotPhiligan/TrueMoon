@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
@@ -32,9 +33,24 @@ public static class PlayerConfigurationExtensions
         context.Services(services=>
         {
             services.Singleton<PlayerWindow>(resolver=>new(resolver.Resolve<HostedUiWindow>(),resolver.Resolve<PlayerSession>(),resolver.Resolve<PlayerInput>(),settings));
+            if (settings.ManualTicks)
+                services.Singleton<IPlayerScenarioDriver>(resolver => new WindowScenarioDriver(resolver.Resolve<PlayerWindow>()));
             services.Singleton<IStartable>(resolver=>new AppServiceLifecycle(startable:resolver.Resolve<PlayerWindow>()));
             services.Singleton<IStoppable>(resolver=>new AppServiceLifecycle(stoppable:resolver.Resolve<PlayerWindow>()));
         });
+        return context;
+    }
+
+    /// <summary>Registers an App-owned local game and a manually stepped scenario driver without a window or surface.</summary>
+    /// <param name="context">Player App configuration.</param>
+    /// <param name="start">Captured game Build and scene.</param>
+    /// <returns>The same context.</returns>
+    public static IAppConfigurationContext UseAetherHeadlessPlayer(this IAppConfigurationContext context, PlayerStart start)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.UseAetherLocalRuntime(start);
+        context.Services(services =>
+            services.Singleton<IPlayerScenarioDriver>(resolver => new HeadlessScenarioDriver(resolver.Resolve<PlayerSession>())));
         return context;
     }
     /// <summary>Uses the standard prepared PlayerOptions.Schema and explicit sources; artifact identity stays outside configuration providers.</summary>

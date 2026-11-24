@@ -17826,3 +17826,44 @@ foreach ($configuration in 'Release', 'Debug') {
 воспроизведение после десериализации с отдельным значением параметра совпадает
 по девяти точкам с исходной сессией. Проверка Release класса
 `EditorSceneScenarioTests` прошла 2/2. [Запись](SCENARIO_TESTING.md#editor-scenario-recording).
+
+Отдельный запуск загрузил редактированную копию записанного JSON с
+`Transform.X = 41` и отдельным файлом параметров. Тест
+`SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform` подтвердил
+`41` после повторного открытия файла.
+
+<a id="eng9b4-player-parity-2026-11-24"></a>
+## 2026-11-24 — ENG9b.4. Совпадение оконного и headless Player
+
+`IPlayerScenarioDriver` подаёт ввод, выполняет один тик и возвращает
+наблюдение. Headless выполняет явный шаг Paused без поверхности. Оконный
+профиль выполняет Playing после фактического представления первого кадра.
+[Контракт и запуск](SCENARIO_TESTING.md#headless-player-scenario).
+
+На SDK `11.0.100` собраны 17 пакетов `1.2611.24.4-alpha`. Probe,
+публикатор Build и игра с двумя кубами опубликованы из изолированных
+пакетных consumers без ProjectReference. Оба прогона `VerifyScenarioProfiles.ps1`
+прочитали один Build, сцену и сценарий. SHA-256 PNG сверены с оконным отчётом.
+
+| Тик | Ввод | `first-cube.red` в обоих профилях | Оконный кадр | Headless-кадр |
+| ---: | --- | ---: | --- | --- |
+| 2 | Accepted | 1 | Captured | UnavailableHeadless |
+| 6 | Accepted | 0.5 | Captured | UnavailableHeadless |
+
+Оба Player завершились в `Stopped`. Оконный освободил поверхность, слоты и
+дескрипторы. Headless завершился без окна, поверхности и PNG. Нарушение
+диапазона, отсутствующий ключ и таймаут вернули коды `2`, `7` и `3`.
+`HeadlessProfiles_AdvanceThroughTheScenarioDriverWithoutAWindowOrSurface`
+проверен на Cobalt и Microsoft DI, включая отмену до допуска тика.
+
+Доказательства и TRX сохранены в
+`TestResults/ENG9b-Complete-20261124-e6d8c855`.
+Полные наборы прошли на итоговом коде в Debug и Release:
+по 1 544 теста Editor и по 19 тестов Player.
+
+```powershell
+foreach ($configuration in 'Release', 'Debug') {
+    dotnet test TrueMoon.Aether.Player.Tests/TrueMoon.Aether.Player.Tests.csproj --no-restore -c $configuration
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c $configuration
+}
+```

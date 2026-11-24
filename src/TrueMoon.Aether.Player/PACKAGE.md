@@ -18,6 +18,14 @@ over the existing Player viewport and shares its scale without receiving input.
 common configuration profile. Artifact/scene identity and renderer callbacks stay
 explicit. Resource limits retain the shared Aether render profile.
 
+For repeatable scenarios, enable `PlayerOptions.ManualTicks` on the windowed
+Player or register `UseAetherHeadlessPlayer(start)`. Both profiles provide
+`IPlayerScenarioDriver` from `TrueMoon.Aether.Player.Scenarios`. After the App
+starts, advance one tick with `AdvanceScenarioAsync` and request a game
+observation. The headless driver steps the paused session and reports
+`SupportsFrameCapture == false` with a null frame. The App owns the game
+session and releases it on stop.
+
 Local runtime types now reside in the separate Runtime assembly; Player has no
 workflow Aether dependency. Expanded
 combined-exe/replace/crash/release matrix is ENG7b.3.

@@ -33,7 +33,8 @@ combined/separate hosts, повторные Play/Stop/crash, документы/
 Player. Этот runner сохраняет отдельный минимальный Player scope.
 
 Для фиксированных тиков, PNG и отчёта используйте `PlayerProbe --scenario`.
-[Формат сценария и пакетный пример](../../docs/engine/SCENARIO_TESTING.md).
+Для сверки с headless-профилем используйте `VerifyScenarioProfiles.ps1`.
+[Формат сценария и пакетный пример](../../docs/engine/SCENARIO_TESTING.md#headless-player-scenario).
 
 <a id="orthographic-route"></a>
 ## Ортографический маршрут TrueMoon.Tales

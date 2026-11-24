@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using TrueMoon.Aether.Abstractions.Input;
 using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Aether.Player;
+using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Gpu.Surfaces;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -26,7 +27,7 @@ internal static class PlayerScenarioCommand
         WriteIndented = true
     };
 
-    internal static async Task<int> RunAsync(string scenarioPath, string build, string scene, string output, bool legacyScene)
+    internal static async Task<int> RunAsync(string scenarioPath, string build, string scene, string output, bool legacyScene, bool headless)
     {
         if (Directory.Exists(output))
         {
@@ -60,27 +61,37 @@ internal static class PlayerScenarioCommand
             Validate(scenario);
             timeout.CancelAfter(scenario.TimeoutMs);
             start = await PlayerStart.CaptureAsync(build, BuildIdentity.HostId, scene, legacyScene, run.Token);
-            var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
-            {
-                ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf")
-            });
             var app = App.Build(context =>
             {
                 context.UseDiagnostics(new DiagnosticPipelineOptions { JsonDirectory = Path.Combine(output, "diagnostics") });
-                context.UseAetherPlayer(start, fonts, player =>
+                if (headless)
                 {
-                    player.Width = scenario.Width;
-                    player.Height = scenario.Height;
-                    player.Title = "Aether Player Scenario";
-                    player.Validation = scenario.Validation;
-                    player.ManualTicks = true;
-                });
+                    context.UseAetherHeadlessPlayer(start);
+                }
+                else
+                {
+                    var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
+                    {
+                        ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf")
+                    });
+                    context.UseAetherPlayer(start, fonts, player =>
+                    {
+                        player.Width = scenario.Width;
+                        player.Height = scenario.Height;
+                        player.Title = "Aether Player Scenario";
+                        player.Validation = scenario.Validation;
+                        player.ManualTicks = true;
+                    });
+                }
             });
             try
             {
-                window = app.Services.Resolve<HostedUiWindow>() ?? throw new InvalidOperationException("Hosted window is unavailable.");
-                window.Closing += OnWindowClosing;
-                var player = app.Services.Resolve<PlayerWindow>() ?? throw new InvalidOperationException("Player window is unavailable.");
+                if (!headless)
+                {
+                    window = app.Services.Resolve<HostedUiWindow>() ?? throw new InvalidOperationException("Hosted window is unavailable.");
+                    window.Closing += OnWindowClosing;
+                }
+                var player = app.Services.Resolve<IPlayerScenarioDriver>() ?? throw new InvalidOperationException("Player scenario is unavailable.");
                 session = app.Services.Resolve<PlayerSession>() ?? throw new InvalidOperationException("Player session is unavailable.");
                 await app.StartAsync(run.Token);
                 var changes = scenario.Input.ToDictionary(change => change.Tick);
@@ -95,16 +106,24 @@ internal static class PlayerScenarioCommand
                     input = input with { Yaw = 0, Pitch = 0, InteractPressed = false };
                     if (step.Status.Tick != (ulong)tick) throw new InvalidDataException($"Requested tick {tick}, observed {step.Status.Tick}.");
                     if (checkpoint == null) continue;
-                    var frame = step.Frame ?? throw new InvalidDataException($"No frame for '{checkpoint.Id}'.");
-                    var file = $"frame-{checkpoint.Id}.png";
-                    await File.WriteAllBytesAsync(Path.Combine(output, file), frame.Png.AsMemory(), run.Token);
+                    var frame = step.Frame;
+                    if (player.SupportsFrameCapture && frame == null)
+                        throw new InvalidDataException($"No frame for '{checkpoint.Id}'.");
+                    string? file = null, hash = null;
+                    if (frame != null)
+                    {
+                        file = $"frame-{checkpoint.Id}.png";
+                        await File.WriteAllBytesAsync(Path.Combine(output, file), frame.Png.AsMemory(), run.Token);
+                        hash = Convert.ToHexString(SHA256.HashData(frame.Png.AsSpan()));
+                    }
                     var hudStatus = session.Hud?.Status;
                     var checks = expected.Select(expectation => Evaluate(expectation, step.Observation)).ToArray();
                     var passed = (checkpoint.ExpectedInput == null || checkpoint.ExpectedInput == step.Input) &&
                         (checkpoint.ExpectedHudStatus == null || checkpoint.ExpectedHudStatus == hudStatus) &&
                         checks.All(check => check.Outcome == ObservationOutcome.Passed);
-                    observations.Add(new(checkpoint, step.Input, hudStatus, frame.Tick, frame.FrameId, frame.SurfaceGeneration,
-                        frame.Width, frame.Height, frame.Scale, file, Convert.ToHexString(SHA256.HashData(frame.Png.AsSpan())),
+                    observations.Add(new(checkpoint, step.Input, hudStatus, step.Status.Tick,
+                        frame != null ? "Captured" : "UnavailableHeadless", frame?.Tick, frame?.FrameId, frame?.SurfaceGeneration,
+                        frame?.Width, frame?.Height, frame?.Scale, file, hash,
                         step.Observation?.Tick, step.Observation?.Version, checks, passed));
                     if (!passed)
                     {
@@ -133,6 +152,8 @@ internal static class PlayerScenarioCommand
 
         var surface = session?.Surface;
         var diagnostics = surface?.Diagnostics;
+        if (headless && cleanupError == null && session != null && (surface != null || session.Status.State != PlayerState.Stopped))
+            cleanupError = "The headless Player did not stop without a surface.";
         if (cleanupError == null && surface != null && (!surface.IsReleased || !Released(diagnostics!) || window?.IsClosed != true ||
             session?.Status.State != PlayerState.Stopped))
             cleanupError = "The Player window or GPU resources remain live after App disposal.";
@@ -149,7 +170,8 @@ internal static class PlayerScenarioCommand
             BuildId = start?.Artifact.BuildId, SceneHash = start?.SceneHash,
             Scene = start?.World?.Scene.Id.Value.ToString() ?? start?.Snapshot?.Id,
             SceneRevision = start?.World?.Scene.Revision ?? start?.Snapshot?.Revision,
-            HostContractId = start?.Artifact.HostContractId, Backend = "Vulkan / OpenGL",
+            HostContractId = start?.Artifact.HostContractId, Profile = headless ? "Headless" : "Windowed",
+            Backend = headless ? "None" : "Vulkan / OpenGL",
             Versions = new { Probe = VersionOf(typeof(Program)), Player = VersionOf(typeof(PlayerWindow)), Runtime = VersionOf(typeof(PlayerSession)) },
             Checkpoints = observations, State = session?.Status.State.ToString(), WindowClosed = window?.IsClosed,
             SurfaceReleased = surface?.IsReleased, Diagnostics = diagnostics
@@ -221,7 +243,7 @@ internal static class PlayerScenarioCommand
         [property: JsonRequired] double Minimum, [property: JsonRequired] double Maximum);
     private enum ObservationOutcome { Passed, OutOfRange, Unavailable, Incompatible }
     private sealed record ObservationCheck(ExpectedNumber Expected, GameScenarioNumber? Actual, ObservationOutcome Outcome);
-    private sealed record Observation(Checkpoint Requested, GameInputOutcome Input, string? HudStatus, ulong RenderedTick,
-        ulong FrameId, ulong SurfaceGeneration, int Width, int Height, float Scale, string File, string Sha256,
+    private sealed record Observation(Checkpoint Requested, GameInputOutcome Input, string? HudStatus, ulong Tick, string FrameAvailability,
+        ulong? RenderedTick, ulong? FrameId, ulong? SurfaceGeneration, int? Width, int? Height, float? Scale, string? File, string? Sha256,
         ulong? ObservationTick, int? ObservationVersion, ObservationCheck[] ObservationChecks, bool Passed);
 }

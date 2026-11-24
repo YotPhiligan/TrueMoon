@@ -1,4 +1,4 @@
-# Сценарный запуск оконного Player
+# Сценарный запуск Player и Editor
 
 Для автоматизации Editor используйте [сценарий с вводом по ID](#editor-scenario).
 
@@ -6,6 +6,8 @@
 Оно подаёт `GameInputState` через протокол Player и выполняет фиксированные тики
 по запросу. На контрольном тике следующий шаг ждёт фактического представления
 кадра. PNG содержит композицию окна с HUD.
+[Headless-профиль](#headless-player-scenario) выполняет тот же сценарий через
+общий драйвер и сверяет игровые наблюдения.
 
 <a id="synthetic-scenario"></a>
 ## Синтетический сценарий
@@ -122,10 +124,10 @@ Player вызывает `ReadScenarioObservation()` после симуляци�
 
 В тестовом App передайте `options.ManualTicks = true` в `UseAetherPlayer`.
 App владеет Player, окном и GPU-ресурсами. После запуска продвигайте время через
-`PlayerWindow.AdvanceScenarioAsync`.
+`IPlayerScenarioDriver` из `TrueMoon.Aether.Player.Scenarios`.
 
 ```csharp
-var player = app.Services.Resolve<PlayerWindow>()!;
+var player = app.Services.Resolve<IPlayerScenarioDriver>()!;
 await app.StartAsync(token);
 var step = await player.AdvanceScenarioAsync(
     new GameInputState(true, GameButtons.Forward),
@@ -137,6 +139,41 @@ await File.WriteAllBytesAsync(framePath, step.Frame!.Png.AsMemory(), token);
 При отмене ожидания тестовый хост завершает App вне UI owner thread.
 Режим `ManualTicks` использует начальную область рендера. Сохраняйте размер
 окна и держите его открытым до конца прогона.
+
+<a id="headless-player-scenario"></a>
+## Headless-профиль Player
+
+Добавьте `--headless` к той же команде `PlayerProbe --scenario` и выберите
+новый каталог вывода. В C# используйте `UseAetherHeadlessPlayer(start)`,
+затем тот же `IPlayerScenarioDriver`. Он передаёт ввод в штатный протокол и
+делает один явный шаг Paused. Game, загрузка Build и наблюдения проходят через
+тот же локальный PlayerSession. Headless не требует поверхности, оконного
+сервиса или шрифтов. Оконный профиль по-прежнему допускает Playing после
+первого фактически представленного кадра.
+
+Поле `tick` обозначает завершённый тик во всех профилях. `renderedTick`
+относится к кадру. В headless отчёт содержит `frameAvailability:
+UnavailableHeadless`, значения кадра равны `null`, PNG отсутствует.
+В оконном профиле доступность обозначена `Captured`. Числовые ожидания,
+коды выхода и правила остановки одинаковы. Настройки окна и Vulkan validation
+применяются только в оконном профиле.
+
+Запустите проверку с точным пакетным Probe и Build из синтетического примера.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ManualTests/PlayerProbe/VerifyScenarioProfiles.ps1 `
+  -ProbeAssembly $probe -BuildDirectory $build.DirectoryPath `
+  -ScenarioPath ./synthetic.scenario.json -ScenePath $scene `
+  -EvidenceDirectory ./TestResults/PlayerScenarioParity -LegacyScene
+```
+
+Проверка сверяет идентичность входов, контрольные тики, результат ввода, HUD,
+схему и значения игровых наблюдений. Она проверяет SHA-256 оконного PNG
+и завершение обоих Player, затем сохраняет `comparison.json` рядом
+с отчётами `windowed/report.json` и `headless/report.json`.
+В синтетическом примере оба профиля дают красный канал `1` и `0.5`
+на тиках `2` и `6`. Для игры, которая меняет логику в зависимости от режима
+Playing, используйте сравнение её собственных наблюдений.
 
 <a id="editor-scenario"></a>
 ## Сценарий Editor с вводом по ID
@@ -218,3 +255,13 @@ dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c 
 Отсутствующий или некорректный параметр останавливает действие до передачи
 ввода в UI. Второй прогон загружает сохранённый JSON и сверяет результат с
 первым через тот же отчёт сравнения.
+
+Для отдельного воспроизведения изменённой копии задайте
+`TRUEMOON_EDITOR_SCENARIO_INPUT` с путём к сценарию, а через
+`TRUEMOON_EDITOR_SCENARIO_PARAMETERS` укажите отдельный файл параметров.
+Для синтетической сцены используйте объект
+`{"scene-path":"uiqa-round-trip.aetherscene"}`. Запустите следующий тест.
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --filter 'FullyQualifiedName~SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform'
+```
