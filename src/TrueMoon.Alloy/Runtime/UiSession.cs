@@ -187,11 +187,116 @@ public sealed class UiSession : IDisposable, IInputContext
     {
         VerifyRendering();
         if (maximumNodes is < 1 or > 4096) throw new ArgumentOutOfRangeException(nameof(maximumNodes));
-        if (_updating || _disposing || _layoutGeneration == 0 || Viewport.IsEmpty || (_dirty & (Invalidation.Layout | Invalidation.Tree)) != 0)
+        if (!HasCurrentSemanticLayout)
             throw new InvalidOperationException("Semantic capture requires a completed, current UI layout.");
         return UiSemanticCapture.Take(Id, _treeGeneration, _layoutGeneration, Viewport, Root, _focus, _capture,
             maximumNodes, includeAccessibleNames);
     }
+
+    private bool HasCurrentSemanticLayout => !_updating && !_disposing && _layoutGeneration != 0 && !Viewport.IsEmpty &&
+        (_dirty & (Invalidation.Layout | Invalidation.Tree)) == 0;
+
+    /// <summary>Finds an addressable element from a complete snapshot that still matches the live session.</summary>
+    /// <param name="snapshot">Previously captured semantic tree.</param>
+    /// <param name="id">Case-sensitive semantic ID.</param>
+    /// <returns>Availability and detached node data, on the UI owner thread.</returns>
+    public UiSemanticTargetResult FindSemanticTarget(UiSemanticSnapshot snapshot, string id)
+    {
+        var status = ResolveSemanticTarget(snapshot, id, out _, out var node);
+        return new(status, node);
+    }
+
+    /// <summary>Sends one normal input event only when the current hit or focus route starts within the requested target.</summary>
+    /// <param name="snapshot">Complete, current snapshot from this session.</param>
+    /// <param name="id">Case-sensitive semantic ID.</param>
+    /// <param name="input">Pointer coordinates are in root logical units. Keyboard events require existing focus.</param>
+    /// <returns>Routing outcome, origin and resulting focus and capture.</returns>
+    public UiSemanticInputResult HandleSemanticInput(UiSemanticSnapshot snapshot, string id, UiInput input)
+    {
+        var status = ResolveSemanticTarget(snapshot, id, out var element, out var node);
+        if (status != UiSemanticTargetStatus.Ready) return Result(status, null, InputResult(false));
+        if (input.Kind is not (InputKind.PointerMove or InputKind.PointerDown or InputKind.PointerUp or InputKind.Wheel or
+            InputKind.KeyDown or InputKind.KeyUp or InputKind.Text))
+            return Result(UiSemanticTargetStatus.UnsupportedInput, null, InputResult(false));
+        var request = new SemanticInput(snapshot, element!, node!.VisibleBounds);
+        var pointer = IsPointer(input);
+        var route = CurrentInputTarget(input, pointer);
+        status = CheckSemanticRoute(request, input, pointer, route);
+        if (status != UiSemanticTargetStatus.Ready) return Result(status, SemanticIdOf(route), InputResult(false));
+        var result = RouteInput(input, request, out status, out var routedId);
+        return Result(status, routedId, result);
+
+        UiSemanticInputResult Result(UiSemanticTargetStatus outcome, string? hitId, UiInputResult routed) =>
+            new(outcome, hitId, SemanticIdOf(_focus), SemanticIdOf(_capture), routed);
+    }
+
+    private bool IsCurrent(UiSemanticSnapshot snapshot) => HasCurrentSemanticLayout && snapshot.SessionId == Id &&
+        snapshot.TreeGeneration == _treeGeneration && snapshot.LayoutGeneration == _layoutGeneration && snapshot.Viewport == Viewport;
+
+    private UiSemanticTargetStatus ResolveSemanticTarget(UiSemanticSnapshot snapshot, string id, out Element? element, out UiSemanticNode? node)
+    {
+        VerifyRendering();
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        element = null; node = null;
+        if (!IsCurrent(snapshot)) return UiSemanticTargetStatus.StaleSnapshot;
+        if (snapshot.IsTruncated || snapshot.Nodes.IsDefault) return UiSemanticTargetStatus.IncompleteSnapshot;
+        foreach (var candidate in snapshot.Nodes)
+        {
+            if (candidate.Id != id) continue;
+            if (node != null) { node = null; return UiSemanticTargetStatus.Ambiguous; }
+            node = candidate;
+        }
+        if (node == null) return UiSemanticTargetStatus.NotFound;
+        foreach (var candidate in Descendants(Root))
+        {
+            if (candidate.SemanticId != id) continue;
+            if (element != null) { element = null; node = null; return UiSemanticTargetStatus.Ambiguous; }
+            element = candidate;
+        }
+        return element == null ? UiSemanticTargetStatus.NotFound : SemanticAvailability(element);
+    }
+
+    private static UiSemanticTargetStatus SemanticAvailability(Element element)
+    {
+        for (Element? ancestor = element; ancestor != null; ancestor = ancestor.Parent)
+            if (!ancestor.IsVisible) return UiSemanticTargetStatus.Hidden;
+        return element.IsEffectivelyEnabled ? UiSemanticTargetStatus.Ready : UiSemanticTargetStatus.Disabled;
+    }
+
+    private UiSemanticTargetStatus CheckSemanticRoute(SemanticInput request, UiInput input, bool pointer, Element? route)
+    {
+        if (!IsCurrent(request.Snapshot) || request.Element.IsDisposed || !request.Element.IsAttached)
+            return UiSemanticTargetStatus.StaleSnapshot;
+        var status = SemanticAvailability(request.Element);
+        if (status != UiSemanticTargetStatus.Ready) return status;
+        var within = IsWithin(route, request.Element);
+        if (!pointer) return within ? UiSemanticTargetStatus.Ready : UiSemanticTargetStatus.NotFocused;
+        var captured = _capture != null && ReferenceEquals(route, _capture);
+        if (captured && !within) return UiSemanticTargetStatus.PointerCaptured;
+        var capturedGesture = captured && input.Kind is (InputKind.PointerMove or InputKind.PointerUp);
+        if (!float.IsFinite(input.X) || !float.IsFinite(input.Y) ||
+            !capturedGesture && !request.VisibleBounds.Contains(input.X, input.Y))
+            return UiSemanticTargetStatus.OutsideTarget;
+        return within ? UiSemanticTargetStatus.Ready : UiSemanticTargetStatus.Obstructed;
+    }
+
+    private static bool IsWithin(Element? element, Element ancestor)
+    {
+        for (; element != null; element = element.Parent)
+            if (ReferenceEquals(element, ancestor)) return true;
+        return false;
+    }
+
+    private static string? SemanticIdOf(Element? element)
+    {
+        for (; element != null; element = element.Parent)
+            if (element.SemanticId is { } id) return id;
+        return null;
+    }
+
+    private readonly record struct SemanticInput(UiSemanticSnapshot Snapshot, Element Element, Rect VisibleBounds);
+
     private void RefreshParticipants()
     {
         if (!_participantsDirty) return;
@@ -268,15 +373,54 @@ public sealed class UiSession : IDisposable, IInputContext
         diagnostics?.End(UiPhase.Render, started, true);
     }
     /// <summary>Routes input from the host in logical coordinates and reports consumption/capture.</summary>
-    public UiInputResult HandleInput(UiInput input)
+    public UiInputResult HandleInput(UiInput input) => RouteInput(input, null, out _, out _);
+
+    private UiInputResult RouteInput(UiInput input, SemanticInput? semantic, out UiSemanticTargetStatus status, out string? routedId)
     {
+        status = UiSemanticTargetStatus.Routed; routedId = null;
         VerifyRendering(); ClearDetachedInput();
         AdvanceParticipants();
+        var pointer = IsPointer(input);
+        if (semantic is { } expected)
+        {
+            var beforePreview = CurrentInputTarget(input, pointer);
+            var outcome = CheckSemanticRoute(expected, input, pointer, beforePreview);
+            if (outcome != UiSemanticTargetStatus.Ready)
+            { status = outcome; routedId = SemanticIdOf(beforePreview); return InputResult(false); }
+        }
         foreach (var observer in _inputObservers)
             if (observer is Element element && Eligible(element) && observer.PreviewInput(input, this))
-                return new(true, _capture != null, _focus != null);
+            {
+                status = UiSemanticTargetStatus.Intercepted;
+                if (semantic != null) routedId = SemanticIdOf(element);
+                return InputResult(true);
+            }
         if (input.Kind == InputKind.FocusLost) { CancelInput(); return new(false, false, false); }
         if (Viewport.IsEmpty) return new(false, false, _focus != null);
+        var target = CurrentInputTarget(input, pointer);
+        if (semantic is { } guarded)
+        {
+            routedId = SemanticIdOf(target);
+            var outcome = CheckSemanticRoute(guarded, input, pointer, target);
+            if (outcome != UiSemanticTargetStatus.Ready) { status = outcome; return InputResult(false); }
+        }
+        if (pointer)
+        {
+            var hover = Hit(Root, input.X, input.Y);
+            if (_hover != hover)
+            {
+                if (_hover != null) _hover.IsHovered = false;
+                _hover = hover;
+                if (_hover != null) _hover.IsHovered = true;
+                target = CurrentInputTarget(input, pointer);
+                if (semantic is { } afterHover)
+                {
+                    routedId = SemanticIdOf(target);
+                    var outcome = CheckSemanticRoute(afterHover, input, pointer, target);
+                    if (outcome != UiSemanticTargetStatus.Ready) { status = outcome; return InputResult(false); }
+                }
+            }
+        }
         if (input.Kind == InputKind.KeyDown && input.Key == UiKey.Tab)
         {
             if (_focus != null && _focus.HandleInput(input, this))
@@ -287,13 +431,6 @@ public sealed class UiSession : IDisposable, IInputContext
             Focus(items[(index + (input.Shift ? items.Length - 1 : 1) + items.Length) % items.Length]);
             return new(true, _capture != null, true);
         }
-        var pointer = input.Kind is InputKind.PointerMove or InputKind.PointerDown or InputKind.PointerUp or InputKind.Wheel;
-        if (pointer)
-        {
-            var hover = Hit(Root, input.X, input.Y);
-            if (_hover != hover) { if (_hover != null) _hover.IsHovered = false; _hover = hover; if (_hover != null) _hover.IsHovered = true; }
-        }
-        var target = pointer ? _capture ?? Hit(Root, input.X, input.Y) : _focus;
         var handled = false;
         try
         {
@@ -302,8 +439,11 @@ public sealed class UiSession : IDisposable, IInputContext
         }
         catch (UiClipboardException error) { handled = true; ClipboardFailed?.Invoke(error); }
         if (input.Kind == InputKind.PointerDown && input.Button == 0 && !handled) SetFocus(null);
-        return new(handled, _capture != null, _focus != null);
+        return InputResult(handled);
     }
+    private static bool IsPointer(UiInput input) => input.Kind is InputKind.PointerMove or InputKind.PointerDown or InputKind.PointerUp or InputKind.Wheel;
+    private Element? CurrentInputTarget(UiInput input, bool pointer) => pointer ? _capture ?? Hit(Root, input.X, input.Y) : _focus;
+    private UiInputResult InputResult(bool handled) => new(handled, _capture != null, _focus != null);
     private static IEnumerable<Element> Descendants(Element root)
     { yield return root; foreach (var child in root.Children) foreach (var item in Descendants(child)) yield return item; }
     private bool Eligible(Element element)

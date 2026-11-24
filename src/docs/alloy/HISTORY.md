@@ -8314,3 +8314,22 @@ foreach ($mode in @('Debug', 'Release')) {
 и 1 539 тестов Aether.Editor. Проверки использовали `UiSession`, Skia CPU
 raster и маршрутизируемый ввод. Доказательства в `TestResults/UIQA1-20261124-115531`,
 включая `editor-snapshot.json` и TRX.
+
+<a id="uiqa2-semantic-input-2026-11-24"></a>
+## 2026-11-24 — UIQA.2. Поиск и ввод по ID
+
+В `1.2611.24.2-alpha` добавлены `FindSemanticTarget` и `HandleSemanticInput`.
+Поиск сверяет сессию, поколения дерева и layout, уникальность ID и живую
+доступность. Маршрутизация проверяет hit test, фокус и захват, в том числе
+после preview-наблюдателей. Результат различает отказ, перехват и успешную
+маршрутизацию и показывает живые ID и handled.
+
+На `UiSession` со Skia CPU raster `EditorSemanticInputTests` проверяет ввод
+в поиск, блокировку поиска и Apply перекрывающим popup, отключённую команду
+перемещения в корень и Apply, старый снимок после resize и пересоздания
+Transform, фокус и ввод поля X. Свежий снимок после закрытия popup позволяет
+выполнить Apply один раз. Также проверены wheel, чужой pointer capture и отмена
+жеста через FocusLost.
+
+В Debug и Release прошли по 1 251 тесту Alloy, 171 тесту Alloy.Hosting и
+1 542 тестам Aether.Editor. TRX и логи в `TestResults/UIQA2-20261124-120714`.
