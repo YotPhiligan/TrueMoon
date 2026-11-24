@@ -7,7 +7,9 @@
 от создания объекта до повторного открытия сохранённой сцены.
 [Запуск](SCENARIO_TESTING.md#editor-scenario-comparison) ·
 [Результаты](HISTORY.md#eng9b3-editor-comparison-2026-11-24).
-Следующий шаг ENG9b.3 — запись действий для воспроизведения.
+Запись 20 действий с параметром пути воспроизведена в новой сессии.
+Все девять точек совпали. [Запись](SCENARIO_TESTING.md#editor-scenario-recording).
+Далее — headless-профиль ENG9b.4 и сверка с оконным Player.
 
 24.11.2026 — [ENG9b.1](PLAN.md#eng9b1-player-scenario-capture) завершён на
 `1.2611.23.13-alpha`. Пакетный Player сопоставляет числовые наблюдения и PNG

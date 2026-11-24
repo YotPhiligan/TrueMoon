@@ -17817,3 +17817,12 @@ foreach ($configuration in 'Release', 'Debug') {
     dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c $configuration --logger "trx;LogFileName=editor-$($configuration.ToLowerInvariant()).trx" --results-directory $run
 }
 ```
+
+### Запись и воспроизведение ENG9b.3
+
+В `SceneRoundTrip_ComparesIndependentRunsAndWritesDifferences` сохранены
+20 действий и девять контрольных точек. Оба ввода пути записаны как
+`scene-path`. Проверка подтвердила, что путь отсутствует в JSON, а
+воспроизведение после десериализации с отдельным значением параметра совпадает
+по девяти точкам с исходной сессией. Проверка Release класса
+`EditorSceneScenarioTests` прошла 2/2. [Запись](SCENARIO_TESTING.md#editor-scenario-recording).

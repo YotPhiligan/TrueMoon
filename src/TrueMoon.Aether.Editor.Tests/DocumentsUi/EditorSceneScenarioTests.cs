@@ -31,6 +31,13 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
 {
     private const string SceneName = "uiqa-round-trip.aetherscene";
     private const string TreeId = "editor.hierarchy.tree";
+    private static readonly JsonSerializerOptions ScenarioJson = new(JsonSerializerDefaults.Web)
+    {
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter(allowIntegerValues: false) }
+    };
 
     [Fact]
     public void SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform() => Replay(LoadScenario());
@@ -47,8 +54,20 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
 
         try
         {
-            var baseline = Replay(scenario, capture: true);
-            var repeat = Replay(scenario, capture: true);
+            var recorder = new ScenarioRecorder();
+            var baseline = Replay(scenario, capture: true, recorder: recorder);
+            Directory.CreateDirectory(root);
+            var recordingPath = Path.Combine(root, "recorded.scenario.json");
+            using (var file = new FileStream(recordingPath, FileMode.CreateNew))
+                JsonSerializer.Serialize(file, recorder.Complete(scenario), ScenarioJson);
+            var recording = File.ReadAllText(recordingPath);
+            Assert.DoesNotContain(SceneName, recording, StringComparison.Ordinal);
+            var recorded = Assert.IsType<Scenario>(JsonSerializer.Deserialize<Scenario>(recording, ScenarioJson));
+            Assert.Equal(scenario.Checkpoints.Select(c => c.Input.Length), recorded.Checkpoints.Select(c => c.Input.Length));
+            Assert.Equal(2, recorded.Checkpoints.SelectMany(c => c.Input).Count(a => a.TextParameter == "scene-path" && a.Text == null));
+            Assert.Throws<InvalidDataException>(() => ResolveText(new("editor.document.path", ActionKind.Text, null, UiKey.None,
+                false, false, "scene-path"), null));
+            var repeat = Replay(recorded, capture: true, parameters: new Dictionary<string, string> { ["scene-path"] = SceneName });
             var identical = EditorScenarioComparison.Compare(baseline, repeat, Path.Combine(root, "repeat"));
             Assert.True(identical.Passed, string.Join(", ", identical.Checkpoints.Where(c => !c.Passed).Select(c => c.Id)));
             Assert.Equal(scenario.Checkpoints.Length, identical.Checkpoints.Length);
@@ -116,14 +135,13 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
         using var source = typeof(EditorSceneScenarioTests).Assembly.GetManifestResourceStream(
             "TrueMoon.Aether.Editor.Tests.DocumentsUi.scene-round-trip.scenario.json");
         Assert.NotNull(source);
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
-        options.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
-        var scenario = Assert.IsType<Scenario>(JsonSerializer.Deserialize<Scenario>(source, options));
+        var scenario = Assert.IsType<Scenario>(JsonSerializer.Deserialize<Scenario>(source, ScenarioJson));
         Assert.Equal(1, scenario.FormatVersion);
         return scenario;
     }
 
-    private EditorScenarioComparison.Checkpoint[] Replay(Scenario scenario, bool capture = false)
+    private EditorScenarioComparison.Checkpoint[] Replay(Scenario scenario, bool capture = false,
+        ScenarioRecorder? recorder = null, IReadOnlyDictionary<string, string>? parameters = null)
     {
         var codec = new SceneFileCodec(DocumentData.Factory());
         var store = new JsonSceneDocumentStore(codec);
@@ -183,7 +201,8 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
                 else
                 {
                     var kind = step.Kind == ActionKind.Text ? InputKind.Text : InputKind.KeyDown;
-                    var result = Send(target, new(kind, Key: step.Key, Text: step.Text, Control: step.Control),
+                    var result = Send(target, new(kind, Key: step.Key, Text: ResolveText(step, parameters), Control: step.Control,
+                        Shift: step.Shift),
                         step.Intercepted ? UiSemanticTargetStatus.Intercepted : UiSemanticTargetStatus.Routed);
                     if (kind == InputKind.Text) Assert.Equal(target, result.FocusedId);
                 }
@@ -291,6 +310,7 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
                 using var image = ui.SnapshotRasterImage();
                 checkpoints.Add(EditorScenarioComparison.Capture(checkpoint.Id, document, snapshot, transform?.Value, selectionIdLabel, image));
             }
+            recorder?.Checkpoint(checkpoint);
         }
         return checkpoints.ToArray();
 
@@ -322,6 +342,8 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
                 $"Input {input.Kind} to {id}: expected {expected}, observed {result.Status}, hit {result.HitTargetId}.");
             if (expected == UiSemanticTargetStatus.Routed) Assert.Equal(id, result.HitTargetId);
             if (requireHandled) Assert.True(result.Input.Handled, $"Input {input.Kind} to {id} was not handled.");
+            var recordedId = transform is { } t && id == $"editor.inspector.transform.{t.Value:N}.x" ? "$transform-x" : id;
+            recorder?.Accept(recordedId, input, result.Status);
             ui.Update();
             return result;
         }
@@ -332,5 +354,69 @@ public sealed class EditorSceneScenarioTests(ITestOutputHelper output)
     private sealed record Scenario(int FormatVersion, int TimeoutMs, int Width, int Height, Checkpoint[] Checkpoints);
     private sealed record Checkpoint(string Id, Action[] Input, SceneState Scene, int? EntityCount, int? UndoCount,
         int? RedoCount, double? PositionX, string? EditorX, bool Selected, string? Focused, string[]? Ready, string[]? Disabled, string[]? Missing);
-    private sealed record Action(string Target, ActionKind Kind, string? Text, UiKey Key, bool Control, bool Intercepted);
+    private sealed record Action(string Target, ActionKind Kind, string? Text,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] UiKey Key,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Control,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Intercepted,
+        string? TextParameter = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Shift = false);
+
+    private static string? ResolveText(Action input, IReadOnlyDictionary<string, string>? parameters)
+    {
+        if (input.TextParameter is not { } parameter) return input.Text;
+        if (input.Kind != ActionKind.Text || input.Text != null || parameters == null ||
+            !parameters.TryGetValue(parameter, out var value) || string.IsNullOrEmpty(value))
+            throw new InvalidDataException($"Unresolved or invalid scenario text parameter '{parameter}'.");
+        return value;
+    }
+
+    // The test harness explicitly starts recording and writes only actions admitted by UiSession.
+    private sealed class ScenarioRecorder
+    {
+        private readonly List<Checkpoint> _checkpoints = [];
+        private readonly List<Action> _actions = [];
+        private string? _pressed;
+        private int _textParameters;
+
+        internal void Accept(string target, UiInput input, UiSemanticTargetStatus status)
+        {
+            if (status is not (UiSemanticTargetStatus.Routed or UiSemanticTargetStatus.Intercepted))
+                throw new InvalidOperationException("Only admitted semantic input can be recorded.");
+            var intercepted = status == UiSemanticTargetStatus.Intercepted;
+            switch (input.Kind)
+            {
+                case InputKind.PointerDown when _pressed == null && !intercepted:
+                    _pressed = target;
+                    break;
+                case InputKind.PointerUp when _pressed == target && !intercepted:
+                    _actions.Add(new(target, ActionKind.Click, null, UiKey.None, false, false));
+                    _pressed = null;
+                    break;
+                case InputKind.KeyDown when _pressed == null:
+                    _actions.Add(new(target, ActionKind.KeyDown, null, input.Key, input.Control, intercepted, Shift: input.Shift));
+                    break;
+                case InputKind.Text when _pressed == null && !intercepted:
+                    // The synthetic numeric edit is the fixture's only opt-in literal.
+                    var literal = target == "$transform-x" && input.Text is "37";
+                    var parameter = literal ? null : target == "editor.document.path" ? "scene-path" : $"text-{++_textParameters}";
+                    _actions.Add(new(target, ActionKind.Text, literal ? input.Text : null, UiKey.None, false, false, parameter));
+                    break;
+                default: throw new InvalidOperationException($"The recorder cannot represent {input.Kind} in this scenario.");
+            }
+        }
+
+        internal void Checkpoint(Checkpoint expectation)
+        {
+            if (_pressed != null) throw new InvalidOperationException("A recording checkpoint requires a completed gesture.");
+            _checkpoints.Add(expectation with { Input = _actions.ToArray() });
+            _actions.Clear();
+        }
+
+        internal Scenario Complete(Scenario source)
+        {
+            if (_pressed != null || _actions.Count != 0 || _checkpoints.Count != source.Checkpoints.Length)
+                throw new InvalidOperationException("The scenario recording is incomplete.");
+            return source with { Checkpoints = _checkpoints.ToArray() };
+        }
+    }
 }
