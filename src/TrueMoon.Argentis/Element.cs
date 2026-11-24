@@ -133,6 +133,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Semantic name for icon-only controls and future accessibility adapters.</summary>
     [FluentSetter]
     public string AccessibleName { get => Get(UiProperties.AccessibleName); set => Set(UiProperties.AccessibleName, value); }
+    /// <summary>Explicit stable target identity for semantic snapshots in the owning UI session.</summary>
+    public string? SemanticId { get => Get(UiProperties.SemanticId); set => Set(UiProperties.SemanticId, value); }
     /// <summary>Effective corner radius.</summary>
     public float CornerRadius { get => Get(UiProperties.CornerRadius); set => Set(UiProperties.CornerRadius, value); }
     /// <summary>Effective inside outline width.</summary>

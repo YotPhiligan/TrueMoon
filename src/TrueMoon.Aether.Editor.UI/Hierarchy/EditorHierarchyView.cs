@@ -40,6 +40,7 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
     private EditorHierarchyView(IEditorHierarchyViewModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
+        SemanticId = "editor.hierarchy";
         DataContext = model;
         InitializeEntityCommands();
     }
@@ -50,23 +51,24 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
         Layout = new HierarchyLayout().WithChildren(
             HStack.Create(
                 Text.Plain("ОБОЗРЕВАТЕЛЬ").Named("Title").Fill(),
-                RootButton = Button.Simple("В корень").WithCommand(_entityCommands["root"]))
+                RootButton = Button.Simple("В корень").SemanticId("editor.hierarchy.move-to-root").WithCommand(_entityCommands["root"]))
                 .Configure(header => header.Spacing = 4),
             Caption = Text.Plain().BindText(this, data => data.Caption),
             HStack.Create(
-                CreateButton = ActionIcon(UiSymbol.Add, "Создать объект · Insert").WithCommand(_entityCommands["create.empty"]),
-                CubeButton = ActionIcon(UiSymbol.Cube, "Создать куб").WithCommand(_entityCommands["create.cube"]),
-                DuplicateButton = ActionIcon(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").WithCommand(_entityCommands["duplicate"]),
-                DeleteButton = ActionIcon(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").WithCommand(_entityCommands["delete"]),
-                ContextButton = ActionIcon(UiSymbol.More, "Действия объекта · Shift+F10").OnClick(RequestContext))
+                CreateButton = ActionIcon(UiSymbol.Add, "Создать объект · Insert").SemanticId("editor.hierarchy.create").WithCommand(_entityCommands["create.empty"]),
+                CubeButton = ActionIcon(UiSymbol.Cube, "Создать куб").SemanticId("editor.hierarchy.create-cube").WithCommand(_entityCommands["create.cube"]),
+                DuplicateButton = ActionIcon(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").SemanticId("editor.hierarchy.duplicate").WithCommand(_entityCommands["duplicate"]),
+                DeleteButton = ActionIcon(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").SemanticId("editor.hierarchy.delete").WithCommand(_entityCommands["delete"]),
+                ContextButton = ActionIcon(UiSymbol.More, "Действия объекта · Shift+F10").SemanticId("editor.hierarchy.context").OnClick(RequestContext))
                 .Named("Actions"),
             HStack.Create(
                 TextBox.Create()
                     .Named("Search")
+                    .SemanticId("editor.hierarchy.search")
                     .AccessibleName("Поиск по имени или ID · Enter следующее совпадение")
                     .MinWidth(0)
                     .BindValueTwoWay(this, data => data.SearchText),
-                FindButton = Button.Simple("Найти").WithCommand(_entityCommands["find"]))
+                FindButton = Button.Simple("Найти").SemanticId("editor.hierarchy.find").WithCommand(_entityCommands["find"]))
                 .Named("SearchRow"),
             Hint = Text.Plain().BindText(this, data => data.Hint),
             Error = new RichTextEditor(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true })
@@ -75,6 +77,7 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
             Scroll = ScrollViewer.Create().Fill().Content(new RenameLayer(
                 TreeView.Create()
                     .Named("Tree")
+                    .SemanticId("editor.hierarchy.tree")
                     .AccessibleName("Обозреватель сущностей")
                     .ReorderEnabled(true)
                     .Bind(TreeView.MoveEnabledProperty, this, data => data.CanMove)
@@ -83,6 +86,7 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
                     .OnPlacementRequested(Place),
                 TextBox.Create()
                     .Named("NameEditor")
+                    .SemanticId("editor.hierarchy.name")
                     .AccessibleName("Имя сущности")
                     .MinWidth(0)
                     .BindValueTwoWay(this, data => data.RenameText)

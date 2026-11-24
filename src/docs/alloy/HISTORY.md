@@ -8292,3 +8292,25 @@ foreach ($mode in @('Debug', 'Release')) {
     dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $mode --no-restore --filter 'FullyQualifiedName~ViewStyleTests'
 }
 ```
+
+<a id="uiqa1-semantic-snapshot-2026-11-24"></a>
+## 2026-11-24 — UIQA.1. Семантический снимок после layout
+
+На `1.2611.24.1-alpha` `UiSession.CaptureSemantics()` возвращает неизменяемое
+дерево с логической геометрией и состояниями ввода. Цели обозревателя и
+инспектора явно заданы через `SemanticId`. Поля Transform используют ключ
+компонента и поля. Снимок не копирует введённый текст. Доступные имена требуют
+явного включения.
+
+В `EditorSnapshot_KeepsTargetIdsAndReportsRoutedFocusAndCommandState`
+проверены ID при смене темы и масштаба и при пересоздании редактора Transform.
+Маршрутизируемый ввод подтвердил фокус дерева, поиска и поля X. Проверены
+доступность команд перемещения в корень и Apply, Cancel, Undo, Redo, запись
+изменения в документ и отсутствие введённого текста в JSON.
+`Snapshot_ReportsTruncationAndOverlayOrderAndRejectsDuplicateIds` проверил
+лимит узлов, порядок popup, фокус, захват и конфликт ID.
+
+В Debug и Release прошли по 1 251 тесту Alloy, 171 тесту Alloy.Hosting
+и 1 539 тестов Aether.Editor. Проверки использовали `UiSession`, Skia CPU
+raster и маршрутизируемый ввод. Доказательства в `TestResults/UIQA1-20261124-115531`,
+включая `editor-snapshot.json` и TRX.

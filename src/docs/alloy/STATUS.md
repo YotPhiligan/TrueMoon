@@ -1,5 +1,11 @@
 # Alloy / Argentis: состояние и точка продолжения
 
+24.11.2026 — [UIQA.1](PLAN.md#uiqa-agent-checks) проверен на `1.2611.24.1-alpha`
+в CPU raster. Снимок обозревателя и инспектора после layout подтверждает
+устойчивые ID, фокус и доступность команд. Следующий шаг — поиск цели и ввод
+по ID в UIQA.2. [Контракт](UI_TESTING.md#ui-semantic-snapshot) ·
+[Проверки](HISTORY.md#uiqa1-semantic-snapshot-2026-11-24).
+
 23.11.2026 — [UIA1f](PLAN.md#uia1f-minimal-view-authoring) завершён в
 `1.2611.23.11-alpha`. `BuildContent()`, именованные части и контекстные
 привязки, команды и подписки проверены в обозревателе и диагностике.

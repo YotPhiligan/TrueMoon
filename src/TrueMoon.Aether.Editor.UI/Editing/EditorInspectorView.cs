@@ -120,13 +120,19 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style); _model = model;
         try
         {
+            SemanticId = "editor.inspector";
             DataContext = model;
             Empty = Text.Plain().BindText(model, x => x.SelectionText).Bind(UiProperties.Visible, model, x => x.NoSelection);
-            Apply = Action(UiSymbol.Check, "Применить изменения · Ctrl+Enter").Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply);
-            Cancel = Action(UiSymbol.Close, "Отменить правку · Esc").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel);
-            Undo = Action(UiSymbol.Undo, "Отменить изменение сцены · Ctrl+Z вне текстового поля").Bind(UiProperties.Enabled, model, x => x.CanUndo).OnClick(model.Undo);
-            Redo = Action(UiSymbol.Redo, "Повторить изменение сцены · Ctrl+Y вне текстового поля").Bind(UiProperties.Enabled, model, x => x.CanRedo).OnClick(model.Redo);
-            AddComponent = Action(UiSymbol.Add, "Добавить компонент").Bind(UiProperties.Enabled, model, x => x.CanChangeComponents)
+            Apply = Action(UiSymbol.Check, "Применить изменения · Ctrl+Enter").SemanticId("editor.inspector.apply")
+                .Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply);
+            Cancel = Action(UiSymbol.Close, "Отменить правку · Esc").SemanticId("editor.inspector.cancel")
+                .Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel);
+            Undo = Action(UiSymbol.Undo, "Отменить изменение сцены · Ctrl+Z вне текстового поля").SemanticId("editor.inspector.undo")
+                .Bind(UiProperties.Enabled, model, x => x.CanUndo).OnClick(model.Undo);
+            Redo = Action(UiSymbol.Redo, "Повторить изменение сцены · Ctrl+Y вне текстового поля").SemanticId("editor.inspector.redo")
+                .Bind(UiProperties.Enabled, model, x => x.CanRedo).OnClick(model.Redo);
+            AddComponent = Action(UiSymbol.Add, "Добавить компонент").SemanticId("editor.inspector.add-component")
+                .Bind(UiProperties.Enabled, model, x => x.CanChangeComponents)
                 .OnClick(() => AddChoices.IsVisible = !AddChoices.IsVisible);
             AddChoices.IsVisible = false;
             Error = new(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true });
@@ -179,7 +185,8 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             if (!_components.TryGetValue(component.Id, out var parts))
             {
                 var body = VStack.Create().WithRole(StackRole);
-                var header = new ComponentHeader().WithRole(HeaderRole);
+                var header = new ComponentHeader().WithRole(HeaderRole)
+                    .SemanticId($"editor.inspector.component.{component.Id.Value:N}");
                 header.OnClick(() => { if (!_collapsed.Add(component.Id)) _collapsed.Remove(component.Id); body.IsVisible = !_collapsed.Contains(component.Id); header.Expanded = body.IsVisible; });
                 var remove = Action(UiSymbol.Delete, "Удалить компонент " + component.Title).OnClick(() => _model.RemoveComponent(component.Id));
                 var details = Action(UiSymbol.More, "Сведения и сброс значений · " + component.Title).OnClick(() => ToggleDetails(component.Id));
@@ -464,6 +471,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
                 else if (property.Key is "sx" or "sy" or "sz") boxes[i].Step = .01;
                 ConfigureNumber(boxes[i], property);
                 var input = boxes[i].Editor.WithRole(InputRole)
+                    .SemanticId($"editor.inspector.transform.{component.Id.Value:N}.{property.Key}")
                     .BindTwoWay(TextBox.ValueProperty, property, p => p.DisplayValue)
                     .Bind(UiProperties.AccessibleName, property, p => p.InputAccessibleName)
                     .Bind(UiProperties.Enabled, property, p => p.CanWrite);

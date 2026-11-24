@@ -56,6 +56,8 @@ public static partial class ElementExtensions
     { element.Backdrop = material; return element; }
     /// <summary>Sets a typed property.</summary>
     public static T SetValue<T, TValue>(this T element, UiProperty<TValue> property, TValue value) where T : Element { element.Set(property, value); return element; }
+    /// <summary>Sets the stable semantic target ID. IDs must be unique within a session.</summary>
+    public static T SemanticId<T>(this T element, string id) where T : Element { element.SemanticId = id; return element; }
     /// <summary>Names an unowned, unattached element in the nearest view's part scope.</summary>
     /// <remarks>Names use ordinal comparison. A nested View begins its own scope, including its root name.</remarks>
     public static T Named<T>(this T element, string name) where T : Element

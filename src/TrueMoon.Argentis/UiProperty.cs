@@ -36,6 +36,10 @@ public static class UiProperties
     public static readonly UiProperty<EditorColorRole> ColorRole = new("ColorRole", EditorColorRole.Neutral, validate: Enum.IsDefined);
     /// <summary>Accessible semantic name; no operating-system accessibility bridge is implied.</summary>
     public static readonly UiProperty<string> AccessibleName = new("AccessibleName", "", validate: value => value != null);
+    /// <summary>Optional session-unique semantic target ID. Use a stable key without display text or user data.</summary>
+    public static readonly UiProperty<string?> SemanticId = new("SemanticId", null, Invalidation.Tree,
+        value => value == null || value.Length is > 0 and <= 128 &&
+            value.All(character => char.IsAsciiLetterOrDigit(character) || character is '.' or '-' or '_'));
     /// <summary>Explicit corner radius; local/style values override the theme.</summary>
     public static readonly UiProperty<float> CornerRadius = new("CornerRadius", 0, validate: value => float.IsFinite(value) && value >= 0 && value <= 64);
     /// <summary>Explicit inside outline width; zero hides the normal outline.</summary>

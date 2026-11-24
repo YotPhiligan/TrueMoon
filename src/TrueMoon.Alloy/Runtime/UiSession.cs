@@ -1,4 +1,5 @@
 using TrueMoon.Argentis;
+using TrueMoon.Alloy.Runtime.Semantics;
 
 namespace TrueMoon.Alloy.Runtime;
 
@@ -19,6 +20,7 @@ public sealed class UiSession : IDisposable, IInputContext
     private Invalidation _dirty = Invalidation.Tree | Invalidation.Layout | Invalidation.Render;
     private volatile bool _disposed;
     private bool _updating, _disposing, _reportingFailure;
+    private long _treeGeneration = 1, _layoutGeneration;
     private volatile UiRenderingException? _renderingFailure;
     /// <summary>Stable identity within this process; independent of diagnostics being enabled.</summary>
     public long Id { get; } = Interlocked.Increment(ref _nextId);
@@ -168,7 +170,28 @@ public sealed class UiSession : IDisposable, IInputContext
         }
         finally { _reportingFailure = false; }
     }
-    private void Invalidated(Invalidation reason) { VerifyAccess(); if ((reason & Invalidation.Tree) != 0) _participantsDirty = true; _dirty |= reason | Invalidation.Render; _posted.SignalUpdate(); }
+    private void Invalidated(Invalidation reason)
+    {
+        VerifyAccess();
+        if ((reason & Invalidation.Tree) != 0) { _participantsDirty = true; _treeGeneration++; }
+        _dirty |= reason | Invalidation.Render;
+        _posted.SignalUpdate();
+    }
+
+    /// <summary>Copies the current UI tree on its owner thread after a completed layout.</summary>
+    /// <param name="maximumNodes">Maximum number of nodes to copy, from 1 to 4096.</param>
+    /// <param name="includeAccessibleNames">Opt in to exporting accessible labels from a trusted tree.</param>
+    /// <returns>A detached snapshot. Input values, error messages and display text are excluded.</returns>
+    /// <exception cref="InvalidOperationException">Layout is pending or the snapshot contains duplicate target IDs.</exception>
+    public UiSemanticSnapshot CaptureSemantics(int maximumNodes = 1024, bool includeAccessibleNames = false)
+    {
+        VerifyRendering();
+        if (maximumNodes is < 1 or > 4096) throw new ArgumentOutOfRangeException(nameof(maximumNodes));
+        if (_updating || _disposing || _layoutGeneration == 0 || Viewport.IsEmpty || (_dirty & (Invalidation.Layout | Invalidation.Tree)) != 0)
+            throw new InvalidOperationException("Semantic capture requires a completed, current UI layout.");
+        return UiSemanticCapture.Take(Id, _treeGeneration, _layoutGeneration, Viewport, Root, _focus, _capture,
+            maximumNodes, includeAccessibleNames);
+    }
     private void RefreshParticipants()
     {
         if (!_participantsDirty) return;
@@ -234,6 +257,7 @@ public sealed class UiSession : IDisposable, IInputContext
         started = diagnostics?.Begin(UiPhase.Arrange) ?? 0;
         try { Root.Arrange(new Rect(0, 0, logical.Width, logical.Height)); }
         catch { diagnostics?.End(UiPhase.Arrange, started, false); throw; }
+        _layoutGeneration++;
         diagnostics?.End(UiPhase.Arrange, started, true);
     }
     private void Draw(UiDiagnostics? diagnostics)
