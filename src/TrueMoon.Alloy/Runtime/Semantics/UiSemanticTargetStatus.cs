@@ -17,7 +17,7 @@ public enum UiSemanticTargetStatus
     Ambiguous,
     /// <summary>The target or an ancestor is hidden.</summary>
     Hidden,
-    /// <summary>The target or an ancestor is disabled.</summary>
+    /// <summary>The target or an ancestor is disabled or temporarily excluded from input.</summary>
     Disabled,
     /// <summary>The requested point is outside the target's clipped bounds.</summary>
     OutsideTarget,

@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
@@ -113,7 +118,7 @@ public sealed class SplitViewDemoView : View<SplitViewDemoData>
     {
         ArgumentNullException.ThrowIfNull(data); ArgumentNullException.ThrowIfNull(style);
         DataContext = data; Editor = new TextBox { Value = data.Draft };
-        Rows = new SplitView(VStack.Create().WithChildren(new Text("Рабочая область"), Editor,
+        Rows = new SplitView(new VStack().WithChildren(new Text("Рабочая область"), Editor,
             new Text("Tab → разделитель; стрелки / Shift; Home / End; Esc отменяет drag")), new Text("Таймлайн"))
         { Orientation = SplitOrientation.Vertical, FirstPaneSize = 380 };
         Rows.FirstPane.MinHeight = 120; Rows.SecondPane.MinHeight = 80;

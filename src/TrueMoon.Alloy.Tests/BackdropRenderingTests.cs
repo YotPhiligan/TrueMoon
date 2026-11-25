@@ -1,4 +1,9 @@
-﻿using SkiaSharp;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -114,9 +119,9 @@ public sealed class BackdropRenderingTests
         var material = new BackdropMaterial(8, new(20, 30, 40, 128), new(50, 60, 70));
         using var panel = new ForegroundPatch().WithBackdrop(material);
         panel.Measure(new(120, 80), new FixedTextLayout()); panel.Arrange(new(0, 0, 120, 80));
-        var drawing = new LegacyDrawing(); panel.Draw(drawing);
+        var drawing = new LegacyDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, drawing);
         Assert.Equal(new[] { material.Fallback, new Color(255, 0, 0) }, drawing.Fills);
-        panel.Backdrop = null; drawing.Fills.Clear(); panel.Draw(drawing);
+        panel.Backdrop = null; drawing.Fills.Clear(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, drawing);
         Assert.Equal(new[] { new Color(255, 0, 0) }, drawing.Fills);
     }
 
@@ -130,13 +135,13 @@ public sealed class BackdropRenderingTests
         panel.Arrange(new(0, 0, 200, 40));
 
         var drawing = new LegacyDrawing(canSample: true);
-        panel.Draw(drawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, drawing);
         Assert.Same(Theme.Dark.PanelBackdrop, Assert.Single(drawing.Materials));
         Assert.Equal(Theme.Dark.Input with { A = Theme.Dark.ControlTintAlpha }, Assert.Single(drawing.Fills));
 
         drawing.Materials.Clear();
         drawing.Fills.Clear();
-        field.Draw(drawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(field, drawing);
         var standalone = Assert.Single(drawing.Materials);
         Assert.Equal(Theme.Dark.ControlBlurSigma, standalone.BlurSigma);
         Assert.Equal(Theme.Dark.Input, standalone.Fallback);
@@ -144,20 +149,20 @@ public sealed class BackdropRenderingTests
 
         drawing.Materials.Clear();
         field.Backdrop = null;
-        field.Draw(drawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(field, drawing);
         Assert.Empty(drawing.Materials);
         Assert.Equal(Theme.Dark.Input, Assert.Single(drawing.Fills));
         field.Clear(UiProperties.Backdrop);
 
         drawing.Fills.Clear();
         field.Style = new Style().With(UiProperties.Background, new Color(90, 80, 70));
-        field.Draw(drawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(field, drawing);
         Assert.Empty(drawing.Materials);
         Assert.Equal(new Color(90, 80, 70), Assert.Single(drawing.Fills));
         field.Style = null;
 
         var unsupported = new LegacyDrawing();
-        field.Draw(unsupported);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(field, unsupported);
         Assert.Equal(Theme.Dark.Input, Assert.Single(unsupported.Fills));
     }
 
@@ -251,17 +256,19 @@ public sealed class BackdropRenderingTests
 
     private sealed class SplitBackground : Panel
     {
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation SplitPresentation = ElementPresentation.Create<SplitBackground>(static (_, context) =>
         {
             context.Fill(new(0, 0, 60, 100), new(0, 0, 0));
             context.Fill(new(60, 0, 100, 100), new(255, 255, 255));
-        }
+        });
+        public override ElementPresentation Presentation => SplitPresentation;
     }
 
     private sealed class ForegroundPatch : Border
     {
-        protected override void DrawCore(IDrawingContext context)
-            => context.Fill(new(Bounds.X + 20, Bounds.Y + 15, 8, 10), new(255, 0, 0));
+        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<ForegroundPatch>(static (patch, context) =>
+            context.Fill(new(patch.Bounds.X + 20, patch.Bounds.Y + 15, 8, 10), new(255, 0, 0)));
+        public override ElementPresentation Presentation => PatchPresentation;
     }
 
     private sealed class LegacyDrawing(bool canSample = false) : IDrawingContext, IBackdropDrawingContext

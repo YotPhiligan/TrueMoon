@@ -1,5 +1,10 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Runtime;
-using System.Reflection;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -9,40 +14,33 @@ public class ControlFactoryTests
 {
     public static IEnumerable<object[]> Factories()
     {
-        yield return [typeof(Button), nameof(Button.Simple)];
-        yield return [typeof(Text), nameof(Text.Plain)];
-        yield return [typeof(TextBox), nameof(TextBox.Create)];
-        yield return [typeof(CheckBox), nameof(CheckBox.Create)];
-        yield return [typeof(ProgressBar), nameof(ProgressBar.Create)];
-        yield return [typeof(Slider), nameof(Slider.Create)];
-        yield return [typeof(Image), nameof(Image.Create)];
-        yield return [typeof(Panel), nameof(Panel.Create)];
-        yield return [typeof(ContentControl), nameof(ContentControl.Create)];
-        yield return [typeof(Border), nameof(Border.Create)];
-        yield return [typeof(ScrollViewer), nameof(ScrollViewer.Create)];
-        yield return [typeof(VStack), nameof(VStack.Create)];
-        yield return [typeof(HStack), nameof(HStack.Create)];
-        yield return [typeof(Line), nameof(Line.Create)];
-        yield return [typeof(Rectagle), nameof(Rectagle.Create)];
+        yield return [typeof(Button)];
+        yield return [typeof(Text)];
+        yield return [typeof(TextBox)];
+        yield return [typeof(CheckBox)];
+        yield return [typeof(ProgressBar)];
+        yield return [typeof(Slider)];
+        yield return [typeof(Image)];
+        yield return [typeof(Panel)];
+        yield return [typeof(ContentControl)];
+        yield return [typeof(Border)];
+        yield return [typeof(ScrollViewer)];
+        yield return [typeof(VStack)];
+        yield return [typeof(HStack)];
+        yield return [typeof(Line)];
+        yield return [typeof(Rectagle)];
     }
 
     [Theory]
     [MemberData(nameof(Factories))]
-    public void Factories_DeclareConcreteReturnTypes(Type type, string name)
+    public void Factories_MatchConstructorsAndKeepIndependentLifetime(Type type)
     {
-        var method = DefaultFactory(type, name);
-        Assert.Equal(type, method.ReturnType);
-        Assert.Equal(type, method.DeclaringType);
-    }
-
-    [Theory]
-    [MemberData(nameof(Factories))]
-    public void Factories_MatchConstructorsAndKeepIndependentLifetime(Type type, string name)
-    {
-        using var expected = (Element)Invoke(type.GetConstructors().Single());
-        var factory = DefaultFactory(type, name);
-        using var first = (Element)Invoke(factory);
-        using var second = (Element)Invoke(factory);
+        var constructor = type.GetConstructors().Single();
+        using var expected = (Element)constructor.Invoke(constructor.GetParameters().Select(parameter => parameter.DefaultValue).ToArray());
+        var registry = new UiControlFactories();
+        var factory = typeof(UiControlFactories).GetMethod(nameof(UiControlFactories.Create), Type.EmptyTypes)!.MakeGenericMethod(type);
+        using var first = (Element)factory.Invoke(registry, null)!;
+        using var second = (Element)factory.Invoke(registry, null)!;
         Assert.IsType(type, first);
         Assert.IsType(type, second);
         Assert.NotSame(first, second);
@@ -66,7 +64,7 @@ public class ControlFactoryTests
         Assert.False(second.IsDisposed);
         Assert.Null(second.Parent);
         // A call after disposal must still create a live element, never return a cached instance.
-        using var third = (Element)Invoke(factory);
+        using var third = (Element)factory.Invoke(registry, null)!;
         Assert.NotSame(first, third);
         Assert.NotSame(second, third);
         Assert.False(third.IsDisposed);
@@ -78,9 +76,15 @@ public class ControlFactoryTests
     [InlineData("<b>Текст 🧑‍💻</b>")]
     public void TextFactories_PreserveLiteralContent(string value)
     {
-        using Text text = Text.Plain(value).Width(200);
-        using Button button = Button.Simple(value).OnClick(() => { });
-        using CheckBox check = CheckBox.Create(value).Configure(control => control.IsChecked = true);
+        using var view = new FactoryView(ui => ui.VStack(
+            ui.Text(value).Width(200),
+            ui.Button(value),
+            ui.CheckBox(value).Configure(control => control.IsChecked = true)));
+        using var session = new UiSession(view, new HeadlessSurface(), new UiViewport(300, 400));
+        var stack = Assert.IsType<VStack>(view.Child);
+        var text = Assert.IsType<Text>(stack.Items[0]);
+        var button = Assert.IsType<Button>(stack.Items[1]);
+        var check = Assert.IsType<CheckBox>(stack.Items[2]);
         Assert.Equal(value, text.Value);
         Assert.Equal(value, button.Value);
         Assert.Equal(value, check.Value);
@@ -94,25 +98,36 @@ public class ControlFactoryTests
     [Fact]
     public void TextFactories_NullLabels_KeepConstructorValidation()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => Text.Plain(null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Button.Simple(null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CheckBox.Create(null!));
+        using var surface = new HeadlessSurface();
+        foreach (var factory in new Func<IUiBuildContext<object>, Element>[] { ui => ui.Text(null!), ui => ui.Button(null!), ui => ui.CheckBox(null!) })
+        {
+            using var view = new FactoryView(factory);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new UiSession(view, surface, new UiViewport(300, 400)));
+            Assert.Null(view.Child);
+        }
     }
 
     [Fact]
     public void FactoriesAndConstructors_MixedTreeRoutesInputAndOwnsChildren()
     {
         var activations = 0;
-        TextBox editor = TextBox.Create().Width(200);
-        CheckBox toggle = new CheckBox("Notifications");
-        Slider slider = Slider.Create().Width(200);
-        Button button = Button.Simple("Apply").OnClick(() => activations++);
-        Border border = Border.Create().Content(Text.Plain("Settings"));
-        VStack root = VStack.Create().Width(240).Configure(stack => stack.Spacing = 8)
-            .WithChildren(border, editor, toggle, slider, button, new Text("Constructor label"));
-        var children = root.Children.ToArray();
-        using (var ui = new UiSession(root, new HeadlessSurface(), new UiViewport(300, 400)))
+        var view = new FactoryView(ui => ui.VStack(
+            ui.Border(ui.Text("Settings")),
+            ui.TextBox().Width(200),
+            ui.CheckBox("Notifications"),
+            ui.Create<Slider>().Width(200),
+            ui.Button("Apply").OnClick(() => activations++),
+            new Text("Constructor label")).Width(240).Configure(stack => stack.Spacing = 8));
+        VStack root;
+        Element[] children;
+        using (var ui = new UiSession(view, new HeadlessSurface(), new UiViewport(300, 400)))
         {
+            root = Assert.IsType<VStack>(view.Child);
+            children = root.Children.ToArray();
+            var editor = Assert.IsType<TextBox>(children[1]);
+            var toggle = Assert.IsType<CheckBox>(children[2]);
+            var slider = Assert.IsType<Slider>(children[3]);
+            var button = Assert.IsType<Button>(children[4]);
             Assert.True(ui.Update());
             ui.Focus(editor);
             Assert.True(ui.HandleInput(new UiInput(InputKind.Text, Text: "Привет 👋")).Handled);
@@ -132,7 +147,29 @@ public class ControlFactoryTests
         }
         Assert.True(root.IsDisposed);
         Assert.All(children, child => { Assert.True(child.IsDisposed); Assert.False(child.IsAttached); });
-        Assert.True(border.Child!.IsDisposed);
+        Assert.True(Assert.IsType<Border>(children[0]).Child!.IsDisposed);
+    }
+
+    [Fact]
+    public void FailedDirectAttach_LeavesSuppliedSurfaceAndRootWithCaller()
+    {
+        using var surface = new HeadlessSurface();
+        var failure = new InvalidOperationException("Cannot create layout");
+        var factories = new UiControlFactories();
+        factories.Register(new Factory<HStack>(() => throw failure));
+        Text? draft = null;
+        using var view = new FactoryView(ui =>
+        {
+            draft = ui.Create<Text>();
+            return ui.Create<HStack>();
+        });
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => new UiSession(view, surface,
+            new UiViewport(32, 32), null, new UiDispatchOptions(), null, factories)));
+        Assert.True(Assert.IsType<Text>(draft).IsDisposed);
+        Assert.Null(view.Child);
+        Assert.False(view.IsAttached);
+        Assert.False(view.IsDisposed);
+        Assert.Equal(0, surface.Disposals);
     }
 
     private static void Click(UiSession ui, Element element)
@@ -147,17 +184,10 @@ public class ControlFactoryTests
         Assert.False(released.PointerCaptured);
     }
 
-    private static MethodInfo DefaultFactory(Type type, string name) =>
-        type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == name && method.GetParameters().All(parameter => parameter.IsOptional));
-
-    private static object Invoke(MethodBase method) =>
-        method switch
-        {
-            ConstructorInfo constructor => constructor.Invoke(method.GetParameters().Select(parameter => parameter.DefaultValue).ToArray()),
-            MethodInfo factory => factory.Invoke(null, method.GetParameters().Select(parameter => parameter.DefaultValue).ToArray())!,
-            _ => throw new InvalidOperationException()
-        };
+    private sealed class FactoryView : View
+    {
+        public FactoryView(Func<IUiBuildContext<object>, Element> factory) => Content(factory);
+    }
 
     private static object?[] Defaults(Element element) =>
     [
@@ -175,7 +205,8 @@ public class ControlFactoryTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => root.Draw(new RecordingDrawingContext());
-        public void Dispose() { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters);
+        public int Disposals { get; private set; }
+        public void Dispose() => Disposals++;
     }
 }

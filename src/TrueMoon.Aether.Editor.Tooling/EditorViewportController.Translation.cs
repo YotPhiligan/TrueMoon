@@ -1,7 +1,9 @@
+using TrueMoon.Argentis.Input;
 using System.Numerics;
 using TrueMoon.Aether.Abstractions.Preview;
 using TrueMoon.Aether.Editor.Tooling.Translation;
 using TrueMoon.Aether.Editor.UI.Translation;
+using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Preview;
 using TrueMoon.Argentis;
 
@@ -9,7 +11,6 @@ namespace TrueMoon.Aether.Editor.Tooling;
 
 public sealed partial class EditorViewportController
 {
-    void TrueMoon.Aether.Editor.UI.IEditorViewportController.DrawTranslationOverlay(IDrawingContext drawing) => DrawTranslationOverlay(drawing);
     private TranslationTarget? _translationTarget;
     private TranslationDrag? _translationDrag;
     private TranslationPosition _translationPosition;
@@ -107,76 +108,21 @@ public sealed partial class EditorViewportController
         _translationTarget = null; _translationDrag = null; _translationDelta = default;
     }
 
-    internal void DrawTranslationOverlay(IDrawingContext drawing)
+    public TranslationOverlay? CaptureTranslationOverlay(ViewportFrame frame)
     {
         PreviewPresentedView? receipt; TranslationTarget? target; TranslationGeometry? geometry;
         if (IsTranslating)
         {
             receipt = _start; target = _translationTarget; geometry = _translationDrag?.Geometry;
-            if (receipt == null || target == null || geometry == null || !GestureCurrent()) return;
+            if (receipt == null || target == null || geometry == null || !GestureCurrent()) return null;
         }
         else
         {
             receipt = Ready();
-            if (receipt == null || !CaptureTranslation(receipt, out target, out geometry)) return;
+            if (receipt == null || !CaptureTranslation(receipt, out target, out geometry)) return null;
         }
-        var clip = receipt.ClipBounds; var image = receipt.ImageBounds; var theme = _view.Canvas.Theme;
-        drawing.Save();
-        try
-        {
-            drawing.Clip(new((float)clip.Left, (float)clip.Top, (float)clip.Width, (float)clip.Height));
-            DrawBounds(drawing, target!.Ghosts, receipt, default, theme.Focus);
-            if (IsTranslating) DrawBounds(drawing, target.Ghosts, receipt, _translationDelta, theme.Modified);
-            foreach (var handle in geometry!.Handles)
-            {
-                var color = handle.Kind switch
-                {
-                    TranslationHandle.X or TranslationHandle.YZ => theme.AxisX,
-                    TranslationHandle.Y or TranslationHandle.XZ => theme.AxisY,
-                    _ => theme.AxisZ
-                };
-                if (_translationDrag?.Handle == handle.Kind) color = theme.Focus;
-                var points = handle.Points;
-                if (points.Length == 2)
-                {
-                    DrawLine(drawing, points[0], points[1], color);
-                    drawing.Fill(new((float)points[1].X - 3, (float)points[1].Y - 3, 6, 6), color);
-                    drawing.Text(handle.Kind.ToString(), (float)points[1].X + 5, (float)points[1].Y - 6, color, 12, _view.Canvas.FontFamily, _view.Canvas.FontWeight, _view.Canvas.FontItalic);
-                }
-                else for (var i = 0; i < points.Length; i++) DrawLine(drawing, points[i], points[(i + 1) % points.Length], color with { A = 180 });
-            }
-            if (IsTranslating) drawing.Text("Перемещение · отпустите для применения · Esc — отмена",
-                (float)Math.Max(image.Left + 8, image.Left + image.Width / 2 - 160),
-                (float)Math.Min(image.Top + image.Height, clip.Top + clip.Height) - 24,
-                theme.Modified, 12, _view.Canvas.FontFamily, _view.Canvas.FontWeight, _view.Canvas.FontItalic);
-        }
-        finally { drawing.Restore(); }
-    }
-
-    private static void DrawLine(IDrawingContext drawing, TranslationPoint a, TranslationPoint b, Color color)
-    {
-        var steps = (int)Math.Clamp(Math.Ceiling(Math.Max(Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y))), 1, 192);
-        for (var i = 0; i <= steps; i++)
-        {
-            var t = (double)i / steps;
-            drawing.Fill(new((float)(a.X + (b.X - a.X) * t) - 1, (float)(a.Y + (b.Y - a.Y) * t) - 1, 2, 2), color);
-        }
-    }
-
-    private static void DrawBounds(IDrawingContext drawing, IEnumerable<PreviewPickPrimitive> primitives, PreviewPresentedView receipt, Vector3 delta, Color color)
-    {
-        foreach (var primitive in primitives)
-        {
-            double left = double.PositiveInfinity, top = double.PositiveInfinity, right = double.NegativeInfinity, bottom = double.NegativeInfinity;
-            var valid = true;
-            for (var i = 0; i < 8; i++)
-            {
-                var corner = Vector3.Transform(new((i & 1) == 0 ? -.5f : .5f, (i & 2) == 0 ? -.5f : .5f, (i & 4) == 0 ? -.5f : .5f), primitive.World) + delta;
-                if (!TranslationGeometry.Project(corner, receipt.Projection, receipt.ImageBounds, out var point)) { valid = false; break; }
-                left = Math.Min(left, point.X); right = Math.Max(right, point.X); top = Math.Min(top, point.Y); bottom = Math.Max(bottom, point.Y);
-            }
-            var bounds = new Rect((float)left, (float)top, (float)(right - left), (float)(bottom - top));
-            if (valid && float.IsFinite(bounds.X) && float.IsFinite(bounds.Y) && float.IsFinite(bounds.Width) && float.IsFinite(bounds.Height)) drawing.Stroke(bounds, color, 2);
-        }
+        if (!ReferenceEquals(frame.Presentation, receipt.Frame.Presentation) || frame.Metadata.PreviewView != receipt.State.Stamp)
+            return null;
+        return new(geometry!, receipt.ClipBounds, target!.Ghosts, _translationDrag?.Handle ?? TranslationHandle.None, _translationDelta);
     }
 }

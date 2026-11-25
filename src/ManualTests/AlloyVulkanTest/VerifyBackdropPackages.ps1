@@ -52,6 +52,12 @@ using System.Text.Json;
 using Silk.NET.Vulkan;
 using SkiaSharp;
 using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Platform.Silk;
@@ -103,7 +109,16 @@ internal static unsafe class Program
             Native=SkiaNativeLibrary.LoadedPath,NativeSha256=Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(SkiaNativeLibrary.LoadedPath!))),Assembly=typeof(SkiaVulkanRenderBackend).Assembly.Location},new JsonSerializerOptions{WriteIndented=true}));
     }
     private sealed class SplitBackground:Panel
-    {protected override void DrawCore(IDrawingContext c){c.Fill(new(Bounds.X,Bounds.Y,Bounds.Width/2,Bounds.Height),new(0,0,0));c.Fill(new(Bounds.X+Bounds.Width/2,Bounds.Y,Bounds.Width/2,Bounds.Height),new(255,255,255));}}
+    {
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<SplitBackground>(static (panel, c) =>
+        {
+            var bounds = panel.Bounds;
+            var half = bounds.Width / 2;
+            c.Fill(new(bounds.X, bounds.Y, half, bounds.Height), new(0,0,0));
+            c.Fill(new(bounds.X + half, bounds.Y, half, bounds.Height), new(255,255,255));
+        });
+        public override ElementPresentation Presentation => Painter;
+    }
 }
 '@)
 Invoke-Dotnet 'restore' @('restore',"$run/consumer/Consumer.csproj",'--configfile',"$run/NuGet.Config",'--no-http-cache',"-bl:$evidence/restore-{}.binlog",'--verbosity','quiet')

@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using System.ComponentModel;
 using TrueMoon.Argentis;
 
@@ -76,7 +81,8 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
             void Attachment() { if (!IsAttached) _restoreDetailsFocus = false; }
             AttachmentChanged += Attachment;
             Own(new Release(() => { AttachmentChanged -= Attachment; _restoreDetailsFocus = false; }));
-            Content(model, _ => Bar); this.WithViewStyle(style);
+            DataContext = model;
+            SetContent(Bar); this.WithViewStyle(style);
             model.PropertyChanged += Changed; Own(new Release(() => model.PropertyChanged -= Changed));
             UpdateKind();
         }
@@ -129,8 +135,10 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         { _action = action; Clear(UiProperties.Width); Clear(UiProperties.Height); }
         protected override float ThemeBorderWidth => 0;
         protected override Color ThemeBackground => IsPressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Color.Transparent;
-        protected override void DrawCore(IDrawingContext context) => UiSymbols.Draw(context, Symbol,
-            new(Bounds.X + (Bounds.Width - 14) / 2, Bounds.Y + (Bounds.Height - 14) / 2, 14, 14), Foreground);
+        private static readonly ElementPresentation ActionPresentation = ElementPresentation.Create<DetailsAction>(static (action, context) =>
+            UiSymbols.Draw(context, action.Symbol, new(action.Bounds.X + (action.Bounds.Width - 14) / 2,
+                action.Bounds.Y + (action.Bounds.Height - 14) / 2, 14, 14), action.Foreground));
+        public override ElementPresentation Presentation => ActionPresentation;
         public override bool HandleInput(UiInput input, IInputContext context)
         { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
         protected override void Activate() => _action(_context!, this);
@@ -152,15 +160,17 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         { _text = text; var size = base.MeasureCore(available, text); return new(size.Width + 20, Math.Max(14, size.Height)); }
         private ITextLayoutService? _text;
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation SegmentPresentation = ElementPresentation.Create<SegmentButton>(static (button, context) =>
         {
-            if (IsHovered || IsPressed)
+            if (button.IsHovered || button.IsPressed)
             {
-                var width = Math.Min(Bounds.Width, (_text?.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0) + 20 + Padding.Left + Padding.Right);
-                context.Fill(new(Bounds.X, Bounds.Y, width, Bounds.Height), IsPressed ? Theme.ControlPressed : Theme.ControlHover);
+                var labelWidth = button._text?.Measure(button.Value, button.FontSize, button.FontFamily, button.FontWeight, button.FontItalic).Width ?? 0;
+                var width = Math.Min(button.Bounds.Width, labelWidth + 20 + button.Padding.Left + button.Padding.Right);
+                context.Fill(new(button.Bounds.X, button.Bounds.Y, width, button.Bounds.Height), button.IsPressed ? button.Theme.ControlPressed : button.Theme.ControlHover);
             }
-            DrawSegment(context, this, Symbol, Value, _text);
-        }
+            DrawSegment(context, button, button.Symbol, button.Value, button._text);
+        });
+        public override ElementPresentation Presentation => SegmentPresentation;
         public override bool HandleInput(UiInput input, IInputContext context)
         { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
         protected override void Activate() => _action(_context!, this);
@@ -170,7 +180,10 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         private ITextLayoutService? _text;
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         { _text = text; var size = base.MeasureCore(available, text); return new(size.Width + 20, Math.Max(14, size.Height)); }
-        protected override void DrawCore(IDrawingContext context) => DrawSegment(context, this, symbol, Value, _text);
+        private readonly UiSymbol _symbol = symbol;
+        private static readonly ElementPresentation SegmentPresentation = ElementPresentation.Create<SegmentLabel>(static (label, context) =>
+            DrawSegment(context, label, label._symbol, label.Value, label._text));
+        public override ElementPresentation Presentation => SegmentPresentation;
     }
     private static void DrawSegment(IDrawingContext context, Element element, UiSymbol symbol, string text, ITextLayoutService? layout)
     {

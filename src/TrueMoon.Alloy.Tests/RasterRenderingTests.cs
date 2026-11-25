@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using System.Runtime.InteropServices;
 using SkiaSharp;
@@ -22,6 +26,37 @@ public sealed class RasterRenderingTests
         Assert.Equal(new byte[] { 100, 50, 25, 128 }, Pixel(image, (int)(49 * scale), (int)(39 * scale)));
         Assert.Equal(new byte[] { 0, 0, 0, 0 }, Pixel(image, (int)(30 * scale), (int)(25 * scale)));
         Assert.Equal(new byte[] { 0, 0, 0, 0 }, Pixel(image, (int)(9 * scale), (int)(9 * scale)));
+    }
+
+    private sealed class ClippedPanel : Panel
+    {
+        public override Rect ChildClipBounds => Bounds with { Width = Bounds.Width / 2 };
+    }
+
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(2f)]
+    public void NestedPanels_CompositeOnceAndRestoreClipBeforeSibling(float scale)
+    {
+        var root = new Panel();
+        var outer = new ClippedPanel { Width = 40, Height = 30, Opacity = .5f,
+            HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start,
+            Background = new Color(255, 0, 0), BorderWidth = 4, BorderColor = new Color(255, 255, 255) };
+        var inner = new ClippedPanel { Background = new Color(0, 255, 0), Width = 24,
+            HorizontalAlignment = LayoutAlignment.Start };
+        inner.Add(new Panel { Background = new Color(0, 0, 255) });
+        outer.Add(inner); root.Add(outer);
+        var sibling = Patch(new Color(255, 255, 0), 10, 10);
+        sibling.Margin = new Thickness(48, 4, 0, 0); root.Add(sibling);
+        using var ui = Create(root, new UiViewport((int)(64 * scale), (int)(32 * scale), scale));
+        Assert.True(ui.Update());
+        using var image = ui.SnapshotRasterImage();
+        byte[] Sample(int x, int y) => Pixel(image, (int)(x * scale), (int)(y * scale));
+        Assert.Equal(new byte[] { 128, 128, 128, 128 }, Sample(1, 8)); // Border above the blue child.
+        Assert.Equal(new byte[] { 0, 0, 128, 128 }, Sample(8, 8));
+        Assert.Equal(new byte[] { 0, 128, 0, 128 }, Sample(16, 8)); // Outside inner child clip.
+        Assert.Equal(new byte[] { 128, 0, 0, 128 }, Sample(22, 8)); // Outside outer child clip.
+        Assert.Equal(new byte[] { 255, 255, 0, 255 }, Sample(50, 8));
     }
 
     private static UiSession Create(Element root, UiViewport? viewport = null) => UiSession.Create(
@@ -378,15 +413,27 @@ public sealed class RasterRenderingTests
 
     private sealed class ForeignTarget : UiRenderTarget;
     private sealed class OverflowFill : Element
-    { protected override void DrawCore(IDrawingContext context) => context.Fill(new Rect(-100, -100, 300, 300), new Color(255, 0, 0)); }
+    {
+        private static readonly ElementPresentation FillPresentation = ElementPresentation.Create<OverflowFill>(static (_, context) =>
+            context.Fill(new Rect(-100, -100, 300, 300), new Color(255, 0, 0)));
+        public override ElementPresentation Presentation => FillPresentation;
+    }
     private sealed class CountingFill : Element
     {
         internal int Draws { get; private set; }
-        protected override void DrawCore(IDrawingContext context) { Draws++; context.Fill(Bounds, Foreground); }
+        private static readonly ElementPresentation FillPresentation = ElementPresentation.Create<CountingFill>(static (fill, context) =>
+        {
+            fill.Draws++; context.Fill(fill.Bounds, fill.Foreground);
+        });
+        public override ElementPresentation Presentation => FillPresentation;
     }
     private sealed class CallbackFill : Element
     {
         internal Action? Callback { get; set; }
-        protected override void DrawCore(IDrawingContext context) { Callback?.Invoke(); context.Fill(Bounds, new Color(0, 0, 255)); }
+        private static readonly ElementPresentation FillPresentation = ElementPresentation.Create<CallbackFill>(static (fill, context) =>
+        {
+            fill.Callback?.Invoke(); context.Fill(fill.Bounds, new Color(0, 0, 255));
+        });
+        public override ElementPresentation Presentation => FillPresentation;
     }
 }

@@ -1,0 +1,427 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using System.Globalization;
+
+namespace TrueMoon.Argentis.Editors;
+
+/// <summary>A retained multiline rich editor. Documents/options are immutable snapshots; indices are UTF-16 grapheme boundaries.</summary>
+public sealed class RichTextEditor : Element
+{
+    /// <inheritdoc />
+    protected override bool SupportsValidationIcon => true;
+    /// <summary>Minimum preferred content height, excluding padding; the constructor's MinHeight remains independent.</summary>
+    public static readonly UiProperty<float> MinimumContentHeightProperty = new("MinimumContentHeight", 80, Invalidation.Layout, v => float.IsFinite(v) && v >= 0);
+    /// <summary>Maximum preferred content height, excluding padding. A ceiling below the minimum takes precedence.</summary>
+    public static readonly UiProperty<float> MaximumContentHeightProperty = new("MaximumContentHeight", float.PositiveInfinity, Invalidation.Layout, v => !float.IsNaN(v) && v > 0);
+    /// <summary>Preferred lower bound for automatically measured content height.</summary>
+    public float MinimumContentHeight { get => Get(MinimumContentHeightProperty); set => Set(MinimumContentHeightProperty, value); }
+    /// <summary>Preferred upper bound for automatically measured content height; infinity preserves the available-space policy.</summary>
+    public float MaximumContentHeight { get => Get(MaximumContentHeightProperty); set => Set(MaximumContentHeightProperty, value); }
+    /// <summary>Bindable rich content. Replacing it externally clears undo/redo history.</summary>
+    public static readonly UiProperty<RichTextDocument> DocumentProperty = new("Document", RichTextDocument.Empty, Invalidation.Layout, value => value != null);
+    /// <summary>Bindable plain text. External assignment replaces formatting and normalizes line endings.</summary>
+    public static readonly UiProperty<string> TextProperty = new("Text", "", Invalidation.Layout,
+        value => value != null && !value.Contains('\r') && RichTextRun.IsValidUtf16(value));
+    /// <summary>Bindable immutable editing options.</summary>
+    public static readonly UiProperty<RichTextEditorOptions> OptionsProperty = new("Options", new(), Invalidation.Layout,
+        value => value != null && Enum.IsDefined(value.Alignment));
+
+    private readonly List<Snapshot> _undo = [], _redo = [];
+    private int _caret, _anchor;
+    private bool _syncing, _editing, _dragging, _followCaret = true;
+    private RichTextStyle? _typingStyle, _defaults;
+    private ITextLayoutService? _service;
+    private IRichTextLayout? _layout;
+    private RichTextDocument? _layoutDocument;
+    private RichTextAlignment _layoutAlignment;
+    private Rect _viewport, _caretBounds;
+    private float? _layoutWidth, _preferredX;
+    private float _scrollX, _scrollY;
+    private sealed record Snapshot(RichTextDocument Document, int Caret, int Anchor);
+
+    /// <summary>Creates a rich editor with optional immutable configuration.</summary>
+    /// <param name="options">Editing options; omitted uses the defaults.</param>
+    public RichTextEditor(RichTextEditorOptions? options = null)
+    {
+        MinWidth = 160; MinHeight = 80;
+        if (options != null) Options = options;
+        Own(new LayoutLifetime(this));
+        AttachmentChanged += () => { if (!IsAttached) { ReleaseLayout(); _service = null; } };
+    }
+    /// <summary>Immutable rich content.</summary>
+    public RichTextDocument Document { get => Get(DocumentProperty); set => Set(DocumentProperty, value); }
+    /// <summary>Plain text with normalized LF line endings.</summary>
+    public string Text { get => Get(TextProperty); set { ArgumentNullException.ThrowIfNull(value); Set(TextProperty, value.ReplaceLineEndings("\n")); } }
+    /// <summary>Immutable configuration. Use with-expressions to change individual options.</summary>
+    public RichTextEditorOptions Options { get => Get(OptionsProperty); set => Set(OptionsProperty, value); }
+    /// <summary>Current UTF-16 caret position.</summary>
+    public int CaretIndex => _caret;
+    /// <summary>Selected UTF-16 range start.</summary>
+    public int SelectionStart => Math.Min(_caret, _anchor);
+    /// <summary>Selected UTF-16 range length.</summary>
+    public int SelectionLength => Math.Abs(_caret - _anchor);
+    /// <summary>Selected plain text, suitable for clipboard export.</summary>
+    public string SelectedText => Document.Text.Substring(SelectionStart, SelectionLength);
+    /// <summary>Whether an editable undo operation is available.</summary>
+    public bool CanUndo => Editable && _undo.Count != 0;
+    /// <summary>Whether an editable redo operation is available.</summary>
+    public bool CanRedo => Editable && _redo.Count != 0;
+    /// <summary>Current horizontal logical scroll offset.</summary>
+    public float HorizontalOffset => _scrollX;
+    /// <summary>Current vertical logical scroll offset.</summary>
+    public float VerticalOffset => _scrollY;
+    /// <summary>Formatting at the caret, including pending insertion formatting.</summary>
+    public RichTextStyle SelectionStyle => _typingStyle ?? Document.StyleAt(Math.Max(0, _caret - 1));
+    /// <summary>Raised when document, selection or undo availability changes; handlers run on the owner thread.</summary>
+    public event Action? StateChanged;
+    /// <inheritdoc />
+    public override bool Focusable => true;
+    /// <inheritdoc />
+    protected override Thickness ThemePadding => Theme.EditorPadding;
+    /// <inheritdoc />
+    protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : Options.IsReadOnly ? Theme.ReadOnly : Theme.Input;
+    /// <inheritdoc />
+    protected override bool UsesThemedControlBackdrop => true;
+    /// <inheritdoc />
+    protected override float ThemeBorderWidth => Theme.BorderWidth;
+
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(object property)
+    {
+        base.OnPropertyChanged(property);
+        if (_syncing)
+        {
+            if (ReferenceEquals(property, DocumentProperty)) { _caret = Clamp(_caret); _anchor = Clamp(_anchor); }
+            return;
+        }
+        if (ReferenceEquals(property, TextProperty))
+        {
+            _syncing = true;
+            try
+            {
+                var document = RichTextDocument.FromText(Text);
+                ResetExternalState(document.Text);
+                Document = document;
+                _caret = Clamp(_caret); _anchor = Clamp(_anchor);
+                if (Text != document.Text) Text = document.Text;
+            }
+            finally { _syncing = false; ReleaseLayout(); }
+        }
+        else if (ReferenceEquals(property, DocumentProperty))
+        {
+            if (!_editing) ResetExternalState(Document.Text);
+            _caret = Clamp(_caret); _anchor = Clamp(_anchor);
+            _syncing = true;
+            try { Text = Document.Text; }
+            finally { _syncing = false; ReleaseLayout(); }
+        }
+        else if (ReferenceEquals(property, OptionsProperty))
+        {
+            Trim(_undo); Trim(_redo); ReleaseLayout();
+        }
+        else
+        {
+            if (ReferenceEquals(property, UiProperties.Foreground) && _layout != null)
+                EnsureLayout(_viewport.Width, _service!);
+            return;
+        }
+        StateChanged?.Invoke();
+    }
+    private void ResetExternalState(string text)
+    {
+        _undo.Clear(); _redo.Clear(); _typingStyle = null; _preferredX = null; _followCaret = true;
+        _caret = Math.Min(_caret, text.Length); _anchor = Math.Min(_anchor, text.Length);
+    }
+    private int Clamp(int index)
+    {
+        var text = Document.Text;
+        if (index >= text.Length) return text.Length;
+        return StringInfo.ParseCombiningCharacters(text).LastOrDefault(position => position <= Math.Max(0, index));
+    }
+    private int Previous(int index) => StringInfo.ParseCombiningCharacters(Document.Text).LastOrDefault(position => position < index);
+    private int Next(int index) => StringInfo.ParseCombiningCharacters(Document.Text).FirstOrDefault(position => position > index, Document.Text.Length);
+    private void Trim(List<Snapshot> history)
+    { if (history.Count > Options.UndoLimit) history.RemoveRange(0, history.Count - Options.UndoLimit); }
+    private Snapshot Capture() => new(Document, _caret, _anchor);
+    private void ApplySnapshot(Snapshot snapshot)
+    {
+        _editing = true; _caret = snapshot.Caret; _anchor = snapshot.Anchor;
+        _typingStyle = null; _preferredX = null; _followCaret = true;
+        try { Document = snapshot.Document; }
+        finally { _editing = false; Invalidate(Invalidation.Layout); }
+    }
+    private void Commit(RichTextDocument document, int caret, int anchor)
+    {
+        if (Options.UndoLimit > 0) { _undo.Add(Capture()); Trim(_undo); }
+        _redo.Clear();
+        ApplySnapshot(new(document, caret, anchor));
+    }
+    private bool Editable => IsEffectivelyEnabled && !Options.IsReadOnly;
+
+    /// <summary>Selects a UTF-16 range. Boundaries inside a grapheme are rounded down.</summary>
+    /// <param name="start">Range start.</param><param name="length">Range length.</param>
+    public void Select(int start, int length)
+    {
+        VerifyAccess();
+        if (start < 0 || length < 0 || start > Document.Text.Length - length) throw new ArgumentOutOfRangeException(nameof(start));
+        _anchor = Clamp(start); _caret = Clamp(start + length); _typingStyle = null; _preferredX = null; _followCaret = true;
+        UpdateCaretGeometry(); Invalidate(); StateChanged?.Invoke();
+    }
+    /// <summary>Selects the whole document.</summary>
+    public void SelectAll() => Select(0, Document.Text.Length);
+    /// <summary>Replaces selection with normalized plain text using the current insertion style.</summary>
+    /// <param name="text">Text to insert; CR/CRLF become LF.</param><returns>Whether the document changed.</returns>
+    public bool InsertText(string text)
+    {
+        VerifyAccess(); ArgumentNullException.ThrowIfNull(text);
+        if (!Editable) return false;
+        text = text.ReplaceLineEndings("\n");
+        // Validate before modifying history or selection.
+        _ = new RichTextRun(text);
+        if (text.Length == 0 && SelectionLength == 0) return false;
+        var start = SelectionStart; var style = SelectionStyle;
+        Commit(Document.Replace(start, SelectionLength, text, style), start + text.Length, start + text.Length);
+        _typingStyle = style;
+        return true;
+    }
+    /// <summary>Applies a formatting patch to selection, or to subsequent typing at a collapsed caret.</summary>
+    /// <param name="style">Non-null members change formatting; other members are preserved.</param><returns>Whether the command was accepted.</returns>
+    public bool ApplyStyle(RichTextStyle style)
+    {
+        VerifyAccess(); ArgumentNullException.ThrowIfNull(style);
+        if (!Editable) return false;
+        if (SelectionLength == 0) { _typingStyle = SelectionStyle.Merge(style); Invalidate(); StateChanged?.Invoke(); }
+        else Commit(Document.Format(SelectionStart, SelectionLength, style), _caret, _anchor);
+        return true;
+    }
+    /// <summary>Restores document, formatting and selection from the last edit.</summary>
+    /// <returns>Whether an operation was undone.</returns>
+    public bool Undo()
+    {
+        VerifyAccess(); if (!Editable || _undo.Count == 0) return false;
+        var previous = _undo[^1]; _undo.RemoveAt(_undo.Count - 1); _redo.Add(Capture()); Trim(_redo);
+        ApplySnapshot(previous); return true;
+    }
+    /// <summary>Reapplies the last undone edit.</summary>
+    /// <returns>Whether an operation was redone.</returns>
+    public bool Redo()
+    {
+        VerifyAccess(); if (!Editable || _redo.Count == 0) return false;
+        var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1); _undo.Add(Capture()); Trim(_undo);
+        ApplySnapshot(next); return true;
+    }
+    /// <summary>Scrolls to a logical offset, clamped to the currently measured document extent.</summary>
+    /// <param name="horizontal">Nonnegative horizontal offset.</param><param name="vertical">Nonnegative vertical offset.</param>
+    public void ScrollTo(float horizontal, float vertical)
+    {
+        VerifyAccess();
+        if (!float.IsFinite(horizontal) || !float.IsFinite(vertical) || horizontal < 0 || vertical < 0)
+            throw new ArgumentOutOfRangeException(nameof(horizontal));
+        _scrollX = horizontal; _scrollY = vertical; _followCaret = false; ClampScroll(); Invalidate();
+    }
+    private void ReleaseLayout()
+    { _layout?.Dispose(); _layout = null; _defaults = null; _layoutDocument = null; }
+    private void EnsureLayout(float width, ITextLayoutService service)
+    {
+        var foreground = IsEffectivelyEnabled ? Foreground : Theme.Disabled;
+        float? wrap = Options.WordWrap ? Math.Max(1, float.IsFinite(width) ? width : 320) : null;
+        if (_layout != null && ReferenceEquals(service, _service) && ReferenceEquals(Document, _layoutDocument) &&
+            _defaults is { } previous && previous.FontFamily == FontFamily && previous.FontSize == FontSize &&
+            previous.FontWeight == FontWeight && previous.Italic == FontItalic && previous.Foreground == foreground &&
+            wrap == _layoutWidth && Options.Alignment == _layoutAlignment) return;
+        ReleaseLayout();
+        if (service is not IRichTextLayoutService rich) throw new NotSupportedException("RichTextEditor requires an IRichTextLayoutService backend.");
+        _service = service; _layoutWidth = wrap; _layoutDocument = Document; _layoutAlignment = Options.Alignment;
+        _defaults = new() { FontFamily = FontFamily, FontSize = FontSize, FontWeight = FontWeight, Italic = FontItalic, Foreground = foreground };
+        _layout = rich.CreateRichTextLayout(_layoutDocument, _defaults, wrap, _layoutAlignment);
+    }
+    /// <inheritdoc />
+    protected override Size MeasureCore(Size available, ITextLayoutService text)
+    {
+        var ceiling = Math.Min(float.IsFinite(available.Height) ? available.Height : 160, MaximumContentHeight);
+        float ContentHeight() => Math.Min(ceiling, Math.Max(MinimumContentHeight, _layout!.Size.Height));
+        float BadgeReserve(float contentHeight)
+        {
+            if (!HasError) return 0;
+            var height = Math.Clamp(float.IsNaN(Height) ? contentHeight + Padding.Vertical : Height, MinHeight, MaxHeight);
+            if (float.IsFinite(available.Height)) height = Math.Min(height, available.Height + Padding.Vertical);
+            var width = Math.Min(height, available.Width + Padding.Horizontal);
+            return Math.Max(0, width + 4 - Padding.Right);
+        }
+        EnsureLayout(available.Width, text);
+        var height = ContentHeight(); var reserve = BadgeReserve(height);
+        // Wrapping can grow the auto-height field, which widens its square badge.
+        // Start afresh on each measure so wider constraints also allow it to shrink.
+        for (var pass = 0; HasError; pass++)
+        {
+            EnsureLayout(Math.Max(0, available.Width - reserve), text);
+            var next = Math.Max(height, ContentHeight());
+            if (next == height) break;
+            height = pass < 31 ? next : ceiling;
+            reserve = BadgeReserve(height);
+            if (pass >= 31) { EnsureLayout(Math.Max(0, available.Width - reserve), text); break; }
+        }
+        return new(Math.Min(float.IsFinite(available.Width) ? available.Width : 320, Math.Max(160, _layout!.Size.Width + reserve)), height);
+    }
+    /// <inheritdoc />
+    protected override void ArrangeCore(Rect contentBounds)
+    {
+        _viewport = EditorContentBounds;
+        if (_service != null) EnsureLayout(_viewport.Width, _service);
+        UpdateCaretGeometry();
+    }
+    private void ClampScroll()
+    {
+        _scrollX = Options.WordWrap ? 0 : Math.Clamp(_scrollX, 0, Math.Max(0, (_layout?.Size.Width ?? 0) - _viewport.Width + 2));
+        _scrollY = Math.Clamp(_scrollY, 0, Math.Max(0, (_layout?.Size.Height ?? 0) - _viewport.Height));
+    }
+    private void UpdateCaretGeometry()
+    {
+        if (_layout == null) return;
+        _caretBounds = _layout.GetCaretBounds(_caret);
+        if (_followCaret)
+        {
+            var area = _viewport;
+            if (_caretBounds.X < _scrollX) _scrollX = _caretBounds.X;
+            else if (_caretBounds.X + _caretBounds.Width > _scrollX + area.Width) _scrollX = _caretBounds.X + _caretBounds.Width - area.Width;
+            if (_caretBounds.Y < _scrollY) _scrollY = _caretBounds.Y;
+            else if (_caretBounds.Y + _caretBounds.Height > _scrollY + area.Height) _scrollY = _caretBounds.Y + _caretBounds.Height - area.Height;
+        }
+        ClampScroll();
+    }
+    private static readonly ElementPresentation Paint = ElementPresentation.Create<RichTextEditor>(
+        new Factory<IElementPresenter<RichTextEditor>>(static () => new Painter()));
+    /// <inheritdoc />
+    public override ElementPresentation Presentation => Paint;
+
+    private sealed class Painter : IElementPresenter<RichTextEditor>
+    {
+        public void Draw(RichTextEditor editor, IDrawingContext context)
+        {
+            if (editor._layout is not { } layout) return;
+            if (context is not IRichTextDrawingContext rich) throw new NotSupportedException("RichTextEditor requires an IRichTextDrawingContext backend.");
+            var bounds = editor.Bounds;
+            if (editor.Options.IsReadOnly && !editor.HasError)
+                context.Fill(new(bounds.X + bounds.Width - 4, bounds.Y + 4, 2, Math.Max(0, bounds.Height - 8)), editor.Theme.Border);
+            var area = editor._viewport;
+            var x = area.X - editor._scrollX;
+            var y = area.Y - editor._scrollY;
+            context.Save();
+            try
+            {
+                context.Clip(area);
+                var selected = editor.IsFocused || editor.Options.ShowSelectionWhenUnfocused;
+                rich.RichText(layout, x, y, editor.SelectionStart, selected ? editor.SelectionLength : 0,
+                    editor.Options.SelectionColor ?? (editor.Theme.Accent with { A = 100 }));
+                if (editor.IsFocused && editor.IsEffectivelyEnabled)
+                {
+                    var caret = editor._caretBounds;
+                    context.Fill(new(x + caret.X, y + caret.Y, 1, caret.Height), editor.Foreground);
+                }
+            }
+            finally { context.Restore(); }
+        }
+    }
+    private void Move(int position, bool extend, bool vertical = false)
+    {
+        _caret = Clamp(position); if (!extend) _anchor = _caret;
+        _typingStyle = null; _followCaret = true; if (!vertical) _preferredX = null;
+        UpdateCaretGeometry(); Invalidate(); StateChanged?.Invoke();
+    }
+    private int Word(int direction)
+    {
+        var text = Document.Text; var index = _caret;
+        if (direction < 0)
+        {
+            while (index > 0 && char.IsWhiteSpace(text, Previous(index))) index = Previous(index);
+            while (index > 0 && !char.IsWhiteSpace(text, Previous(index))) index = Previous(index);
+        }
+        else
+        {
+            while (index < text.Length && !char.IsWhiteSpace(text, index)) index = Next(index);
+            while (index < text.Length && char.IsWhiteSpace(text, index)) index = Next(index);
+        }
+        return index;
+    }
+    /// <inheritdoc />
+    public override bool HandleInput(UiInput input, IInputContext context)
+    {
+        VerifyAccess();
+        if (!IsEffectivelyEnabled) return false;
+        if (input is { Kind: InputKind.PointerDown, Button: 0 })
+        {
+            if (HasError && ValidationIconBounds.Contains(input.X, input.Y)) return true;
+            context.Focus(this); context.Capture(this); _dragging = true;
+            try { Move(Hit(input), input.Shift); }
+            catch { _dragging = false; context.ReleaseCapture(this); throw; }
+            return true;
+        }
+        if (_dragging && input.Kind is InputKind.PointerMove or InputKind.PointerUp)
+        {
+            try { Move(Hit(input), true); }
+            finally { if (input.Kind == InputKind.PointerUp) { _dragging = false; context.ReleaseCapture(this); } }
+            return true;
+        }
+        if (input.Kind == InputKind.Wheel)
+        {
+            ScrollTo(_scrollX, Math.Max(0, _scrollY - input.WheelDelta * FontSize * 3)); return true;
+        }
+        if (input.Kind == InputKind.Text && !string.IsNullOrEmpty(input.Text))
+        {
+            var text = string.Concat(input.Text.Where(c => !char.IsControl(c)));
+            return text.Length != 0 && InsertText(text);
+        }
+        if (input.Kind != InputKind.KeyDown) return false;
+        if (input.Control)
+        {
+            switch (input.Key)
+            {
+                case UiKey.A: SelectAll(); return true;
+                case UiKey.C: if (SelectionLength > 0) context.SetClipboardText(SelectedText); return true;
+                case UiKey.X:
+                    if (Editable && SelectionLength > 0) { context.SetClipboardText(SelectedText); InsertText(""); }
+                    return true;
+                case UiKey.V: if (Editable && context.GetClipboardText() is { } text) InsertText(text); return true;
+                case UiKey.Z: if (input.Shift) Redo(); else Undo(); return true;
+                case UiKey.Y: Redo(); return true;
+                case UiKey.B: ApplyStyle(new() { Bold = (SelectionStyle.FontWeight ??
+                    (SelectionStyle.Bold.HasValue ? (SelectionStyle.Bold.Value ? 700 : 400) : FontWeight)) < 700 }); return true;
+                case UiKey.I: ApplyStyle(new() { Italic = !(SelectionStyle.Italic ?? FontItalic) }); return true;
+                case UiKey.U: ApplyStyle(new() { Underline = !(SelectionStyle.Underline ?? false) }); return true;
+            }
+        }
+        switch (input.Key)
+        {
+            case UiKey.Left: Move(!input.Shift && SelectionLength > 0 ? SelectionStart : input.Control ? Word(-1) : Previous(_caret), input.Shift); return true;
+            case UiKey.Right: Move(!input.Shift && SelectionLength > 0 ? SelectionStart + SelectionLength : input.Control ? Word(1) : Next(_caret), input.Shift); return true;
+            case UiKey.Home: Move(input.Control ? 0 : _layout?.GetLineBoundary(_caret, false) ?? 0, input.Shift); return true;
+            case UiKey.End: Move(input.Control ? Document.Text.Length : _layout?.GetLineBoundary(_caret, true) ?? Document.Text.Length, input.Shift); return true;
+            case UiKey.Up:
+            case UiKey.Down:
+                if (_layout == null) return false;
+                _preferredX ??= _caretBounds.X;
+                Move(_layout.MoveVertical(_caret, input.Key == UiKey.Up ? -1 : 1, _preferredX.Value), input.Shift, true); return true;
+            case UiKey.Backspace:
+            case UiKey.Delete:
+                if (!Editable) return true;
+                if (SelectionLength == 0) _anchor = input.Key == UiKey.Backspace ? Previous(_caret) : Next(_caret);
+                InsertText(""); return true;
+            case UiKey.Enter: if (!Options.AcceptsReturn) return false; InsertText("\n"); return true;
+            case UiKey.Tab: if (!Options.AcceptsTab || input.Shift || !Editable) return false; InsertText("    "); return true;
+            default: return false;
+        }
+    }
+    private int Hit(UiInput input) => _layout?.HitTest(input.X - _viewport.X + _scrollX, input.Y - _viewport.Y + _scrollY) ?? 0;
+    /// <inheritdoc />
+    public override void OnInputCancelled() { _dragging = false; _preferredX = null; }
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        try { base.Dispose(); }
+        finally { if (IsDisposed) { StateChanged = null; _undo.Clear(); _redo.Clear(); _service = null; } }
+    }
+    private sealed class LayoutLifetime(RichTextEditor owner) : IDisposable
+    { public void Dispose() => owner.ReleaseLayout(); }
+}

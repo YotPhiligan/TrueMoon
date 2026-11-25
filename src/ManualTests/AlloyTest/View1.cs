@@ -1,9 +1,14 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis;
 using TrueMoon.Alloy.Rendering.Skia;
 
 namespace AlloyTest;
 
-/// <summary>A settings form mixing static factories and public constructors.</summary>
+/// <summary>A retained settings form assembled around its existing controls.</summary>
 public sealed class View1 : View<SettingsModel>
 {
     internal VStack RowList { get; }
@@ -34,50 +39,51 @@ public sealed class View1 : View<SettingsModel>
         }
         else Logo = new LogoMark();
         Logo.Width = Logo.Height = 48;
-        LightButton = Button.Simple("Светлая").OnClick(model.UseLight);
+        LightButton = new Button("Светлая").OnClick(model.UseLight);
         DarkButton = new Button("Тёмная").OnClick(model.UseDark);
-        CompactToggle = CheckBox.Create("Компактно").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.IsCompact);
+        CompactToggle = new CheckBox("Компактно").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.IsCompact);
         EditingToggle = new CheckBox("Ввод включён").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.ControlsEnabled);
-        NameEditor = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.Name);
-        NotificationToggle = CheckBox.Create("Получать уведомления").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.Enabled);
+        NameEditor = new TextBox().BindTwoWay(TextBox.ValueProperty, model, x => x.Name);
+        NotificationToggle = new CheckBox("Получать уведомления").BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.Enabled);
         VolumeSlider = new Slider().BindTwoWay(ProgressBar.ValueProperty, model, x => x.Volume);
         Meter = new VolumeMeter().Bind(ProgressBar.ValueProperty, model, x => x.Volume);
-        SettingsFields = VStack.Create().Bind(UiProperties.Enabled, model, x => x.ControlsEnabled).WithChildren(
-            new Text("Имя"), NameEditor, NotificationToggle, Text.Plain("Громкость"), VolumeSlider, Meter);
+        SettingsFields = new VStack().Bind(UiProperties.Enabled, model, x => x.ControlsEnabled).WithChildren(
+            new Text("Имя"), NameEditor, NotificationToggle, new Text("Громкость"), VolumeSlider, Meter);
         StatusRegion = new LoadStatusRegion(status => status.Phase switch
         {
-            LoadPhase.Loading => VStack.Create().Configure(stack => stack.Spacing = 6).WithChildren(
-                Text.Plain(status.Message), new ProgressBar { Value = .5f, Height = 8 }),
-            LoadPhase.Error => HStack.Create().Configure(stack => stack.Spacing = 12).WithChildren(
-                Text.Plain(status.Message).Width(340), Button.Simple("Повторить").OnClick(model.BeginLoading)),
-            _ => Text.Plain(status.Message)
+            LoadPhase.Loading => new VStack().Configure(stack => stack.Spacing = 6).WithChildren(
+                new Text(status.Message), new ProgressBar { Value = .5f, Height = 8 }),
+            LoadPhase.Error => new HStack().Configure(stack => stack.Spacing = 12).WithChildren(
+                new Text(status.Message).Width(340), new Button("Повторить").OnClick(model.BeginLoading)),
+            _ => new Text(status.Message)
         }).Height(48).Bind(LoadStatusRegion.StatusProperty, model, x => x.LoadStatus);
-        RowList = VStack.Create().Configure(stack => stack.Spacing = 8)
-            .BindItems(model.Rows, row => HStack.Create().Configure(stack => stack.Spacing = 8).WithChildren(
-                TextBox.Create().Width(260).BindTwoWay(TextBox.ValueProperty, row, x => x.Name),
-                Button.Simple("↑").Configure(button => button.FontFamily = "Segoe UI Symbol").OnClick(() => model.MoveRowUp(row)),
+        RowList = new VStack().Configure(stack => stack.Spacing = 8)
+            .BindItems(model.Rows, row => new HStack().Configure(stack => stack.Spacing = 8).WithChildren(
+                new TextBox().Width(260).BindTwoWay(TextBox.ValueProperty, row, x => x.Name),
+                new Button("↑").Configure(button => button.FontFamily = "Segoe UI Symbol").OnClick(() => model.MoveRowUp(row)),
                 new Button("Заменить").OnClick(() => model.ReplaceRow(row)),
-                Button.Simple("Удалить").OnClick(() => model.RemoveRow(row))));
-        RowScroll = ScrollViewer.Create().Height(160).Content(RowList);
-        Content(model, _ => VStack.Create()
+                new Button("Удалить").OnClick(() => model.RemoveRow(row))));
+        RowScroll = new ScrollViewer().Height(160).Content(RowList);
+        DataContext = model;
+        SetContent(new VStack()
             .Width(720)
             .Padding(24)
             .WithChildren(
-                HStack.Create().WithChildren(Logo, Text.Plain("Настройки").Configure(text => text.FontSize = 24)),
-                HStack.Create().WithChildren(LightButton, DarkButton, CompactToggle, EditingToggle),
+                new HStack().WithChildren(Logo, new Text("Настройки").Configure(text => text.FontSize = 24)),
+                new HStack().WithChildren(LightButton, DarkButton, CompactToggle, EditingToggle),
                 SettingsFields,
-                Border.Create().Padding(12).Content(Text.Plain().BindText(model, x => x.Summary)),
+                new Border().Padding(12).Content(new Text().BindText(model, x => x.Summary)),
                 StatusRegion,
-                HStack.Create().Configure(stack => stack.Spacing = 12).WithChildren(
-                    Button.Simple("Загрузка").OnClick(model.BeginLoading),
-                    Button.Simple("Ошибка").OnClick(model.ShowLoadError),
-                    Button.Simple("Готово").OnClick(model.CompleteLoading)),
-                HStack.Create().Configure(stack => stack.Spacing = 12).WithChildren(
-                    Button.Simple("Загрузить пример").OnClick(model.LoadExample),
+                new HStack().Configure(stack => stack.Spacing = 12).WithChildren(
+                    new Button("Загрузка").OnClick(model.BeginLoading),
+                    new Button("Ошибка").OnClick(model.ShowLoadError),
+                    new Button("Готово").OnClick(model.CompleteLoading)),
+                new HStack().Configure(stack => stack.Spacing = 12).WithChildren(
+                    new Button("Загрузить пример").OnClick(model.LoadExample),
                     new Button("Сбросить").OnClick(model.Reset)),
-                Text.Plain("Дела").Configure(text => text.FontSize = 20),
-                HStack.Create().Configure(stack => stack.Spacing = 12).WithChildren(
-                    Button.Simple("Добавить дело").OnClick(model.AddRow),
+                new Text("Дела").Configure(text => text.FontSize = 20),
+                new HStack().Configure(stack => stack.Spacing = 12).WithChildren(
+                    new Button("Добавить дело").OnClick(model.AddRow),
                     new Button("Развернуть (Reset)").OnClick(model.ResetRows)),
                 RowScroll
             ));
@@ -86,8 +92,9 @@ public sealed class View1 : View<SettingsModel>
 
     private sealed class LogoMark : Element
     {
-        protected override void DrawCore(IDrawingContext context) =>
-            UiSymbols.Draw(context, UiSymbol.TrueMoon, Bounds, Foreground);
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<LogoMark>(
+            static (mark, context) => UiSymbols.Draw(context, UiSymbol.TrueMoon, mark.Bounds, mark.Foreground));
+        public override ElementPresentation Presentation => Painter;
     }
 
     /// <inheritdoc />

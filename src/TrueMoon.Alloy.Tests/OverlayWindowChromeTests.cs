@@ -1,4 +1,9 @@
-﻿using SkiaSharp;
+﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
+using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -59,7 +64,7 @@ public sealed class OverlayWindowChromeTests
         frame.TitleBarOverContent = true;
         frame.ApplyWindowState(new(true, false, true, true, true));
         Arrange(frame);
-        frame.Draw(new RecordingDrawingContext());
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(frame, new RecordingDrawingContext());
         Assert.Equal(new[] { "body", "header" }, order);
         Assert.Equal(new Element[] { body, title, frame.ResizeGrip! }, frame.Children);
         Assert.True(title.OverlayContent);
@@ -331,12 +336,15 @@ public sealed class OverlayWindowChromeTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class PaintProbe(string name, List<string> order) : Element
     {
-        protected override void DrawCore(IDrawingContext context) => order.Add(name);
+        private readonly string _name = name;
+        private readonly List<string> _order = order;
+        private static readonly ElementPresentation ProbePresentation = ElementPresentation.Create<PaintProbe>(static (probe, _) => probe._order.Add(probe._name));
+        public override ElementPresentation Presentation => ProbePresentation;
     }
     private sealed class ActiveHeader : Element, IWindowHeaderActivity
     {
@@ -344,15 +352,17 @@ public sealed class OverlayWindowChromeTests
     }
     private sealed class SplitScene : Element
     {
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation ScenePresentation = ElementPresentation.Create<SplitScene>(static (scene, context) =>
         {
-            context.Fill(new(0, 0, 80, Bounds.Height), new(0, 0, 0));
-            context.Fill(new(80, 0, Bounds.Width - 80, Bounds.Height), new(255, 255, 255));
-        }
+            context.Fill(new(0, 0, 80, scene.Bounds.Height), new(0, 0, 0));
+            context.Fill(new(80, 0, scene.Bounds.Width - 80, scene.Bounds.Height), new(255, 255, 255));
+        });
+        public override ElementPresentation Presentation => ScenePresentation;
     }
     private sealed class WhitePatch : Element
     {
-        protected override void DrawCore(IDrawingContext context) =>
-            context.Fill(new(Bounds.X + 34, Bounds.Y + 10, 10, 10), new(255, 255, 255));
+        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<WhitePatch>(static (patch, context) =>
+            context.Fill(new(patch.Bounds.X + 34, patch.Bounds.Y + 10, 10, 10), new(255, 255, 255)));
+        public override ElementPresentation Presentation => PatchPresentation;
     }
 }

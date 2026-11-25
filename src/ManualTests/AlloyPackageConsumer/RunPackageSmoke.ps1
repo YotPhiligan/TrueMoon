@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string] $RunDirectory, [string] $PackageVersion)
+param([string] $RunDirectory, [string] $PackageVersion, [switch] $PresentersOnly)
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
 $trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
 
@@ -24,6 +24,7 @@ $logs = Join-Path $run 'logs'
 foreach ($directory in @($run, $feed, $cache, $logs)) { [IO.Directory]::CreateDirectory($directory) | Out-Null }
 $summary = [ordered]@{
     Completed = $false; Version = $PackageVersion; RunDirectory = $run
+    Profile = $(if ($PresentersOnly) { 'presenters-raster' } else { 'full' })
     TimestampUtc = [DateTime]::UtcNow.ToString('O'); Sdk = (& dotnet --version).Trim()
     OS = [Environment]::OSVersion.VersionString
     Architecture = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
@@ -205,7 +206,8 @@ function Verify-Delivery([string] $Output) {
     }
 }
 try {
-    foreach ($name in @('TrueMoon.Alloy.Hosting', 'TrueMoon', 'TrueMoon.Extensions.DependencyInjection')) { Add-Project (Join-Path $workspace "$name/$name.csproj") }
+    $roots = if ($PresentersOnly) { 'TrueMoon.Alloy.Rendering.Skia' } else { @('TrueMoon.Alloy.Hosting', 'TrueMoon', 'TrueMoon.Extensions.DependencyInjection') }
+    foreach ($name in $roots) { Add-Project (Join-Path $workspace "$name/$name.csproj") }
     $inputs = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($project in $projects) {
         Get-ChildItem -LiteralPath (Split-Path $project) -Recurse -File |
@@ -224,7 +226,8 @@ try {
         Invoke-DotNet ('pack-' + [IO.Path]::GetFileNameWithoutExtension($project)) @('pack', $project, '--configuration', 'Release', "-p:Version=$PackageVersion", '--output', $feed, '--verbosity', 'quiet') | Out-Null
     }
     $packages = @(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg')
-    if ($packages.Count -ne 10) { throw "Expected 10 packages, got $($packages.Count)." }
+    $expectedCount = if ($PresentersOnly) { 4 } else { 10 }
+    if ($packages.Count -ne $expectedCount) { throw "Expected $expectedCount packages, got $($packages.Count)." }
     foreach ($package in $packages) {
         $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
         try {
@@ -267,7 +270,8 @@ try {
     if ($packageNative -ne $expectedNative) { throw 'Source/package native SHA mismatch.' }
     $expectedFonts = @{}
     foreach ($name in $fontNames) { $expectedFonts[$name] = (Get-FileHash -LiteralPath (Join-Path $fontSource $name)).Hash }
-    foreach ($variant in @('generated', 'di-only')) {
+    $variants = if (!$PresentersOnly) { @('generated', 'di-only') }
+    foreach ($variant in $variants) {
         $cobalt = $variant -eq 'generated'
         $consumer = Join-Path $run $variant
         Copy-Consumer $consumer
@@ -305,7 +309,7 @@ try {
     # Direct renderer: no App/Hosting, with the same explicit font snapshots.
     $direct = Join-Path $run 'direct-renderer'
     [IO.Directory]::CreateDirectory($direct) | Out-Null
-    foreach ($name in @('Directory.Build.props', 'Directory.Packages.props', 'ConsumerFonts.cs')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $direct }
+    foreach ($name in @('Directory.Build.props', 'Directory.Packages.props', 'ConsumerFonts.cs', 'PresenterScreen.cs')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $direct }
     Export-TrueMoonConsumerFrameworks -Profile $trueMoonBuildProfile -Directory $direct
     '<Project />' | Set-Content -LiteralPath (Join-Path $direct 'Directory.Build.targets')
     Copy-Fonts $direct
@@ -320,9 +324,10 @@ try {
 using AlloyPackageConsumer;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
-using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
 var hashes = ConsumerFonts.Fingerprints();
 var fonts = ConsumerFonts.Load();
+PresenterScreen.Verify(fonts, args[0]);
 var editor = new RichTextEditor { Text = "Direct renderer package" };
 editor.Select(0, 6); editor.ApplyStyle(new RichTextStyle { Underline = true });
 using var ui = UiSession.Create(editor, new SkiaRasterRenderBackend(fonts), new RasterUiTarget(), new UiViewport(320, 100, 1));
@@ -341,24 +346,35 @@ Console.WriteLine("Direct renderer package: passed; fonts, raster, cleanup and n
     Get-ChildItem -LiteralPath $direct -File | ForEach-Object { Remember $_.FullName }
     Invoke-DotNet 'restore-direct' @('restore', $directProject, '--configfile', (Join-Path $direct 'NuGet.Config'), '--packages', $cache, '--verbosity', 'quiet') | Out-Null
     Verify-Assets $direct $true
-    foreach ($configuration in @('Debug', 'Release')) {
+    $directConfigurations = if ($PresentersOnly) { 'Release' } else { @('Debug', 'Release') }
+    foreach ($configuration in $directConfigurations) {
         Invoke-DotNet "build-direct-$configuration" @('build', $directProject, '--configuration', $configuration, '--no-restore', '--verbosity', 'quiet') | Out-Null
-        $publish = Join-Path $run "publish-direct/$configuration"
-        Invoke-DotNet "publish-direct-$configuration" @('publish', $directProject, '--configuration', $configuration, '--no-restore', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet') | Out-Null
-        foreach ($delivery in @(@{ Name = 'build'; Path = Join-Path $direct "bin/$configuration/$($trueMoonBuildProfile.Framework)" }, @{ Name = 'publish'; Path = $publish })) {
+        $deliveries = @(@{ Name = 'build'; Path = Join-Path $direct "bin/$configuration/$($trueMoonBuildProfile.Framework)" })
+        if (!$PresentersOnly) {
+            $publish = Join-Path $run "publish-direct/$configuration"
+            Invoke-DotNet "publish-direct-$configuration" @('publish', $directProject, '--configuration', $configuration, '--no-restore', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet') | Out-Null
+            $deliveries += @{ Name = 'publish'; Path = $publish }
+        }
+        foreach ($delivery in $deliveries) {
             Verify-Delivery $delivery.Path
             Remember (Join-Path $delivery.Path 'DirectRenderer.dll')
             $name = "direct-$configuration-$($delivery.Name)"
-            Invoke-DotNet $name @((Join-Path $delivery.Path 'DirectRenderer.dll')) 45 | Out-Null
-            $summary.DirectCases += @{ Name = $name; NativeSha256 = $expectedNative }
+            $report = Join-Path $run "$name-presenters.json"
+            Invoke-DotNet $name @((Join-Path $delivery.Path 'DirectRenderer.dll'), $report) 45 | Out-Null
+            Remember $report
+            $summary.DirectCases += @{ Name = $name; NativeSha256 = $expectedNative; Presenters = (Get-Content -LiteralPath $report -Raw | ConvertFrom-Json) }
         }
     }
-    $negative = Join-Path $run 'without-cobalt-analyzer'
-    Copy-Consumer $negative
-    $project = Join-Path $negative 'AlloyPackageConsumer.csproj'
-    Invoke-DotNet 'restore-without-analyzer' @('restore', $project, '--configfile', (Join-Path $negative 'NuGet.Config'), '--packages', $cache, $versionProperty, '-p:EnableCobaltGenerator=false', '--verbosity', 'quiet') | Out-Null
-    Invoke-DotNet 'build-without-analyzer' @('build', $project, '--no-restore', $versionProperty, '-p:EnableCobaltGenerator=false', '--verbosity', 'quiet') 180 $true | Out-Null
-    if ($summary.Cases.Count -ne 36 -or $summary.DirectCases.Count -ne 4 -or !$summary.NegativeControl) { throw 'Incomplete package matrix.' }
+    if ($PresentersOnly) {
+        if ($summary.DirectCases.Count -ne 1) { throw 'Missing independent presenter case.' }
+    } else {
+        $negative = Join-Path $run 'without-cobalt-analyzer'
+        Copy-Consumer $negative
+        $project = Join-Path $negative 'AlloyPackageConsumer.csproj'
+        Invoke-DotNet 'restore-without-analyzer' @('restore', $project, '--configfile', (Join-Path $negative 'NuGet.Config'), '--packages', $cache, $versionProperty, '-p:EnableCobaltGenerator=false', '--verbosity', 'quiet') | Out-Null
+        Invoke-DotNet 'build-without-analyzer' @('build', $project, '--no-restore', $versionProperty, '-p:EnableCobaltGenerator=false', '--verbosity', 'quiet') 180 $true | Out-Null
+        if ($summary.Cases.Count -ne 36 -or $summary.DirectCases.Count -ne 4 -or !$summary.NegativeControl) { throw 'Incomplete package matrix.' }
+    }
     foreach ($source in $summary.SourceFiles) {
         if ((Get-FileHash -LiteralPath (Join-Path $workspace $source.Path)).Hash -ne $source.Sha256) { throw "Source changed: $($source.Path)" }
     }
@@ -366,6 +382,6 @@ Console.WriteLine("Direct renderer package: passed; fonts, raster, cleanup and n
         if ((Get-FileHash -LiteralPath (Join-Path $run $evidence.Path)).Hash -ne $evidence.Sha256) { throw "Evidence changed: $($evidence.Path)" }
     }
     $summary.Completed = $true
-    Write-Host "UI package smoke completed: 36 App + 4 direct cases and omitted-analyzer control. $run"
+    Write-Host "UI package smoke completed ($($summary.Profile)): $run"
 } catch { $summary.Failure = $_.ToString(); throw }
 finally { $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $run 'summary.json') -Encoding utf8 }

@@ -1,5 +1,53 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="uia1-architecture-2026-11-25"></a>
+## UIA1g/h/i/j — проверка `1.2611.25.6-alpha`, 25.11.2026
+
+Профиль: Windows x64, `net11.0`, локальная сборка, без публикации пакетов.
+Проверяли [контракты архитектурного блока](PLAN.md#uia1h-control-presenters);
+это не повтор всей release-матрицы TrueMoon.
+
+| Release, `dotnet test` | Прошло |
+|---|---:|
+| `TrueMoon.Alloy.Tests` | 1260 |
+| `TrueMoon.Alloy.Hosting.Tests` | 178 |
+| `TrueMoon.Aether.Editor.Tests`, включая ENG9b | 1551 |
+| `TrueMoon.Aether.Player.Tests` | 21 |
+| `TrueMoon.Aether.Tests`, фильтр `GameInputTests` | 27 |
+
+[Финальные TRX и журналы](../../TestResults/UIA1h-25-6/).
+В ENG9b две независимые записи совпали во всех девяти контрольных точках;
+изменение ширины экрана и координаты объекта дало ожидаемые отличия
+в геометрии, состоянии документа и пикселях.
+Release-сборки прошли для `AlloyTest`, `AlloyVulkanTest`, `RichTextEditorTest`,
+`AlloyFactoryConsumer`, `EngineSessionProbe`, `KtonVisual/Probe` и `Examples/AetherEditor`.
+
+**Пакеты.** Из `src`: `pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -PresentersOnly -PackageVersion 1.2611.25.6-alpha`.
+Свежие пакеты Contracts/Argentis/Alloy/Rendering.Skia проверены отдельным потребителем:
+две замены изменили ожидаемые пиксели, сохранили фокус, захват и по одному клику;
+соседняя сессия после закрытия первой продолжила рисовать штатный символ.
+[Отчёт пакетного экрана](../../TestResults/PresenterSandbox-20261125-125636/src/TestResults/AlloyPackages/run-20261125-125647-444/direct-Release-build-presenters.json).
+
+**Нативные профили.** Release `AlloyVulkanTest --opengl-window` и
+`--window --validation`: по 30 показанных кадров, resize до 640×360 логических
+единиц (960×540 пикселей при DPI 150%), minimize/restore. GL без ошибок;
+Vulkan — две генерации swapchain, 0 ошибок и 0 предупреждений, включая disposal.
+Слой Khronos 1.4.363 использовался только процессами проверки.
+
+Отдельные Debug-профили проверили именно прикладные viewport, а не только
+окно с тестовой кнопкой. [Editor `--smoke-camera`](../../TestResults/UIA1h-Native-25-6/editor-evidence.json):
+4 PNG после `FramePresented`, совпадение ticket, камера, новая геометрия,
+resize render surface и suspend/resume. [PlayerProbe](../../TestResults/UIA1h-Native-25-6/player-evidence.json):
+5 PNG после показа, resize окна и restore, освобождены 3/3 поверхности и 9/9
+слотов. В обоих профилях — игровой Vulkan и OpenGL-хост, validation 0/0.
+Удержание одного ticket для повторного показа не считалось новым кадром.
+
+**Граница проверки:** дополнительный legacy-профиль `Game.Logic.csproj --smoke`
+не дошёл до viewport: `EditorCommand.Build` не стал доступен до тайм-аута.
+Успешный `--smoke-camera` не заменяет проверку сборки и перезапуска игры этим
+legacy-маршрутом. Обновления бинарных пакетов у внешних потребителей и публикации
+в NuGet не выполнялись.
+
 <a id="skiasharp-41560-2026-11-12"></a>
 ## SkiaSharp/native4.156.0 — 2026-11-12
 
@@ -8333,3 +8381,161 @@ Transform, фокус и ввод поля X. Свежий снимок посл
 
 В Debug и Release прошли по 1 251 тесту Alloy, 171 тесту Alloy.Hosting и
 1 542 тестам Aether.Editor. TRX и логи в `TestResults/UIQA2-20261124-120714`.
+
+<a id="uia1f11-deferred-content-pilot-2026-11-24"></a>
+## 2026-11-24 — UIA1f.11. Пилот отложенного Content
+
+Перегрузка `Content(data, factories, factory)` в `View<TData>` сохраняет
+фабрику до первой подготовки к attach. `ViewCreation.Prepare` откладывает
+стиль для такого View, чтобы правила могли обратиться к живым частям после
+установки содержимого. `UiControlFactories` в Alloy принимает `IFactory<TControl>`.
+Контекст Argentis создаёт `UiControl<TControl, TData>` с живым `IDataContext`
+и передаёт селектор `Expression` штатной привязке. Дочернее дерево хранит
+обычные элементы. Пилот использует `GetRequiredPart<TextBox>("Search")` для
+типизированного доступа к части. Генерация доступа из новой формы остаётся
+следующим этапом [UIA1f.11](PLAN.md#uia1f11-contextual-content).
+
+В [DeferredContentTests](../../TrueMoon.Alloy.Tests/DeferredContentTests.cs)
+проверка первого attach подтверждает ноль вызовов фабрик до подключения,
+создание трёх контролов через реестр, применение стиля к именованной части
+и начальное значение из актуальной модели. Поздняя вставка и reattach сохраняют
+дерево и одну подписку. Маршрутизируемый ввод после замены модели сохраняет
+фокус, записывает в новый источник и пропускает старое уведомление. Ошибка
+фабрики освобождает созданные контролы и сохраняет содержимое подключённого
+контейнера. `Dispose` до attach обходится без создания контролов.
+
+На SDK `11.0.100` и `1.2611.24.7-alpha` прошли 5 адресных тестов и по 1 257
+тестов Alloy в Release и Debug. Пилот использует `UiSession` с тестовой
+поверхностью и маршрутизируемым вводом. Первый полный прогон выявил нарушение
+границы Argentis из-за прямой ссылки на Contracts. После переноса реестра в
+Alloy проверка `Argentis_AssemblyReferences_ContainOnlyBcl` прошла. В новых
+пакетах `net11.0` у Argentis пустой список зависимостей, у Alloy — Argentis
+и Contracts версии `1.2611.24.7-alpha`. TRX, логи и пакеты лежат в
+`TestResults/UIA1f11-20261124-37ace4d4/verified`.
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-restore -c Release --filter 'FullyQualifiedName~TrueMoon.Alloy.Tests.DeferredContentTests'
+```
+
+<a id="uia1f11-content-parts-2026-11-24"></a>
+## 2026-11-24 — UIA1f.11. Именованные части из Content
+
+В `1.2611.24.8-alpha` `ViewPartsGenerator` распознаёт по символу вызов
+`View<TData>.Content(data, factories, factory)` из конструктора. Читает
+прямые `.Named()` внутри inline-фабрики и извлекает `TControl`, если результат
+имеет тип `UiControl<TControl, TData>`. Свойства генерируются в отдельном
+классе расширений. Входы `BuildContent()` и `[GenerateViewParts]` сохранены.
+
+`EditorHierarchyView` задаёт дерево в `Content(...)`. Оба поля создаются
+через `ui.Create<TextBox>()` и привязываются к текущему `DataContext` через
+`.BindValueTwoWay(...)`. Публичные конструктор и фабрика готовят содержимое
+через `ViewCreation.PrepareImmediately`, потому что оболочка Editor читает
+`Caption` до attach. Вариант с подготовкой при attach использует ту же фабрику.
+
+- Обычный `SearchView` компилируется со сгенерированными `TextBox Search` и
+  `HStack SearchLayout`. `FirstAttach_BuildsThroughFactoriesBeforeLayout`
+  проверяет тип и экземпляр части и её стиль сразу после подключения.
+- `NamedHierarchyParts_PreserveStylesAndRoutedFocusInsideAnotherView`
+  проверяет отдельные области имён, стиль поля поиска и редактора имени,
+  Ctrl+F, F2 и сохранение фокуса при смене темы и стиля.
+- `DataContextSwap_RetainsFocusedEditorAndDiscardsPreviousModelUpdates`
+  проходит четыре комбинации поля и режима подготовки. Повторное применение
+  стиля сохраняет фокус и значение, отложенные уведомления прежней модели
+  отбрасываются, ввод записывается в новую модель. Переименование применяется
+  к новой сцене и возвращает фокус дереву.
+
+На SDK `11.0.100` прошли 33 адресных теста Alloy и 98 адресных тестов Editor
+в Release. В обеих конфигурациях Debug и Release прошли полные наборы по
+1 257 тестов Alloy и 1 548 тестов Editor. В ENG9b Editor два независимых
+прогона совпали во всех девяти
+контрольных точках, включая CPU Skia PNG. Нормализованные снимки состояния
+и геометрии совпали с записью на `1.2611.24.6-alpha`.
+
+TRX, отчёты ENG9b и копии сгенерированных частей сохранены в
+`TestResults/UIA1f11-Parts-20261124-0a30ede3`.
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-restore -c Release --filter 'FullyQualifiedName~DeferredContentTests|FullyQualifiedName~ViewStyleTests'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Release -p:EmitCompilerGeneratedFiles=true --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Hierarchy|FullyQualifiedName~EditorSemantic|FullyQualifiedName~EditorSceneScenarioTests'
+```
+
+<a id="uia1f11-view-consumers-2026-11-24"></a>
+## 2026-11-24 — UIA1f.11. Перевод View-потребителей
+
+В `1.2611.24.10-alpha` обозреватель, инспектор и диагностика объявляют
+дерево через `Content(model, ui => ...)`. Контролы в дереве создаются
+фабриками сессии. Именованные части разрешаются после подготовки View.
+Оболочка Editor получает заголовок сцены из обозревателя. Для панелей с
+уже созданными дочерними элементами используется `SetContent`.
+
+Инспектор использует сгенерированную часть в обработчике внутри
+`Content(...)`. На первом проходе Roslyn оставляет такой вызов без
+окончательного связывания. Генератор распознаёт штатную перегрузку по
+кандидатам и форме вызова. Сборка с выдачей generated files создала
+7 частей обозревателя, 13 частей инспектора и 27 частей диагностики.
+
+Прошли Release-сборки `AetherEditorHost`, `AlloyTest`, `AlloyVulkanTest`,
+`EngineSessionProbe`, `RichTextEditorTest` и `KtonVisual`. Отдельная копия
+`AlloyPackageConsumer` собрана из десяти пакетов локального feed.
+Логи и локальный feed сохранены в
+`TestResults/UIA1f11-Views-20261124-c93e9fc5`. Проверки поведения UI
+запланированы на следующий этап.
+
+<a id="uia1f11-regression-2026-11-24"></a>
+## 2026-11-24 — UIA1f.11. Регрессия отложенного Content
+
+На `1.2611.24.11-alpha` тесты Alloy, Hosting и Editor переведены на
+подготовку при первом attach. Проверки отказа фабрики и стиля различают
+черновое содержимое, которое освобождает операция, и View, которое при
+неудачной передаче остаётся у вызывающего кода. Регрессия со стеком
+воспроизвела частичное принятие детей, когда более поздний ребёнок уже
+имел владельца. Теперь контекстный `WithChildren` проверяет весь список
+и обновляет дерево одной операцией. Пример в `truemoon-ui` собран со
+штатным генератором, который выпустил пять именованных частей.
+
+| Конфигурация | Alloy | Hosting | Editor | Упало / пропущено |
+| --- | ---: | ---: | ---: | ---: |
+| Debug | 1 242 | 171 | 1 548 | 0 / 0 |
+| Release | 1 242 | 171 | 1 548 | 0 / 0 |
+
+UiSession подтвердил смену источника с сохранением Search и NameEditor,
+отбрасывание прежних уведомлений, стиль, фокус, раскрытие и переименование.
+Проверки диагностики покрыли геометрию колонок, фильтры, выбор строки,
+прокрутку на паузе и очистку после reattach. В ENG9b два независимых
+прогона совпали по состоянию, геометрии и CPU-кадрам на девяти точках
+в каждой конфигурации. Состояние документа, семантические цели и их
+геометрия совпали с пилотом `1.2611.24.8-alpha`. Контрольный вариант с
+другим размером окна и значением Transform сохранил различия и diff PNG.
+Проверки выполнены через UiSession и CPU Skia.
+
+SDK `11.0.100`. Логи, TRX, сравнения и исходные PNG сценария сохранены в
+`TestResults/UIA1f11-Tests-20261124-96580f2c`.
+
+```powershell
+foreach ($configuration in @('Release', 'Debug')) {
+    $env:TRUEMOON_EDITOR_SCENARIO_RESULTS = Join-Path $run "eng9b-$configuration"
+    foreach ($project in @('TrueMoon.Alloy.Tests', 'TrueMoon.Alloy.Hosting.Tests', 'TrueMoon.Aether.Editor.Tests')) {
+        dotnet test "$project/$project.csproj" --no-restore -c $configuration --logger "trx;LogFileName=$project-$configuration.trx" --results-directory $run
+    }
+}
+```
+
+<a id="uia1f11-recheck-2026-11-24"></a>
+## 2026-11-24 — UIA1f.11. Повторная проверка
+
+На `1.2611.24.11-alpha` и SDK `11.0.100` повторены три полных набора по
+командам предыдущей записи. В каждой конфигурации прошли 1 242 теста
+Alloy, 171 Hosting и 1 548 Editor. Падений и пропусков нет. В Debug и
+Release оба прогона ENG9b снова совпали на девяти контрольных точках,
+включая CPU Skia. Состояние документа и геометрия на всех девяти точках
+совпали с пилотом `1.2611.24.8-alpha`. Для изменённого прогона в каждой
+конфигурации сохранено девять diff PNG.
+
+Пример из `truemoon-ui` собран как отдельный Release-проект с генератором
+и даёт пять типизированных частей. Проверено содержимое локально собранного
+`TrueMoon.Argentis.1.2611.24.11-alpha.nupkg`. Для генерации в приложении на
+NuGet-пакетах анализатор требуется подключать отдельно. В планах описан
+актуальный контракт `Content(...)` и зафиксирована граница локальной приёмки.
+
+Логи, TRX, сравнения, PNG и проверочный пакет сохранены в
+`TestResults/UIA1f11-Recheck-20261124-e7813c0f`.

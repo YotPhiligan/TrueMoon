@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -13,8 +19,9 @@ public sealed class DefaultStyleTests
     public void DefaultRadii_ApplyToConstructorsFactoriesAndEditors(bool light)
     {
         var theme = light ? Theme.Light : Theme.Dark;
-        (Element Control, float Radius)[] controls = [(new Button(), 5), (Button.Simple(), 5), (new TextBox(), 5),
-            (TextBox.Create(), 5), (new RichTextEditor(), 5), (new ProgressBar(), 0), (new Slider(), 0),
+        var factories = new UiControlFactories();
+        (Element Control, float Radius)[] controls = [(new Button(), 5), (factories.Create<Button>(), 5), (new TextBox(), 5),
+            (factories.Create<TextBox>(), 5), (new RichTextEditor(), 5), (new ProgressBar(), 0), (new Slider(), 0),
             (new CheckBox(), 5), (new Border(), 0), (new IconButton(UiSymbol.Close, "Close"), 5)];
         foreach (var (control, radius) in controls)
         {
@@ -67,26 +74,26 @@ public sealed class DefaultStyleTests
         using var button = new Button("OK") { Padding = new(10, 8, 30, 12) };
         button.ApplyTheme(theme); button.Measure(size, textLayout); button.Arrange(bounds);
         var buttonDrawing = new Drawing();
-        button.Draw(buttonDrawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(button, buttonDrawing);
         Assert.Equal(("OK", 72f, 34f), Assert.Single(buttonDrawing.Texts));
         Assert.Contains(buttonDrawing.Fills, fill => fill.Bounds == bounds && fill.Radius == 5);
         button.ApplyTheme(theme with { CenterButtonLabels = false }); button.Measure(size, textLayout); button.Arrange(bounds);
         var leftAlignedDrawing = new Drawing();
-        button.Draw(leftAlignedDrawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(button, leftAlignedDrawing);
         Assert.Equal(("OK", 20f, 28f), Assert.Single(leftAlignedDrawing.Texts));
 
         using var check = new CheckBox("On");
         check.ApplyTheme(theme); check.Measure(size, textLayout); check.Arrange(bounds);
         var indicator = new Rect(20, 36, 16, 16);
         var uncheckedDrawing = new Drawing();
-        check.Draw(uncheckedDrawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(check, uncheckedDrawing);
         Assert.Contains(uncheckedDrawing.Fills, fill => fill.Bounds == bounds && fill.Radius == 5);
         Assert.Contains(uncheckedDrawing.Strokes, stroke => stroke.Bounds == indicator.Deflate(new(.5f)) && stroke.Radius == 4.5f);
         Assert.Equal(("On", 46f, 36f), Assert.Single(uncheckedDrawing.Texts));
 
         check.IsChecked = true;
         var checkedDrawing = new Drawing();
-        check.Draw(checkedDrawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(check, checkedDrawing);
         Assert.Contains(checkedDrawing.Fills, fill => fill.Bounds == indicator && fill.Radius == 5 && fill.Color == theme.Accent);
     }
 
@@ -118,7 +125,7 @@ public sealed class DefaultStyleTests
     public void FocusAndError_UseInsideSquareOutlineAndStructuralErrorMarker()
     {
         var editor = new TextBox { HasError = true, CornerRadius = 0 }; using var ui = Create(editor); ui.Update(); ui.Focus(editor);
-        var drawing = new Drawing(); editor.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing);
         Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(.5f, .5f, 239, 139) && x.Color == new Color(255, 112, 128) && x.Width == 1 && x.Radius == 0);
         Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(2, 2, 96, 136) && x.Color == new Color(255, 201, 92) && x.Width == 2 && x.Radius == 0);
         Assert.Contains(drawing.Fills, x => editor.ValidationIconBounds.Contains(x.Bounds.X, x.Bounds.Y) && x.Color == new Color(255, 112, 128));
@@ -228,7 +235,7 @@ public sealed class DefaultStyleTests
     private sealed class Surface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout(); public void VerifyAvailable() { } public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => root.Draw(new RecordingDrawingContext()); public void Dispose() { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters); public void Dispose() { }
     }
     private sealed class Clipboard : IUiClipboard
     {

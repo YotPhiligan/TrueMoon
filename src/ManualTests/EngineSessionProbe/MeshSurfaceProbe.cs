@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -46,10 +50,15 @@ public sealed class MeshSurfaceCanvas : Element, IDisposable
         var old = _image; _image = next; _stamp = stamp; Drawn = null; old?.Dispose(); Invalidate();
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(640, 360);
-    protected override void DrawCore(IDrawingContext context)
+    private static readonly ElementPresentation Painter = ElementPresentation.Create<MeshSurfaceCanvas>(static (canvas, context) =>
     {
-        if (_image != null) { context.Image(_image, Bounds); Drawn = _stamp; }
-    }
+        if (canvas._image is not { } image) return;
+        var stamp = canvas._stamp;
+        context.Image(image, canvas.Bounds);
+        canvas.ReportDrawn(stamp);
+    });
+    public override ElementPresentation Presentation => Painter;
+    private void ReportDrawn(RenderSnapshotStamp? stamp) => Drawn = stamp;
     public override void Dispose() { VerifyAccess(); _image?.Dispose(); _image = null; base.Dispose(); }
 }
 public sealed class MeshSurfaceView : View<MeshSurfaceData>
@@ -58,8 +67,9 @@ public sealed class MeshSurfaceView : View<MeshSurfaceData>
     public VStack Stack { get; }
     public MeshSurfaceView(MeshSurfaceData data, IViewStyle<MeshSurfaceView> style)
     {
-        Stack = VStack.Create().WithChildren(Text.Plain(data.Title), Canvas);
-        Content(data, _ => Stack); this.WithViewStyle(style);
+        Stack = new VStack().WithChildren(new Text(data.Title), Canvas);
+        DataContext = data;
+        SetContent(Stack); this.WithViewStyle(style);
     }
 }
 public sealed class MeshSurfaceStyle : IViewStyle<MeshSurfaceView>
@@ -68,7 +78,7 @@ public sealed class MeshSurfaceStyle : IViewStyle<MeshSurfaceView>
 }
 
 // A diagnostic custom host: readback is displayed by Skia, and the exact stamp is
-// acknowledged only after DrawCore and a real HostedUiWindow.FramePresented event.
+// acknowledged only after the presenter draws the image and a real HostedUiWindow.FramePresented event fires.
 public static partial class MeshSurfaceProbe
 {
     public static async Task<int> RunAsync(string runtimePath, string gameDirectory, string reportDirectory,

@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -244,14 +249,17 @@ internal static partial class FontTypographyProbe
 
     private sealed class FractionalLines : Element
     {
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<FractionalLines>(static (lines, context) =>
         {
-            context.Fill(new(Bounds.X + 4, Bounds.Y + 4, 72, 1), Foreground);
-            context.Fill(new(Bounds.X + 4, Bounds.Y + 14.5f, 72, 1), Foreground);
-            context.Fill(new(Bounds.X + 94, Bounds.Y + 4, 1, 24), Foreground);
-            context.Fill(new(Bounds.X + 110.5f, Bounds.Y + 4, 1, 24), Foreground);
-            context.Stroke(new(Bounds.X + 132, Bounds.Y + 5, 42, 20), Foreground, 1);
-            context.Stroke(new(Bounds.X + 188.5f, Bounds.Y + 5.5f, 42, 20), Foreground, 1);
-        }
+            var bounds = lines.Bounds;
+            var color = lines.Foreground;
+            context.Fill(new(bounds.X + 4, bounds.Y + 4, 72, 1), color);
+            context.Fill(new(bounds.X + 4, bounds.Y + 14.5f, 72, 1), color);
+            context.Fill(new(bounds.X + 94, bounds.Y + 4, 1, 24), color);
+            context.Fill(new(bounds.X + 110.5f, bounds.Y + 4, 1, 24), color);
+            context.Stroke(new(bounds.X + 132, bounds.Y + 5, 42, 20), color, 1);
+            context.Stroke(new(bounds.X + 188.5f, bounds.Y + 5.5f, 42, 20), color, 1);
+        });
+        public override ElementPresentation Presentation => Painter;
     }
 }

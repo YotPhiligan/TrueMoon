@@ -1,6 +1,6 @@
 ﻿# RichTextEditor
 
-`TrueMoon.Argentis.RichTextEditor` — retained multiline editor. `Topten.RichTextKit`
+`TrueMoon.Argentis.Editors.RichTextEditor` — retained multiline editor. `Topten.RichTextKit`
 0.6.170 выполняет shaping/layout/hit testing/painting в Rendering.Skia.
 Argentis содержит только нейтральные document/style/options contracts и editing;
 зависимости Argentis → SkiaSharp/RichTextKit не добавлены. Raster/OpenGL/Vulkan
@@ -10,8 +10,9 @@ Argentis содержит только нейтральные document/style/opt
 
 ```csharp
 using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
 
-var editor = RichTextEditor.Create(new RichTextEditorOptions
+var editor = new RichTextEditor(new RichTextEditorOptions
 {
     WordWrap = true,
     IsReadOnly = false,

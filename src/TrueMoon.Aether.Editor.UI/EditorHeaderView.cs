@@ -1,3 +1,10 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using System.ComponentModel;
 using System.Globalization;
 using TrueMoon.Aether.Editor.UI.Documents;
@@ -157,7 +164,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             PauseButton = Action(UiSymbol.Pause, "Пауза симуляции", _runtime[EditorCommand.Pause]);
             StopButton = Action(UiSymbol.Stop, "Остановить симуляцию", _runtime[EditorCommand.Stop]);
             _toolbarButtons = [OpenButton, SaveButton, UndoButton, RedoButton, RunButton, PauseButton, StopButton];
-            Content(model, _ => new HeaderLayout(BrandIcon, Menu, Caption, new FileActions(OpenButton, SaveButton, UndoButton, RedoButton),
+            SetContent(new HeaderLayout(BrandIcon, Menu, Caption, new FileActions(OpenButton, SaveButton, UndoButton, RedoButton),
                 RunButton, PauseButton, StopButton));
             this.WithViewStyle(style);
             Watch(model); Watch(documents); Watch(transform);
@@ -306,23 +313,30 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             }
             return new(Math.Min(width, widest), _lines.Count * _lineHeight);
         }
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation HintPresentation = ElementPresentation.Create<HeaderHintText>(static (hint, context) =>
         {
-            var y = Bounds.Y;
-            foreach (var line in _lines) { context.Text(line, Bounds.X, y, Foreground, FontSize, FontFamily, FontWeight, FontItalic); y += _lineHeight; }
-        }
+            var y = hint.Bounds.Y;
+            foreach (var line in hint._lines)
+            {
+                context.Text(line, hint.Bounds.X, y, hint.Foreground, hint.FontSize, hint.FontFamily, hint.FontWeight, hint.FontItalic);
+                y += hint._lineHeight;
+            }
+        });
+        public override ElementPresentation Presentation => HintPresentation;
     }
 
     private sealed class BrandMark : Element
     {
         public BrandMark() { AccessibleName = "TrueMoon"; WindowRegion = WindowRegionRole.Caption; }
         protected override Size MeasureCore(Size available, ITextLayoutService text) => new(28, 32);
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation MarkPresentation = ElementPresentation.Create<BrandMark>(static (mark, context) =>
         {
-            var size = Math.Min(20, Math.Min(Bounds.Width, Bounds.Height));
-            UiSymbols.Draw(context, UiSymbol.TrueMoon, new(Bounds.X + (Bounds.Width - size) / 2,
-                Bounds.Y + (Bounds.Height - size) / 2, size, size), Foreground);
-        }
+            var bounds = mark.Bounds;
+            var size = Math.Min(20, Math.Min(bounds.Width, bounds.Height));
+            UiSymbols.Draw(context, UiSymbol.TrueMoon, new(bounds.X + (bounds.Width - size) / 2,
+                bounds.Y + (bounds.Height - size) / 2, size, size), mark.Foreground);
+        });
+        public override ElementPresentation Presentation => MarkPresentation;
     }
 
     private sealed class HeaderLayout : ElementList
@@ -387,8 +401,9 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             if (count > 0 && char.IsHighSurrogate(Value[count - 1])) count--;
             _display = Value[..count] + ellipsis;
         }
-        protected override void DrawCore(IDrawingContext context) =>
-            context.Text(_display, Bounds.X, Bounds.Y + Bounds.Height / 2 - (_inkCenter ?? FontSize / 2),
-                Foreground, FontSize, FontFamily, FontWeight, FontItalic);
+        private static readonly ElementPresentation CaptionPresentation = ElementPresentation.Create<CaptionText>(static (caption, context) =>
+            context.Text(caption._display, caption.Bounds.X, caption.Bounds.Y + caption.Bounds.Height / 2 - (caption._inkCenter ?? caption.FontSize / 2),
+                caption.Foreground, caption.FontSize, caption.FontFamily, caption.FontWeight, caption.FontItalic));
+        public override ElementPresentation Presentation => CaptionPresentation;
     }
 }

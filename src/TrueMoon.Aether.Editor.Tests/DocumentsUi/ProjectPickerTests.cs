@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
 using TrueMoon.Aether.Editor.Tooling;
@@ -185,7 +189,7 @@ public sealed class ProjectPickerTests
     {
         using var h = new Fixture(); using var model = new EditorDocumentViewModel(h.Commands);
         var tools = new EditorDocumentView(model, new EditorDocumentViewStyle(), compactHeader: true);
-        var trigger = Button.Simple("Project"); var content = new VStack().WithChildren(trigger, tools);
+        var trigger = new Button("Project"); var content = new VStack().WithChildren(trigger, tools);
         using var ui = DocumentUiFixture.Ui(content); ui.Update(); ui.Focus(trigger); tools.SynchronizeFocus(ui);
         var tree = DocumentUiFixture.Tree(tools).ToArray(); var field = tools.PathInput;
         model.PathDraft = "scene-draft.aetherscene"; model.ProjectPathDraft = h.Next.Manifest;

@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using AlloyTest;
 using TrueMoon.Argentis;
@@ -221,7 +225,7 @@ public sealed class RenderingFailureTests
         public int WorkCalls, Disposals;
         public void VerifyAvailable() { if (Borrowed) throw new InvalidOperationException("borrowed"); }
         public void Resize(UiViewport viewport) { WorkCalls++; if (Error != null) throw Error; }
-        public void Render(Element root, UiViewport viewport) { WorkCalls++; if (Error != null) throw Error; root.Draw(new RecordingDrawingContext()); }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { WorkCalls++; if (Error != null) throw Error; TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters); }
         public void Dispose() { VerifyAvailable(); Disposals++; if (DisposeError != null) throw DisposeError; }
     }
 }

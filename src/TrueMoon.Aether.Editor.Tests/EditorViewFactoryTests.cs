@@ -1,4 +1,6 @@
-﻿using TrueMoon.Aether.Editor.Tooling;
+﻿using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -80,7 +82,7 @@ public sealed class EditorViewFactoryTests
         public ITextLayoutService TextLayout { get; } = new TextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class TextLayout : ITextLayoutService

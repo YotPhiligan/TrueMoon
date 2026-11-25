@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -95,7 +100,7 @@ public sealed class MenuInteractionTests
 
         (float X, float Y)[] Dots()
         {
-            var drawing = new DotDrawing(); fixture.Menu.MoreButton.Draw(drawing);
+            var drawing = new DotDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(fixture.Menu.MoreButton, drawing);
             Assert.Equal(3, drawing.Dots.Count); Assert.Equal(0, drawing.TextCalls);
             return drawing.Dots.Select(dot => (dot.X + dot.Width / 2, dot.Y + dot.Height / 2)).ToArray();
         }
@@ -418,7 +423,7 @@ public sealed class MenuInteractionTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
 }

@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using Silk.NET.OpenGL;
 using SkiaSharp;
 using TrueMoon;
@@ -121,8 +124,12 @@ internal static class OpenGLProbe
     {
         internal bool Fail = true;
         internal Action? DuringDraw;
-        protected override void DrawCore(IDrawingContext context)
-        { DuringDraw?.Invoke(); if (Fail) throw new InvalidOperationException("Retry drawing"); }
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<RetryView>(static (view, _) =>
+        {
+            view.DuringDraw?.Invoke();
+            if (view.Fail) throw new InvalidOperationException("Retry drawing");
+        });
+        public override ElementPresentation Presentation => Painter;
     }
     private static void VerifyComposition(GL gl, UiSession ui, byte[] source)
     {
@@ -198,6 +205,8 @@ internal static class OpenGLProbe
 /// <summary>Exercises diagnostic propagation from a failing standalone UI draw.</summary>
 public sealed class OpenGLFailingView : Panel
 {
+    private static readonly ElementPresentation Painter = ElementPresentation.Create<OpenGLFailingView>(
+        static (_, _) => throw new InvalidOperationException("OpenGL draw failure probe"));
     /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context) => throw new InvalidOperationException("OpenGL draw failure probe");
+    public override ElementPresentation Presentation => Painter;
 }

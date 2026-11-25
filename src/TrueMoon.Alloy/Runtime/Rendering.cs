@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Runtime;
@@ -32,7 +34,7 @@ public interface IUiRenderSurface : IDisposable
     /// <summary>Resizes the surface after the host returns its borrowed frame.</summary>
     void Resize(UiViewport viewport);
     /// <summary>Draws one UI tree using logical coordinates.</summary>
-    void Render(Element root, UiViewport viewport);
+    void Render(Element root, UiViewport viewport, UiPresenters? presenters = null);
 }
 /// <summary>Optional platform clipboard services. The host owns their lifetime.</summary>
 public interface IUiClipboard

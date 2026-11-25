@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Alloy.Runtime;
 using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
@@ -40,6 +42,10 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _started;
+    private volatile bool _cleanupPending;
+    private bool _retryingCleanup;
+    /// <summary>True after cleanup was blocked before it could release the window's resources.</summary>
+    public bool CleanupPending => _cleanupPending;
     private volatile bool _stop;
     /// <summary>Completes when the window loop and resource disposal finish.</summary>
     public Task Completion => _completion.Task;
@@ -70,14 +76,14 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     /// <param name="options">Window configuration copied before startup.</param>
     /// <param name="sessions">Factory owning the registered UI sessions.</param>
     /// <param name="root">Creates the root on the shared owner thread.</param>
-    /// <param name="closed">Legacy lifetime callback after cleanup is attempted, including failure; inspect Completion for the result.</param>
+    /// <param name="closed">Lifetime callback after dependent resources are released, including after a cleanup retry.</param>
     public HostedUiWindow(SilkUiWindowOptions options, IUiSessionFactory sessions, Func<Element> root, Action? closed = null)
         : this(options, sessions, root, closed, null) { }
     /// <summary>Creates the service without allocating a window or GPU resources.</summary>
     /// <param name="options">Window configuration copied before startup.</param>
     /// <param name="sessions">Factory owning the registered UI sessions.</param>
     /// <param name="root">Creates the root on the shared owner thread.</param>
-    /// <param name="closed">Legacy lifetime callback after cleanup is attempted, including failure; inspect Completion for the result.</param>
+    /// <param name="closed">Lifetime callback after dependent resources are released, including after a cleanup retry.</param>
     /// <param name="dispatcher">Application scope; null uses the process default scope.</param>
     public HostedUiWindow(SilkUiWindowOptions options, IUiSessionFactory sessions, Func<Element> root, Action? closed, HostedUiDispatcher? dispatcher)
     {
@@ -329,33 +335,77 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     private void Cleanup()
     {
         lock (_gate) { _stop = true; _commands.Clear(); }
-        var window = _window; var session = _session; var presenter = _presenter; var device = _device;
+        var window = _window;
         try
         {
             UiCleanup.Complete(null,
                 () => { if (window != null) { window.Input -= Input; window.RenderRequested -= Render; window.NativeWindow.Closing -= NativeClosing; } },
                 _frames.Dispose,
-                () => { MakeCurrent(); if (window is { NativeWindow.IsClosing: false }) window.NativeWindow.Close(); },
                 () => _component?.Dispose(),
-                () => { MakeCurrent(); session?.Dispose(); },
                 () => { if (_startupRoot is { IsDisposed: false } pending) pending.Dispose(); },
-                () =>
-                {
-                    if (session is { IsDisposed: false }) throw new InvalidOperationException("UI still owns a borrowed/in-flight frame; keep its presenter/device alive.");
-                    presenter?.Dispose();
-                },
-                () =>
-                {
-                    if (session is { IsDisposed: false } || presenter is { IsDisposed: false }) throw new InvalidOperationException("UI/presenter cleanup is incomplete; keep the Vulkan device alive.");
-                    device?.Dispose();
-                },
-                () =>
-                {
-                    if (device is { ValidationErrorCount: > 0 }) throw new InvalidOperationException($"Vulkan validation reported {device.ValidationErrorCount} errors including disposal.");
-                },
-                () => window?.Dispose(), () => _closed?.Invoke());
+                ReleaseResources);
         }
-        finally { _close.Finish(); _component = null; _startupRoot = null; _windowFrame = null; _defaultFrame = null; _window = null; _session = null; _presenter = null; _device = null; }
+        finally { _close.Finish(); _component = null; _startupRoot = null; _windowFrame = null; _defaultFrame = null; }
+    }
+
+    private void ReleaseResources()
+    {
+        try
+        {
+            UiCleanup.Complete(null,
+                () =>
+                {
+                    if (_session is not { } session) return;
+                    try { MakeCurrent(); session.Dispose(); }
+                    finally { if (session.IsDisposed) _session = null; }
+                },
+                () =>
+                {
+                    if (_session != null || _presenter is not { } presenter) return;
+                    try { presenter.Dispose(); }
+                    finally { if (presenter.IsDisposed) _presenter = null; }
+                },
+                () =>
+                {
+                    if (_session != null || _presenter != null || _device is not { } device) return;
+                    try { device.Dispose(); }
+                    finally { if (device.IsDisposed) _device = null; }
+                    if (device.ValidationErrorCount > 0)
+                        throw new InvalidOperationException($"Vulkan validation reported {device.ValidationErrorCount} errors including disposal.");
+                },
+                () =>
+                {
+                    if (_session != null || _presenter != null || _device != null) return;
+                    var window = _window;
+                    _window = null;
+                    UiCleanup.Complete(null,
+                        () => { if (window is { NativeWindow.IsClosing: false }) window.NativeWindow.Close(); },
+                        () => window?.Dispose(), () => _closed?.Invoke());
+                });
+        }
+        finally { _cleanupPending = _session != null || _presenter != null || _device != null; }
+    }
+
+    /// <summary>Resumes blocked resource teardown on the original owner thread without reopening the window.</summary>
+    /// <param name="release">Optional owner-thread operation to return an outstanding frame in its actual layout.</param>
+    /// <returns>The result of this attempt. Completion retains the original close error even after recovery.</returns>
+    public Task RetryCleanupAsync(Action? release = null)
+    {
+        lock (_gate)
+        {
+            if (!Completion.IsFaulted || !_cleanupPending || _retryingCleanup)
+                throw new InvalidOperationException("Cleanup must be blocked with no retry already in progress.");
+            _retryingCleanup = true;
+            try
+            {
+                return _dispatcher.ScheduleCleanup(this, () =>
+                {
+                    try { UiCleanup.Complete(null, () => { MakeCurrent(); release?.Invoke(); }, ReleaseResources); }
+                    finally { lock (_gate) _retryingCleanup = false; }
+                });
+            }
+            catch { _retryingCleanup = false; throw; }
+        }
     }
     private UiSession CreateSession(Element root, UiRenderTarget target, SilkWindowHost window)
     {

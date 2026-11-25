@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI;
@@ -7,7 +11,7 @@ public sealed class PropertyRow : ElementList
 {
     public PropertyRow(string name, string value)
     {
-        Add(Text.Plain(name).WithRole(EditorView.PropertyNameRole));
+        Add(new Text(name).WithRole(EditorView.PropertyNameRole));
         Add(new TextBox { Value = value, IsReadOnly = true, MinWidth = 0, AccessibleName = name });
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text)

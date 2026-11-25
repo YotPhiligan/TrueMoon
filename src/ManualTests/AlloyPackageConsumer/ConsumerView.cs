@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using System.ComponentModel;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -47,8 +53,8 @@ public sealed class ConsumerModel : INotifyPropertyChanged, IDisposable
 public sealed class ConsumerView : View<ConsumerModel>
 {
     private readonly ConsumerModel _model;
-    private readonly TextBox _editor;
-    private readonly RichTextEditor _richEditor;
+    private TextBox _editor = null!;
+    private RichTextEditor _richEditor = null!;
     private int _step;
 
     /// <summary>Creates the view using an application-owned model supplied by DI.</summary>
@@ -57,11 +63,13 @@ public sealed class ConsumerView : View<ConsumerModel>
     {
         ArgumentNullException.ThrowIfNull(model);
         _model = model;
-        _editor = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, state => state.Name);
-        _richEditor = new RichTextEditor { Height = 80, Text = "Rich text from NuGet" };
-        Content(model, _ => VStack.Create().Padding(16).WithChildren(
-            Text.Plain("TrueMoon from NuGet"), _editor, _richEditor,
-            Button.Simple("Rename").Configure(button => button.Tone = ControlTone.Accent).OnClick(() => model.Name = "Button update")));
+        Content(model, ui => ui.VStack(
+            ui.Text("TrueMoon from NuGet"),
+            _editor = ui.TextBox().BindValueTwoWay(state => state.Name),
+            _richEditor = ui.RichTextEditor().Height(80).Configure(editor => editor.Text = "Rich text from NuGet"),
+            ui.Button("Rename").Configure(button => button.Tone = ControlTone.Accent)
+                .OnClick(() => model.Name = "Button update"))
+            .Padding(16));
     }
 
     /// <summary>Exercises binding, layout, theme and queued changes on the UI owner thread.</summary>

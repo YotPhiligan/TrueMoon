@@ -10,13 +10,7 @@ namespace TrueMoon.Argentis.Generator;
 [Generator(LanguageNames.CSharp)]
 public sealed class ViewPartsGenerator : IIncrementalGenerator
 {
-    private const string AttributeName = "TrueMoon.Argentis.GenerateViewPartsAttribute";
-    private const string ViewName = "TrueMoon.Argentis.View";
-    private const string ContentMethodName = "BuildContent";
-    private static readonly DiagnosticDescriptor UnsupportedView = new(
-        "ARG005", "Unsupported view for generated parts",
-        "'{0}' must be an accessible top-level non-generic View",
-        "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private const string ViewName = "TrueMoon.Argentis.Views.View";
     private static readonly DiagnosticDescriptor InvalidPart = new(
         "ARG006", "Unsupported generated view part",
         "A generated part must have a constant C# identifier and a public top-level non-generic control type",
@@ -33,48 +27,94 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var constructors = context.SyntaxProvider.ForAttributeWithMetadataName(
-            AttributeName, static (_, _) => true, static (input, cancellation) => ReadConstructors(input, cancellation));
-        var contentMethods = context.SyntaxProvider.CreateSyntaxProvider(
-            static (node, _) => node is MethodDeclarationSyntax method &&
-                method.Identifier.ValueText == ContentMethodName && method.Modifiers.Any(SyntaxKind.OverrideKeyword),
-            static (input, cancellation) => ReadContentMethod(input, cancellation));
-        context.RegisterSourceOutput(constructors, Emit);
-        context.RegisterSourceOutput(contentMethods, Emit);
-
-        static void Emit(SourceProductionContext output, GeneratedView? view)
+        var views = context.SyntaxProvider.CreateSyntaxProvider(
+            static (node, _) => node is TypeDeclarationSyntax type && IsCandidate(type),
+            static (input, cancellation) => ReadView(input, cancellation));
+        context.RegisterSourceOutput(views, static (output, view) =>
         {
             if (view is null) return;
             foreach (var diagnostic in view.Diagnostics) output.ReportDiagnostic(diagnostic);
             if (view.Source is { } source) output.AddSource(view.HintName, source);
+        });
+    }
+
+    private static bool IsCandidate(TypeDeclarationSyntax type) => type.Members.OfType<ConstructorDeclarationSyntax>()
+        .Any(static constructor => Calls(constructor).Any(IsContentCall));
+
+    private static bool IsContentCall(InvocationExpressionSyntax call) => call.Expression switch
+    {
+        IdentifierNameSyntax name => name.Identifier.ValueText == "Content",
+        MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax or BaseExpressionSyntax } member =>
+            member.Name.Identifier.ValueText == "Content",
+        _ => false
+    };
+
+    private static IEnumerable<InvocationExpressionSyntax> Calls(SyntaxNode root) => root
+        .DescendantNodesAndSelf(static node => node is not (AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax))
+        .OfType<InvocationExpressionSyntax>();
+
+    private static GeneratedView? ReadView(GeneratorSyntaxContext input, CancellationToken cancellation)
+    {
+        var compilation = input.SemanticModel.Compilation;
+        var view = compilation.GetTypeByMetadataName(ViewName);
+        var declaration = (TypeDeclarationSyntax)input.Node;
+        if (view is null || input.SemanticModel.GetDeclaredSymbol(declaration, cancellation) is not INamedTypeSymbol owner ||
+            !SupportsExtensions(owner) || !DerivesFrom(owner, view)) return null;
+
+        var declarations = owner.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax(cancellation))
+            .OfType<TypeDeclarationSyntax>().ToArray();
+        // Analyze each view once, even if multiple partial declarations are candidates.
+        var first = declarations.First(IsCandidate);
+        if (first.SyntaxTree != declaration.SyntaxTree || first.SpanStart != declaration.SpanStart)
+            return null;
+        var constructors = declarations.SelectMany(type => type.Members.OfType<ConstructorDeclarationSyntax>()).ToArray();
+        var factories = ReadContentFactories(compilation, view, constructors, cancellation).ToArray();
+        return factories.Length > 0 ? ReadParts(owner, view, compilation, factories, declaration.GetLocation(), cancellation) : null;
+    }
+
+    private static IEnumerable<SyntaxNode> ReadContentFactories(Compilation compilation, INamedTypeSymbol view,
+        IEnumerable<ConstructorDeclarationSyntax> constructors, CancellationToken cancellation)
+    {
+        var typedView = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.View`1");
+        var typedWindow = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Windows.Window`1");
+
+        foreach (var constructor in constructors)
+        {
+            var model = compilation.GetSemanticModel(constructor.SyntaxTree);
+            foreach (var call in Calls(constructor).Where(IsContentCall))
+            {
+                // A callback in the factory can reference a part that this generator has yet to emit.
+                var symbol = model.GetSymbolInfo(call, cancellation);
+                var arguments = call.ArgumentList.Arguments;
+                if (symbol.Symbol is IMethodSymbol method)
+                {
+                    if (!IsFrameworkContent(method, arguments.Count)) continue;
+                }
+                else
+                {
+                    var candidates = symbol.CandidateSymbols.IsEmpty
+                        ? model.GetMemberGroup(call.Expression, cancellation) : symbol.CandidateSymbols;
+                    if (candidates.OfType<IMethodSymbol>().Count(item => item.Parameters.Length == arguments.Count) != 1 ||
+                        !candidates.OfType<IMethodSymbol>().Any(item => IsFrameworkContent(item, arguments.Count))) continue;
+                }
+
+                var argument = arguments.FirstOrDefault(static arg => arg.NameColon?.Name.Identifier.ValueText == "factory")
+                    ?? arguments[arguments.Count - 1];
+                if (argument.NameColon is { Name.Identifier.ValueText: not "factory" }) continue;
+                var expression = argument.Expression;
+                while (expression is ParenthesizedExpressionSyntax grouping) expression = grouping.Expression;
+                if (expression is AnonymousFunctionExpressionSyntax factory) yield return factory.Body;
+            }
         }
-    }
 
-    private static GeneratedView? ReadConstructors(GeneratorAttributeSyntaxContext input, CancellationToken cancellation)
-    {
-        var compilation = input.SemanticModel.Compilation;
-        var view = compilation.GetTypeByMetadataName(ViewName);
-        if (input.TargetSymbol is not INamedTypeSymbol owner || !SupportsExtensions(owner) || view is null || !DerivesFrom(owner, view))
-            return new("", null, [Diagnostic.Create(UnsupportedView, input.TargetNode.GetLocation(), input.TargetSymbol.Name)]);
-
-        if (owner.GetMembers(ContentMethodName).OfType<IMethodSymbol>().Any(method => OverridesBuildContent(method, view)))
-            return null;
-
-        var declarations = owner.InstanceConstructors.SelectMany(constructor => constructor.DeclaringSyntaxReferences)
-            .Select(declaration => declaration.GetSyntax(cancellation)).OfType<ConstructorDeclarationSyntax>();
-        return ReadParts(owner, view, compilation, declarations, input.TargetNode.GetLocation(), cancellation);
-    }
-
-    private static GeneratedView? ReadContentMethod(GeneratorSyntaxContext input, CancellationToken cancellation)
-    {
-        var compilation = input.SemanticModel.Compilation;
-        var view = compilation.GetTypeByMetadataName(ViewName);
-        var declaration = (MethodDeclarationSyntax)input.Node;
-        if (view is null || input.SemanticModel.GetDeclaredSymbol(declaration, cancellation) is not IMethodSymbol method ||
-            !OverridesBuildContent(method, view) || !SupportsExtensions(method.ContainingType))
-            return null;
-
-        return ReadParts(method.ContainingType, view, compilation, [declaration], declaration.GetLocation(), cancellation);
+        bool IsFrameworkContent(IMethodSymbol method, int arguments)
+        {
+            if (method.Parameters.Length != arguments) return false;
+            var declaringType = method.ContainingType.OriginalDefinition;
+            return SymbolEqualityComparer.Default.Equals(declaringType, view) ||
+                SymbolEqualityComparer.Default.Equals(declaringType, typedView) ||
+                SymbolEqualityComparer.Default.Equals(declaringType, typedWindow);
+        }
     }
 
     private static bool SupportsExtensions(INamedTypeSymbol owner) => owner is
@@ -83,18 +123,13 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         DeclaredAccessibility: Accessibility.Public or Accessibility.Internal
     };
 
-    private static bool OverridesBuildContent(IMethodSymbol method, INamedTypeSymbol view)
-    {
-        for (var current = method.OverriddenMethod; current is not null; current = current.OverriddenMethod)
-            if (SymbolEqualityComparer.Default.Equals(current.ContainingType, view)) return true;
-        return false;
-    }
-
     private static GeneratedView ReadParts(INamedTypeSymbol owner, INamedTypeSymbol view, Compilation compilation,
         IEnumerable<SyntaxNode> declarations, Location location, CancellationToken cancellation)
     {
         var elementExtensions = compilation.GetTypeByMetadataName("TrueMoon.Argentis.ElementExtensions");
         if (elementExtensions is null) return new("", null, []);
+        var buildExtensions = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.UiBuildExtensions");
+        var wrapped = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.UiControl`2");
         var extensionType = owner.Name + "Parts";
         if (owner.ContainingNamespace.GetTypeMembers(extensionType).Any(type => type.Arity == 0))
         {
@@ -106,19 +141,23 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         foreach (var declaration in declarations)
         {
             var model = compilation.GetSemanticModel(declaration.SyntaxTree);
-            var calls = declaration.DescendantNodes(static node => node is not (AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax))
-                .OfType<InvocationExpressionSyntax>();
-            foreach (var call in calls)
+            foreach (var call in Calls(declaration))
             {
                 if (call.Expression is not MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Named" } ||
-                    model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol
-                    {
-                        ReducedFrom: { } original, ReturnType: INamedTypeSymbol partType
-                    } || !SymbolEqualityComparer.Default.Equals(original.ContainingType, elementExtensions) ||
-                    DerivesFrom(partType, view))
-                {
+                    model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol { ReturnType: INamedTypeSymbol returnType } method)
                     continue;
-                }
+
+                INamedTypeSymbol? partType;
+                var declaringType = (method.ReducedFrom ?? method).ContainingType;
+                if (wrapped is not null && buildExtensions is not null && SymbolEqualityComparer.Default.Equals(returnType.OriginalDefinition, wrapped) &&
+                    (SymbolEqualityComparer.Default.Equals(declaringType, buildExtensions) ||
+                     SymbolEqualityComparer.Default.Equals(declaringType.ContainingType, buildExtensions)))
+                    partType = returnType.TypeArguments[0] as INamedTypeSymbol;
+                else if (method.ReducedFrom is not null && SymbolEqualityComparer.Default.Equals(declaringType, elementExtensions))
+                    partType = returnType;
+                else
+                    continue;
+                if (partType is not null && DerivesFrom(partType, view)) continue;
 
                 if (call.ArgumentList.Arguments is not [{ Expression: var argument }] ||
                     model.GetConstantValue(argument, cancellation) is not { HasValue: true, Value: string name } ||

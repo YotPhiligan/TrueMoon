@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Tooling;
 using System.Diagnostics;
@@ -23,7 +27,19 @@ public sealed class ViewportCanvas : Element
 {
     /// <summary>Fits the image without distorting the renderer's projection.</summary>
     public bool PreserveAspectRatio { get; set; }
-    internal Rect ImageBounds { get; private set; }
+    internal Rect ImageBounds
+    {
+        get
+        {
+            var bounds = Bounds;
+            if (!PreserveAspectRatio) return bounds;
+            var width = _gpuFrame?.Presentation.Surface.Width ?? _imageFrame?.Display.Surface.Width ?? 0;
+            var height = _gpuFrame?.Presentation.Surface.Height ?? _imageFrame?.Display.Surface.Height ?? 0;
+            if (width <= 0 || height <= 0) return bounds;
+            var scale = Math.Min(bounds.Width / width, bounds.Height / height);
+            return new(bounds.X + (bounds.Width - width * scale) / 2, bounds.Y + (bounds.Height - height * scale) / 2, width * scale, height * scale);
+        }
+    }
     internal SceneViewportInput? GameplayInput { get; set; }
     public override bool Focusable => GameplayInput != null;
     public override bool HandleInput(UiInput input, IInputContext context) => GameplayInput?.Handle(input, context) ?? false;
@@ -49,21 +65,24 @@ public sealed class ViewportCanvas : Element
         var old = _image; _image = next; _imageFrame = (display, frame.Metadata); old?.Dispose(); Invalidate();
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(available.Width, 420);
-    protected override void DrawCore(IDrawingContext context)
+    private static readonly ElementPresentation Painter = ElementPresentation.Create<ViewportCanvas>(static (canvas, context) =>
     {
-        context.Fill(Bounds, new(15, 19, 28));
-        var visible = _gpuFrame == null || _gpuCurrent!();
-        var imageBounds = Bounds;
-        var width = _gpuFrame?.Presentation.Surface.Width ?? _imageFrame?.Display.Surface.Width ?? 0;
-        var height = _gpuFrame?.Presentation.Surface.Height ?? _imageFrame?.Display.Surface.Height ?? 0;
-        if (PreserveAspectRatio && width > 0 && height > 0)
+        context.Fill(canvas.Bounds, new(15, 19, 28));
+        var gpuFrame = canvas._gpuFrame;
+        if (canvas._image is not { } image || (gpuFrame != null && !canvas._gpuCurrent!()))
         {
-            var scale = Math.Min(Bounds.Width / width, Bounds.Height / height);
-            imageBounds = new(Bounds.X + (Bounds.Width - width * scale) / 2, Bounds.Y + (Bounds.Height - height * scale) / 2, width * scale, height * scale);
+            canvas.ReportDrawn(null, null);
+            return;
         }
-        ImageBounds = imageBounds;
-        if (_image != null && visible) context.Image(_image, imageBounds);
-        Drawn = _imageFrame; DrawnViewport = visible ? _gpuFrame : null;
+        var imageFrame = canvas._imageFrame;
+        context.Image(image, canvas.ImageBounds);
+        canvas.ReportDrawn(imageFrame, gpuFrame);
+    });
+    public override ElementPresentation Presentation => Painter;
+    private void ReportDrawn((FrameDisplay Display, FrameMetadata Metadata)? imageFrame, ViewportFrame? gpuFrame)
+    {
+        Drawn = imageFrame;
+        DrawnViewport = gpuFrame;
     }
     public override void Dispose()
     {
@@ -77,24 +96,24 @@ public sealed class ViewportView : View
 {
     public Button PauseButton { get; }
     public ViewportCanvas Canvas { get; } = new() { Height = 420 };
-    public Text Status { get; } = Text.Plain("Runtime stopped");
+    public Text Status { get; } = new Text("Runtime stopped");
     public ViewportView(Action<string> command)
     {
-        PauseButton = Button.Simple("Pause").OnClick(() => command("pause"));
-        Content(() => VStack.Create().Padding(12).WithChildren(
-            Text.Plain("TrueMoon — Editor / child process viewport"),
-            HStack.Create().WithChildren(
-                Button.Simple("Start").OnClick(() => command("start")),
-                Button.Simple("Play").OnClick(() => command("play")),
+        PauseButton = new Button("Pause").OnClick(() => command("pause"));
+        SetContent(new VStack().Padding(12).WithChildren(
+            new Text("TrueMoon — Editor / child process viewport"),
+            new HStack().WithChildren(
+                new Button("Start").OnClick(() => command("start")),
+                new Button("Play").OnClick(() => command("play")),
                 PauseButton,
-                Button.Simple("Step").OnClick(() => command("step")),
-                Button.Simple("Stop").OnClick(() => command("stop"))),
-            HStack.Create().WithChildren(
-                Button.Simple("Refresh source").OnClick(() => command("refresh")),
-                Button.Simple("Build").OnClick(() => command("build")),
-                Button.Simple("Replace").OnClick(() => command("replace")),
-                Button.Simple("Cancel").OnClick(() => command("cancel"))),
-            Status, Canvas, Text.Plain("Build prepares a candidate. Replace preserves simulation state; Start resets the scene.")));
+                new Button("Step").OnClick(() => command("step")),
+                new Button("Stop").OnClick(() => command("stop"))),
+            new HStack().WithChildren(
+                new Button("Refresh source").OnClick(() => command("refresh")),
+                new Button("Build").OnClick(() => command("build")),
+                new Button("Replace").OnClick(() => command("replace")),
+                new Button("Cancel").OnClick(() => command("cancel"))),
+            Status, Canvas, new Text("Build prepares a candidate. Replace preserves simulation state; Start resets the scene.")));
     }
 }
 

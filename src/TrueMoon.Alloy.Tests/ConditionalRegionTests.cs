@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using System.ComponentModel;
 using AlloyTest;
@@ -475,7 +479,7 @@ public sealed class ConditionalRegionTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { root.Draw(new RecordingDrawingContext()); Renders++; }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters); Renders++; }
         public void Dispose() { }
     }
 }

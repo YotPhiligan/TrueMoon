@@ -8,7 +8,7 @@ WindowFrame с minimize/maximize/restore/close и resize grip. `TitleBarFactory`
 Обычные окна сохраняют системное оформление. Close кнопка использует cancellable
 App close coordinator, включая asynchronous save/drain.
 
-`TrueMoon.Argentis.Window` / `Window<TData>` можно передавать корнем через
+`TrueMoon.Argentis.Windows.Window` / `Window<TData>` можно передавать корнем через
 `UsePresentationFactory<TWindow>`. Компонент задаёт Title/ClientSize, содержимое,
 bindings и scoped style; native/GPU ресурсы остаются у Hosting. Корневая фабрика
 вызывается на UI owner **до** native/graphics allocation и не должна требовать
@@ -357,20 +357,21 @@ Data/ViewModel хранит данные/состояние/команды, IVie
 реализует INotifyPropertyChanged. ViewModel не использует controls/theme/renderer.
 
 ```csharp
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+
 public sealed record ProfileData(string Caption);
 
 public sealed class ProfileView : View<ProfileData>
 {
     public static ViewStyleRole<Button> ActionRole { get; } = new("Action");
-    public Text Header { get; }
+    public Text Header => GetRequiredPart<Text>("CaptionLabel");
 
-    public ProfileView(ProfileData data, IViewStyle<ProfileView> style)
-    {
-        Header = Text.Plain(data.Caption);
-        Content(data, _ => VStack.Create().WithChildren(
-            Header, Button.Simple("Действие").WithRole(ActionRole)));
-        this.WithViewStyle(style);
-    }
+    public ProfileView(ProfileData data) =>
+        Content(data, ui => ui.VStack(
+            ui.Text(data.Caption).Named("CaptionLabel"),
+            ui.Button("Действие").WithRole(ActionRole)));
 }
 
 public sealed class ProfileViewStyle : IViewStyle<ProfileView>
@@ -385,7 +386,8 @@ public sealed class ProfileViewStyle : IViewStyle<ProfileView>
 ```
 
 Регистрируйте model/style и IFactory<ProfileView> через App DI; вызывайте
-UsePresentationFactory<ProfileView>. Factory создаёт root на owner thread, окно
+`UsePresentationFactory<ProfileView>`. Фабрика возвращает
+`ViewCreation.Prepare(new ProfileView(data), style)` на owner thread. Окно
 владеет успешно созданным View; model/style заимствуются. При failed construction
 фабрика/constructor освобождает созданные элементы и подписки, сохраняя original
 failure и отдельно cleanup errors. Сложный пример — TrueMoon.Aether.Editor.
@@ -404,55 +406,41 @@ Adopt/orphan обновляют style layer. Focus/selection/scroll/data binding
 
 ### Конструкторы и фабрики контролов
 
-Согласованный подход (2026-10-06): публичные конструкторы и статические фабрики на типах контролов — два равноправных способа создания элементов. Их можно смешивать в одной разметке. Фабрики упрощают запись; последующие Fluent-вызовы настраивают тот же конкретный элемент.
-
-Фабрики доступны с 2026-10-07. Пример использует существующие `Button.Simple(...)`, `Text.Plain(...)`, `new` и Fluent helpers. Методы Apply/Cancel принадлежат пользовательскому View.
+Внутри `Content` используйте контекст из `TrueMoon.Argentis.Views`. Методы
+`ui.Text`, `ui.Button` и `ui.VStack` создают контролы через реестр сессии.
+`Apply` и `Cancel` ниже — методы самого View.
 
 ```csharp
-Content(() =>
-    new VStack()
-        .Padding(16)
-        .WithChildren(
-            Text.Plain("Настройки"),
-
-            Button.Simple("Применить")
-                .Width(160)
-                .OnClick(Apply),
-
-            new Button("Отмена")
-                .OnClick(Cancel)
-        )
-);
+Content(ui => ui.VStack(
+    ui.Text("Настройки"),
+    ui.Button("Применить").Width(160).OnClick(Apply),
+    ui.Button("Отмена").OnClick(Cancel)).Padding(16));
 ```
 
-`Button.Simple("Применить")` создаёт обычную кнопку с оформлением текущей темы; `Text.Plain("Настройки")` — обычный текст без обработки разметки. Их начальные свойства и поведение соответствуют `new Button("Применить")` и `new Text("Настройки")`.
+Для своего контрола зарегистрируйте `IFactory<TControl>` либо
+`IFactory<TControl, TArguments>` и используйте `ui.Create<TControl>()` либо
+типизированную перегрузку с аргументом. Верните корень, созданный этим
+контекстом, и включите в дерево все полученные от него элементы. Если дерево
+уже создано отдельно через конструкторы, передайте его в `SetContent`.
 
-| Типы | Фабрика |
-| --- | --- |
-| Button / Text | `Button.Simple(string text = "")` / `Text.Plain(string value = "")` |
-| CheckBox | `CheckBox.Create(string text = "")` |
-| TextBox, ProgressBar, Slider, Image | Собственный `Create()` на каждом типе |
-| Panel, ContentControl, Border, ScrollViewer | Собственный `Create()` на каждом типе |
-| VStack, HStack, Line, Rectagle | Собственный `Create()` на каждом типе |
-
-Create использует исходные значения конструктора. Slider/Border/ScrollViewer объявляют свой Create с конкретным возвращаемым типом. Пользовательским наследникам нужно объявлять собственную фабрику; статические фабрики не виртуальны. Shapes.Line/Rectagle сохраняются как прежние helpers; пустой Line пока не рисует линию.
-
-Каждая фабрика возвращает новый экземпляр своего конкретного типа: после `Button.Simple(...).Width(...)` доступны методы кнопки, включая OnClick. Фабрики объявляются в Argentis и работают независимо от Hosting, App/DI, окна и renderer. Публичные конструкторы сохраняются, в том числе для наследования. Способ создания не меняет ownership, attach/detach, subscriptions или обновление постоянного дерева.
-
-[Требования — пункт 4.8](../docs/alloy/PLAN.md#этап-4-добавить-ввод-контролы-и-оформление). [Фактическое состояние](../docs/alloy/STATUS.md). [Редактируемая форма AlloyTest](../ManualTests/AlloyTest/README.md) использует фабрики и конструкторы вместе с BindTwoWay.
+[Пример формы AlloyTest](../ManualTests/AlloyTest/README.md) и
+[карта импортов](../docs/alloy/PLAN.md#uia1i-argentis-structure).
 
 ## Тема, отступы и прокрутка
 
 `UiSession.SetTheme` обновляет существующее дерево; новые дети наследуют текущую тему. Local typed value имеет приоритет над Style, Style — над Theme. Typography/Foreground и `UiProperties.Padding`/`Spacing` поддерживают этот порядок; `Clear` открывает следующий уровень.
 
 ```csharp
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Styling;
+
 ui.SetTheme(Theme.Light with
 {
     ButtonPadding = new Thickness(8, 4, 8, 4),
     EditorPadding = new Thickness(4),
     StackSpacing = 6
 });
-var button = Button.Simple("Действие"); // theme ButtonPadding
+var button = new Button("Действие"); // theme ButtonPadding
 button.Style = new Style().With(UiProperties.Padding, new Thickness(10));
 button.Padding = new Thickness(16);   // local overrides style
 button.Clear(UiProperties.Padding);   // restores style padding
@@ -548,6 +536,9 @@ var apply = new Button("Применить")
 BindTwoWay работает с тем же lifetime и dispatcher, но также записывает изменения attached UI property в модель. TextBox, CheckBox и Slider используют общий типизированный механизм:
 
 ```csharp
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
+
 // model реализует INotifyPropertyChanged; свойства имеют public get/set.
 var name = new TextBox()
     .BindTwoWay(TextBox.ValueProperty, model, x => x.Name);
@@ -572,10 +563,14 @@ var volume = new Slider()
 `BindItems` заполняет первоначально пустой ElementList из ObservableCollection<TItem> или ReadOnlyObservableCollection<TItem>, где TItem — reference type. Возвращается конкретный тип контейнера:
 
 ```csharp
-var rows = VStack.Create().BindItems(model.Rows, row =>
-    HStack.Create().WithChildren(
-        TextBox.Create().BindTwoWay(TextBox.ValueProperty, row, x => x.Name),
-        Button.Simple("Удалить").OnClick(() => model.Rows.Remove(row))));
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Layout;
+
+var rows = new VStack().BindItems(model.Rows, row =>
+    new HStack().WithChildren(
+        new TextBox().BindTwoWay(TextBox.ValueProperty, row, x => x.Name),
+        new Button("Удалить").OnClick(() => model.Rows.Remove(row))));
 ```
 
 Одному уникальному ненулевому объекту соответствует одна строка, сравнение — ReferenceEquals. Разные объекты, равные по Equals или имеющие одинаковый Id, создают разные строки. Повтор одной ссылки/null отклоняются до изменения дерева. Add/Remove/Replace/Move/Reset и range notifications запрашивают сверку актуального состава при Update; промежуточные состояния могут объединяться. Reset сохраняет строки для тех же объектов и переставляет без detach, включая focus/selection/subscriptions. Новый объект с прежним Id создаёт новую строку. Свойства item изменяют обычные Bind/BindTwoWay, фабрика повторно для них не вызывается.

@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis;
 using Xunit;
 

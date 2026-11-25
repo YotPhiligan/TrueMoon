@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Bindings;
 using TrueMoon.Argentis;
 
 namespace AlloyTest;

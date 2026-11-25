@@ -65,6 +65,16 @@ public sealed class FluentSetterGenerator : IIncrementalGenerator
                         return element;
                     }
                 }
+
+                {{setter.Receiver.DeclareControl("control")}}
+                {
+                    /// <summary>Sets the property while retaining the control's build context.</summary>
+                    public {{setter.Receiver.ControlType}} {{name}}({{setter.ValueType}} value)
+                    {
+                        control.Element.{{name}} = value;
+                        return control;
+                    }
+                }
             }
             """;
     }

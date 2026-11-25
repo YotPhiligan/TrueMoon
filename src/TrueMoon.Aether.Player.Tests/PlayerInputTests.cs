@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Input;
 using TrueMoon.Aether.Abstractions.Input;
 using TrueMoon.Argentis;
 using Xunit;
@@ -46,6 +47,9 @@ public sealed class PlayerInputTests
     {
         var input=new PlayerInput(); var data=new PlayerViewModel("captured");
         using var view=new PlayerView(data,input,new PlayerViewStyle());
+        Assert.Same(data, view.DataContext);
+        Assert.Same(view.Canvas, view.Child);
+        Assert.Same(view, view.Canvas.Parent);
         input.Capture(0,0); input.Key(UiKey.W,true); view.Canvas.OnInputCancelled();
         Assert.False(input.IsCaptured); Assert.Equal(GameButtons.None,input.Take().Buttons);
         Assert.True(view.Canvas.Focusable); Assert.False(view.Canvas.IsDisposed);

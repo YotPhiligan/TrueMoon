@@ -13,6 +13,8 @@ namespace TrueMoon.Alloy.Platform.Silk;
 public sealed unsafe class VulkanDevice : IDisposable
 {
     private bool _disposed;
+    /// <summary>Whether device teardown passed the idle check and attempted native destruction.</summary>
+    public bool IsDisposed => _disposed;
     private readonly IWindow? _window;
     private readonly Action<string>? _validationMessage;
     private DebugUtilsMessengerCallbackFunctionEXT? _debugCallback;

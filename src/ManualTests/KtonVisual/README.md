@@ -3,7 +3,7 @@
 Самостоятельный непакетируемый App/DI consumer. Настоящие `PrimitiveGameSession`,
 SceneWorld/scheduler и `AddKtonPhysics`; физика фиксирована на 60 Hz. Vulkan рисует
 primitive scene в локальный surface, OpenGL/Skia копирует его в окно Alloy.
-Изображение подтверждается после DrawCore и `HostedUiWindow.FramePresented`.
+Изображение подтверждается после того, как презентер нарисовал соответствующую версию и окно опубликовало `HostedUiWindow.FramePresented`.
 
 Сцена: пол, плавный вход на склон, движущаяся платформа, два динамических куба,
 низкий потолок и стена. Персонаж — реальный PHYS6 capsule controller; изображение

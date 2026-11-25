@@ -1,17 +1,16 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+
 namespace TrueMoon.Argentis;
 
 /// <summary>A pointer- and keyboard-activated button.</summary>
 public class Button : Text
 {
-    /// <summary>Creates a new button with the current theme's default appearance.</summary>
-    /// <param name="text">The literal label.</param>
-    /// <returns>A new independent Button for Fluent configuration.</returns>
-    public static Button Simple(string text = "") => new(text);
-
     private bool _pressed;
     private float? _labelInkCenter;
     /// <summary>Measured label dimensions in the current face.</summary>
-    protected Size LabelSize { get; private set; }
+    protected internal Size LabelSize { get; private set; }
     /// <summary>Whether to center the plain label inside the padded button area.</summary>
     protected virtual bool CentersLabel => Theme.CenterButtonLabels;
     /// <summary>Creates a button with a label.</summary>
@@ -50,21 +49,11 @@ public class Button : Text
         }
         return LabelSize;
     }
+    internal float? LabelInkCenter => _labelInkCenter;
+    private static readonly ElementPresentation ButtonLabel = ElementPresentation.Create<Button>(
+        new Factory<IElementPresenter<Button>>(static () => new ButtonPresenter()));
     /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context)
-    {
-        if (_labelInkCenter is not { } center)
-        {
-            base.DrawCore(context);
-            return;
-        }
-        var area = Bounds.Deflate(Padding);
-        var x = area.X + Math.Max(0, (area.Width - LabelSize.Width) / 2);
-        // Keep centering useful when a fixed height has no room for both vertical insets.
-        var y = area.Height > 0 ? area.Y + area.Height / 2 : Bounds.Y + Bounds.Height / 2;
-        context.Text(Value, x, y - center, IsEffectivelyEnabled ? Foreground : Theme.Disabled,
-            FontSize, FontFamily, FontWeight, FontItalic);
-    }
+    public override ElementPresentation Presentation => ButtonLabel;
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context)
     {

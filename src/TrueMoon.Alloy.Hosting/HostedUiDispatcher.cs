@@ -26,10 +26,24 @@ public sealed class HostedUiDispatcher : IStoppable, IAsyncDisposable
             try
             {
                 Owner.Schedule(initialize, tick, cleanup, closing, ready, completion,
-                    () => { lock (_gate) _windows.Remove(window); }, window.WaitMilliseconds);
+                    () => ForgetIfReleased(window), window.WaitMilliseconds);
             }
             catch { _windows.Remove(window); throw; }
         }
+    }
+
+    private void ForgetIfReleased(HostedUiWindow window)
+    {
+        lock (_gate) { if (!window.CleanupPending) _windows.Remove(window); }
+    }
+
+    // Recovery for an already accepted window is allowed even while the scope is stopping.
+    internal Task ScheduleCleanup(HostedUiWindow window, Action cleanup)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Owner.Schedule(static () => { }, static () => true, cleanup, static () => false,
+            new TaskCompletionSource(), completion, () => ForgetIfReleased(window));
+        return completion.Task;
     }
 
     /// <summary>Closes this application's windows and waits for owner-thread cleanup.</summary>
@@ -42,7 +56,7 @@ public sealed class HostedUiDispatcher : IStoppable, IAsyncDisposable
         {
             if (_shutdown == null)
             {
-                var windows = _windows.Where(window => !window.Completion.IsCompleted).ToArray();
+                var windows = _windows.Where(window => !window.Completion.IsCompleted || window.CleanupPending).ToArray();
                 foreach (var window in windows) window.Close();
                 _shutdown = Task.WhenAll(windows.Select(window => window.Completion));
             }

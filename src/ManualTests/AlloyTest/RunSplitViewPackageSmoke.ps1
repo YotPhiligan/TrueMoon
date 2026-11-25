@@ -20,6 +20,11 @@ Set-Content -LiteralPath (Join-Path $probeRoot 'Probe.csproj') -Encoding utf8 -V
 $probeProgram = @'
 using SplitViewPackageProbe;
 using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 
 var checks = 0;
@@ -57,7 +62,7 @@ sealed class Surface : IUiRenderSurface
     public ITextLayoutService TextLayout { get; } = new TextLayout();
     public void VerifyAvailable() { }
     public void Resize(UiViewport viewport) { }
-    public void Render(Element root, UiViewport viewport) { }
+    public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
     public void Dispose() { }
 }
 sealed class TextLayout : ITextLayoutService

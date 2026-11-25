@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI.Editing;
@@ -33,8 +36,8 @@ public sealed class EditorInspectorViewStyle : IViewStyle<EditorInspectorView>
         styles.Role(EditorInspectorView.ResetRole).Height(24).Set(UiProperties.Width, 24f).Padding(new Thickness(0));
         styles.Role(EditorInspectorView.MetadataRole).FontSize(10).Foreground(t => t.Disabled);
         styles.Role(EditorInspectorView.ErrorRole).FontSize(11).Foreground(t => t.Error);
-        styles.Part(v => v.Apply).Tone(ControlTone.Accent);
-        styles.Part(v => v.Error).FontSize(11).Height(72).Foreground(t => t.Error);
-        styles.Part(v => v.AddComponent).Height(26);
+        styles.Part(v => v.ApplyPart).Tone(ControlTone.Accent);
+        styles.Part(v => v.ErrorPart).FontSize(11).Height(72).Foreground(t => t.Error);
+        styles.Part(v => v.AddComponentPart).Height(26);
     }
 }

@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
@@ -44,27 +46,47 @@ internal static partial class FontTypographyProbe
     {
         private static readonly UiSymbol[] Symbols = Enum.GetValues<UiSymbol>();
         private static readonly float[] Sizes = [12, 16, 24];
-        internal (UiSymbol Symbol, Rect Bounds)[] Specimens { get; } = new (UiSymbol, Rect)[Symbols.Length * Sizes.Length];
+        private static readonly string[] Labels = Array.ConvertAll(Symbols, static symbol => symbol.ToString());
+        private static readonly (UiSymbol Symbol, Rect Bounds)[] Samples = CreateSamples();
+        internal (UiSymbol Symbol, Rect Bounds)[] Specimens => Samples;
 
-        protected override void DrawCore(IDrawingContext context)
+        private static (int X, int Y) CellOrigin(int index) => (12 + index % 4 * 181, 76 + index / 4 * 68);
+
+        private static (UiSymbol Symbol, Rect Bounds)[] CreateSamples()
         {
-            UiSymbols.Draw(context, UiSymbol.TrueMoon, new(12, 12, 44, 44), Foreground);
-            context.Text("Argentis · TrueMoon.Tales", 65, 18, Foreground, 21, FontFamily);
-            context.Text("12 · 16 · 24 px", 66, 44, Foreground, 12, FontFamily);
+            var result = new (UiSymbol, Rect)[Symbols.Length * Sizes.Length];
             for (var i = 0; i < Symbols.Length; i++)
             {
-                var x = 12 + i % 4 * 181;
-                var y = 76 + i / 4 * 68;
-                context.Fill(new(x, y, 173, 60), Theme.Control, 6);
-                context.Text(Symbols[i].ToString(), x + 9, y + 5, Foreground, 13, FontFamily);
+                var (x, y) = CellOrigin(i);
                 for (var s = 0; s < Sizes.Length; s++)
                 {
                     var size = Sizes[s];
-                    var bounds = new Rect(x + 28 + 56 * s - size / 2, y + 40 - size / 2, size, size);
-                    UiSymbols.Draw(context, Symbols[i], bounds, Foreground);
-                    Specimens[i * Sizes.Length + s] = (Symbols[i], bounds);
+                    result[i * Sizes.Length + s] = (Symbols[i], new Rect(x + 28 + 56 * s - size / 2, y + 40 - size / 2, size, size));
                 }
             }
+            return result;
         }
+
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<IconCatalog>(static (catalog, context) =>
+        {
+            var foreground = catalog.Foreground;
+            var fontFamily = catalog.FontFamily;
+            var background = catalog.Theme.Control;
+            UiSymbols.Draw(context, UiSymbol.TrueMoon, new(12, 12, 44, 44), foreground);
+            context.Text("Argentis · TrueMoon.Tales", 65, 18, foreground, 21, fontFamily);
+            context.Text("12 · 16 · 24 px", 66, 44, foreground, 12, fontFamily);
+            for (var i = 0; i < Symbols.Length; i++)
+            {
+                var (x, y) = CellOrigin(i);
+                context.Fill(new(x, y, 173, 60), background, 6);
+                context.Text(Labels[i], x + 9, y + 5, foreground, 13, fontFamily);
+                for (var s = 0; s < Sizes.Length; s++)
+                {
+                    var (symbol, bounds) = Samples[i * Sizes.Length + s];
+                    UiSymbols.Draw(context, symbol, bounds, foreground);
+                }
+            }
+        });
+        public override ElementPresentation Presentation => Painter;
     }
 }

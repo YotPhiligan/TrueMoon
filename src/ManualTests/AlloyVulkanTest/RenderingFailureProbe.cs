@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Windows;
 using AlloyTest;
 using Silk.NET.OpenGL;
 using Silk.NET.Vulkan;
@@ -162,7 +166,11 @@ internal static class RenderingFailureProbe
     {
         internal UiRenderingException? Failure;
         internal FailingRoot(View1 view) => Add(view);
-        protected override void DrawCore(IDrawingContext context) { if (Failure != null) throw Failure; }
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<FailingRoot>(static (root, _) =>
+        {
+            if (root.Failure is { } failure) throw failure;
+        });
+        public override ElementPresentation Presentation => Painter;
     }
     private sealed class ThrowingResource(Exception error) : IDisposable { public void Dispose() => throw error; }
     private sealed class Target : UiRenderTarget;
@@ -176,12 +184,12 @@ internal static class RenderingFailureProbe
         {
             public ITextLayoutService TextLayout => throw new NotSupportedException();
             public void Resize(UiViewport viewport) { }
-            public void Render(Element root, UiViewport viewport) { }
+            public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
             public void VerifyAvailable() { }
             public void Dispose() => owner.Disposals++;
         }
     }
-    private static UiRenderingException Failure() => new("controlled", "DrawCore", UiRenderingFailureKind.BackendFailure, new InvalidOperationException("controlled terminal graphics failure"));
+    private static UiRenderingException Failure() => new("controlled", "Paint", UiRenderingFailureKind.BackendFailure, new InvalidOperationException("controlled terminal graphics failure"));
     private static IEnumerable<Exception> OrderedErrors(Exception error) => error is AggregateException aggregate
         ? aggregate.InnerExceptions.SelectMany(OrderedErrors) : new[] { error };
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

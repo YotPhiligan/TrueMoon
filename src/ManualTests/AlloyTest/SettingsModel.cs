@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Bindings;
+using TrueMoon.Argentis.Styling;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;

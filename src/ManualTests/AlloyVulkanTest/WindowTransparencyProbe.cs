@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Windows;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Runtime.ExceptionServices;
@@ -190,12 +193,15 @@ internal static unsafe class WindowTransparencyProbe
         internal void Set(Rgb color, bool bands)
         { _color = color; _bands = bands; Invalidate(Invalidation.Render); }
         protected override Size MeasureCore(Size available, ITextLayoutService text) => available;
-        protected override void DrawCore(IDrawingContext drawing)
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<Scene>(static (scene, drawing) =>
         {
+            ReadOnlySpan<byte> alphas = [0, 128, 255];
+            var bounds = scene.Bounds;
             for (var band = 0; band < 3; band++)
-                drawing.Fill(new Rect(Bounds.X + Bounds.Width * band / 3, Bounds.Y, Bounds.Width / 3, Bounds.Height),
-                    _color.Color(_bands ? new byte[] { 0, 128, 255 }[band] : (byte)255));
-        }
+                drawing.Fill(new Rect(bounds.X + bounds.Width * band / 3, bounds.Y, bounds.Width / 3, bounds.Height),
+                    scene._color.Color(scene._bands ? alphas[band] : (byte)255));
+        });
+        public override ElementPresentation Presentation => Painter;
     }
 
     internal sealed class ProbeWindow : IDisposable

@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -21,9 +23,9 @@ namespace EngineSessionProbe;
 
 public sealed class GpuSurfaceView : View
 {
-    public GpuSurfaceView() => Content(() => VStack.Create().Padding(16).WithChildren(
-        Text.Plain("TrueMoon ENG4c — reusable GPU surfaces"), Text.Plain("Checking slots, resize and runtime recovery."),
-        Text.Plain("The ordinary viewport continues to use CPU transport.")));
+    public GpuSurfaceView() => Content(static ui => ui.VStack(
+        ui.Text("TrueMoon ENG4c — reusable GPU surfaces"), ui.Text("Checking slots, resize and runtime recovery."),
+        ui.Text("The ordinary viewport continues to use CPU transport.")).Padding(16));
 }
 
 public static class GpuSurfaceProbe

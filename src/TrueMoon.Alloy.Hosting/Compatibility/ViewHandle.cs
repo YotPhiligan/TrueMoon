@@ -2,7 +2,7 @@
 using Silk.NET.Windowing;
 using TrueMoon.Diagnostics;
 using TrueMoon.Threading;
-using IView = TrueMoon.Argentis.IView;
+using IView = TrueMoon.Argentis.Views.IView;
 
 namespace TrueMoon.Alloy.Hosting.Compatibility;
 

@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -223,7 +225,7 @@ public sealed class UiFramePumpTests
         public ITextLayoutService TextLayout { get; } = new Layout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => Drawing?.Invoke();
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => Drawing?.Invoke();
         public void Dispose() { }
     }
     private sealed class Layout : ITextLayoutService

@@ -1,4 +1,6 @@
-﻿namespace TrueMoon.Argentis;
+﻿using TrueMoon.Argentis.Views;
+
+namespace TrueMoon.Argentis;
 
 public interface IViewManager
 {

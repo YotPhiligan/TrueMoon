@@ -145,7 +145,7 @@ dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --ope
 
 `--opengl-window` использует тот же `ProbeView` и HostedUiWindow, что Vulkan: >=30 frames, actual framebuffer resize, minimize/restore, динамический Text и завершение App. GL errors проверяются между кадрами. Skia закрывается в Closing до уничтожения native context Silk; для GL нет Vulkan swapchain generations.
 
-`--opengl-failure` намеренно бросает исключение из DrawCore. Ошибка перехватывается внутри GLFW callback, затем передаётся через Completion/StopAsync после безопасного закрытия, registry count0. Probe подтверждает, что process не завершается из-за managed unwind через native refresh callback.
+`--opengl-failure` намеренно бросает исключение из презентера во время рисования. Ошибка перехватывается внутри GLFW callback, затем передаётся через Completion/StopAsync после безопасного закрытия, registry count0. Probe подтверждает, что process не завершается из-за managed unwind через native refresh callback.
 
 В предыдущем OpenGL шаге все три прошли Debug и published Release на Windows x64/OpenGL3.3 NVIDIA RTX5070Ti (driver616.92). GL GetError не заменяет полноценный GL debug validation/driver profiling; GLES/ANGLE/другие GPU, context loss и cross-context texture exchange не проверялись. Logs в `TestResults/AlloyOpenGL`, native DLL/ABI/packages не менялись.
 
@@ -259,6 +259,13 @@ Shared-loop control выполняет20rounds на одном owner thread: д�
 ### Production dispatcher и Vulkan resource controls — 2026-10-10
 
 `--hosted-dispatcher --validation` проверяет реальные HostedUiWindow/HostedUiDispatcher: GL/GL, Vulkan/Vulkan и GL/Vulkan пары; один owner через независимые app scopes, разные HWND, resize/selection, native WM_PAINT своего и соседнего окна, close/recreate при продолжающемся sibling, command/startup faults и независимый shutdown. Startup cancellation отменяет ожидание, повтор Start не создаёт второй root; canceled shutdown wait не отменяет cleanup. Проверяются close-before-start, rejected starts/posts, registry/hooks0 и validation0. Это bounded functional proof, не полный K7, physical drag/DPI или VRAM.
+
+`--partial-window-startup` проверяет OpenGL/OpenGL и Vulkan/Vulkan в одном
+`HostedUiDispatcher` с общим реестром сессий. После отказа фабрики содержимого
+при первом attach проверяются освобождение дерева, HWND и hooks неудавшегося окна.
+Выжившее окно получает адресный `WM_CHAR`; проверка ждёт `FramePresented` после
+запроса кадра с новым значением `TextBox`. `--validation` требует доступного
+слоя Vulkan. Сценарий не имитирует физический ввод.
 
 `--window-lifecycle-soak --soak-resource-trace` сохраняет дополнительные samples после каждого окна для привязки native роста к backend. Основные warm checkpoint и USER/GDI +2/+4 лимиты не меняются.
 

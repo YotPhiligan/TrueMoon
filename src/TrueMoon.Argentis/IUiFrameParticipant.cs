@@ -1,4 +1,6 @@
-﻿namespace TrueMoon.Argentis;
+﻿using TrueMoon.Argentis.Input;
+
+namespace TrueMoon.Argentis;
 
 /// <summary>A retained control that needs owner-thread frame ticks only while a transition or delay is pending.</summary>
 public interface IUiFrameParticipant

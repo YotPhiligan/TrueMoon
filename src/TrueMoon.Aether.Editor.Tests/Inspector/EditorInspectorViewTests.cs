@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
@@ -10,6 +14,102 @@ namespace TrueMoon.Aether.Editor.Tests.Inspector;
 
 public sealed class EditorInspectorViewTests
 {
+    [Fact]
+    public void DataContextReplacement_RebindsMatchingFieldsAndKeepsNamedActions()
+    {
+        using var previous = new InspectorFixture();
+        using var current = new InspectorFixture();
+        using var view = EditorInspectorView.Create(previous.Model, new EditorInspectorViewStyle());
+        var host = new Panel().WithChildren(view);
+        using var ui = InspectorFixture.Ui(host);
+        ui.Update();
+
+        var address = (DocumentData.Transform, "x");
+        var previousInput = Assert.IsType<TextBox>(view.Properties[address].Input);
+        var apply = view.Apply;
+        var scroll = view.Scroll;
+        Assert.Same(apply, view.ApplyPart);
+        Assert.Same(scroll, view.ScrollPart);
+        ui.Focus(view.AddComponent);
+        previous.Property(DocumentData.Transform, "x").Value = "99";
+
+        view.DataContext = current.Model;
+        Assert.True(view.ComponentListPart.IsInputBlocked);
+        Assert.True(previousInput.IsEffectivelyEnabled);
+        ui.Update();
+        var rebound = view.Properties[address];
+        var currentInput = Assert.IsType<TextBox>(rebound.Input);
+        Assert.True(previousInput.IsDisposed);
+        Assert.Same(current.Property(DocumentData.Transform, "x"), rebound.Property);
+        Assert.Equal("4", currentInput.Value);
+        Assert.False(apply.IsEnabled);
+        Assert.Equal(ControlTone.Accent, apply.Tone);
+        Assert.Same(apply, view.Apply);
+        Assert.Same(scroll, view.Scroll);
+        Assert.True(view.AddComponent.IsFocused);
+
+        Enter(ui, view, currentInput, "53");
+        Assert.True(currentInput.IsFocused);
+        Assert.True(apply.IsEnabled);
+        Click(ui, view, apply);
+        Assert.Equal(53d, DocumentData.X(current.Owner.Document.Read().Content!));
+        Assert.Equal(4d, DocumentData.X(previous.Owner.Document.Read().Content!));
+        Assert.Equal("99", previous.Property(DocumentData.Transform, "x").Value);
+
+        host.Items.Remove(view);
+        current.Model.Refresh(null);
+        Assert.False(currentInput.IsDisposed);
+        host.Add(view);
+        ui.Update();
+        Assert.True(currentInput.IsDisposed);
+        Assert.Empty(view.Properties);
+        Assert.Same(apply, view.Apply);
+        current.Refresh();
+        ui.Update();
+        Assert.Equal("53", Assert.IsType<TextBox>(view.Properties[address].Input).Value);
+
+        view.DataContext = null;
+        ui.Update();
+        Assert.Empty(view.Properties);
+        Assert.All(view.Actions.Children, action => Assert.False(action.IsEnabled));
+        Assert.True(view.Empty.IsVisible);
+    }
+
+    [Fact]
+    public void DataContextReplacement_PreservesStyledEnablementOfDynamicParts()
+    {
+        using var previous = new InspectorFixture();
+        using var current = new InspectorFixture();
+        var style = new EditorInspectorViewStyle();
+        var view = EditorInspectorView.Create(previous.Model, style);
+        using var ui = InspectorFixture.Ui(view);
+        ui.Update();
+
+        Element[] parts = [view.ComponentListPart, view.AddChoicesPart, view.RemovedPart];
+        Assert.All(parts, part => Assert.True(part.IsEnabled));
+        view.DataContext = current.Model;
+        Assert.All(parts, part =>
+        {
+            Assert.True(part.IsInputBlocked);
+            Assert.True(part.IsEnabled);
+        });
+
+        view.WithViewStyle(new DisabledDynamicPartsStyle());
+        ui.Update();
+        Assert.All(parts, part =>
+        {
+            Assert.False(part.IsInputBlocked);
+            Assert.False(part.IsEnabled);
+        });
+
+        view.WithViewStyle(style);
+        ui.Update();
+        Assert.All(parts, part => Assert.True(part.IsEnabled));
+        view.WithViewStyle(new DisabledDynamicPartsStyle());
+        ui.Update();
+        Assert.All(parts, part => Assert.False(part.IsEnabled));
+    }
+
     [Fact]
     public void SchemaEditors_UseCheckboxTextAndMultilineControlsAndRemoveSectionsAbsentFromSelection()
     {
@@ -229,14 +329,23 @@ public sealed class EditorInspectorViewTests
     [InlineData(true)]
     public void StyleFailure_CleansUnpublishedFormAndAggregatesCleanupFailureWithoutOwningModel(bool cleanupFailure)
     {
-        using var test = new InspectorFixture(); EditorInspectorView unpublished = null!;
+        using var test = new InspectorFixture();
+        Element[] unpublished = [];
         var failure = new IOException("inspector style failed"); var cleanup = new IOException("inspector cleanup failed");
         var resource = new Resource(cleanupFailure ? cleanup : null);
-        var error = Record.Exception(() => new EditorInspectorView(test.Model, new FailingStyle(view => { unpublished = view; view.Own(resource); }, failure)));
+        using var draft = new EditorInspectorView(test.Model, new FailingStyle(view =>
+        {
+            unpublished = [view.Form, view.Scroll, view.ComponentList];
+            view.Form.Own(resource);
+        }, failure));
+        var error = Record.Exception(() => InspectorFixture.Ui(draft));
         if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, item => Assert.Same(failure, item), item => Assert.Same(cleanup, item));
         else Assert.Same(failure, error);
-        Assert.Equal(1, resource.Disposals); Assert.True(unpublished.IsDisposed); Assert.True(unpublished.Form.IsDisposed);
-        Assert.True(unpublished.Scroll.IsDisposed); Assert.True(unpublished.ComponentList.IsDisposed);
+        Assert.Equal(1, resource.Disposals);
+        Assert.False(draft.IsDisposed);
+        Assert.False(draft.IsAttached);
+        Assert.Null(draft.Child);
+        Assert.All(unpublished, part => Assert.True(part.IsDisposed));
         test.Property(DocumentData.Custom, "flag").BooleanValue = true; test.Model.Apply();
         Assert.True(test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["flag"].Value.GetBoolean());
         Assert.False(test.Owner.Commands.Read().Closed);
@@ -264,6 +373,17 @@ public sealed class EditorInspectorViewTests
         else ui.HandleInput(new(InputKind.Text, Text: value));
         ui.Update();
     }
+    private sealed class DisabledDynamicPartsStyle : IViewStyle<EditorInspectorView>
+    {
+        public void Configure(IViewStyleBuilder<EditorInspectorView> styles)
+        {
+            new EditorInspectorViewStyle().Configure(styles);
+            styles.Part(view => view.ComponentListPart).Set(UiProperties.Enabled, false);
+            styles.Part(view => view.AddChoicesPart).Set(UiProperties.Enabled, false);
+            styles.Part(view => view.RemovedPart).Set(UiProperties.Enabled, false);
+        }
+    }
+
     private sealed class FailingStyle(Action<EditorInspectorView> capture, Exception failure) : IViewStyle<EditorInspectorView>
     { public void Configure(IViewStyleBuilder<EditorInspectorView> styles) { styles.Part(view => { capture(view); return view.Error; }).FontSize(13); throw failure; } }
     private sealed class Resource(Exception? failure) : IDisposable

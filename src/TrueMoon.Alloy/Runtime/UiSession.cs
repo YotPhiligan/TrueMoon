@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis;
 using TrueMoon.Alloy.Runtime.Semantics;
 
@@ -11,15 +15,17 @@ public sealed class UiSession : IDisposable, IInputContext
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly UiDispatcher _posted;
     private readonly IUiClipboard? _clipboard;
+    private readonly UiPresenters _presenters;
     private Element? _focus, _capture, _hover;
     private readonly TimeProvider _time;
     private long _lastTime;
     private bool _participantsDirty = true;
     private IUiFrameParticipant[] _participants = [];
     private IUiInputObserver[] _inputObservers = [];
+    private const Invalidation Geometry = Invalidation.Layout | Invalidation.Tree;
     private Invalidation _dirty = Invalidation.Tree | Invalidation.Layout | Invalidation.Render;
     private volatile bool _disposed;
-    private bool _updating, _disposing, _reportingFailure;
+    private bool _updating, _layingOut, _disposing, _reportingFailure;
     private long _treeGeneration = 1, _layoutGeneration;
     private volatile UiRenderingException? _renderingFailure;
     /// <summary>Stable identity within this process; independent of diagnostics being enabled.</summary>
@@ -76,8 +82,9 @@ public sealed class UiSession : IDisposable, IInputContext
     public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions)
         : this(root, rendering, viewport, clipboard, dispatchOptions, null) { }
 
-    /// <summary>Attaches an unattached root with explicit dispatch limits and a borrowed monotonic frame clock.</summary>
-    public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions, TimeProvider? timeProvider)
+    /// <summary>Attaches an unattached root with explicit dispatch limits, frame clock and optional control factories.</summary>
+    public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions,
+        TimeProvider? timeProvider, IUiControlFactories? controlFactories = null, Action<UiPresenters>? configurePresenters = null)
     {
         ArgumentNullException.ThrowIfNull(root); ArgumentNullException.ThrowIfNull(rendering); viewport.Validate();
         ArgumentNullException.ThrowIfNull(dispatchOptions); dispatchOptions.Validate();
@@ -85,26 +92,26 @@ public sealed class UiSession : IDisposable, IInputContext
         if (root.Parent != null || root.IsAttached || root.IsDisposed) throw new ArgumentException("Root is already owned or disposed.", nameof(root));
         Root = root; Rendering = rendering; Viewport = viewport; _clipboard = clipboard;
         _time = timeProvider ?? TimeProvider.System; _lastTime = _time.GetTimestamp();
-        try { Root.Attach(VerifyAccess, Post, ElementDetaching); }
-        catch (Exception attachError)
+        _presenters = UiPresenters.Create(configurePresenters);
+        try
         {
-            try { Root.Detach(); }
-            catch (Exception detachError) { throw new AggregateException("UI attachment and rollback failed.", attachError, detachError); }
-            throw;
+            Root.Attach(VerifyAccess, Post, ElementDetaching, controlFactories ?? new UiControlFactories());
+            Root.Invalidated += Invalidated;
         }
-        Root.Invalidated += Invalidated;
+        catch (Exception error) { UiCleanup.Complete(error, Root.Detach, _presenters.Dispose); throw; }
     }
     /// <summary>Creates a session directly without App/DI. The session owns its root and created surface.</summary>
     public static UiSession Create(Element root, IRenderBackend backend, UiRenderTarget target, UiViewport viewport, IUiClipboard? clipboard = null)
         => Create(root, backend, target, viewport, clipboard, new UiDispatchOptions());
 
     /// <summary>Creates a directly owned session with explicit dispatch limits, without App/DI.</summary>
-    public static UiSession Create(Element root, IRenderBackend backend, UiRenderTarget target, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions)
+    public static UiSession Create(Element root, IRenderBackend backend, UiRenderTarget target, UiViewport viewport, IUiClipboard? clipboard,
+        UiDispatchOptions dispatchOptions, IUiControlFactories? controlFactories = null, Action<UiPresenters>? configurePresenters = null)
     {
         ArgumentNullException.ThrowIfNull(backend);
         ArgumentNullException.ThrowIfNull(dispatchOptions); dispatchOptions.Validate();
         var surface = backend.CreateSurface(target, viewport);
-        try { return new UiSession(root, surface, viewport, clipboard, dispatchOptions); }
+        try { return new UiSession(root, surface, viewport, clipboard, dispatchOptions, null, controlFactories, configurePresenters); }
         catch (Exception error) { UiCleanup.Complete(error, surface.Dispose); throw; }
     }
     /// <summary>Queues synchronous work in FIFO order. Capacity/lifetime errors throw immediately;
@@ -193,8 +200,8 @@ public sealed class UiSession : IDisposable, IInputContext
             maximumNodes, includeAccessibleNames);
     }
 
-    private bool HasCurrentSemanticLayout => !_updating && !_disposing && _layoutGeneration != 0 && !Viewport.IsEmpty &&
-        (_dirty & (Invalidation.Layout | Invalidation.Tree)) == 0;
+    private bool HasCurrentSemanticLayout => !_updating && !_layingOut && !_disposing && _layoutGeneration != 0 &&
+        !Viewport.IsEmpty && (_dirty & Geometry) == 0;
 
     /// <summary>Finds an addressable element from a complete snapshot that still matches the live session.</summary>
     /// <param name="snapshot">Previously captured semantic tree.</param>
@@ -259,9 +266,13 @@ public sealed class UiSession : IDisposable, IInputContext
 
     private static UiSemanticTargetStatus SemanticAvailability(Element element)
     {
+        var acceptsInput = true;
         for (Element? ancestor = element; ancestor != null; ancestor = ancestor.Parent)
+        {
             if (!ancestor.IsVisible) return UiSemanticTargetStatus.Hidden;
-        return element.IsEffectivelyEnabled ? UiSemanticTargetStatus.Ready : UiSemanticTargetStatus.Disabled;
+            acceptsInput &= ancestor.IsEnabled && !ancestor.IsInputBlocked;
+        }
+        return acceptsInput ? UiSemanticTargetStatus.Ready : UiSemanticTargetStatus.Disabled;
     }
 
     private UiSemanticTargetStatus CheckSemanticRoute(SemanticInput request, UiInput input, bool pointer, Element? route)
@@ -324,7 +335,7 @@ public sealed class UiSession : IDisposable, IInputContext
     /// <summary>Runs posted work, layout and drawing only when invalidated. Returns whether a frame was drawn.</summary>
     public bool Update()
     {
-        VerifyRendering(); if (_updating) throw new InvalidOperationException("UI Update cannot be reentrant.");
+        VerifyRendering(); if (_updating || _layingOut) throw new InvalidOperationException("UI Update cannot be reentrant.");
         _updating = true;
         var diagnostics = _diagnostics;
         var started = diagnostics?.Begin(UiPhase.Update) ?? 0;
@@ -341,11 +352,7 @@ public sealed class UiSession : IDisposable, IInputContext
             var work = _dirty; _dirty = 0;
             try
             {
-                if ((work & (Invalidation.Layout | Invalidation.Tree)) != 0)
-                {
-                    var logical = new Size(Viewport.Width / Viewport.Scale, Viewport.Height / Viewport.Scale);
-                    Layout(logical, diagnostics);
-                }
+                if ((work & Geometry) != 0) Layout(diagnostics);
                 VerifyRendering(); Draw(diagnostics); completed = true; return true;
             }
             catch { _dirty |= work; throw; }
@@ -353,34 +360,53 @@ public sealed class UiSession : IDisposable, IInputContext
         catch (UiRenderingException error) { ReportRenderingFailure(error); throw; }
         finally { _updating = false; diagnostics?.End(UiPhase.Update, started, completed); }
     }
-    private void Layout(Size logical, UiDiagnostics? diagnostics)
+    private void Layout(UiDiagnostics? diagnostics)
     {
-        var started = diagnostics?.Begin(UiPhase.Measure) ?? 0;
-        try { Root.Measure(logical, Rendering.TextLayout); }
-        catch { diagnostics?.End(UiPhase.Measure, started, false); throw; }
-        diagnostics?.End(UiPhase.Measure, started, true);
-        started = diagnostics?.Begin(UiPhase.Arrange) ?? 0;
-        try { Root.Arrange(new Rect(0, 0, logical.Width, logical.Height)); }
-        catch { diagnostics?.End(UiPhase.Arrange, started, false); throw; }
-        _layoutGeneration++;
-        diagnostics?.End(UiPhase.Arrange, started, true);
+        _layingOut = true;
+        try
+        {
+            var logical = new Size(Viewport.Width / Viewport.Scale, Viewport.Height / Viewport.Scale);
+            var started = diagnostics?.Begin(UiPhase.Measure) ?? 0;
+            try { Root.Measure(logical, Rendering.TextLayout); }
+            catch { diagnostics?.End(UiPhase.Measure, started, false); throw; }
+            diagnostics?.End(UiPhase.Measure, started, true);
+            started = diagnostics?.Begin(UiPhase.Arrange) ?? 0;
+            try { Root.Arrange(new Rect(0, 0, logical.Width, logical.Height)); }
+            catch { diagnostics?.End(UiPhase.Arrange, started, false); throw; }
+            _layoutGeneration++;
+            diagnostics?.End(UiPhase.Arrange, started, true);
+        }
+        finally { _layingOut = false; }
+    }
+    // Do not drain dispatch, advance the clock, draw, or consume render invalidation here.
+    private void PrepareInputLayout()
+    {
+        var pending = _dirty & Geometry;
+        if (pending == 0 || Viewport.IsEmpty) return;
+        _dirty &= ~pending;
+        try { Layout(_diagnostics); }
+        catch (UiRenderingException error) { _dirty |= pending; ReportRenderingFailure(error); throw; }
+        catch { _dirty |= pending; throw; }
     }
     private void Draw(UiDiagnostics? diagnostics)
     {
         var started = diagnostics?.Begin(UiPhase.Render) ?? 0;
-        try { Rendering.Render(Root, Viewport); }
+        try { Rendering.Render(Root, Viewport, _presenters); }
         catch { diagnostics?.End(UiPhase.Render, started, false); throw; }
         diagnostics?.End(UiPhase.Render, started, true);
     }
-    /// <summary>Routes input from the host in logical coordinates and reports consumption/capture.</summary>
+    /// <summary>Routes host input in logical coordinates, applying pending layout without drawing a frame.</summary>
     public UiInputResult HandleInput(UiInput input) => RouteInput(input, null, out _, out _);
 
     private UiInputResult RouteInput(UiInput input, SemanticInput? semantic, out UiSemanticTargetStatus status, out string? routedId)
     {
         status = UiSemanticTargetStatus.Routed; routedId = null;
-        VerifyRendering(); ClearDetachedInput();
+        VerifyRendering();
+        if (_layingOut) throw new InvalidOperationException("Cannot route input during layout.");
+        ClearDetachedInput();
         AdvanceParticipants();
         var pointer = IsPointer(input);
+        if (semantic == null && input.Kind != InputKind.FocusLost) PrepareInputLayout();
         if (semantic is { } expected)
         {
             var beforePreview = CurrentInputTarget(input, pointer);
@@ -389,7 +415,7 @@ public sealed class UiSession : IDisposable, IInputContext
             { status = outcome; routedId = SemanticIdOf(beforePreview); return InputResult(false); }
         }
         foreach (var observer in _inputObservers)
-            if (observer is Element element && Eligible(element) && observer.PreviewInput(input, this))
+            if (observer is Element element && Eligible(element, forInput: true) && observer.PreviewInput(input, this))
             {
                 status = UiSemanticTargetStatus.Intercepted;
                 if (semantic != null) routedId = SemanticIdOf(element);
@@ -397,6 +423,8 @@ public sealed class UiSession : IDisposable, IInputContext
             }
         if (input.Kind == InputKind.FocusLost) { CancelInput(); return new(false, false, false); }
         if (Viewport.IsEmpty) return new(false, false, _focus != null);
+        // A non-consuming preview may have moved or replaced the target.
+        if (semantic == null && _inputObservers.Length != 0) PrepareInputLayout();
         var target = CurrentInputTarget(input, pointer);
         if (semantic is { } guarded)
         {
@@ -425,7 +453,7 @@ public sealed class UiSession : IDisposable, IInputContext
         {
             if (_focus != null && _focus.HandleInput(input, this))
                 return new(true, _capture != null, true);
-            var items = Descendants(Root).Where(e => e.Focusable && Eligible(e)).ToArray();
+            var items = Descendants(Root).Where(e => e.Focusable && Eligible(e, forInput: true)).ToArray();
             if (items.Length == 0) return new(false, _capture != null, false);
             var index = Array.IndexOf(items, _focus); if (index < 0 && input.Shift) index = 0;
             Focus(items[(index + (input.Shift ? items.Length - 1 : 1) + items.Length) % items.Length]);
@@ -434,7 +462,7 @@ public sealed class UiSession : IDisposable, IInputContext
         var handled = false;
         try
         {
-            for (var node = target; node != null && Eligible(node); node = node.Parent)
+            for (var node = target; node != null && Eligible(node, forInput: true); node = node.Parent)
                 if (node.HandleInput(input, this)) { handled = true; break; }
         }
         catch (UiClipboardException error) { handled = true; ClipboardFailed?.Invoke(error); }
@@ -446,24 +474,28 @@ public sealed class UiSession : IDisposable, IInputContext
     private UiInputResult InputResult(bool handled) => new(handled, _capture != null, _focus != null);
     private static IEnumerable<Element> Descendants(Element root)
     { yield return root; foreach (var child in root.Children) foreach (var item in Descendants(child)) yield return item; }
-    private bool Eligible(Element element)
+    private bool Eligible(Element element, bool forInput = false)
     {
-        if (element.IsDisposed || !element.IsAttached || !element.IsEffectivelyEnabled) return false;
-        for (Element? node = element; node != null; node = node.Parent) { if (!node.IsVisible) return false; if (node == Root) return true; }
+        if (element.IsDisposed || !element.IsAttached) return false;
+        for (Element? node = element; node != null; node = node.Parent)
+        {
+            if (!node.IsVisible || !node.IsEnabled || forInput && node.IsInputBlocked) return false;
+            if (node == Root) return true;
+        }
         return false;
     }
     private Element? Hit(Element element, float x, float y)
     {
-        if (!Eligible(element) || !element.Bounds.Contains(x, y)) return null;
+        if (!Eligible(element, forInput: true) || !element.Bounds.Contains(x, y)) return null;
         if (element.ChildClipBounds.Contains(x, y))
             for (var i = element.Children.Count - 1; i >= 0; i--) { var hit = Hit(element.Children[i], x, y); if (hit != null) return hit; }
         return element;
     }
     private void ClearDetachedInput()
     {
-        if (_focus != null && !Eligible(_focus)) SetFocus(null);
-        if (_capture != null && !Eligible(_capture)) { if (!_capture.IsDisposed) _capture.OnInputCancelled(); _capture = null; }
-        if (_hover != null && !Eligible(_hover)) { if (!_hover.IsDisposed) _hover.IsHovered = false; _hover = null; }
+        if (_focus != null && !Eligible(_focus, forInput: true)) SetFocus(null);
+        if (_capture != null && !Eligible(_capture, forInput: true)) { if (!_capture.IsDisposed) _capture.OnInputCancelled(); _capture = null; }
+        if (_hover != null && !Eligible(_hover, forInput: true)) { if (!_hover.IsDisposed) _hover.IsHovered = false; _hover = null; }
     }
     private void ElementDetaching(Element element)
     {
@@ -478,7 +510,7 @@ public sealed class UiSession : IDisposable, IInputContext
     /// <inheritdoc />
     public void Focus(Element element)
     {
-        VerifyRendering(); if (!Eligible(element) || !element.Focusable) throw new ArgumentException("Element cannot receive focus.");
+        VerifyRendering(); if (!Eligible(element, forInput: true) || !element.Focusable) throw new ArgumentException("Element cannot receive focus.");
         SetFocus(element);
         var bounds = element.Bounds;
         for (var ancestor = element.Parent; ancestor != null; ancestor = ancestor.Parent)
@@ -490,7 +522,7 @@ public sealed class UiSession : IDisposable, IInputContext
     }
     /// <inheritdoc />
     public void Capture(Element element)
-    { VerifyRendering(); if (!Eligible(element)) throw new ArgumentException("Element is not in this session."); if (_capture != element) _capture?.OnInputCancelled(); _capture = element; }
+    { VerifyRendering(); if (!Eligible(element, forInput: true)) throw new ArgumentException("Element cannot capture input."); if (_capture != element) _capture?.OnInputCancelled(); _capture = element; }
     /// <inheritdoc />
     public void ReleaseCapture(Element element) { VerifyRendering(); if (_capture == element) _capture = null; }
     /// <inheritdoc />
@@ -512,7 +544,7 @@ public sealed class UiSession : IDisposable, IInputContext
     {
         if (_disposed) return;
         VerifyAccess(); Rendering.VerifyAvailable();
-        if (_updating) throw new InvalidOperationException("UI session cannot be disposed during Update.");
+        if (_updating || _layingOut) throw new InvalidOperationException("UI session cannot be disposed during Update or layout.");
         if (_disposing || _reportingFailure) throw new InvalidOperationException("UI session disposal cannot be reentrant or occur during failure notification.");
         if (!Root.IsDisposed) Root.VerifyTreeAccess();
         _disposing = true;
@@ -522,7 +554,7 @@ public sealed class UiSession : IDisposable, IInputContext
         // Focus-loss callbacks may update bound presentation. Cancel input while their dispatcher is still available,
         // then close it before detaching/disposal; any queued UI work is cancelled rather than run during teardown.
         Release(CancelInput); _posted.Close(); Root.Invalidated -= Invalidated;
-        Release(Root.Dispose); Release(Rendering.Dispose);
+        Release(Root.Dispose); Release(_presenters.Dispose); Release(Rendering.Dispose);
         _disposed = true; _disposing = false;
         _participants = []; _inputObservers = [];
         SetDiagnosticState(_diagnostics);

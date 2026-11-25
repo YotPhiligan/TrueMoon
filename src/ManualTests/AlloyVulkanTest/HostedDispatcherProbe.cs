@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using System.Runtime.InteropServices;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
@@ -91,6 +96,132 @@ internal static partial class HostedDispatcherProbe
         Console.WriteLine("Hosted dispatcher passed: GL/GL, Vulkan/Vulkan, GL/Vulkan; one process owner across scopes; startup/shutdown cancellation; registry/hooks zero; validation " + (validation ? "zero." : "not requested."));
     }
 
+    internal static async Task RunBorrowedCloseAsync(bool validation)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var token = timeout.Token;
+        using var factory = new HostedUiSessionFactory(new SkiaVulkanRenderBackend());
+        await using var scope = new HostedUiDispatcher();
+        var messages = new List<string>();
+        var closed = 0;
+        var owner = 0;
+        UiSession? session = null;
+        VulkanTextureLease? lease = null;
+        var window = new HostedUiWindow(new SilkUiWindowOptions { Width = 320, Height = 200,
+            FrameMode = UiFrameMode.OnDemand, ValidationMessage = validation ? messages.Add : null },
+            factory, () => new Text("Borrowed frame"), () => closed++, scope);
+        window.FramePresented += ui =>
+        {
+            if (lease != null) return;
+            session = ui;
+            owner = Environment.CurrentManagedThreadId;
+            lease = ui.AcquireVulkanTexture();
+            window.Close();
+        };
+        await window.StartAsync(token);
+        var failure = await Observe(() => window.Completion.WaitAsync(token));
+        try
+        {
+            Require(failure is InvalidOperationException && window.CleanupPending && !window.IsClosed,
+                $"Outstanding frame did not block window cleanup: {failure}");
+            Require(session is { IsDisposed: false } && factory.ActiveSessionCount == 1 && closed == 0 &&
+                Win32WindowDpi.ActiveHooks == 1, "Blocked close released a live dependency or notified closure.");
+            var blocked = await Observe(() => window.RetryCleanupAsync().WaitAsync(token));
+            Require(blocked is InvalidOperationException && window.CleanupPending && closed == 0,
+                "Retry without returning the frame bypassed the guard.");
+        }
+        finally
+        {
+            if (window.CleanupPending)
+                await window.RetryCleanupAsync(() =>
+                {
+                    Require(Environment.CurrentManagedThreadId == owner, "Retry moved to another owner thread.");
+                    lease!.Return((Silk.NET.Vulkan.ImageLayout)lease.Info.Layout);
+                }).WaitAsync(token);
+        }
+        Require(!window.CleanupPending && session is { IsDisposed: true } && closed == 1 &&
+            factory.ActiveSessionCount == 0, "Retry did not complete teardown exactly once.");
+        Require(ReferenceEquals(failure, await Observe(() => window.Completion)), "Recovery replaced the close error.");
+        VerifyHooks();
+        Require(messages.Count == 0, string.Join(Environment.NewLine, messages));
+        Console.WriteLine($"Borrowed Vulkan frame: close blocked; owner returned texture; sessions/hooks zero; closed once; validation {(validation ? "zero" : "not requested")}.");
+    }
+
+    internal static async Task RunPartialStartupAsync(bool validation)
+    {
+        foreach (var openGL in new[] { true, false })
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var token = timeout.Token;
+            var messages = new List<string>();
+            using var sessions = new HostedUiSessionFactory(openGL ? new SkiaOpenGLRenderBackend() : new SkiaVulkanRenderBackend());
+            await using var scope = new HostedUiDispatcher();
+            var firstFrame = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var editedFrame = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var owner = 0;
+            var requestedAfter = -1;
+            await using var sibling = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL,
+                Width = 320, Height = 200, FrameMode = UiFrameMode.OnDemand, ValidationMessage = validation ? messages.Add : null },
+                sessions, () => new TextBox(), null, scope);
+            sibling.FramePresented += ui =>
+            {
+                if (firstFrame.TrySetResult(ui)) owner = Environment.CurrentManagedThreadId;
+                if (requestedAfter >= 0 && sibling.PresentedFrames > requestedAfter && ((TextBox)ui.Root).Value == "X")
+                    editedFrame.TrySetResult();
+            };
+            await sibling.StartAsync(token);
+            var live = await firstFrame.Task.WaitAsync(token);
+
+            var fault = new InvalidOperationException("Partial startup: content factory failed during attach.");
+            nint failedHandle = 0;
+            Text? title = null;
+            FaultingContent? root = null;
+            var closed = 0;
+            var failed = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL, Width = 320, Height = 200,
+                Appearance = new WindowAppearance { Decorated = false }, Chrome = new WindowChromeOptions(),
+                ValidationMessage = validation ? messages.Add : null, TitleBarFactory = commands =>
+                {
+                    failedHandle = ((SilkWindowHost)commands).NativeWindow.Native!.Win32!.Value.Hwnd;
+                    Require(Environment.CurrentManagedThreadId == owner && IsWindow(failedHandle) != 0 &&
+                        Win32WindowDpi.ActiveHooks == 2, "Startup did not reach a second live window on the shared owner.");
+                    return title = new Text("Failing window");
+                } }, sessions, () => root = new FaultingContent(fault), () => closed++, scope);
+            Require(ReferenceEquals(await Observe(() => failed.StartAsync(token)), fault), "StartAsync lost the attach failure.");
+            Require(ReferenceEquals(await Observe(() => failed.Completion.WaitAsync(token)), fault), "Completion lost the attach failure.");
+            Require(!failed.CleanupPending && closed == 1 && failed.PresentedFrames == 0 &&
+                root is { IsDisposed: true, Draft.IsDisposed: true } && title is { IsDisposed: true } &&
+                IsWindow(failedHandle) == 0 && Win32WindowChrome.ActiveHooks == 0 && Win32WindowDpi.ActiveHooks == 1 &&
+                sessions.ActiveSessionCount == 1, "Partial startup did not release just the failed window.");
+
+            sibling.PostWindow(host =>
+            {
+                live.Focus(live.Root);
+                SendMessageW(host.NativeWindow.Native!.Win32!.Value.Hwnd, 0x0102 /* WM_CHAR */, 'X', 1);
+                Require(((TextBox)live.Root).Value == "X", "Sibling did not receive the directed character.");
+                requestedAfter = sibling.PresentedFrames;
+                sibling.RequestFrame();
+            });
+            var completed = await Task.WhenAny(editedFrame.Task, sibling.Completion).WaitAsync(token);
+            await completed;
+            Require(completed == editedFrame.Task, "Sibling closed before presenting the edit.");
+            await sibling.StopAsync(token);
+            Require(live.IsDisposed && sessions.ActiveSessionCount == 0, "Sibling session survived its own shutdown.");
+            VerifyHooks();
+            Require(messages.Count == 0, string.Join(Environment.NewLine, messages));
+            Console.WriteLine($"{(openGL ? "OpenGL" : "Vulkan")}: partial startup rolled back; sibling processed WM_CHAR and presented the edit; sessions/hooks zero.");
+        }
+    }
+
+    private sealed class FaultingContent : View
+    {
+        internal Text? Draft { get; private set; }
+        internal FaultingContent(Exception fault) => Content(ui =>
+        {
+            Draft = ui.Text("Draft").Element;
+            throw fault;
+        });
+    }
+
     private static async Task Cancellation(HostedUiSessionFactory factory, CancellationToken timeout)
     {
         await using var scope = new HostedUiDispatcher();
@@ -139,6 +270,7 @@ internal static partial class HostedDispatcherProbe
     private static void VerifyHooks() => Require(Win32WindowDpi.ActiveHooks == 0 && Win32WindowChrome.ActiveHooks == 0
         && Win32TransparentFramebuffer.ActiveHooks == 0, "Dispatcher retained native hooks.");
     [LibraryImport("user32.dll")] private static partial nint SendMessageW(nint hwnd, uint message, nuint wparam, nint lparam);
+    [LibraryImport("user32.dll")] private static partial int IsWindow(nint hwnd);
     [LibraryImport("opengl32.dll", EntryPoint = "wglGetCurrentContext")] private static partial nint CurrentGLContext();
 
     private sealed class Live : IAsyncDisposable

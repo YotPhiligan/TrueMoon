@@ -1,4 +1,11 @@
-﻿using TrueMoon.Aether.Editor.Tests.Documents;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
+using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.UI;
@@ -22,7 +29,7 @@ public sealed class EditorStatusBarViewTests
         ui.HandleInput(new(InputKind.PointerMove, summary.Bounds.X + 5, summary.Bounds.Y + 5)); test.Settle(ui);
         summary.Value = new string('W', 40); summary.FontFamily = "typography-family"; summary.FontWeight = 600; summary.FontItalic = true;
         var probe = new TypographyRecordingContext();
-        summary.Measure(new(120, 40), probe); summary.Arrange(new(0, 0, 120, 40)); summary.Draw(probe);
+        summary.Measure(new(120, 40), probe); summary.Arrange(new(0, 0, 120, 40)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(summary, probe);
         var drawn = Assert.Single(probe.Texts); var area = summary.Bounds.Deflate(summary.Padding);
         Assert.EndsWith("…", drawn.Text);
         Assert.Equal((12f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
@@ -76,7 +83,7 @@ public sealed class EditorStatusBarViewTests
         Assert.All(actions, button => Assert.Equal(0, button.CornerRadius));
         Assert.Equal(5, test.BodyButton.CornerRadius);
         Assert.False(view.CancelButton.IsVisible); Assert.Equal(0, summary.BorderWidth); Assert.Equal(0, preview.BorderWidth);
-        var drawing = new RecordingDrawing(); summary.Draw(drawing);
+        var drawing = new RecordingDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(summary, drawing);
         var text = Assert.Single(drawing.Texts);
         Assert.Equal(test.Model.Summary, text.Value); Assert.Equal(12, text.Font);
         var area = summary.Bounds.Deflate(summary.Padding);
@@ -91,7 +98,7 @@ public sealed class EditorStatusBarViewTests
         });
         Assert.Equal(area.X + 20, text.X);
         ui.HandleInput(new(InputKind.PointerMove, summary.Bounds.X + 5, summary.Bounds.Y + 5)); test.Settle(ui);
-        var hovered = new RecordingDrawing(); summary.Draw(hovered);
+        var hovered = new RecordingDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(summary, hovered);
         var highlight = Assert.Single(hovered.Fills, fill => fill.Color == summary.Theme.ControlHover);
         Assert.Equal(summary.Bounds.X, highlight.Bounds.X);
         Assert.True(highlight.Bounds.Width < summary.Bounds.Width);
@@ -249,7 +256,7 @@ public sealed class EditorStatusBarViewTests
         DocumentUiFixture.Click(ui, test.View.PreviewButton); ui.Update();
         var previous = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup);
         ui.Resize(new(220, 800)); ui.Update(); Assert.True(test.View.NeedsFrame);
-        var other = Button.Simple("Other popup");
+        var other = new Button("Other popup");
         test.Overlays.Open(test.BodyButton, other, test.BodyButton.Bounds, ui, test.BodyButton); ui.Focus(other);
         ui.Update(); ui.Update();
         Assert.True(previous.IsDisposed); Assert.Same(other, test.Overlays.Popup); Assert.True(other.IsFocused);
@@ -356,7 +363,7 @@ public sealed class EditorStatusBarViewTests
         public EditorStatusBarViewModel Model { get; }
         public EditorStatusBarView View { get; }
         public OverlayHost Overlays { get; }
-        public Button BodyButton { get; } = Button.Simple("Body");
+        public Button BodyButton { get; } = new Button("Body");
         public StatusFixture(bool openDocument = false)
         {
             Source = new(openDocument: openDocument); Model = new(Source.Model, Source.Documents, Source.Transform);
@@ -377,7 +384,7 @@ public sealed class EditorStatusBarViewTests
     private sealed class Surface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new TextLayout();
-        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { }
+        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { }
     }
     private sealed class TextLayout : ITextLayoutService
     { public Size Measure(string text, float fontSize, string fontFamily) => new(text.Length * fontSize / 2, fontSize); }

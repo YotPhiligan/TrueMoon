@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI;
@@ -59,14 +63,16 @@ public sealed class EditorIsland : ContentControl, IUiFrameParticipant
         var slide = (1 - Reveal) * 8 * (_fromRight ? 1 : -1);
         Child?.Arrange(new(area.X + slide, area.Y, area.Width, area.Height));
     }
+    private static readonly ElementPresentation IslandPresentation = ElementPresentation.Create<EditorIsland>(PaintShadow);
     /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context)
+    public override ElementPresentation Presentation => IslandPresentation;
+    private static void PaintShadow(EditorIsland island, IDrawingContext context)
     {
-        if (Child is not { IsVisible: true } child) return;
+        if (island.Child is not { IsVisible: true } child) return;
         var area = child.Bounds;
         for (var spread = 6; spread >= 1; spread--)
             context.Fill(new(area.X - spread, area.Y - spread + 2, area.Width + spread * 2, area.Height + spread * 2),
-                new(0, 0, 0, (byte)(Theme.Surface.R < 128 ? 8 : 5)), child.CornerRadius + spread);
+                new(0, 0, 0, (byte)(island.Theme.Surface.R < 128 ? 8 : 5)), child.CornerRadius + spread);
     }
     /// <inheritdoc />
     public override void Dispose()

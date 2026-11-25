@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using System.ComponentModel;
 using TrueMoon.Argentis;
 
@@ -49,12 +55,12 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
             Title = new(arguments.Preview ? "Edit Preview" : "Сведения о редакторе");
             Error = new(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true });
             Error.Bind(RichTextEditor.TextProperty, model, x => x.ErrorDetails).Bind(UiProperties.Visible, model, x => x.HasError);
-            StartPreview = Button.Simple("Запустить / обновить Preview").Bind(UiProperties.Enabled, model, x => x.CanPreview).OnClick(model.ShowPreview);
-            StopPreview = Button.Simple("Остановить Preview").Bind(UiProperties.Enabled, model, x => x.CanStopPreview)
+            StartPreview = new Button("Запустить / обновить Preview").Bind(UiProperties.Enabled, model, x => x.CanPreview).OnClick(model.ShowPreview);
+            StopPreview = new Button("Остановить Preview").Bind(UiProperties.Enabled, model, x => x.CanStopPreview)
                 .OnClick(() => { _ = Observe(model.StopPreviewAsync()); });
-            PreviewDetails = Text.Plain().BindText(model, x => x.PreviewDetails);
+            PreviewDetails = new Text().BindText(model, x => x.PreviewDetails);
             ModelImportDetails = Row(x => x.ModelImportDetails).Bind(UiProperties.Visible, model, x => x.HasModelImports);
-            ReadModelCatalog = Button.Simple("Модели проекта").Bind(UiProperties.Visible, model, x => x.HasModelCatalog)
+            ReadModelCatalog = new Button("Модели проекта").Bind(UiProperties.Visible, model, x => x.HasModelCatalog)
                 .Bind(UiProperties.Enabled, model, x => x.CanReadModelCatalog).OnClick(model.ReadModelCatalog);
             ModelCatalogMessage = Row(x => x.ModelCatalogMessage);
             ModelCatalogList = new ScrollViewer { MaxHeight = 150 }.Content(ModelCatalogRows);
@@ -66,12 +72,13 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
                 Row(x => x.EntityText), Row(x => x.PreviewSummary),
                 PreviewDetails, PreviewActions, Error);
             MaxHeight = 420;
-            Content(model, _ => new ScrollViewer().Content(Body)); this.WithViewStyle(style);
+            DataContext = model;
+            SetContent(new ScrollViewer().Content(Body)); this.WithViewStyle(style);
             SynchronizeReimport();
             SynchronizeCatalog();
             model.PropertyChanged += ModelChanged;
             Text Row(System.Linq.Expressions.Expression<Func<IEditorStatusBarViewModel, string>> value) =>
-                Text.Plain().WithRole(EditorStatusPopupViewStyle.Row).BindText(model, value);
+                new Text().WithRole(EditorStatusPopupViewStyle.Row).BindText(model, value);
         }
         catch (Exception original)
         {
@@ -105,14 +112,14 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
             var key = (row.OpeningId, row.SourceId);
             if (!_catalogRows.TryGetValue(key, out var entry))
             {
-                var check = CheckBox.Create().WithRole(EditorStatusPopupViewStyle.CatalogChoice);
+                var check = new CheckBox().WithRole(EditorStatusPopupViewStyle.CatalogChoice);
                 check.OnClick(() =>
                 {
                     if (!_catalogRows.TryGetValue(key, out var target)) return;
                     check.IsChecked = target.Row.Selected;
                     _model.SelectModel(target.Row);
                 });
-                var place = Button.Simple("Добавить в сцену").WithRole(EditorStatusPopupViewStyle.CatalogPlace);
+                var place = new Button("Добавить в сцену").WithRole(EditorStatusPopupViewStyle.CatalogPlace);
                 place.OnClick(() =>
                 {
                     if (_catalogRows.TryGetValue(key, out var target)) _model.PlaceModel(target.Row);
@@ -153,7 +160,7 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
             var key = Key(target);
             if (!_reimportButtons.TryGetValue(key, out var entry))
             {
-                var button = Button.Simple($"Переимпортировать «{target.Name}»").WithRole(EditorStatusPopupViewStyle.Reimport);
+                var button = new Button($"Переимпортировать «{target.Name}»").WithRole(EditorStatusPopupViewStyle.Reimport);
                 button.OnClick(() => _model.ReimportModel(_reimportButtons[key].Target));
                 ReimportActions.Items.Add(button);
                 entry = (button, target);

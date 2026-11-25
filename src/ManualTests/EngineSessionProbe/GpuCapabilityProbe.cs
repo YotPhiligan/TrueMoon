@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using System.Text.Json;
 using TrueMoon;
@@ -17,9 +19,9 @@ namespace EngineSessionProbe;
 
 public sealed class GpuCapabilityView : View
 {
-    public Text Status { get; } = Text.Plain("Collecting read-only GPU capabilities…");
-    public GpuCapabilityView() => Content(() => VStack.Create().Padding(16).WithChildren(
-        Text.Plain("TrueMoon ENG4a — capability probe"), Status, Text.Plain("CPU transport remains selected. No GPU imports or shared allocations.")));
+    public Text Status { get; } = new Text("Collecting read-only GPU capabilities…");
+    public GpuCapabilityView() => SetContent(new VStack().Padding(16).WithChildren(
+        new Text("TrueMoon ENG4a — capability probe"), Status, new Text("CPU transport remains selected. No GPU imports or shared allocations.")));
 }
 
 public static class GpuCapabilityProbe

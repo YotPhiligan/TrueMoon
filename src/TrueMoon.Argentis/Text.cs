@@ -1,13 +1,10 @@
+using TrueMoon.Argentis.Painting;
+
 namespace TrueMoon.Argentis;
 
 /// <summary>A single line of display text.</summary>
 public class Text : Element, ITextElement
 {
-    /// <summary>Creates a new plain text label without markup processing.</summary>
-    /// <param name="value">The literal text content.</param>
-    /// <returns>A new independent Text for Fluent configuration.</returns>
-    public static Text Plain(string value = "") => new(value);
-
     /// <summary>The text content property.</summary>
     public static readonly UiProperty<string> ValueProperty = new("Text", "", Invalidation.Layout, v => v != null);
     /// <summary>Creates a label.</summary>
@@ -16,10 +13,8 @@ public class Text : Element, ITextElement
     public string Value { get => Get(ValueProperty); set => Set(ValueProperty, value); }
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text) => text.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic);
+    private static readonly ElementPresentation Label = ElementPresentation.Create<Text>(
+        new Factory<IElementPresenter<Text>>(static () => new TextPresenter()));
     /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context)
-    {
-        var area = Bounds.Deflate(Padding);
-        context.Text(Value, area.X, area.Y, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
-    }
+    public override ElementPresentation Presentation => Label;
 }

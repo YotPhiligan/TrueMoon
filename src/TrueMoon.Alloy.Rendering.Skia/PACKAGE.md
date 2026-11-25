@@ -19,13 +19,17 @@ System fonts are used in place and are not bundled in the package. Supply a
 catalog to add a file fallback or choose another ordered family chain:
 
 ```csharp
+using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Styling;
+
 var fallback = SkiaFontCatalog.Load("AppSans", new Dictionary<string, string>
 {
     ["AppSans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf")
 });
 var fonts = SkiaFontCatalog.FromSystemFonts(["Segoe UI Variable Text", "Segoe UI"], fallback);
 var backend = new SkiaRasterRenderBackend(fonts);
-var heading = Text.Plain("Заголовок").FontWeight(600);
+var heading = new Text("Заголовок") { FontWeight = 600 };
 var theme = Theme.Dark with { FontFamily = "Segoe UI Variable Text", FontWeight = 400 };
 ```
 
@@ -65,7 +69,7 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 
-using var ui = UiSession.Create(Text.Plain("Hello from a package"),
+using var ui = UiSession.Create(new Text("Hello from a package"),
     new SkiaRasterRenderBackend(), new RasterUiTarget(), new UiViewport(480, 260, 1));
 ui.Update();
 using var image = ui.SnapshotRasterImage();

@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -24,7 +30,7 @@ public sealed class ValidationPresentationTests
         t.Ui.HandleInput(new(InputKind.PointerUp, icon.X + 7, icon.Y + 7));
         Assert.Equal(14, t.SelectionLength); Assert.True(t.Field.IsFocused);
         t.Ui.Update();
-        var drawing = new Drawing(); t.Field.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(t.Field, drawing);
         Assert.True(drawing.TextClip.X + drawing.TextClip.Width <= icon.X - 4);
         Assert.True(drawing.TextClip.Width > 0);
         using var image = t.Ui.SnapshotRasterImage(); using var bitmap = SKBitmap.FromImage(image);
@@ -67,7 +73,7 @@ public sealed class ValidationPresentationTests
     {
         using var t = new Fixture(); var theme = light ? Theme.Light : Theme.Dark;
         t.Ui.SetTheme(theme); t.Field.HasError = true; t.Ui.Focus(t.Field); t.Ui.Update();
-        var drawing = new Drawing(); t.Field.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(t.Field, drawing);
         Assert.Equal(5, t.Field.CornerRadius);
         Assert.Equal(new Rect(160, 0, 40, 40), t.Field.ValidationIconBounds);
         Assert.Contains((new Rect(169.5f, 6, 28, 28), theme.Error), drawing.Fills);
@@ -103,7 +109,7 @@ public sealed class ValidationPresentationTests
         using var ui = UiSession.Create(new OverlayHost(box), new SkiaRasterRenderBackend(), new RasterUiTarget(), new(300, 100)); ui.Update();
         Assert.True(box.Editor.HasError); Assert.Equal("Parent validator", box.Editor.ErrorMessage); Assert.False(box.Prefix.HasError);
         var badge = box.Editor.ValidationIconBounds; Assert.Equal(new Rect(150, 0, 30, 30), badge);
-        var drawing = new Drawing(); box.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(box, drawing);
         Assert.Single(drawing.Fills, fill => fill.Color == box.Theme.Error);
         box.Editor.Style = new Style().With(UiProperties.HasError, false).With(UiProperties.ErrorMessage, "Editor style"); ui.Update();
         Assert.Equal(default, box.Editor.ValidationIconBounds); Assert.Equal("Editor style", box.Editor.ErrorMessage);
@@ -123,7 +129,7 @@ public sealed class ValidationPresentationTests
         ui.Update(); ui.Focus(editor); editor.Select(2, 7); var document = editor.Document;
         foreach (var width in new[] { 220, 160, 500, 160, 220 })
         {
-            ui.Resize(new(width, 200)); ui.Update(); var drawing = new Drawing(); editor.Draw(drawing);
+            ui.Resize(new(width, 200)); ui.Update(); var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing);
             Assert.Equal(Math.Min(70, Math.Max(18, drawing.RichSize.Height)) + 8, editor.Bounds.Height);
             Assert.Equal(new Rect(width - editor.Bounds.Height, 0, editor.Bounds.Height, editor.Bounds.Height), editor.ValidationIconBounds);
             Assert.Equal(Math.Max(0, width - editor.Bounds.Height - 8), drawing.TextClip.Width);

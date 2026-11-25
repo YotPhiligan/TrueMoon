@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI.Editing;
@@ -30,7 +31,7 @@ public static class EditingConfigurationExtensions
                 workspace ? r.Resolve<EditorWorkspace>() : null));
             if (!services.Exist<IViewStyle<EditorInspectorView>>()) services.Singleton<IViewStyle<EditorInspectorView>>(_ => new EditorInspectorViewStyle());
             services.Singleton<IFactory<EditorInspectorView>>(r => new Factory<EditorInspectorView>(() =>
-                new(r.Resolve<EditorInspectorViewModel>()!, r.Resolve<IViewStyle<EditorInspectorView>>()!)));
+                EditorInspectorView.Create(r.Resolve<EditorInspectorViewModel>()!, r.Resolve<IViewStyle<EditorInspectorView>>()!)));
             if (!services.Exist<IViewStyle<EditorTransformView>>()) services.Singleton<IViewStyle<EditorTransformView>>(_ => new EditorTransformViewStyle());
             services.Singleton<IFactory<EditorTransformView>>(r => new Factory<EditorTransformView>(() =>
                 new(r.Resolve<EditorInspectorViewModel>()!, r.Resolve<IViewStyle<EditorTransformView>>()!, !previewInStatusBar)));

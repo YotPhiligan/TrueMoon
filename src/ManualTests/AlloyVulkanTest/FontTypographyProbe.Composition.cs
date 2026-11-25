@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -283,12 +286,14 @@ internal static partial class FontTypographyProbe
 
     private sealed class TextCompositionBackdrop : Panel
     {
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<TextCompositionBackdrop>(static (panel, context) =>
         {
-            var half = Bounds.Width / 2;
+            var bounds = panel.Bounds;
+            var half = bounds.Width / 2;
             var (left, right) = CompositionColors;
-            context.Fill(new(Bounds.X, Bounds.Y, half, Bounds.Height), new(left.Red, left.Green, left.Blue));
-            context.Fill(new(Bounds.X + half, Bounds.Y, half, Bounds.Height), new(right.Red, right.Green, right.Blue));
-        }
+            context.Fill(new(bounds.X, bounds.Y, half, bounds.Height), new(left.Red, left.Green, left.Blue));
+            context.Fill(new(bounds.X + half, bounds.Y, half, bounds.Height), new(right.Red, right.Green, right.Blue));
+        });
+        public override ElementPresentation Presentation => Painter;
     }
 }

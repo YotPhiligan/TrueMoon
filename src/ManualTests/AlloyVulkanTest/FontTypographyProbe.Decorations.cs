@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
@@ -148,10 +154,13 @@ internal static partial class FontTypographyProbe
 
     private sealed class BackdropSplit : Element
     {
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<BackdropSplit>(static (split, context) =>
         {
-            context.Fill(new(Bounds.X, Bounds.Y, Bounds.Width / 2, Bounds.Height), new(0, 0, 0));
-            context.Fill(new(Bounds.X + Bounds.Width / 2, Bounds.Y, Bounds.Width / 2, Bounds.Height), new(255, 255, 255));
-        }
+            var bounds = split.Bounds;
+            var half = bounds.Width / 2;
+            context.Fill(new(bounds.X, bounds.Y, half, bounds.Height), new(0, 0, 0));
+            context.Fill(new(bounds.X + half, bounds.Y, half, bounds.Height), new(255, 255, 255));
+        });
+        public override ElementPresentation Presentation => Painter;
     }
 }

@@ -1027,11 +1027,12 @@ undo/redo. [Приёмка](HISTORY.md#uia1f4c-typed-bindings-2026-11-23).
 extension properties. Подписка на фокус сохраняет ссылку на конкретный
 редактор для снятия при очистке. [Приёмка](HISTORY.md#uia1f4e-generated-parts-2026-11-23).
 
-В [UIA1f.6](../alloy/PLAN.md#uia1f6-build-content) DI-фабрика вызывает
+В пилоте [UIA1f.6](../alloy/PLAN.md#uia1f6-build-content) DI-фабрика вызывала
 `ViewCreation.Prepare` после конструктора `EditorHierarchyView`. Дерево
 переехало в `BuildContent()`, синхронизация и подписки выполняются после
-регистрации частей, стиль применяется последним. Генератор находит части
-по override `BuildContent()`. Публичный конструктор со стилем сохранён.
+регистрации частей, стиль применяется последним. На этом этапе генератор
+находил части по override `BuildContent()`. Публичный конструктор со стилем
+сохранён.
 [Приёмка](HISTORY.md#uia1f6-build-content-2026-11-23).
 
 В [UIA1f.7](../alloy/PLAN.md#uia1f7-context-bindings) свойства обозревателя
@@ -1058,7 +1059,7 @@ extension properties. Подписка на фокус сохраняет ссы
 доступом к именованным частям.
 [Сравнение](../alloy/HISTORY.md#uia1f4f-style-generation-study-2026-11-23).
 
-В [UIA1f.10](../alloy/PLAN.md#uia1f10-diagnostics-view) консоль диагностики
+В пилоте [UIA1f.10](../alloy/PLAN.md#uia1f10-diagnostics-view) консоль диагностики
 переведена на `BuildContent()` и текущий `DataContext`. Кнопка очистки,
 ввод фильтров и выбор события работают с активной моделью.
 [Приёмка](HISTORY.md#uia1f10-diagnostics-view-2026-11-23).
@@ -1066,7 +1067,37 @@ extension properties. Подписка на фокус сохраняет ссы
 Оба пилота завершены в `1.2611.23.11-alpha`.
 [Итоговая регрессия](HISTORY.md#uia1f-delivery-2026-11-23).
 
+В [UIA1f.11](../alloy/PLAN.md#uia1f11-contextual-content) `EditorHierarchyView`
+объявляет дерево через `Content(...)`. `Search` и `NameEditor` получают
+`TextBox` из типизированного контекста и привязываются без `this`. Сгенерированные
+части используют прежние области имён. В `1.2611.24.10-alpha` дерево готовится
+при первом attach, и `EditorView` получает `Caption` после подготовки
+обозревателя. Консоль диагностики тоже объявляет дерево в `Content(...)`.
+[Сборка](../alloy/HISTORY.md#uia1f11-view-consumers-2026-11-24).
+
+На `1.2611.24.11-alpha` подтверждены ввод в текущую модель, фокус, стили
+и диагностика после detach/reattach. ENG9b в Debug и Release подтвердил
+создание объекта, правку Transform, Apply/Undo/Redo и повторное открытие
+сохранённой сцены. [Регрессия](../alloy/HISTORY.md#uia1f11-regression-2026-11-24).
+
 ### ED4d. Динамический инспектор компонентов — начат 2026-10-24
+
+<a id="ed4d-fluent-inspector"></a>
+24.11.2026. `EditorInspectorView` применяет подход UIA1f к инспектору
+компонентов. Фабрика `Content(...)` задаёт панель действий, ошибки и
+контейнеры динамических секций. `.Named()` даёт типизированный доступ к каркасу и
+сохраняет прежние публичные свойства. Фабрики полей строят обычные редакторы
+и группы Transform. При смене `DataContext` каркас сохраняется, а поля
+пересоздаются по моделям источника после синхронизации в очереди UI.
+[Проверки пилота на `BuildContent()`](HISTORY.md#ed4d-inspector-fluent-2026-11-24).
+Удержание динамических редакторов по ключу остаётся предметом
+[исследования UIA1f](../alloy/PLAN.md#ui-reuse-study).
+
+Смена источника временно блокирует ввод в динамические части через
+`IsInputBlocked`. Состояние доступности этих частей определяется стилем.
+Внутренний код использует сгенерированные части. Уведомления о составе
+компонентов, состоянии редакторов и ресурсах направляются в отдельные
+ветви синхронизации. [Проверки](HISTORY.md#ed4d-inspector-style-context-2026-11-24).
 
 Реализован2026-10-24: retained `EditorInspectorView`/Data/Style, schema-driven
 scalar/null/multiline editors, provenance/reset, Add/Remove/Restore и общий

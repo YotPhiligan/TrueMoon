@@ -1,3 +1,10 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using System.ComponentModel;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -450,7 +457,7 @@ public sealed class WindowComponentBindingTests
         public ITextLayoutService TextLayout { get; } = new Layout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class Layout : ITextLayoutService

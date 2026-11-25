@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -85,7 +89,9 @@ public sealed class LayoutTests
         var fixedChild = new SizedElement(30, 30);
         var first = new SizedElement(10, 10).Fill();
         var second = new SizedElement(10, 10).Fill();
-        using StackBase stack = vertical ? VStack.Create(fixedChild, first, second) : HStack.Create(fixedChild, first, second);
+        var view = new StackView(vertical, fixedChild, first, second);
+        using var ui = Create(view);
+        var stack = Assert.IsAssignableFrom<StackBase>(view.Child);
         stack.Spacing = 5;
         Assert.Collection(stack.Children,
             child => Assert.Same(fixedChild, child),
@@ -125,17 +131,35 @@ public sealed class LayoutTests
         var owned = new SizedElement(20, 20);
         using var owner = new Panel().WithChildren(owned);
 
-        Assert.Throws<InvalidOperationException>(() =>
-        {
-            using StackBase invalid = vertical ? VStack.Create(first, owned) : HStack.Create(first, owned);
-        });
+        using var invalid = new StackView(vertical, first, owned);
+        using var surface = new LayoutSurface();
+        Assert.Throws<InvalidOperationException>(() => new UiSession(invalid, surface, new UiViewport(100, 100)));
 
         Assert.Null(first.Parent);
         Assert.False(first.IsDisposed);
         Assert.Same(owner, owned.Parent);
         Assert.Same(owned, Assert.Single(owner.Children));
-        using StackBase stack = vertical ? VStack.Create(first) : HStack.Create(first);
+        var view = new StackView(vertical, first);
+        using var ui = Create(view);
+        var stack = Assert.IsAssignableFrom<StackBase>(view.Child);
         Assert.Same(first, Assert.Single(stack.Children));
+    }
+
+    private sealed class StackView : View
+    {
+        public StackView(bool vertical, params Element[] children)
+            => Content(ui => vertical ? (Element)ui.VStack(children) : ui.HStack(children));
+    }
+
+    private static UiSession Create(Element root) => new(root, new LayoutSurface(), new UiViewport(100, 100));
+
+    private sealed class LayoutSurface : IUiRenderSurface
+    {
+        public ITextLayoutService TextLayout => LayoutTests.TextLayout;
+        public void VerifyAvailable() { }
+        public void Resize(UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
+        public void Dispose() { }
     }
 
     [Fact]
@@ -186,7 +210,7 @@ public sealed class LayoutTests
         panel.Arrange(new Rect(10, 20, 100, 80));
         var context = new RecordingDrawingContext { ThrowOnFill = true };
 
-        Assert.Throws<InvalidOperationException>(() => panel.Draw(context));
+        Assert.Throws<InvalidOperationException>(() => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, context));
         Assert.Equal(2, context.Saves);
         Assert.Equal(2, context.Restores);
         Assert.Equal(new[] { panel.Bounds, child.Bounds }, context.Clips);

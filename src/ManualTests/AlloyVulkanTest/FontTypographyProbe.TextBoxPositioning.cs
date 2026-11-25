@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
@@ -269,7 +274,7 @@ internal static partial class FontTypographyProbe
             VerifyAvailable();
             Require(value == viewport, "The positioning probe changes the field width inside a fixed surface.");
         }
-        public void Render(Element root, UiViewport value)
+        public void Render(Element root, UiViewport value, UiPresenters? presenters = null)
         {
             Resize(value);
             Pixels = render(canvas =>
@@ -281,7 +286,7 @@ internal static partial class FontTypographyProbe
                     canvas.Scale(viewport.Scale);
                     using var paint = new SKPaint { IsAntialias = true };
                     Draw = new ScrollDrawing(canvas, paint, font, selectionColor);
-                    root.Draw(Draw);
+                    TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, Draw, presenters);
                 }
                 finally { canvas.Restore(); }
             }, TextComposition.Opaque).Pixels;

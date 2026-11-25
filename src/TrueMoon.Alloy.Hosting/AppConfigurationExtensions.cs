@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Services;
@@ -77,8 +80,12 @@ public static class AppConfigurationExtensions
         app.Services(services =>
         {
             if (services.Exist<IUiSessionFactory>()) throw new InvalidOperationException("Alloy is already registered in this App.");
+            if (!services.Exist<IUiControlFactories>()) services.Singleton<IUiControlFactories>(_ => new UiControlFactories());
+            if (!services.Exist<IFactory<IElementPresenter<IconButtonPaintState>>>())
+                services.Singleton<IFactory<IElementPresenter<IconButtonPaintState>>>(_ => UiPresenters.StockIconFactory);
             services.Singleton<IRenderBackend>(_ => options.BackendFactory!())
-                .Singleton<HostedUiSessionFactory>(resolver => new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>()))
+                .Singleton<HostedUiSessionFactory>(resolver => new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>(),
+                    resolver.Resolve<IUiControlFactories>(), resolver.Resolve<IFactory<IElementPresenter<IconButtonPaintState>>>(), options.PresenterConfiguration))
                 .Singleton<IUiSessionFactory>(resolver => new BorrowedUiSessionFactory(resolver.Resolve<HostedUiSessionFactory>()));
             services.Singleton<IFactory<UiSession, UiSessionCreation>>(resolver =>
             {

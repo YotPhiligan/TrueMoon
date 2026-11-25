@@ -107,7 +107,7 @@ Add `TrueMoon.Alloy.Hosting` alongside `TrueMoon` and `TrueMoon.Extensions.Depen
 ```csharp
 using TrueMoon;
 using TrueMoon.Alloy.Hosting;
-using TrueMoon.Argentis;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Extensions.DependencyInjection;
 
 await App.Builder(builder => builder.UseDI()).RunAsync(app =>
@@ -117,9 +117,9 @@ await App.Builder(builder => builder.UseDI()).RunAsync(app =>
 
 public sealed class MainView : View
 {
-    public MainView() => Content(() => VStack.Create().Padding(16).WithChildren(
-        Text.Plain("Hello from Alloy"),
-        Button.Simple("Action").OnClick(() => Console.WriteLine("Clicked"))));
+    public MainView() => Content(ui => ui.VStack(
+        ui.Text("Hello from Alloy"),
+        ui.Button("Action").OnClick(() => Console.WriteLine("Clicked"))).Padding(16));
 }
 ```
 

@@ -1,4 +1,9 @@
-﻿using TrueMoon.Alloy.Runtime;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -334,12 +339,12 @@ public sealed class TreeViewTests
     {
         using var tree = new TreeView(); tree.SetItems([new("root", null, "Root", UiSymbol.Cube), new("child", "root", "Child", UiSymbol.Interaction)]);
         tree.Measure(new(240, 100), new FixedTextLayout()); tree.Arrange(new(0, 0, 240, 100));
-        var collapsed = new Drawing(); tree.Draw(collapsed); var expectedCollapsed = new Drawing();
+        var collapsed = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(tree, collapsed); var expectedCollapsed = new Drawing();
         UiSymbols.Draw(expectedCollapsed, UiSymbol.ChevronRight, new(0, 5, 14, 14), tree.Foreground);
         UiSymbols.Draw(expectedCollapsed, UiSymbol.Cube, new(16, 5, 14, 14), tree.Foreground);
         Assert.Equal(expectedCollapsed.Shapes, collapsed.Shapes); Assert.Equal(new[] { "Root" }, collapsed.Texts);
         tree.SetExpanded("root", true); tree.Measure(new(240, 100), new FixedTextLayout()); tree.Arrange(new(0, 0, 240, 100));
-        var expanded = new Drawing(); tree.Draw(expanded); var expectedExpanded = new Drawing();
+        var expanded = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(tree, expanded); var expectedExpanded = new Drawing();
         UiSymbols.Draw(expectedExpanded, UiSymbol.ChevronDown, new(0, 5, 14, 14), tree.Foreground);
         UiSymbols.Draw(expectedExpanded, UiSymbol.Cube, new(16, 5, 14, 14), tree.Foreground);
         UiSymbols.Draw(expectedExpanded, UiSymbol.Interaction, new(32, 29, 14, 14), tree.Foreground);
@@ -352,7 +357,7 @@ public sealed class TreeViewTests
     {
         var tree = new TreeView(); tree.SetItems(Enumerable.Range(0, 100).Select(index => new TreeItem(index.ToString(), null, "Node " + index, UiSymbol.Entity)));
         var scroll = new ScrollViewer().Content(tree); using var ui = Create(scroll, 240, 72); ui.Update(); scroll.Offset = 24 * 50; ui.Update();
-        var drawing = new Drawing(); scroll.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(scroll, drawing);
         Assert.Equal(new[] { "Node 50", "Node 51", "Node 52" }, drawing.Texts);
         Assert.Equal(drawing.Saves, drawing.Restores); Assert.NotEmpty(drawing.Clips);
         var icons = new[] { UiSymbol.Cube, UiSymbol.Entity, UiSymbol.Interaction, UiSymbol.ChevronRight, UiSymbol.ChevronDown };
@@ -426,7 +431,7 @@ public sealed class TreeViewTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class Drawing : IDrawingContext

@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -76,8 +81,8 @@ public sealed class ShadowRenderingTests
     {
         using var panel = new Throwing { Shadow = new(2, 3, 4, new(0, 0, 0)), Opacity = .5f };
         panel.Measure(new(100, 80), new FixedTextLayout()); panel.Arrange(new(0, 0, 100, 80));
-        var legacy = new Drawing(); Assert.Throws<InvalidOperationException>(() => panel.Draw(legacy)); Assert.Equal(0, legacy.Depth);
-        var drawing = new ShadowDrawing(); Assert.Throws<InvalidOperationException>(() => panel.Draw(drawing));
+        var legacy = new Drawing(); Assert.Throws<InvalidOperationException>(() => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, legacy)); Assert.Equal(0, legacy.Depth);
+        var drawing = new ShadowDrawing(); Assert.Throws<InvalidOperationException>(() => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, drawing));
         Assert.Equal(0, drawing.Depth); Assert.Equal(new[] { "opacity", "shadow", "clip", "content" }, drawing.Events);
         Assert.Equal(new Rect(-3, -2, 112, 92), drawing.LayerBounds);
     }
@@ -85,7 +90,15 @@ public sealed class ShadowRenderingTests
     private static Border Surface() => new() { Width = 50, Height = 40, BorderWidth = 0, Margin = new(30, 20, 0, 0), HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start };
     private static UiSession Create(Element root, float scale = 1) => UiSession.Create(root, new SkiaRasterRenderBackend(), new RasterUiTarget(), new((int)(160 * scale), (int)(100 * scale), scale));
     private static SKColor Pixel(SKImage image, int x, int y, float scale = 1) { using var bitmap = SKBitmap.FromImage(image); return bitmap.GetPixel((int)(x * scale), (int)(y * scale)); }
-    private sealed class Throwing : Element { protected override void DrawCore(IDrawingContext context) { ((Drawing)context).Events.Add("content"); throw new InvalidOperationException("draw"); } }
+    private sealed class Throwing : Element
+    {
+        private static readonly ElementPresentation ThrowingPresentation = ElementPresentation.Create<Throwing>(static (_, context) =>
+        {
+            ((Drawing)context).Events.Add("content");
+            throw new InvalidOperationException("draw");
+        });
+        public override ElementPresentation Presentation => ThrowingPresentation;
+    }
     private class Drawing : IDrawingContext
     {
         internal int Depth; internal List<string> Events = [];

@@ -133,8 +133,8 @@ UiSession без окна. Не выдавать подмену renderer за в
 Общий переиспользуемый host/driver можно предложить владельцу UI по конкретной
 потребности consumer; наличие этой инструкции не объявляет его реализованным.
 
-Контракты: [WindowHostConnection](../../TrueMoon.Argentis/WindowHostConnection.cs),
-[IWindowController](../../TrueMoon.Argentis/IWindowController.cs),
+Контракты: [WindowHostConnection](../../TrueMoon.Argentis/Windows/WindowHostConnection.cs),
+[IWindowController](../../TrueMoon.Argentis/Windows/IWindowController.cs),
 [native Hosting](../../TrueMoon.Alloy.Hosting/HostedUiWindow.cs).
 
 ## Сквозная проверка и ресурсы
@@ -212,6 +212,12 @@ ID должен содержать технический ключ без пол
 Поиск и ввод требуют полного снимка той же сессии с текущими поколениями дерева
 и layout. После изменения дерева, геометрии или доступности вызовите `Update()`
 и получите новый снимок. Скрытая и отключённая цели различаются в результате.
+
+`Element.IsInputBlocked` временно исключает поддерево из маршрута указателя,
+фокуса и Tab. Сессия при следующем обновлении или обычном вводе отменяет
+фокус и захват внутри этого поддерева. Поиск цели возвращает `Disabled`
+на время блокировки. `UiSemanticNode.IsEnabled` продолжает описывать
+оформленное состояние `IsEnabled` с учётом предков.
 
 Координаты pointer-событий остаются логическими координатами `UiSession`.
 Выбирайте точку внутри `VisibleBounds`. Сессия повторяет hit test и проверяет

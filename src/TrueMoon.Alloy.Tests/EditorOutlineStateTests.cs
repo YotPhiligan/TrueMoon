@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -53,7 +59,7 @@ public sealed class EditorOutlineStateTests
         editor.Style = new Style().With(UiProperties.BorderColor, new Color(44, 55, 66));
         Assert.Equal(new Color(44, 55, 66), editor.BorderColor);
         editor.BorderColor = new(77, 88, 99); ui.SetTheme(Theme.Light); ui.Update();
-        var drawing = new OutlineDrawing(); editor.Draw(drawing);
+        var drawing = new OutlineDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing);
         Assert.Contains(drawing.Strokes, stroke => stroke == (new Rect(.5f, .5f, 99, 49), new Color(77, 88, 99), 1f));
         Assert.Contains(drawing.Strokes, stroke => stroke == (new Rect(2, 2, 46, 46), Theme.Light.Focus, 2f));
         Assert.Contains(drawing.Fills, fill => fill.Color == Theme.Light.Error && editor.ValidationIconBounds.Contains(fill.Bounds.X, fill.Bounds.Y));
@@ -63,7 +69,7 @@ public sealed class EditorOutlineStateTests
         editor.Clear(UiProperties.BorderColor); Assert.Equal(new Color(44, 55, 66), editor.BorderColor);
         editor.Style = null; Assert.Equal(new Color(11, 22, 33), editor.BorderColor);
         view.WithViewStyle<OutlineView>(null); Assert.Equal(Theme.Light.Error, editor.BorderColor);
-        editor.HasError = false; drawing = new(); editor.Draw(drawing);
+        editor.HasError = false; drawing = new(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing);
         Assert.Contains(drawing.Fills, fill => fill == (new Rect(95, 2, 3, 3), Theme.Light.Modified));
         Assert.Equal(Theme.Light.Focus, editor.BorderColor); Assert.Same(editor, view.Child);
     }
@@ -94,7 +100,7 @@ public sealed class EditorOutlineStateTests
         var editor = new TextBox { Value = "AB", FontSize = fontSize, Padding = new(4, 3, 8, 9) };
         using var ui = CompactControlHarness.Ui(editor, 120, (int)height); ui.Update(); ui.Focus(editor);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
-        var drawing = new OutlineDrawing(); editor.Draw(drawing);
+        var drawing = new OutlineDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing);
         Assert.Equal(("AB", 4f, textY), Assert.Single(drawing.Texts));
         Assert.Contains(drawing.Fills, fill => fill == (new Rect(4, textY, fontSize, lineHeight), Theme.Dark.Accent with { A = 100 }));
         Assert.Contains(drawing.Fills, fill => fill == (new Rect(4 + fontSize, textY, 1, lineHeight), Theme.Dark.Foreground));

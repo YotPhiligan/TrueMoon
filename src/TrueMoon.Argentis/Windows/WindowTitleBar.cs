@@ -1,0 +1,167 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+
+namespace TrueMoon.Argentis.Windows;
+
+/// <summary>Observed window presentation, supplied by a host adapter; no native handles are retained.</summary>
+/// <param name="Active">Whether the native window is focused.</param><param name="Maximized">Whether it is maximized.</param>
+/// <param name="CanMinimize">Whether minimize is supported.</param><param name="CanMaximize">Whether maximize/restore is supported.</param>
+/// <param name="CanResize">Whether native sizing is supported in the current state.</param>
+public sealed record WindowFrameState(bool Active, bool Maximized, bool CanMinimize, bool CanMaximize, bool CanResize);
+
+/// <summary>Default title bar with caption, optional borrowed icon and standard window actions.</summary>
+public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputObserver
+{
+    internal override bool SquareDescendantButtons => true;
+    private readonly ScalarTransition _overlay = new();
+    private bool _pointerInside, _overlayTarget;
+    /// <summary>Uses a translucent, hover-activated backdrop over full-area content.</summary>
+    public static readonly UiProperty<bool> OverlayContentProperty = new("OverlayContent", false, Invalidation.Layout | Invalidation.Render);
+    /// <summary>Whether this bar is painted over content rather than reserving a separate strip.</summary>
+    public bool OverlayContent { get => Get(OverlayContentProperty); set => Set(OverlayContentProperty, value); }
+    /// <summary>Current reveal progress of the title bar backdrop.</summary>
+    public float OverlayReveal => _overlay.Value;
+    private bool OverlayActive => OverlayContent && (_pointerInside || _state.Active &&
+        (FocusWithin(this) || _header is IWindowHeaderActivity { KeepsTitleBarActive: true }));
+    /// <inheritdoc />
+    public bool NeedsFrame => OverlayContent && (_overlay.IsRunning || OverlayActive != _overlayTarget);
+    private string _title;
+    private IImageSource? _icon;
+    private bool _stateApplied;
+    private Element? _header;
+    private WindowFrameState _state = new(true, false, false, false, false);
+    /// <summary>Creates the three standard action widgets in a native-caption region.</summary>
+    /// <param name="title">Window caption.</param>
+    public WindowTitleBar(string title)
+    {
+        ArgumentNullException.ThrowIfNull(title); _title = title; Height = 36; WindowRegion = WindowRegionRole.Caption;
+        MinimizeButton = new(UiSymbol.Minimize, "Minimize window") { Width = float.NaN, Height = float.NaN, BorderWidth = 0 };
+        MaximizeButton = new(UiSymbol.Maximize, "Maximize window") { Width = float.NaN, Height = float.NaN, BorderWidth = 0, WindowRegion = WindowRegionRole.Maximize };
+        CloseButton = new(UiSymbol.Close, "Close window") { Width = float.NaN, Height = float.NaN, BorderWidth = 0, Tone = ControlTone.Danger };
+        Add(MinimizeButton); Add(MaximizeButton); Add(CloseButton); ApplyState(_state);
+        AttachmentChanged += Attachment;
+    }
+    /// <summary>Minimize action, disabled until supported by the host.</summary>
+    public IconButton MinimizeButton { get; }
+    /// <summary>Maximize/restore action, including native Snap region metadata.</summary>
+    public IconButton MaximizeButton { get; }
+    /// <summary>Close action; a host connects it to its cancellable close coordinator.</summary>
+    public IconButton CloseButton { get; }
+    /// <summary>Gets optional owned application header content, replacing only the painted caption.</summary>
+    public Element? HeaderContent => _header;
+    /// <summary>Adopts fresh custom content within the area left of standard window buttons. The caller owns any removed content.</summary>
+    /// <param name="header">Fresh unowned header, or null to restore the ordinary caption.</param>
+    public void SetHeader(Element? header)
+    {
+        VerifyAccess(); if (ReferenceEquals(_header, header)) return;
+        var previous = _header;
+        if (header != null)
+            ValidateChildChange([header], previous == null ? [] : [previous]);
+        if (previous != null) Items.Remove(previous);
+        _header = header;
+        if (header != null) Add(header);
+        Invalidate(Invalidation.Layout);
+    }
+    /// <summary>Window caption; changing it invalidates only the drawing.</summary>
+    public string Title { get => _title; set { VerifyAccess(); ArgumentNullException.ThrowIfNull(value); if (_title == value) return; _title = value; Invalidate(); } }
+    /// <summary>Optional borrowed icon. The caller retains ownership.</summary>
+    public IImageSource? Icon { get => _icon; set { VerifyAccess(); if (ReferenceEquals(_icon, value)) return; _icon = value; Invalidate(); } }
+    /// <summary>Last observed host presentation.</summary>
+    public WindowFrameState State => _state;
+    /// <summary>Updates capabilities and maximize/restore symbol without rebuilding the tree.</summary>
+    /// <param name="state">Current host state.</param>
+    public void ApplyState(WindowFrameState state)
+    {
+        VerifyAccess(); ArgumentNullException.ThrowIfNull(state);
+        if (_stateApplied && _state == state) return;
+        _stateApplied = true;
+        if (!state.Active) _pointerInside = false;
+        _state = state; MinimizeButton.IsEnabled = state.CanMinimize; MaximizeButton.IsEnabled = state.CanMaximize;
+        MaximizeButton.Symbol = state.Maximized ? UiSymbol.Restore : UiSymbol.Maximize;
+        MaximizeButton.AccessibleName = state.Maximized ? "Restore window" : "Maximize window"; Invalidate();
+    }
+    /// <inheritdoc />
+    protected override Color ThemeBackground => OverlayContent ? Theme.PanelBackdrop == null ? Theme.Surface : Color.Transparent : _state.Active ? Theme.Control : Theme.Surface;
+    /// <inheritdoc />
+    protected override BackdropMaterial? ThemeBackdrop => OverlayContent && Theme.PanelBackdrop is { } material
+        ? new(material.BlurSigma * OverlayReveal, material.Tint with { A = (byte)MathF.Round(Math.Min(72, (int)material.Tint.A) + (material.Tint.A - Math.Min(72, (int)material.Tint.A)) * OverlayReveal) }, material.Fallback)
+        : null;
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(object property)
+    {
+        base.OnPropertyChanged(property);
+        if (!ReferenceEquals(property, OverlayContentProperty)) return;
+        MinimizeButton.RevealOnInteraction = OverlayContent;
+        MaximizeButton.RevealOnInteraction = OverlayContent;
+        CloseButton.RevealOnInteraction = OverlayContent;
+        UpdateOverlay();
+    }
+    /// <inheritdoc />
+    public bool PreviewInput(UiInput input, IInputContext context)
+    {
+        if (input.Kind == InputKind.PointerMove) _pointerInside = Bounds.Contains(input.X, input.Y);
+        else if (input.Kind == InputKind.FocusLost) _pointerInside = false;
+        UpdateOverlay(); return false;
+    }
+    private void UpdateOverlay()
+    {
+        var target = OverlayActive;
+        if (target == _overlayTarget) return;
+        _overlayTarget = target;
+        _overlay.MoveTo(_overlayTarget ? 1 : 0, IsAttached && OverlayContent ? TimeSpan.FromMilliseconds(160) : TimeSpan.Zero);
+        Invalidate();
+    }
+    /// <inheritdoc />
+    public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
+    {
+        VerifyAccess(); if (OverlayActive != _overlayTarget) UpdateOverlay();
+        if (_overlay.Advance(elapsed)) Invalidate();
+    }
+    private static bool FocusWithin(Element element) => element.IsFocused || element.Children.Any(FocusWithin);
+    private void Attachment()
+    {
+        if (IsAttached) return;
+        _pointerInside = _overlayTarget = false; _overlay.MoveTo(0, TimeSpan.Zero);
+    }
+    /// <inheritdoc />
+    protected override Size MeasureCore(Size available, ITextLayoutService text)
+    { foreach (var child in Children) child.Measure(available, text); return new(160, 36); }
+    /// <inheritdoc />
+    protected override void ArrangeCore(Rect area)
+    {
+        var size = Math.Min(OverlayContent ? area.Height : 32, Math.Min(area.Height, area.Width / 3));
+        var start = area.X + area.Width - size * 3;
+        var top = OverlayContent ? area.Y : area.Y + (area.Height - size) / 2;
+        Element[] actions = [MinimizeButton, MaximizeButton, CloseButton];
+        for (var i = 0; i < actions.Length; i++) actions[i].Arrange(new(start + size * i, top, size, size));
+        _header?.Arrange(new(area.X + 6, area.Y, Math.Max(0, start - area.X - 12), area.Height));
+    }
+    private static readonly ElementPresentation WindowTitleBarPresentation = ElementPresentation.Create<WindowTitleBar>(static (bar, context) =>
+    {
+        var bounds = bar.Bounds;
+        var theme = bar.Theme;
+        var right = bar.MinimizeButton.Bounds.X; var caption = new Rect(bounds.X + 12, bounds.Y, Math.Max(0, right - bounds.X - 24), bounds.Height);
+        context.Save();
+        try
+        {
+            context.Clip(caption); var x = caption.X;
+            if (bar._header == null)
+            {
+                if (bar._icon != null) { context.Image(bar._icon, new(x, bounds.Y + (bounds.Height - 16) / 2, 16, 16)); x += 24; }
+                context.Text(bar._title, x, bounds.Y + (bounds.Height - bar.FontSize) / 2, bar._state.Active ? bar.Foreground : theme.Disabled, bar.FontSize, bar.FontFamily, bar.FontWeight, bar.FontItalic);
+            }
+        }
+        finally { context.Restore(); }
+        context.Fill(new(bounds.X, bounds.Y + bounds.Height - 1, bounds.Width, 1), bar.OverlayContent ? theme.Border with { A = (byte)MathF.Round(40 + 100 * bar.OverlayReveal) } : bar._state.Active ? theme.Accent : theme.Border);
+    });
+    /// <inheritdoc />
+    public override ElementPresentation Presentation => WindowTitleBarPresentation;
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        if (IsDisposed) return;
+        AttachmentChanged -= Attachment; _overlay.MoveTo(0, TimeSpan.Zero); base.Dispose();
+    }
+}

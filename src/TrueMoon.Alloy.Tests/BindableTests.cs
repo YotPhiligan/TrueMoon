@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Bindings;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Painting;
 using System.ComponentModel;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -132,7 +135,7 @@ public sealed class BindableTests
     public void ViewModel_UpdatesRetainedTwoWayBindingThroughInheritedNotifications()
     {
         var model = new NameViewModel();
-        var text = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, state => state.Name);
+        var text = new TextBox().BindTwoWay(TextBox.ValueProperty, model, state => state.Name);
         using var ui = new UiSession(text, new HeadlessSurface(), new UiViewport(240, 140));
         ui.Update();
         Assert.Equal("initial", text.Value);
@@ -187,7 +190,7 @@ public sealed class BindableTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => root.Draw(new RecordingDrawingContext());
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters);
         public void Dispose() { }
     }
 }

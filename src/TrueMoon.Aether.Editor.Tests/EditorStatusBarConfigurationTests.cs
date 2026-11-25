@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
@@ -240,7 +244,7 @@ public sealed class EditorStatusBarConfigurationTests
     private sealed class Surface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new TextLayout();
-        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { }
+        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { }
     }
     private sealed class TextLayout : ITextLayoutService
     { public Size Measure(string text, float fontSize, string fontFamily) => new(text.Length * fontSize / 2, fontSize); }

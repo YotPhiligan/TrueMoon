@@ -100,7 +100,7 @@ Argentis, Alloy, Rendering.Skia and Platform.Silk arrive transitively. The custo
 ```csharp
 using TrueMoon;
 using TrueMoon.Alloy.Hosting;
-using TrueMoon.Argentis;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Extensions.DependencyInjection;
 
 await App.Builder(options => options.UseDI()).RunAsync(app =>
@@ -110,8 +110,9 @@ await App.Builder(options => options.UseDI()).RunAsync(app =>
 
 public sealed class MainView : View
 {
-    public MainView() => Content(() => VStack.Create().Padding(16).WithChildren(
-        Text.Plain("Hello from Alloy"), Button.Simple("Action").OnClick(() => Console.WriteLine("Clicked"))));
+    public MainView() => Content(ui => ui.VStack(
+        ui.Text("Hello from Alloy"),
+        ui.Button("Action").OnClick(() => Console.WriteLine("Clicked"))).Padding(16));
 }
 ```
 
@@ -140,9 +141,9 @@ layout and drawing. Default themes/controls use Segoe UI Variable Text; paramete
 Skia backends use SystemDefault with Segoe UI fallback. File-only catalogs remain
 explicit. System-font metrics depend on the machine and optical sizing is not automatic.
 
-Constructors and factories can be mixed. `TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, state => state.Name)` binds an `INotifyPropertyChanged` model to an editor. Keep durable state in the model and create a fresh UI tree when recreating a session.
+For an existing control outside a deferred view factory, `new TextBox().BindTwoWay(TextBox.ValueProperty, model, state => state.Name)` binds an `INotifyPropertyChanged` model to an editor. Import `TrueMoon.Argentis.Editors` for `TextBox` and `TrueMoon.Argentis` for `BindTwoWay`. Keep durable state in the model and create a fresh UI tree when recreating a session.
 
-`RichTextEditor.Create(new RichTextEditorOptions { WordWrap = true, UndoLimit = 100 })`
+`new RichTextEditor(new RichTextEditorOptions { WordWrap = true, UndoLimit = 100 })`
 provides multiline text, immutable `RichTextDocument`/`RichTextRun` styling,
 selection, plain-text clipboard, undo/redo and read-only options. Bind
 `RichTextEditor.DocumentProperty` for rich content or `TextProperty` for LF plain text.

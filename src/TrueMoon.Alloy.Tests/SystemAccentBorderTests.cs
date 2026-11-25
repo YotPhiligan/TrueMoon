@@ -1,4 +1,10 @@
-﻿using TrueMoon.Alloy.Runtime;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -159,6 +165,6 @@ public sealed class SystemAccentBorderTests
     private sealed class Surface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
-        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { }
+        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { }
     }
 }

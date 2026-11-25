@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Translation;
@@ -9,6 +13,21 @@ namespace TrueMoon.Aether.Editor.Tests;
 
 public sealed class EditorViewportTranslationTests
 {
+    [Fact]
+    public void FailingOverlayAfterImageDoesNotIssueDrawReceiptOrReplaceHostPresentation()
+    {
+        using var t = new ViewportInputFixture(); t.Start(); Begin(t);
+        var presented = t.Preview.PresentedView!;
+        var next = t.Issue(presented.State);
+        var surface = next.Presentation.Surface;
+        t.View.Canvas.Upload(TrueMoon.Alloy.Rendering.Skia.SkiaImageSource.CopyBgraPixels(surface.Width, surface.Height,
+            new byte[surface.Width * surface.Height * 4]), next, () => true);
+        var drawing = new Drawing { FailOutline = true };
+        Assert.Throws<IOException>(() => UiTreeRenderer.Draw(t.View.Canvas, drawing));
+        Assert.Equal(1, drawing.Images); Assert.Null(t.View.Canvas.CurrentDraw);
+        Assert.Null(t.View.Canvas.DrawnFrame); Assert.Same(presented, t.Preview.PresentedView);
+    }
+
     [Fact]
     public void InvalidMove_PreservesLastValidOutlineUntilAnExplicitValidRelease()
     {
@@ -67,7 +86,7 @@ public sealed class EditorViewportTranslationTests
         Assert.Equal(0, t.Content.UndoCount); Assert.False(t.Owner.Document.Read().IsDirty);
         var position = t.Controller.TranslationCandidate!.Value;
         Assert.True(position.X > -1.2); Assert.Equal(1, position.Y); Assert.Equal(0, position.Z);
-        var drawing = new Drawing(); t.View.Canvas.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(t.View.Canvas, drawing);
         Assert.Contains(drawing.Outlines, item => item.Color == Theme.Dark.Modified);
         Assert.Contains(drawing.Labels, text => text.Contains("Перемещение"));
         Assert.Same(surface, t.Frames.Presentation); Assert.Same(camera, t.State.Camera); Assert.Single(t.Runtime.Leases);
@@ -216,10 +235,16 @@ public sealed class EditorViewportTranslationTests
     {
         public readonly List<(Rect Bounds, Color Color)> Outlines = [];
         public readonly List<string> Labels = [];
+        public bool FailOutline { get; init; }
+        public int Images { get; private set; }
         public void Save() { } public void Restore() { } public void Clip(Rect rectangle) { } public void Translate(float x, float y) { }
         public void Fill(Rect rectangle, Color color, float radius = 0) { }
-        public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0) => Outlines.Add((rectangle, color));
+        public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0)
+        {
+            if (FailOutline) throw new IOException("Overlay failed.");
+            Outlines.Add((rectangle, color));
+        }
         public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily) => Labels.Add(text);
-        public void Image(IImageSource source, Rect destination) { }
+        public void Image(IImageSource source, Rect destination) => Images++;
     }
 }

@@ -39,5 +39,7 @@
     <ProjectReference Include="..\TrueMoon.Argentis\TrueMoon.Argentis.csproj" />
     <ProjectReference Include="..\TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
     <ProjectReference Include="..\TrueMoon.Alloy.Rendering.Skia\TrueMoon.Alloy.Rendering.Skia.csproj" />
+    <ProjectReference Include="..\TrueMoon.Argentis.Generator\TrueMoon.Argentis.Generator.csproj"
+                      ReferenceOutputAssembly="false" OutputItemType="Analyzer" PrivateAssets="all" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,10 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using System.ComponentModel;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -16,7 +23,7 @@ public sealed class WindowComponentTests
         Assert.Equal(WindowPresentationState.Normal, window.State);
         Assert.Equal(default, window.ActualClientSize);
         Assert.False(window.IsActive); Assert.False(window.IsHosted);
-        Assert.Null(window.GetContent()); Assert.Empty(window.Children);
+        Assert.Null(window.Child); Assert.Empty(window.Children);
         Assert.True(float.IsNaN(window.Width)); Assert.True(float.IsNaN(window.Height));
 
         window.Width = 123; window.Height = 45;
@@ -34,9 +41,11 @@ public sealed class WindowComponentTests
         var model = new ScreenModel(); var window = new ScreenWindow(withData ? model : null);
         IView<ScreenModel> typed = window;
         Assert.Same(withData ? model : null, typed.DataContext);
-        Assert.Same(window.Body, typed.GetContent());
-        Assert.Equal(1, window.Builds); Assert.Equal(0, model.Subscribers);
+        Assert.Null(window.Child);
+        Assert.Equal(0, window.Builds); Assert.Equal(0, model.Subscribers);
         using var ui = Create(window); ui.Update();
+        Assert.Same(window.Body, window.Child);
+        Assert.Equal(1, window.Builds);
         Assert.Equal(withData ? "initial" : "unbound", window.Label.Value);
         Assert.Equal(withData ? 3 : 0, model.Subscribers);
         if (withData)
@@ -52,18 +61,27 @@ public sealed class WindowComponentTests
     }
 
     [Fact]
-    public void TypedContent_AcceptsPlainDataAndRejectsInvalidFactoryResultsWithoutReplacingContent()
+    public void TypedContent_AcceptsPlainDataAndRejectsRedeclaration()
     {
         using var window = new Window<string>(); var calls = 0;
-        var content = new Text();
-        window.Content("plain", data => { calls++; content.Value = data!; return content; });
-        Assert.Equal("plain", window.DataContext); Assert.Equal("plain", content.Value);
-        Assert.Same(content, window.GetContent()); Assert.Equal(1, calls);
+        window.Content("plain", ui =>
+        {
+            calls++;
+            return ui.Text(ui.DataContext!.DataContext!);
+        });
+        Assert.Equal("plain", window.DataContext);
+        Assert.Null(window.Child);
+        Assert.Equal(0, calls);
         Assert.Throws<ArgumentNullException>(() => window.Content("other", null!));
-        Assert.Throws<ArgumentException>(() => window.Content("other", _ => new object()));
-        var failure = new IOException("compose");
-        Assert.Same(failure, Assert.Throws<IOException>(() => window.Content("other", _ => throw failure)));
-        Assert.Same(content, window.GetContent()); Assert.Same(window, content.Parent); Assert.False(content.IsDisposed);
+        Assert.Throws<InvalidOperationException>(() => window.Content("other", ui => ui.Text("other")));
+        using var session = Create(window);
+        var content = Assert.IsType<Text>(window.Child);
+        Assert.Equal("plain", content.Value);
+        Assert.Same(window, content.Parent);
+        Assert.Equal(1, calls);
+        Assert.Throws<InvalidOperationException>(() => window.Content("other", ui => ui.Text("other")));
+        Assert.Same(content, window.Child);
+        Assert.Equal("plain", window.DataContext);
     }
 
     [Theory]
@@ -128,7 +146,7 @@ public sealed class WindowComponentTests
         Assert.Equal("fluent", window.Title); Assert.Equal(new Size(1200, 800), window.ClientSize);
         Assert.Throws<ArgumentNullException>(() => ((Window)null!).WithTitle("title"));
         Assert.Throws<ArgumentNullException>(() => ((Window)null!).WithClientSize(1, 1));
-        Assert.Equal(1, window.Builds);
+        Assert.Equal(0, window.Builds);
     }
 
     [Fact]
@@ -337,9 +355,10 @@ public sealed class WindowComponentTests
                 ReferenceEquals(theme, Theme.Light) ? new Size(900, 600) : new Size(800, 500));
             style.Role(EditorRole).FontSize(22);
         }));
-        var content = window.Child; var scrollContent = window.Scroll.Child; var attachments = 0;
-        window.Editor.AttachmentChanged += () => attachments++;
+        var attachments = 0;
+        window.EditorPrepared = editor => editor.AttachmentChanged += () => attachments++;
         using var ui = Create(window); ui.Update(); ui.Focus(window.Editor);
+        var content = window.Child; var scrollContent = window.Scroll.Child;
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
         ui.HandleInput(new(InputKind.Text, Text: "retained draft")); ui.Update();
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
@@ -367,11 +386,12 @@ public sealed class WindowComponentTests
     public void Disposal_ReleasesOwnedTreeOnceAndClearsConnectionWithoutDisposingBorrowedResources()
     {
         var model = new ScreenModel(); var window = new ScreenWindow(model); var controller = new Controller();
-        var owned = new Counter(); window.Body.Own(owned);
+        var owned = new Counter();
         var connection = window.AttachHost(controller); var hostEvents = 0;
         window.HostStateChanged += _ => hostEvents++;
         window.Closing += _ => Task.FromResult(true);
         using var ui = Create(window); ui.Update();
+        window.Body.Own(owned);
         ui.Dispose(); window.Dispose(); connection.Dispose();
         Assert.True(window.IsDisposed); Assert.True(window.Body.IsDisposed); Assert.True(window.Editor.IsDisposed);
         Assert.False(window.IsHosted); Assert.Equal(0, hostEvents); Assert.Equal(1, owned.Disposals);
@@ -392,26 +412,35 @@ public sealed class WindowComponentTests
     private sealed class NestedView : View
     {
         public TextBox Editor { get; } = new TextBox().WithRole(EditorRole);
-        public NestedView() => Content(() => Editor);
+        public NestedView() => SetContent(Editor);
     }
     private sealed class ScreenWindow : Window<ScreenModel>
     {
-        public Text Label { get; } = new("unbound");
-        public TextBox Editor { get; } = new TextBox().WithRole(EditorRole);
-        public ScrollViewer Scroll { get; } = new ScrollViewer().Height(80).Content(new Panel { Width = 100, Height = 500 });
+        public Text Label { get; private set; } = null!;
+        public TextBox Editor { get; private set; } = null!;
+        public ScrollViewer Scroll { get; private set; } = null!;
         public NestedView Nested { get; } = new();
         public VStack Body { get; private set; } = null!;
         public int Builds { get; private set; }
-        public ScreenWindow(ScreenModel? model) => Content(model, data =>
+        public Action<TextBox>? EditorPrepared { get; set; }
+        public ScreenWindow(ScreenModel? model) => Content(model, ui =>
         {
             Builds++;
-            if (data != null)
+            var label = ui.Text("unbound");
+            var editor = ui.TextBox().WithRole(EditorRole);
+            var scroll = ui.ScrollViewer(ui.Panel().Width(100).Height(500)).Height(80);
+            if (DataContext != null)
             {
-                Label.BindText(data, item => item.Text); Editor.BindTwoWay(TextBox.ValueProperty, data, item => item.Text);
-                this.Bind(TitleProperty, data, item => item.Caption);
+                label.BindText(item => item.Text);
+                editor.BindValueTwoWay(item => item.Text);
+                this.Bind(TitleProperty, this, item => item.Caption);
             }
-            return Body = new VStack().WithChildren(Label, Editor, Scroll, Nested);
+            Label = label;
+            Editor = editor;
+            Scroll = scroll;
+            return Body = ui.VStack(label, editor, scroll, Nested);
         });
+        protected override void OnContentPrepared() => EditorPrepared?.Invoke(Editor);
     }
     private sealed class ScreenModel : INotifyPropertyChanged, IDisposable
     {
@@ -443,7 +472,7 @@ public sealed class WindowComponentTests
         public ITextLayoutService TextLayout { get; } = new Layout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class Layout : ITextLayoutService

@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Platform.Silk;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -69,7 +73,8 @@ internal static class RuntimeProbe
         await using var app = builder.Build();
         var window = (HostedUiWindow)app.Services.GetService(typeof(HostedUiWindow))!;
         var restored = false;
-        var resized = false;
+        UiViewport? resized = null;
+        UiViewport last = default;
         Task? restore = null;
         window.FramePresented += session =>
         {
@@ -81,7 +86,10 @@ internal static class RuntimeProbe
                     Require(gl.GetError() == global::Silk.NET.OpenGL.GLEnum.NoError, "Standalone OpenGL generated a GL error.");
                 });
             }
-            if (session.Viewport.Width == 640 && session.Viewport.Height == 360) resized = true;
+            last = session.Viewport;
+            // Resize takes logical units; the presented viewport reports physical framebuffer pixels.
+            if (Math.Abs(last.Width - 640 * last.Scale) <= 0.5f && Math.Abs(last.Height - 360 * last.Scale) <= 0.5f)
+                resized = last;
             if (window.PresentedFrames == 3) window.Resize(640, 360);
             if (window.PresentedFrames == 5)
             {
@@ -104,9 +112,10 @@ internal static class RuntimeProbe
         catch (Exception error) { Console.Error.WriteLine($"Standalone primary failure: {error}"); throw; }
         if (restore != null) await restore;
         await app.StopAsync(timeout.Token);
-        Require(window.PresentedFrames >= 30 && resized && restored && (openGL || window.SwapchainGenerations >= 2), "Expected presentation, framebuffer resize and minimize/restore.");
+        Require(window.PresentedFrames >= 30 && resized.HasValue && restored && (openGL || window.SwapchainGenerations >= 2),
+            $"Expected presentation, logical 640x360 resize and restore; frames={window.PresentedFrames}, last={last}, resized={resized}, restored={restored}, generations={window.SwapchainGenerations}.");
         Require(messages.Count == 0, "Window validation emitted warnings/errors.");
-        Console.WriteLine($"Standalone {(openGL ? "OpenGL" : "Vulkan")} UI passed: {window.PresentedFrames} frames, resize/minimize/restore, {window.SwapchainGenerations} swapchain generations; {(openGL ? "GL error checks passed" : "Vulkan validation 0 errors/0 warnings including disposal")}.");
+        Console.WriteLine($"Standalone {(openGL ? "OpenGL" : "Vulkan")} UI passed: {window.PresentedFrames} frames, resized={resized}, minimize/restore, {window.SwapchainGenerations} swapchain generations; {(openGL ? "GL error checks passed" : validation ? "Vulkan validation 0 errors/0 warnings including disposal" : "Vulkan validation not enabled")}.");
     }
 }
 

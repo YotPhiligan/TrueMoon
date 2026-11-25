@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using System.Linq.Expressions;
 using TrueMoon.Argentis;
 
@@ -20,7 +25,7 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
     /// <summary>Dismisses displayed diagnostics while keeping the document and path draft.</summary>
     public Button DismissTools { get; }
     /// <summary>Gets the path/action row.</summary>
-    public HStack Actions { get; } = HStack.Create();
+    public HStack Actions { get; } = new HStack();
     /// <summary>Gets the Open/SaveAs path editor.</summary>
     public TextBox PathInput { get; }
     /// <summary>Gets the independent first-save path editor.</summary>
@@ -34,7 +39,7 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
     /// <summary>Gets the inline transition decision container.</summary>
     public Border Decision { get; }
     /// <summary>Gets decision action buttons.</summary>
-    public HStack Choices { get; } = HStack.Create();
+    public HStack Choices { get; } = new HStack();
     /// <summary>Gets the safe default decision button.</summary>
     public Button CancelChoice { get; }
     /// <summary>Gets the non-undoable discard decision button.</summary>
@@ -55,24 +60,24 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
         try
         {
             model.Refresh(); DataContext = model;
-            PathInput = TextBox.Create().SemanticId("editor.document.path").BindTwoWay(TextBox.ValueProperty, model, x => x.RequestedPath)
+            PathInput = new TextBox().SemanticId("editor.document.path").BindTwoWay(TextBox.ValueProperty, model, x => x.RequestedPath)
                 .Bind(UiProperties.Enabled, model, x => x.CanEditPath).Bind(UiProperties.AccessibleName, model, x => x.PathInputLabel);
-            SavePathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.SavePathDraft)
+            SavePathInput = new TextBox().BindTwoWay(TextBox.ValueProperty, model, x => x.SavePathDraft)
                 .SetValue(UiProperties.AccessibleName, "Сохранить новую сцену как");
-            Title = compactHeader ? Text.Plain().BindText(model, x => x.PathPromptText) : Text.Plain().BindText(model, x => x.Title);
-            ScenesRoot = Text.Plain().BindText(model, x => x.PathHint);
-            Error = Text.Plain().BindText(model, x => x.ErrorText);
-            Actions.Add(Text.Plain("Сцена:")); Actions.Add(PathInput);
+            Title = compactHeader ? new Text().BindText(model, x => x.PathPromptText) : new Text().BindText(model, x => x.Title);
+            ScenesRoot = new Text().BindText(model, x => x.PathHint);
+            Error = new Text().BindText(model, x => x.ErrorText);
+            Actions.Add(new Text("Сцена:")); Actions.Add(PathInput);
             Add(DocumentCommand.New, "Новая", x => x.CanNew);
             Add(DocumentCommand.Open, "Открыть", x => x.CanOpen);
             Add(DocumentCommand.Save, "Сохранить", x => x.CanSave);
             Add(DocumentCommand.SaveAs, "Сохранить как", x => x.CanSaveAs);
             Add(DocumentCommand.Close, "Закрыть", x => x.CanClose);
-            Actions.Add(Button.Simple("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel));
-            ConfirmPath = Button.Simple("Продолжить").SemanticId("editor.document.confirm-path")
+            Actions.Add(new Button("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel));
+            ConfirmPath = new Button("Продолжить").SemanticId("editor.document.confirm-path")
                 .Bind(UiProperties.Enabled, model, x => x.CanConfirmPath).OnClick(model.ConfirmPath);
-            CancelPath = Button.Simple("Отмена").OnClick(model.CancelPath);
-            DismissTools = Button.Simple("Закрыть").OnClick(model.CancelPath);
+            CancelPath = new Button("Отмена").OnClick(model.CancelPath);
+            DismissTools = new Button("Закрыть").OnClick(model.CancelPath);
             if (compactHeader)
             {
                 foreach (var button in Actions.Children.OfType<Button>()) button.IsVisible = false;
@@ -84,22 +89,22 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
                 this.Bind(UiProperties.Visible, model, x => x.IsToolsVisible);
             }
             else { ConfirmPath.IsVisible = CancelPath.IsVisible = DismissTools.IsVisible = false; }
-            SaveChoice = Button.Simple("Сохранить").OnClick(() => model.Choose(EditorDocumentCloseChoice.Save));
-            DiscardChoice = Button.Simple("Не сохранять").OnClick(() => model.Choose(EditorDocumentCloseChoice.Discard));
-            CancelChoice = Button.Simple("Отмена").OnClick(() => model.Choose(EditorDocumentCloseChoice.Cancel));
+            SaveChoice = new Button("Сохранить").OnClick(() => model.Choose(EditorDocumentCloseChoice.Save));
+            DiscardChoice = new Button("Не сохранять").OnClick(() => model.Choose(EditorDocumentCloseChoice.Discard));
+            CancelChoice = new Button("Отмена").OnClick(() => model.Choose(EditorDocumentCloseChoice.Cancel));
             Choices.Add(SaveChoice); Choices.Add(DiscardChoice); Choices.Add(CancelChoice);
-            var firstSave = HStack.Create().WithChildren(Text.Plain("Путь сохранения:"), SavePathInput)
+            var firstSave = new HStack().WithChildren(new Text("Путь сохранения:"), SavePathInput)
                 .Bind(UiProperties.Visible, model, x => x.NeedsSavePath);
-            Decision = Border.Create().Bind(UiProperties.Visible, model, x => x.AwaitingDecision).Content(
-                VStack.Create().WithChildren(Text.Plain().BindText(model, x => x.DecisionText), firstSave, Choices));
-            Content(model, _ => compactHeader
-                ? VStack.Create().WithChildren(Title, Actions, ScenesRoot, Error, Decision, DismissTools)
-                : VStack.Create().WithChildren(Actions, Title, ScenesRoot, Error, Decision, DismissTools));
+            Decision = new Border().Bind(UiProperties.Visible, model, x => x.AwaitingDecision).Content(
+                new VStack().WithChildren(new Text().BindText(model, x => x.DecisionText), firstSave, Choices));
+            SetContent(compactHeader
+                ? new VStack().WithChildren(Title, Actions, ScenesRoot, Error, Decision, DismissTools)
+                : new VStack().WithChildren(Actions, Title, ScenesRoot, Error, Decision, DismissTools));
             if (!compactHeader) { Own(ConfirmPath); Own(CancelPath); }
             this.WithViewStyle(style);
             void Add(DocumentCommand command, string label, Expression<Func<IEditorDocumentViewModel, bool>> enabled)
             {
-                var button = Button.Simple(label).Bind(UiProperties.Enabled, model, enabled).OnClick(() => model.Execute(command));
+                var button = new Button(label).Bind(UiProperties.Enabled, model, enabled).OnClick(() => model.Execute(command));
                 _commands.Add(command, button); Actions.Add(button);
             }
         }

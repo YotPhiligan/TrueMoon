@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using System.ComponentModel;
 using TrueMoon.Argentis;
 
@@ -35,7 +37,8 @@ public sealed class EditorMainWindow : Window<IEditorViewModel>
             if (!ReferenceEquals(view.DataContext, model))
                 throw new ArgumentException("Editor view belongs to another presentation model.", nameof(views));
             EditorView = view;
-            Content(model, _ => view);
+            DataContext = model;
+            SetContent(view);
             this.WithViewStyle(style);
             _documents.PropertyChanged += DocumentChanged;
             Own(new Subscription(() => _documents.PropertyChanged -= DocumentChanged));

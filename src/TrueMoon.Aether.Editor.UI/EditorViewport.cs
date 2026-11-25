@@ -1,4 +1,9 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Editor.UI.Translation;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -8,16 +13,21 @@ namespace TrueMoon.Aether.Editor.UI;
 
 public sealed class EditorViewport : Element, IUiFrameParticipant
 {
+    private static readonly ElementPresentation Paint = ElementPresentation.Create<EditorViewport, PaintState>(
+        static viewport => viewport.Capture(), new Factory<IElementPresenter<PaintState>>(static () => new Painter()));
+    private readonly DrawReceipts _receipts = new();
+    /// <inheritdoc />
+    public override ElementPresentation Presentation => Paint;
     private IEditorViewportController? _controller;
     private UiViewport _observedViewport;
-    private ulong _viewportEpoch, _drawnViewportEpoch;
+    private ulong _viewportEpoch;
     internal void AttachController(IEditorViewportController controller)
     { if(_controller!=null)throw new InvalidOperationException("Viewport already has a controller.");_controller=controller; }
     internal void DetachController(IEditorViewportController controller) {if(ReferenceEquals(_controller,controller))_controller=null;}
     internal void ObserveViewport(UiViewport viewport)
     { if(viewport==_observedViewport)return;_observedViewport=viewport;InvalidatePresentedGeometry(); }
     internal void InvalidatePresentedGeometry()
-    { _viewportEpoch=checked(_viewportEpoch+1);Invalidate(); }
+    { _viewportEpoch=checked(_viewportEpoch+1); _receipts.Supersede(); Invalidate(); }
     /// <inheritdoc />
     public override bool Focusable=>true;
     /// <inheritdoc />
@@ -40,65 +50,127 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
         set { VerifyAccess(); ArgumentNullException.ThrowIfNull(value); if (_emptyText != value) { _emptyText = value; Invalidate(); } }
     }
     public EditorViewport() => Own(new ImageLifetime(this));
-    public ViewportFrame? DrawnFrame { get; private set; }
+    /// <summary>Ticket recorded by the last successful viewport paint, not a host presentation.</summary>
+    public ViewportFrame? DrawnFrame => _receipts.Frame;
+    /// <summary>Current letterboxed destination, prepared on layout and upload even before paint.</summary>
     public Rect ImageBounds { get; private set; }
     /// <summary>Gets the effective ancestor clip retained with the last draw.</summary>
-    public Rect DrawnClipBounds { get; private set; }
+    public Rect DrawnClipBounds => _receipts.Geometry.Clip;
     /// <summary>Gets a monotonic draw-geometry revision, independent of FrameId.</summary>
-    public ulong LayoutRevision { get; private set; }
+    public ulong LayoutRevision => _receipts.LayoutRevision;
     /// <summary>Whether the retained draw still describes visible current geometry and its exact uploaded ticket.</summary>
-    public bool CanAcknowledgeDraw
-    {
-        get
-        {
-            return HasCurrentDrawGeometry() && ReferenceEquals(DrawnFrame, _frame);
-        }
-    }
+    public bool CanAcknowledgeDraw => CurrentDraw is not null;
+    internal DrawReceipt? CurrentDraw => _receipts.Frame is {} frame && ReferenceEquals(frame, _frame) &&
+        _receipts.IsCurrent && HasCurrentDrawGeometry() ? new(frame, _receipts.Geometry.Image, DrawnClipBounds, LayoutRevision) : null;
+    internal readonly record struct DrawReceipt(ViewportFrame Frame, Rect Image, Rect Clip, ulong Revision);
     /// <summary>Checks frozen presented geometry without requiring the latest received/uploaded FrameId.</summary>
     /// <param name="image">Receipt image bounds.</param><param name="clip">Receipt effective clip.</param><param name="revision">Receipt layout revision.</param>
     /// <returns>False after layout, visibility, clip or surface invalidation; a newer incoming frame alone is allowed.</returns>
     public bool MatchesPresentedLayout(ViewportImageBounds image, ViewportImageBounds clip, ulong revision)
         => HasCurrentDrawGeometry() && revision == LayoutRevision &&
-            image == new ViewportImageBounds(_drawnImage.X,_drawnImage.Y,_drawnImage.Width,_drawnImage.Height) &&
+            image == new ViewportImageBounds(ImageBounds.X,ImageBounds.Y,ImageBounds.Width,ImageBounds.Height) &&
             clip == new ViewportImageBounds(DrawnClipBounds.X,DrawnClipBounds.Y,DrawnClipBounds.Width,DrawnClipBounds.Height);
     private bool HasCurrentDrawGeometry()
     {
-        if (IsDisposed || DrawnFrame == null || _current?.Invoke() != true || Bounds != _drawnBounds || LayoutRevision == 0 ||
-            _drawnViewportEpoch!=_viewportEpoch || EffectiveClip() != DrawnClipBounds) return false;
+        if (IsDisposed || DrawnFrame == null || _current?.Invoke() != true || _receipts.Geometry != Geometry()) return false;
         for (Element? element = this; element != null; element = element.Parent)
             if (!element.IsVisible || element.Opacity <= 0) return false;
-        return Bounds.Width > 0 && Bounds.Height > 0;
+        return true;
     }
     public void Upload(SkiaImageSource image, ViewportFrame frame, Func<bool> current)
     {
         VerifyAccess(); ArgumentNullException.ThrowIfNull(image); ArgumentNullException.ThrowIfNull(frame); ArgumentNullException.ThrowIfNull(current);
-        var previous = _image; _image = image; _frame = frame; _current = current; previous?.Dispose(); Invalidate();
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        var previous = _image; _receipts.Supersede(); _image = image; _frame = frame; _current = current;
+        PrepareImageBounds(); previous?.Dispose(); Invalidate();
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(600, 420);
-    protected override void DrawCore(IDrawingContext context)
+    protected override void ArrangeCore(Rect contentBounds) => PrepareImageBounds();
+
+    private void PrepareImageBounds()
     {
-        DrawnFrame = null; ImageBounds = Bounds;
-        if (_image != null && _frame != null && _current!())
+        var bounds = Bounds;
+        if (_frame is {} frame)
         {
-            context.Fill(Bounds, new(10, 15, 26));
-            var surface = _frame.Presentation.Surface; var scale = Math.Min(Bounds.Width / surface.Width, Bounds.Height / surface.Height);
-            ImageBounds = new(Bounds.X + (Bounds.Width - surface.Width * scale) / 2, Bounds.Y + (Bounds.Height - surface.Height * scale) / 2, surface.Width * scale, surface.Height * scale);
-            var clip = EffectiveClip();
-            if (LayoutRevision == 0 || _drawnImage != ImageBounds || DrawnClipBounds != clip || _drawnViewportEpoch!=_viewportEpoch)
-            { LayoutRevision = checked(LayoutRevision + 1); _drawnImage = ImageBounds; DrawnClipBounds = clip; }
-            _drawnViewportEpoch=_viewportEpoch;
-            _drawnBounds = Bounds; context.Image(_image, ImageBounds); DrawnFrame = _frame;
-            _controller?.DrawTranslationOverlay(context); return;
+            var surface = frame.Presentation.Surface;
+            var scale = Math.Min(bounds.Width / surface.Width, bounds.Height / surface.Height);
+            var width = surface.Width * scale; var height = surface.Height * scale;
+            bounds = new(bounds.X + (bounds.Width - width) / 2, bounds.Y + (bounds.Height - height) / 2, width, height);
         }
-        if (Theme.WindowGradient is not { } gradient || context is not IWindowGradientDrawingContext window ||
-            !window.TryDrawWindowGradient(Bounds, gradient, 0))
-            context.Fill(Bounds, Theme.Surface);
-        var line = Theme.Foreground with { A = 24 };
-        for (var x = Bounds.X; x < Bounds.X + Bounds.Width; x += 32) context.Fill(new(x, Bounds.Y, 1, Bounds.Height), line);
-        for (var y = Bounds.Y; y < Bounds.Y + Bounds.Height; y += 32) context.Fill(new(Bounds.X, y, Bounds.Width, 1), line);
-        context.Text(EmptyText, Bounds.X + 24, Bounds.Y + Math.Max(16, Bounds.Height / 2 - 12), Theme.Foreground, FontSize, FontFamily, FontWeight, FontItalic);
+        if (ImageBounds == bounds) return;
+        ImageBounds = bounds;
+        _viewportEpoch = checked(_viewportEpoch + 1);
+        _receipts.Supersede();
     }
-    private Rect _drawnImage, _drawnBounds;
+
+    private DrawGeometry Geometry() => new(Bounds, ImageBounds, EffectiveClip(), _viewportEpoch);
+    private readonly record struct DrawGeometry(Rect Bounds, Rect Image, Rect Clip, ulong Epoch)
+    {
+        public bool HasVisibleImage => Math.Max(Image.X, Clip.X) < Math.Min(Image.X + Image.Width, Clip.X + Clip.Width) &&
+            Math.Max(Image.Y, Clip.Y) < Math.Min(Image.Y + Image.Height, Clip.Y + Clip.Height);
+    }
+
+    // UI-owner mailbox. Neither the ticket nor a layout revision is published for an incomplete or superseded draw.
+    private sealed class DrawReceipts
+    {
+        private ulong _generation, _completed;
+        public ViewportFrame? Frame { get; private set; }
+        public DrawGeometry Geometry { get; private set; }
+        public ulong LayoutRevision { get; private set; }
+        public bool IsCurrent => _completed == _generation;
+        public ulong Supersede() => _generation = checked(_generation + 1);
+        public void Clear(ulong generation) { if (generation == _generation) Frame = null; }
+        public void Complete(ulong generation, ViewportFrame frame, DrawGeometry geometry)
+        {
+            if (generation != _generation) return;
+            if (LayoutRevision == 0 || Geometry != geometry) LayoutRevision = checked(LayoutRevision + 1);
+            Geometry = geometry; Frame = frame; _completed = generation;
+        }
+    }
+
+    private readonly record struct PaintState(DrawGeometry Geometry, SkiaImageSource? Image, ViewportFrame? Frame,
+        TranslationOverlay? Overlay, Theme Theme, string EmptyText, float FontSize, string FontFamily, int FontWeight,
+        bool FontItalic, DrawReceipts Receipts, ulong Generation);
+
+    private PaintState Capture()
+    {
+        var generation = _receipts.Supersede();
+        try
+        {
+            var geometry = Geometry();
+            var frame = _frame;
+            var image = _image;
+            if (_current?.Invoke() != true) frame = null;
+            var overlay = frame != null && geometry.HasVisibleImage ? _controller?.CaptureTranslationOverlay(frame) : null;
+            return new(geometry, image, frame, overlay, Theme, EmptyText, FontSize, FontFamily, FontWeight, FontItalic, _receipts, generation);
+        }
+        finally { _receipts.Clear(generation); }
+    }
+
+    private sealed class Painter : IElementPresenter<PaintState>
+    {
+        public void Draw(PaintState state, IDrawingContext context)
+        {
+            var bounds = state.Geometry.Bounds;
+            var theme = state.Theme;
+            if (state.Frame is {} frame && state.Image is {} image)
+            {
+                context.Fill(bounds, new(10, 15, 26));
+                if (!state.Geometry.HasVisibleImage) return;
+                context.Image(image, state.Geometry.Image);
+                state.Overlay?.Draw(context, theme, state.FontFamily, state.FontWeight, state.FontItalic);
+                state.Receipts.Complete(state.Generation, frame, state.Geometry);
+                return;
+            }
+            if (theme.WindowGradient is not { } gradient || context is not IWindowGradientDrawingContext window ||
+                !window.TryDrawWindowGradient(bounds, gradient, 0)) context.Fill(bounds, theme.Surface);
+            var line = theme.Foreground with { A = 24 };
+            for (var x = bounds.X; x < bounds.X + bounds.Width; x += 32) context.Fill(new(x, bounds.Y, 1, bounds.Height), line);
+            for (var y = bounds.Y; y < bounds.Y + bounds.Height; y += 32) context.Fill(new(bounds.X, y, bounds.Width, 1), line);
+            context.Text(state.EmptyText, bounds.X + 24, bounds.Y + Math.Max(16, bounds.Height / 2 - 12),
+                theme.Foreground, state.FontSize, state.FontFamily, state.FontWeight, state.FontItalic);
+        }
+    }
     private Rect EffectiveClip()
     {
         var clip = Bounds;
@@ -112,5 +184,5 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
         return clip;
     }
     private sealed class ImageLifetime(EditorViewport owner) : IDisposable
-    { public void Dispose() { owner._image?.Dispose(); owner._image = null; owner._frame = null; owner._current = null; owner.DrawnFrame = null; } }
+    { public void Dispose() { owner._receipts.Clear(owner._receipts.Supersede()); owner._image?.Dispose(); owner._image = null; owner._frame = null; owner._current = null; } }
 }

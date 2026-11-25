@@ -1,4 +1,6 @@
-﻿using TrueMoon.Aether.Editor.UI;
+﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -70,7 +72,7 @@ public sealed class EditorIslandLayoutTests
         var toolbar = new Box(10, 10, "toolbar", painted); var status = new Box(10, 10, "status", painted);
         using var root = new EditorLayout(toolbar, left, viewport, right, status);
         using var ui = new UiSession(root, new Surface(), new(1280, 720)); ui.Update();
-        root.Draw(new Drawing());
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new Drawing());
         Assert.Equal(new[] { "toolbar", "viewport", "hierarchy", "inspector", "status" }, painted);
         Click(ui, 40, 70); Click(ui, 1000, 70); Click(ui, 640, 70); Click(ui, 40, 200);
         Assert.Equal(1, left.Clicks); Assert.Equal(1, right.Clicks); Assert.Equal(2, viewport.Clicks);
@@ -105,7 +107,13 @@ public sealed class EditorIslandLayoutTests
         public int Clicks { get; private set; }
         protected override Size MeasureCore(Size available, ITextLayoutService text) =>
             new(Math.Min(width, available.Width), Math.Min(height, available.Height));
-        protected override void DrawCore(IDrawingContext context) { if (name != null) painted!.Add(name); }
+        private readonly string? _name = name;
+        private readonly List<string>? _painted = painted;
+        private static readonly ElementPresentation BoxPresentation = ElementPresentation.Create<Box>(static (box, _) =>
+        {
+            if (box._name != null) box._painted!.Add(box._name);
+        });
+        public override ElementPresentation Presentation => BoxPresentation;
         public override bool HandleInput(UiInput input, IInputContext context)
         { if (input.Kind != InputKind.PointerDown) return false; Clicks++; return true; }
     }
@@ -115,7 +123,7 @@ public sealed class EditorIslandLayoutTests
     {
         public ITextLayoutService TextLayout { get; } = new TextLayout();
         public void VerifyAvailable() { } public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { } public void Dispose() { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { }
     }
     private sealed class Drawing : IDrawingContext
     {

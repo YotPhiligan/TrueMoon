@@ -24,13 +24,13 @@ No-options `UsePresentation<TView>()` и его optional `Action<PresentationCon
 
 Новый explicit API остаётся в `TrueMoon.Alloy.Hosting`: `UsePresentation<TView>(Action<AlloyOptions>)` для Argentis Element с явным backend/window или `UseAlloy(...)` для внешнего хоста. Он не изменён переносом 2.1b и не использует legacy VisualTree. [Примеры Hosting](../README.md), [AlloyTest с explicit OpenGL/Silk](../../ManualTests/AlloyTest/README.md).
 
-`TrueMoon.Alloy` теперь содержит только Runtime/csproj и ProjectReference на Argentis, без PackageReference и Core/Contracts. Hosting явно подключает Silk.NET, SkiaSharp, Topten.RichTextKit и Core/Contracts вместе с Alloy/Rendering.Skia/Platform.Silk. Compatibility — область Hosting, не отдельная сборка; выбор только explicit API не удаляет эти зависимости из Hosting. Для direct `UiSession.Create` Hosting не требуется.
+`TrueMoon.Alloy` зависит от Argentis и `TrueMoon.Contracts` (фабрики), но не от App, Silk.NET или SkiaSharp. Hosting явно подключает платформу и рендерер. Compatibility — область Hosting, не отдельная сборка. Для direct `UiSession.Create` Hosting не требуется.
 
 ## Сохранённые ограничения
 
 - `Visual.GetEnumerator` по-прежнему обходит весь backing array, а не только `_itemsCount`, включая незаполненные слоты. Эта ошибка не исправлена переносом.
 - Legacy lifetime/cleanup bugs и старый порядок window/presenter/subscription disposal не исправлены. Гарантии нового HostedUiWindow/UiSession нельзя автоматически переносить на ViewHandle/ViewManager.
-- `SkiaVulkanViewPresenter.cs`, `RenderObject.cs` и `TextureData.cs` — целиком закомментированные архивные прототипы, не рабочие рендереры и не доступные compiled API. Рабочие Vulkan/OpenGL/raster backends находятся в Rendering.Skia.
+- Рабочие Vulkan/OpenGL/raster backends находятся в Rendering.Skia; удалённые архивные прототипы не являлись compiled API.
 - Native ABI, GPU lease/ownership и алгоритм swapchain retirement нового пути не менялись.
 
 Фактические проверки переноса и ограничения — в [STATUS](../../docs/alloy/STATUS.md). Compatibility consumer проверяет сборку и opt-in no-options регистрацию/factories/DI без запуска старого окна; успешные GPU/оконные проверки нового runtime не доказывают исправность legacy window/lifetime пути.

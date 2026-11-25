@@ -1,4 +1,8 @@
-﻿using SkiaSharp;
+﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -33,11 +37,11 @@ public sealed class OpacityRenderingTests
         var bounds = child.Bounds;
         var reasons = new List<Invalidation>(); root.Invalidated += reasons.Add;
         root.Opacity = .5f; root.Opacity = .5f;
-        var drawing = new OpacityDrawing(); root.Draw(drawing);
+        var drawing = new OpacityDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing);
         Assert.Equal(.5f, Assert.Single(drawing.Layers).Opacity);
 
         root.Clear(UiProperties.Opacity);
-        drawing = new OpacityDrawing(); root.Draw(drawing);
+        drawing = new OpacityDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing);
 
         Assert.Equal(.25f, Assert.Single(drawing.Layers).Opacity);
         Assert.Equal(new[] { Invalidation.Render, Invalidation.Render }, reasons);
@@ -84,7 +88,7 @@ public sealed class OpacityRenderingTests
     {
         using var root = new Panel { Opacity = opacity, Background = new(255, 0, 0) };
         root.Add(new Panel { Background = new(0, 0, 255) }); Arrange(root);
-        var drawing = new OpacityDrawing(); root.Draw(drawing);
+        var drawing = new OpacityDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing);
 
         Assert.Equal(layers, drawing.Layers.Count);
         Assert.Equal(opacity == 0 ? Array.Empty<Color>() : new[] { new Color(255, 0, 0), new Color(0, 0, 255) }, drawing.Fills);
@@ -100,7 +104,7 @@ public sealed class OpacityRenderingTests
     {
         using var root = new Panel { Opacity = opacity, Background = new(255, 0, 0) };
         root.Add(new Panel { Background = new(0, 0, 255) }); Arrange(root);
-        var drawing = new LegacyDrawing(); root.Draw(drawing);
+        var drawing = new LegacyDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing);
 
         Assert.Equal(opacity == 0 ? Array.Empty<Color>() : new[] { new Color(255, 0, 0), new Color(0, 0, 255) }, drawing.Fills);
         Assert.Equal(opacity == 0 ? 0 : 2, drawing.Restores); Assert.Equal(0, drawing.Depth);
@@ -111,7 +115,7 @@ public sealed class OpacityRenderingTests
     {
         using var root = new Panel { Opacity = .5f, Background = new(255, 0, 0) };
         root.Add(new Panel { Opacity = .25f, Background = new(0, 0, 255) }); Arrange(root);
-        var drawing = new OpacityDrawing(); root.Draw(drawing);
+        var drawing = new OpacityDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing);
 
         Assert.Equal(new[] { "save", "clip", "opacity", "fill", "save", "clip", "opacity", "fill",
             "restore", "restore", "restore", "restore" }, drawing.Events);
@@ -127,7 +131,7 @@ public sealed class OpacityRenderingTests
         root.Add(new ThrowingElement(error) { Opacity = .25f }); Arrange(root);
         var drawing = new OpacityDrawing();
 
-        Assert.Same(error, Assert.Throws<InvalidOperationException>(() => root.Draw(drawing)));
+        Assert.Same(error, Assert.Throws<InvalidOperationException>(() => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing)));
 
         Assert.Equal(new[] { "save", "clip", "opacity", "save", "clip", "opacity",
             "restore", "restore", "restore", "restore" }, drawing.Events);
@@ -300,23 +304,31 @@ public sealed class OpacityRenderingTests
     private sealed class ThrowingElement(Exception error) : Element
     {
         protected override Size MeasureCore(Size available, ITextLayoutService text) => new(20, 20);
-        protected override void DrawCore(IDrawingContext context) => throw error;
+        private readonly Exception _error = error;
+        private static readonly ElementPresentation ThrowingPresentation = ElementPresentation.Create<ThrowingElement>(static (element, _) => throw element._error);
+        public override ElementPresentation Presentation => ThrowingPresentation;
     }
     private sealed class ImagePatch(IImageSource image) : Panel
     {
-        protected override void DrawCore(IDrawingContext context) => context.Image(image, new(20, 20, 20, 20));
+        private readonly IImageSource _image = image;
+        private static readonly ElementPresentation ImagePresentation = ElementPresentation.Create<ImagePatch>(static (patch, context) =>
+            context.Image(patch._image, new(20, 20, 20, 20)));
+        public override ElementPresentation Presentation => ImagePresentation;
     }
     private sealed class SplitBackground : Panel
     {
         public Color Left = new(0, 0, 0), Right = new(255, 255, 255);
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation SplitPresentation = ElementPresentation.Create<SplitBackground>(static (split, context) =>
         {
-            context.Fill(new(0, 0, 60, 100), Left); context.Fill(new(60, 0, 100, 100), Right);
-        }
+            context.Fill(new(0, 0, 60, 100), split.Left); context.Fill(new(60, 0, 100, 100), split.Right);
+        });
+        public override ElementPresentation Presentation => SplitPresentation;
     }
     private sealed class ForegroundPatch : Panel
     {
-        protected override void DrawCore(IDrawingContext context) => context.Fill(new(Bounds.X + 20, Bounds.Y + 15, 8, 10), new(255, 0, 0));
+        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<ForegroundPatch>(static (patch, context) =>
+            context.Fill(new(patch.Bounds.X + 20, patch.Bounds.Y + 15, 8, 10), new(255, 0, 0)));
+        public override ElementPresentation Presentation => PatchPresentation;
     }
     private class LegacyDrawing : IDrawingContext
     {

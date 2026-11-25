@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Painting;
 using System.Text.Json;
 using TrueMoon.Aether.Editor.Tooling.Diagnostics;
 using TrueMoon.Aether.Editor.UI.Diagnostics;
@@ -88,6 +89,6 @@ public sealed class EditorRuntimeObservationTests : IDisposable
         public UiRenderDeviceInfo? DeviceInfo { get { Reads++; return Info; } }
         public ITextLayoutService TextLayout => _inner.TextLayout;
         public void VerifyAvailable() => _inner.VerifyAvailable(); public void Resize(UiViewport viewport) => _inner.Resize(viewport);
-        public void Render(Element root, UiViewport viewport) => _inner.Render(root, viewport); public void Dispose() => _inner.Dispose();
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => _inner.Render(root, viewport, presenters); public void Dispose() => _inner.Dispose();
     }
 }

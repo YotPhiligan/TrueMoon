@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 
@@ -25,7 +30,15 @@ internal sealed class VisualCanvas(Controls controls):Element
     }
     internal void Clear(){VerifyAccess();_image?.Dispose();_image=null;Drawn=0;Invalidate();}
     protected override Size MeasureCore(Size available,ITextLayoutService text)=>new(Math.Min(960,available.Width),540);
-    protected override void DrawCore(IDrawingContext context){if(_image!=null){context.Image(_image,DrawBounds);Drawn=_version;}}
+    private static readonly ElementPresentation Painter = ElementPresentation.Create<VisualCanvas>(static (canvas, context) =>
+    {
+        if (canvas._image is not { } image) return;
+        var version = canvas._version;
+        context.Image(image, canvas.DrawBounds);
+        canvas.ReportDrawn(version);
+    });
+    public override ElementPresentation Presentation => Painter;
+    private void ReportDrawn(long version) => Drawn = version;
     public override bool HandleInput(UiInput input,IInputContext context)
     {
         if(input.Kind==InputKind.PointerDown){context.Focus(this);return true;}
@@ -38,15 +51,15 @@ internal sealed class VisualCanvas(Controls controls):Element
 internal sealed class VisualView:View<VisualData>
 {
     internal VisualCanvas Canvas {get;}
-    internal Text Status {get;}=Text.Plain();
+    internal Text Status {get;}=new Text();
     internal VStack Stack {get;}
     private readonly VisualData _data;
     public VisualView(VisualData data,Controls controls,IViewStyle<VisualView> style)
     {
         _data=data;Canvas=new(controls);
-        Stack=VStack.Create().WithChildren(Text.Plain("Kton physics playground — slope, platform, contacts"),
-            Text.Plain("Click image | WASD move | Space jump | Enter play/pause | F step | Home reset | End stop"),Status,Canvas);
-        Content(data,_=>Stack);this.WithViewStyle(style);Refresh();
+        Stack=new VStack().WithChildren(new Text("Kton physics playground — slope, platform, contacts"),
+            new Text("Click image | WASD move | Space jump | Enter play/pause | F step | Home reset | End stop"),Status,Canvas);
+        DataContext=data;SetContent(Stack);this.WithViewStyle(style);Refresh();
     }
     internal void Refresh()=>Status.Value=_data.Status;
 }

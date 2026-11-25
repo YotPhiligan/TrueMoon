@@ -1,10 +1,12 @@
 # Разделение панелей: SplitView v1
 
-`TrueMoon.Argentis.SplitView` размещает два retained `ContentControl` и focusable
+`TrueMoon.Argentis.Layout.SplitView` размещает два retained `ContentControl` и focusable
 divider. `Horizontal` означает слева/справа, `Vertical` — сверху/снизу. Вложенные
 SplitView дают navigation/workspace/inspector/timeline. Задача [UIA3e](PLAN.md#uia3e-split-view).
 
 ```csharp
+using TrueMoon.Argentis.Layout;
+
 var split = new SplitView(navigation, workspace)
 {
     Orientation = SplitOrientation.Horizontal,

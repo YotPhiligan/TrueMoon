@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
+
 namespace TrueMoon.Argentis;
 
 /// <summary>The work invalidated by a property or tree mutation.</summary>

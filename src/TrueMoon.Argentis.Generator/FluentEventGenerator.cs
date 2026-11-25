@@ -67,6 +67,16 @@ public sealed class FluentEventGenerator : IIncrementalGenerator
                         return {{receiver}};
                     }
                 }
+
+                {{subscription.Receiver.DeclareControl("control")}}
+                {
+                    /// <summary>Handles the event while retaining the control's build context.</summary>
+                    public {{subscription.Receiver.ControlType}} On{{subscription.Name}}({{subscription.HandlerType}} handler)
+                    {
+                        control.Element.On{{subscription.Name}}(handler);
+                        return control;
+                    }
+                }
             }
             """;
     }

@@ -7,7 +7,7 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     bool CanAdjustNumeric(InspectorProperty property);
     bool IsNumericGestureCurrent(InspectorProperty property, long id);
     long BeginNumericGesture(InspectorProperty property);
-    void FinishNumericGesture(TrueMoon.Argentis.NumericGestureResult result, long id);
+    void FinishNumericGesture(TrueMoon.Argentis.Editors.NumericGestureResult result, long id);
     /// <summary>Opt-in proportional scale editing. Enabling it does not change any field or commit data.</summary>
     bool ScaleLinked { get; set; }
 

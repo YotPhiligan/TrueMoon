@@ -130,6 +130,8 @@ if (args.Contains("--style-gallery"))
 if (args.Contains("--default-frame")) { await WindowChromeProbe.RunDefaultAsync(args.Contains("--validation")); return; }
 if (args.Contains("--window-shared-loop-control")) { WindowSharedLoopProbe.Run(args); return; }
 if (args.Contains("--hosted-dispatcher")) { await HostedDispatcherProbe.RunAsync(args.Contains("--validation")); return; }
+if (args.Contains("--borrowed-window-close")) { await HostedDispatcherProbe.RunBorrowedCloseAsync(args.Contains("--validation")); return; }
+if (args.Contains("--partial-window-startup")) { await HostedDispatcherProbe.RunPartialStartupAsync(args.Contains("--validation")); return; }
 if (args.Contains("--frame-scheduling")) { await FrameSchedulingProbe.RunAsync(args); return; }
 if (args.Contains("--async-close")) { await AsyncCloseProbe.RunAsync(args); return; }
 if (args.Contains("--window-component")) { await WindowComponentProbe.RunAsync(args); return; }

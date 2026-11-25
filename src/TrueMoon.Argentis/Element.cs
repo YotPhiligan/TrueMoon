@@ -1,3 +1,10 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
+
 namespace TrueMoon.Argentis;
 
 /// <summary>A retained UI element with typed properties, layout, and deterministic attachment lifetime.</summary>
@@ -10,6 +17,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private Action? _verifyAccess;
     private Action<Action>? _post;
     private Action<Element>? _detaching;
+    private IUiControlFactories? _controlFactories;
     private int _attachmentVersion;
     private bool _disposing;
     internal bool ChangingTree { get; set; }
@@ -20,7 +28,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private float _minWidth, _minHeight, _maxWidth = float.PositiveInfinity, _maxHeight = float.PositiveInfinity;
     private LayoutAlignment _horizontal = LayoutAlignment.Stretch, _vertical = LayoutAlignment.Stretch;
     private bool _disposed;
-    private bool _hovered, _focused;
+    private bool _hovered, _focused, _inputBlocked;
     /// <summary>Parent ownership is managed exclusively by containers.</summary>
     public Element? Parent { get; private set; }
     IElement? IElement.Parent => Parent;
@@ -50,6 +58,18 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public event Action<Element>? FocusChanged;
     /// <summary>The effective enabled state, including ancestors.</summary>
     public bool IsEffectivelyEnabled => IsEnabled && (Parent?.IsEffectivelyEnabled ?? true);
+    /// <summary>Temporarily excludes this subtree from input routing and focus navigation, independently of styled enablement.</summary>
+    public bool IsInputBlocked
+    {
+        get => _inputBlocked;
+        set
+        {
+            VerifyAccess();
+            if (_inputBlocked == value) return;
+            _inputBlocked = value;
+            Invalidate(Invalidation.Render);
+        }
+    }
     /// <summary>Explicit width; NaN selects automatic sizing.</summary>
     public float Width { get => Get(UiProperties.Width); set => Set(UiProperties.Width, value); }
     /// <summary>Explicit height; NaN selects automatic sizing.</summary>
@@ -315,6 +335,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             if (node.ChangingTree || node._disposing) throw new InvalidOperationException("UI tree changes cannot be reentrant.");
     }
 
+    internal virtual ElementScope? OwnedScope => null;
     internal string? PartName { get; private set; }
 
     internal void SetPartName(string name)
@@ -322,7 +343,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         VerifyTreeAccess();
         if (Parent != null || IsAttached)
             throw new InvalidOperationException("Name a part before adding it to a parent or attaching it.");
-        if (this is View view) view.ValidateRootPartName(name);
+        OwnedScope?.ValidateRootName(name);
         PartName = name;
     }
 
@@ -335,10 +356,23 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         for (Element? node = this; node != null; node = node.Parent)
             if (ReferenceEquals(node, child)) throw new InvalidOperationException("An element cannot contain itself or an ancestor.");
         child.ValidateUnattachedSubtree();
+        if (IsAttached) child.PrepareAttachmentSubtree(_controlFactories, this);
         // Validate theme-derived rules before a container commits ownership changes.
-        var inheritedOwner = FindStyleOwner();
-        foreach (var node in child.Subtree())
-            (node.FindStyleOwner() ?? inheritedOwner)?.ViewStyleScope?.Resolve(node, Theme);
+        if (child.OwnedScope == null) FindScope()?.ValidateTheme(Theme);
+        child.ValidateScopeThemes(Theme);
+    }
+
+    private void ValidateScopeThemes(Theme theme)
+    {
+        OwnedScope?.ValidateTheme(theme);
+        var children = Children;
+        for (var i = 0; i < children.Count; i++) children[i].ValidateScopeThemes(theme);
+    }
+
+    internal void ValidateChildChange(IReadOnlyList<Element> added, IReadOnlyList<Element> removed)
+    {
+        foreach (var child in added) ValidateChild(child);
+        FindScope()?.ValidatePartChanges(added, removed);
     }
     private void ValidateUnattachedSubtree()
     {
@@ -349,15 +383,15 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     internal void Adopt(Element child, TreeChange change)
     {
         child.Parent = this;
-        FindStyleOwner()?.RegisterParts(child);
+        FindScope()?.CommitPartChange(child, added: true);
         child.ApplyThemeCore(Theme, change);
-        if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, change);
+        if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, _controlFactories, change);
         change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
     }
     internal void Orphan(Element child, TreeChange change)
     {
         child.Parent = null;
-        FindStyleOwner()?.UnregisterParts(child);
+        FindScope()?.CommitPartChange(child, added: false);
         child.RefreshViewStyles();
         child.DetachCore(change);
         change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
@@ -370,18 +404,30 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <param name="verifyAccess">Checks access to the host's owner thread.</param>
     /// <param name="post">Queues work on the host's owner thread.</param>
     /// <param name="detaching">Clears host references after attachment ends and before user detach notifications.</param>
-    public void Attach(Action verifyAccess, Action<Action> post, Action<Element>? detaching)
+    /// <param name="controlFactories">Borrowed factory registry for declared view content and later insertions.</param>
+    public void Attach(Action verifyAccess, Action<Action> post, Action<Element>? detaching, IUiControlFactories? controlFactories = null)
     {
         ArgumentNullException.ThrowIfNull(verifyAccess);
         ArgumentNullException.ThrowIfNull(post);
         verifyAccess();
         ValidateUnattachedSubtree();
         if (Parent != null) throw new InvalidOperationException("Only an unowned root can be attached directly.");
+        PrepareAttachmentSubtree(controlFactories);
         using var change = new TreeChange(this);
-        AttachCore(verifyAccess, post, detaching, change);
+        AttachCore(verifyAccess, post, detaching, controlFactories, change);
         change.Complete();
     }
-    private void AttachCore(Action verifyAccess, Action<Action> post, Action<Element>? detaching, TreeChange change)
+
+    private protected virtual void PrepareForAttach(IUiControlFactories? factories, Element? attachedParent) { }
+
+    private void PrepareAttachmentSubtree(IUiControlFactories? factories, Element? attachedParent = null)
+    {
+        PrepareForAttach(factories, attachedParent);
+        foreach (var child in Children) child.PrepareAttachmentSubtree(factories, attachedParent);
+    }
+
+    private void AttachCore(Action verifyAccess, Action<Action> post, Action<Element>? detaching,
+        IUiControlFactories? controlFactories, TreeChange change)
     {
         var nodes = Subtree().ToArray();
         foreach (var node in nodes)
@@ -389,6 +435,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             node._verifyAccess = verifyAccess;
             node._post = post;
             node._detaching = detaching;
+            node._controlFactories = controlFactories;
             Interlocked.Increment(ref node._attachmentVersion);
         }
         foreach (var node in nodes.Reverse()) change.Notify(node.AttachmentChanged);
@@ -418,6 +465,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             node._verifyAccess = null;
             node._post = null;
             node._detaching = null;
+            node._controlFactories = null;
             Interlocked.Increment(ref node._attachmentVersion);
             var focused = node._focused;
             node._hovered = node._focused = false;
@@ -443,15 +491,19 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     }
     private void ApplyThemeCore(Theme theme, TreeChange change)
     {
-        var nodes = Subtree().ToArray();
-        var styles = nodes.Select(node => node.FindStyleOwner()?.ViewStyleScope?.Resolve(node, theme)).ToArray();
-        for (var i = 0; i < nodes.Length; i++) { nodes[i].Theme = theme; nodes[i]._viewStyle = styles[i]; }
-        foreach (var node in nodes.Reverse()) change.Schedule(() => node.Invalidate(Invalidation.Layout));
+        List<(Element Node, Style? Value)> pending = [];
+        ResolveSubtreeStyles(Parent?.FindScope(), theme, pending);
+        foreach (var (node, value) in pending) { node.Theme = theme; node._viewStyle = value; }
+        for (var i = pending.Count - 1; i >= 0; i--)
+        {
+            var node = pending[i].Node;
+            change.Schedule(() => node.Invalidate(Invalidation.Layout));
+        }
     }
-    internal View? FindStyleOwner()
+    internal ElementScope? FindScope()
     {
         for (Element? node = this; node != null; node = node.Parent)
-            if (node is View view) return view;
+            if (node.OwnedScope is { } scope) return scope;
         return null;
     }
     internal void SetViewStyleValue(Style? style) => _viewStyle = style;
@@ -460,14 +512,22 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     {
         VerifyAccess();
         if (!(_viewStyleRoles ??= []).Add(role)) return;
-        _viewStyle = FindStyleOwner()?.ViewStyleScope?.Resolve(this, Theme);
+        _viewStyle = FindScope()?.ResolveStyle(this, Theme);
         Invalidate(Invalidation.Layout | Invalidation.Render);
     }
     private void RefreshViewStyles()
     {
-        var nodes = Subtree().ToArray();
-        var styles = nodes.Select(node => node.FindStyleOwner()?.ViewStyleScope?.Resolve(node, node.Theme)).ToArray();
-        for (var i = 0; i < nodes.Length; i++) nodes[i]._viewStyle = styles[i];
+        List<(Element Node, Style? Value)> pending = [];
+        ResolveSubtreeStyles(null, null, pending);
+        foreach (var (node, value) in pending) node._viewStyle = value;
+    }
+
+    private void ResolveSubtreeStyles(ElementScope? inherited, Theme? theme, List<(Element Node, Style? Value)> pending)
+    {
+        var scope = OwnedScope ?? inherited;
+        pending.Add((this, scope?.ResolveStyle(this, theme ?? Theme)));
+        var children = Children;
+        for (var i = 0; i < children.Count; i++) children[i].ResolveSubtreeStyles(scope, theme, pending);
     }
     /// <summary>Measures the subtree within a logical size constraint.</summary>
     public void Measure(Size available, ITextLayoutService text)
@@ -495,130 +555,27 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Size MeasureCore(Size available, ITextLayoutService text) => default;
     /// <summary>Arranges custom content inside the padded bounds.</summary>
     protected virtual void ArrangeCore(Rect contentBounds) { }
-    /// <summary>Draws this subtree with balanced clipping state.</summary>
-    public void Draw(IDrawingContext context) => Draw(context, overBackdrop: false);
+    /// <summary>Default presenter descriptor; null denotes a structural node with only shared decoration.</summary>
+    public virtual ElementPresentation? Presentation => null;
 
-    private void Draw(IDrawingContext context, bool overBackdrop)
-    {
-        if (!IsVisible || Opacity == 0 || Bounds.Width <= 0 || Bounds.Height <= 0) return;
-        context.Save();
-        try
-        {
-            if (Shadow == null) context.Clip(Bounds);
-            if (Opacity < 1 && context is IOpacityDrawingContext composite)
-            {
-                composite.SaveOpacity(Shadow?.PaintBounds(Bounds) ?? Bounds, Opacity);
-                try { DrawSurface(context, overBackdrop); }
-                finally { context.Restore(); }
-            }
-            else DrawSurface(context, overBackdrop);
-        }
-        finally { context.Restore(); }
-    }
-    private void DrawSurface(IDrawingContext context, bool overBackdrop)
-    {
-        if (Shadow is { Color.A: > 0 } shadow && context is IShadowDrawingContext drawing)
-            drawing.DrawShadow(Bounds, shadow, CornerRadius);
-        if (Shadow != null) context.Clip(Bounds);
-        DrawContents(context, overBackdrop);
-    }
-    private void DrawContents(IDrawingContext context, bool overBackdrop)
-    {
-        overBackdrop = DrawBackground(context, overBackdrop);
-        DrawCore(context);
-        var childClip = ChildClipBounds;
-        if (Children.Count != 0 && childClip != Bounds)
-        {
-            context.Save();
-            try { context.Clip(childClip); foreach (var child in Children) child.Draw(context, overBackdrop); }
-            finally { context.Restore(); }
-        }
-        else foreach (var child in Children) child.Draw(context, overBackdrop);
-        var badge = ValidationIconBounds;
-        var radius = CornerRadius;
-        var plate = badge;
-        if (badge.Width > 0)
-        {
-            if (radius > 0)
-            {
-                var inset = Math.Min(Math.Max(BorderWidth + 1, radius / 2), Math.Min(badge.Width, badge.Height) / 4);
-                var available = badge.Deflate(new Thickness(inset));
-                var size = Math.Min(28, Math.Min(available.Width, available.Height));
-                plate = new(available.X + available.Width - size, available.Y + (available.Height - size) / 2, size, size);
-            }
-            context.Fill(plate, Theme.Error, Math.Min(radius, Math.Min(plate.Width, plate.Height) / 2));
-        }
-        if (BorderWidth > 0)
-        {
-            var inset = BorderWidth / 2;
-            context.Stroke(Bounds.Deflate(new Thickness(inset)), BorderColor, BorderWidth,
-                SupportsValidationIcon ? Math.Max(0, radius - inset) : radius);
-        }
-        if (HasError && SupportsValidationIcon)
-        {
-            var space = Math.Min(plate.Width, plate.Height);
-            var size = Math.Min(14, radius > 0 ? space * .65f : Math.Max(0, space - 4));
-            if (size > 0) UiSymbols.Draw(context, UiSymbol.Warning,
-                new(plate.X + (plate.Width - size) / 2, plate.Y + (plate.Height - size) / 2, size, size), Theme.OnError);
-        }
-        else if (HasError)
-        {
-            if (!SharesValidationWithEditors) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
-        }
-        else if (IsModified) context.Fill(new Rect(Bounds.X + Math.Max(0, Bounds.Width - 5), Bounds.Y + 2, Math.Min(3, Bounds.Width), Math.Min(3, Bounds.Height)), Theme.Modified);
-        if (IsFocused && IsEffectivelyEnabled)
-        {
-            var focus = badge.Width > 0 ? Bounds with { Width = Math.Max(0, badge.X - Bounds.X) } : Bounds;
-            if (focus.Width > 4 && focus.Height > 4)
-                context.Stroke(focus.Deflate(new Thickness(2)), Theme.Focus, 2, SupportsValidationIcon ? Math.Max(0, radius - 2) : radius);
-        }
-    }
+    internal bool HasEditorOutline => SupportsValidationIcon;
+    internal bool HasSharedValidation => SharesValidationWithEditors;
+    internal WindowGradient? EffectiveBackgroundGradient =>
+        OverridesAppearance(UiProperties.Background) ? null : ThemeBackgroundGradient;
+    internal bool HasThemedGlass => UsesThemedControlBackdrop &&
+        !OverridesAppearance(UiProperties.Backdrop) && !OverridesAppearance(UiProperties.Background);
+    internal Color GlassTint(Color color) => color with { A = ThemedControlTintAlpha };
 
-    private bool DrawBackground(IDrawingContext context, bool overBackdrop)
+    internal BackdropMaterial ControlBackdrop(Color tint, Color color)
     {
-        var backdrop = context as IBackdropDrawingContext;
-        var material = Backdrop;
-        var radius = CornerRadius;
-        if (material != null)
-        {
-            if (backdrop != null && backdrop.TryDrawBackdrop(Bounds, material, radius))
-                overBackdrop = material.Tint.A < 255 && (material.BlurSigma > 0 || overBackdrop);
-            else
-            {
-                context.Fill(Bounds, material.Fallback, radius);
-                overBackdrop = false;
-            }
-        }
-
-        var color = Background;
-        if (color.A == 0) return overBackdrop;
-        if (material == null && ThemeBackgroundGradient is { } gradient &&
-            !OverridesAppearance(UiProperties.Background) &&
-            context is IWindowGradientDrawingContext window && window.TryDrawWindowGradient(Bounds, gradient, radius))
-            return false;
-        if (UsesThemedControlBackdrop && backdrop != null && color.A == 255 && Theme.ControlTintAlpha < 255 &&
-            material == null && !OverridesAppearance(UiProperties.Backdrop) && !OverridesAppearance(UiProperties.Background))
-        {
-            var tint = color with { A = ThemedControlTintAlpha };
-            if (overBackdrop || Theme.ControlBlurSigma == 0)
-            {
-                context.Fill(Bounds, tint, radius);
-                return overBackdrop;
-            }
-
-            var cached = _themedControlBackdrop;
-            if (cached == null || cached.Tint != tint || cached.BlurSigma != Theme.ControlBlurSigma)
-                _themedControlBackdrop = cached = new(Theme.ControlBlurSigma, tint, color);
-            if (backdrop.TryDrawBackdrop(Bounds, cached, radius)) return true;
-        }
-        context.Fill(Bounds, color, radius);
-        return overBackdrop && color.A < 255;
+        var cached = _themedControlBackdrop;
+        if (cached == null || cached.Tint != tint || cached.BlurSigma != Theme.ControlBlurSigma)
+            _themedControlBackdrop = cached = new(Theme.ControlBlurSigma, tint, color);
+        return cached;
     }
 
     private bool OverridesAppearance<T>(UiProperty<T> property) =>
         _values.ContainsKey(property) || _style?.TryGet(property, out _) == true || _viewStyle?.TryGet(property, out _) == true;
-    /// <summary>Draws custom content before children.</summary>
-    protected virtual void DrawCore(IDrawingContext context) { }
     /// <summary>Handles a routed input event, returning true when consumed.</summary>
     public virtual bool HandleInput(UiInput input, IInputContext context) => false;
     /// <summary>Resets transient interaction state after focus or capture is lost.</summary>

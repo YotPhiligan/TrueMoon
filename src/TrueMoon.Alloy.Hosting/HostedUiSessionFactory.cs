@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
@@ -7,6 +9,8 @@ namespace TrueMoon.Alloy.Hosting;
 public sealed class HostedUiSessionFactory : IUiWindowSessionFactory, IStoppable, IDisposable
 {
     private readonly IRenderBackend _backend;
+    private readonly IUiControlFactories? _controlFactories;
+    private readonly Action<UiPresenters>? _configurePresenters;
     private readonly HashSet<UiSession> _sessions = [];
     private readonly object _gate = new();
     private bool _stopRequested, _disposing;
@@ -16,9 +20,19 @@ public sealed class HostedUiSessionFactory : IUiWindowSessionFactory, IStoppable
     /// <summary>Built-in renderer compatibility, or Custom when the backend owns its target contract.</summary>
     public UiRendererKind Renderer { get; }
     /// <summary>Creates a registry without allocating a graphics context.</summary>
-    public HostedUiSessionFactory(IRenderBackend backend)
+    public HostedUiSessionFactory(IRenderBackend backend, IUiControlFactories? controlFactories = null)
+        : this(backend, controlFactories, UiPresenters.StockIconFactory) { }
+
+    /// <summary>Creates a registry whose sessions borrow the factory and own the presenters it creates.</summary>
+    public HostedUiSessionFactory(IRenderBackend backend, IUiControlFactories? controlFactories,
+        IFactory<IElementPresenter<IconButtonPaintState>> iconButtonFactory, Action<UiPresenters>? configurePresenters = null)
     {
+        ArgumentNullException.ThrowIfNull(iconButtonFactory);
+        _configurePresenters = ReferenceEquals(iconButtonFactory, UiPresenters.StockIconFactory)
+            ? configurePresenters
+            : (Action<UiPresenters>)(p => p.RegisterIconButton(iconButtonFactory)) + configurePresenters;
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        _controlFactories = controlFactories;
         Renderer = UiRendererCompatibility.Identify(backend);
     }
     /// <inheritdoc />
@@ -32,7 +46,8 @@ public sealed class HostedUiSessionFactory : IUiWindowSessionFactory, IStoppable
             _creating++;
             try
             {
-                var session = UiSession.Create(root, _backend, target, viewport, clipboard);
+                var session = UiSession.Create(root, _backend, target, viewport, clipboard, new UiDispatchOptions(), _controlFactories,
+                    configurePresenters: _configurePresenters);
                 session.Disposed += Removed;
                 _sessions.Add(session);
                 return session;

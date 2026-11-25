@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -19,7 +23,7 @@ public sealed class CollectionBindingTests
     {
         var source = new Source(Enumerable.Range(0, count).Select(x => new Model(x)));
         var calls = 0;
-        var list = VStack.Create();
+        var list = new VStack();
         Assert.Same(list, list.BindItems(source, _ => { calls++; return new SizedElement(30, 20); }));
         Assert.Equal(0, source.Subscribers);
         using var ui = Create(list);
@@ -616,7 +620,7 @@ public sealed class CollectionBindingTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => root.Draw(new RecordingDrawingContext());
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters);
         public void Dispose() { }
     }
 }

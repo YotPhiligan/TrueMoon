@@ -53,6 +53,28 @@ Runner создаёт новый `TestResults/AlloyPackages/run-*`, уникал
 GPU процессы выполняются последовательно. Для restore внешних зависимостей может
 потребоваться nuget.org.
 
+### Адресная проверка презентеров (UIA1h)
+
+Из `src` одна команда упаковывает только граф `TrueMoon.Alloy.Rendering.Skia`,
+восстанавливает независимый проект из нового feed/cache, собирает Release и
+запускает один CPU raster процесс без App, окна или GPU:
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -PresentersOnly
+```
+
+Пример миграции с `DrawCore` — [PresenterScreen.cs](PresenterScreen.cs).
+Закрытый `SignalButton` сохраняет ввод `Button`, объявляет
+`Presentation => ElementPresentation.Required`, а рисование реализует `Signal`.
+В `UiSession.Create(..., configurePresenters: ...)` регистрация связывает точный
+тип контрола, захват `Bounds` и фабрику презентера; `RegisterIconButton` в той же
+сессии заменяет только штатный рисунок `IconButton`. Код сверяет конкретные пиксели
+обоих элементов и по нажатию/отпусканию проверяет захват, фокус и одну активацию
+только целевой кнопки. Вторая сессия со штатным значком продолжает рисовать
+и принимать ввод после закрытия первой. В `direct-Release-build-presenters.json`
+сохранены semantic ID, типы, основание выбора и результат проверки изоляции;
+команды pack/restore/build/run записаны в `summary.json`.
+
 Фиксированный каталог/версию можно задать явно; каталог должен быть новым и внутри
 `src/TestResults/AlloyPackages`:
 

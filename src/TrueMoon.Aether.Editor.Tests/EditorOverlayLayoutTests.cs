@@ -1,4 +1,7 @@
-﻿using TrueMoon.Aether.Editor.Tooling;
+﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Windows;
+using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -62,7 +65,7 @@ public sealed class EditorOverlayLayoutTests
         var viewport = new Box(2000, 2000, "viewport", painted); var status = new Box(30, 20, "status", painted);
         using var layout = new EditorLayout(tools, hierarchy, viewport, inspector, status, overlayChrome: true);
         using var ui = new UiSession(layout, new Surface(), new(800, 500)); ui.Update();
-        var scene = viewport.Bounds; tools.IsVisible = true; ui.Update(); layout.Draw(new Drawing());
+        var scene = viewport.Bounds; tools.IsVisible = true; ui.Update(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(layout, new Drawing());
         Assert.Equal(new[] { "viewport", "hierarchy", "inspector", "status", "tools" }, painted);
         Assert.Equal(scene, viewport.Bounds); Assert.Equal(new Rect(80, 44, 640, 120), tools.Bounds);
         Click(ui, 100, 60); Click(ui, 30, 200); Click(ui, 400, 300); Click(ui, 400, 490);
@@ -111,7 +114,13 @@ public sealed class EditorOverlayLayoutTests
     {
         public int Clicks { get; private set; }
         protected override Size MeasureCore(Size available, ITextLayoutService text) => new(Math.Min(width, available.Width), Math.Min(height, available.Height));
-        protected override void DrawCore(IDrawingContext context) { if (name != null) painted!.Add(name); }
+        private readonly string? _name = name;
+        private readonly List<string>? _painted = painted;
+        private static readonly ElementPresentation BoxPresentation = ElementPresentation.Create<Box>(static (box, _) =>
+        {
+            if (box._name != null) box._painted!.Add(box._name);
+        });
+        public override ElementPresentation Presentation => BoxPresentation;
         public override bool HandleInput(UiInput input, IInputContext context)
         { if (input.Kind != InputKind.PointerDown) return false; Clicks++; return true; }
     }
@@ -120,7 +129,7 @@ public sealed class EditorOverlayLayoutTests
     private sealed class Surface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new TextLayout();
-        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { }
+        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { }
     }
     private sealed class Drawing : IDrawingContext
     {

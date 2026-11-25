@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+
 namespace TrueMoon.Argentis;
 
 /// <summary>A square, keyboard-focusable button with a geometric icon and semantic name.</summary>
@@ -37,12 +40,11 @@ public class IconButton : Button
     /// <inheritdoc />
     protected override byte ThemedControlTintAlpha => RevealOnInteraction
         ? Math.Min(Theme.ControlTintAlpha, (byte)208) : base.ThemedControlTintAlpha;
+    internal static IFactory<IElementPresenter<IconButtonPaintState>> StockFactory { get; } =
+        new Factory<IElementPresenter<IconButtonPaintState>>(static () => new IconButtonPresenter());
+    private static readonly ElementPresentation Glyph = ElementPresentation.Create<IconButton, IconButtonPaintState>(
+        IconButtonPaintState.From, StockFactory);
+
     /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context)
-    {
-        var size = IconSize;
-        var bounds = new Rect(Bounds.X + (Bounds.Width - size) / 2, Bounds.Y + (Bounds.Height - size) / 2, size, size);
-        var color = IsEffectivelyEnabled ? Foreground : Theme.Disabled;
-        UiSymbols.Draw(context, Symbol, bounds, color, UseVectorSymbol);
-    }
+    public override ElementPresentation Presentation => Glyph;
 }

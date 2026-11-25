@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Bindings;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -162,12 +166,6 @@ public static partial class ElementExtensions
     public static T Content<T>(this T element, Element? content) where T : ContentControl { element.SetContent(content); return element; }
     /// <summary>Registers a button action.</summary>
     public static T OnClick<T>(this T element, Action action) where T : Button { element.Click += action; return element; }
-    extension(TreeView)
-    {
-        /// <summary>Creates a fresh, unowned tree using its default settings.</summary>
-        public static TreeView Create() => new();
-    }
-
     /// <summary>Observes a borrowed source's property notifications while the element is attached.</summary>
     /// <remarks>Notifications are delivered in queue order on the UI owner thread. Synchronization runs on each attachment after subscribing.</remarks>
     public static T ObservePropertyChanged<T>(this T element, INotifyPropertyChanged source,

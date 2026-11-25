@@ -19,46 +19,43 @@
 ```csharp
 using TrueMoon.Aether.Editor.UI.Hierarchy;
 using TrueMoon.Argentis;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 
 namespace Examples;
 
 public sealed class HierarchyPanelExample : View<IEditorHierarchyViewModel>
 {
-    private readonly IUiCommand _find;
-
     public HierarchyPanelExample(IEditorHierarchyViewModel model, IUiCommand find)
-    {
-        DataContext = model;
-        _find = find;
-    }
+        => Content(model, ui => ui.VStack(
+            ui.Text("ОБОЗРЕВАТЕЛЬ").Named("Title"),
+            ui.HStack(
+                ui.TextBox()
+                    .Named("Search")
+                    .AccessibleName("Поиск по имени или ID")
+                    .MinWidth(0)
+                    .BindValueTwoWay(data => data.SearchText),
+                ui.Button("Найти").WithCommand(find))
+                .Named("SearchRow"),
+            ui.ScrollViewer(
+                ui.TreeView()
+                    .Named("Tree")
+                    .AccessibleName("Обозреватель сущностей")
+                    .OnSelectionChanged(id => DataContext?.Select(id)))
+                .Fill(),
+            ui.TextBox()
+                .Named("NameEditor")
+                .AccessibleName("Имя сущности")
+                .MinWidth(0)
+                .BindValueTwoWay(data => data.RenameText)
+                .Bind(UiProperties.Visible, data => data.IsRenaming)
+                .Bind(UiProperties.HasError, data => data.HasRenameError)
+                .Bind(UiProperties.ErrorMessage, data => data.RenameError)));
 
     public static HierarchyPanelExample Create(
         IEditorHierarchyViewModel model, IUiCommand find, IViewStyle<HierarchyPanelExample> style) =>
         ViewCreation.Prepare(new HierarchyPanelExample(model, find), style);
-
-    protected override Element BuildContent() => VStack.Create(
-        Text.Plain("ОБОЗРЕВАТЕЛЬ").Named("Title"),
-        HStack.Create(
-            TextBox.Create()
-                .Named("Search")
-                .AccessibleName("Поиск по имени или ID")
-                .MinWidth(0)
-                .BindValueTwoWay(this, data => data.SearchText),
-            Button.Simple("Найти").WithCommand(_find))
-            .Named("SearchRow"),
-        ScrollViewer.Create().Fill().Content(
-            TreeView.Create()
-                .Named("Tree")
-                .AccessibleName("Обозреватель сущностей")
-                .OnSelectionChanged(id => DataContext?.Select(id))),
-        TextBox.Create()
-            .Named("NameEditor")
-            .AccessibleName("Имя сущности")
-            .MinWidth(0)
-            .BindValueTwoWay(this, data => data.RenameText)
-            .Bind(UiProperties.Visible, this, data => data.IsRenaming)
-            .Bind(UiProperties.HasError, this, data => data.HasRenameError)
-            .Bind(UiProperties.ErrorMessage, this, data => data.RenameError));
 
     public void FocusSearch(IInputContext input) => input.Focus(this.Search);
 }
@@ -84,20 +81,22 @@ public sealed class HierarchyPanelExampleStyle : IViewStyle<HierarchyPanelExampl
 - **Привязки.** `BindValueTwoWay` связывает значение поля со строкой в текущем
   `DataContext`. `Bind` читает видимость и ошибки. Смена модели сохраняет
   экземпляры контролов. Фабрика передаёт общую команду поиска. Если готовая
-  команда находится в текущей модели, используй `WithCommand(this, data => data.FindCommand)`.
+  команда находится в текущей модели, используй `WithCommand(data => data.FindCommand)`.
   Для наблюдения за контекстом в `OnContentPrepared()` подходит
   `this.ObservePropertyChanged(this, handler, synchronize)` со своей
   синхронизацией при подключении и замене источника.
 - **Именованные части.** `Named("Search")` — техническое имя и ключ
   реестра. `AccessibleName` предназначен пользователю. В поведении
-  обращайся к `this.Search`, а в стиле — к `view.Search`. Применяй стиль
-  после передачи дерева View, когда части уже зарегистрированы.
+  обращайся к `this.Search`, а в стиле — к `view.Search`. Фабрика View
+  регистрирует стиль через `ViewCreation.Prepare`. При первом attach
+  сессия строит дерево, регистрирует части и применяет стиль.
 
 ## Как получается свойство
 
-Генератор находит прямой вызов `Named("Search")` в override `BuildContent()`
-и выводит тип из Fluent-цепочки. Получившееся свойство читает реестр
-текущего View. Упрощённый фрагмент вывода для примера выглядит так.
+Генератор находит прямой вызов `Named("Search")` в inline-фабрике
+`Content(...)`, объявленной в конструкторе, и выводит тип контрола из
+Fluent-цепочки. Свойство читает реестр текущего View. Упрощённый фрагмент
+вывода для примера выглядит так.
 
 ```csharp
 public static class HierarchyPanelExampleParts
@@ -109,19 +108,24 @@ public static class HierarchyPanelExampleParts
 }
 ```
 
-Для текущего прототипа используй доступный верхнеуровневый View без параметров
-типа, публичные верхнеуровневые типы контролов без параметров типа и константные
-имена, допустимые как идентификаторы C#. Держи декларации частей в прямом
-коде `BuildContent()`. Для явной конструкторной композиции используется
-`[GenerateViewParts]`. Вызовы в лямбдах и локальных функциях пропускаются.
-Имя берётся из строки или независимой
-константы. `nameof(view.Search)` для свойства-расширения выдаёт `CS9316`.
+Используй верхнеуровневый public или internal View без параметров типа,
+публичные верхнеуровневые типы контролов без параметров типа и имена,
+допустимые как идентификаторы C#. Держи декларации частей в теле фабрики
+`Content(...)`. Генератор пропускает вложенные обработчики, локальные
+функции и вызовы `Named(...)` на самих вложенных View. Имя берётся из
+строки или независимой константы.
+`nameof(view.Search)` для свойства-расширения выдаёт `CS9316`.
 [Генератор](../../../../src/TrueMoon.Argentis.Generator/ViewPartsGenerator.cs).
 
 В репозитории подключай `TrueMoon.Argentis.Generator` как анализатор проекта
 с `OutputItemType="Analyzer"`, `ReferenceOutputAssembly="false"` и
 `PrivateAssets="all"`. Пример подключения есть в проекте Editor UI.
-Потребителям сгенерированных свойств нужен импорт пространства имён View.
+Потребителям сгенерированных свойств нужен импорт пространства имён
+прикладного View (в примере `Examples`), а не только `TrueMoon.Argentis.Views`.
+Тип поля `TextBox` в иллюстрации относится к `TrueMoon.Argentis.Editors`.
+При подключении Argentis только как NuGet-пакета для генерации нужен
+отдельно подключённый анализатор. Для поиска по имени в таком приложении
+доступны `GetRequiredPart<T>()` и `TryGetPart<T>()`.
 При миграции существующего CLR-свойства пересобери потребителей.
 [Подключение анализатора](../../../../src/TrueMoon.Aether.Editor.UI/TrueMoon.Aether.Editor.UI.csproj).
 
@@ -129,7 +133,7 @@ public static class HierarchyPanelExampleParts
 подписки запомни экземпляр при подключении и используй его при очистке.
 Так обозреватель снимает `FocusChanged` с исходного `NameEditor`. Имена
 внутренних частей вложенного View принадлежат его собственному реестру.
-[Область и поиск частей](../../../../src/TrueMoon.Argentis/View.cs).
+[Область и поиск частей](../../../../src/TrueMoon.Argentis/Views/View.cs).
 
 ## Как проверить
 
@@ -140,8 +144,12 @@ public static class HierarchyPanelExampleParts
 - Помести экран во внешний View с одноимёнными частями. Проверь, что стиль
   и ввод работают с нужным экземпляром. При `Dispose` проверяй очистку по
   ссылке на контрол, полученной до освобождения.
+- Замени `DataContext` при активном поле. Проверь, что фокус сохранился,
+  ввод записался в новую модель, а отложенное событие старой модели
+  проигнорировано. После detach/reattach проверь тот же экземпляр контрола
+  и одну подписку на актуальную модель.
 
 Проверенные сценарии обозревателя находятся в тестах Editor.
 [Именованные части и поиск](../../../../src/TrueMoon.Aether.Editor.Tests/Hierarchy/EditorHierarchyViewTests.cs),
 [переименование](../../../../src/TrueMoon.Aether.Editor.Tests/Hierarchy/HierarchyMetadataTests.cs),
-[результаты пилота UIA1f.4e](../../../../src/docs/engine/HISTORY.md#uia1f4e-generated-parts-2026-11-23).
+[регрессия UIA1f.11](../../../../src/docs/alloy/HISTORY.md#uia1f11-regression-2026-11-24).

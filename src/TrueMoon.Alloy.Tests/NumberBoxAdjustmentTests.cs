@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -80,7 +83,7 @@ public sealed class NumberBoxAdjustmentTests
         var box = new NumberBox(); box.Editor.Value = "001.5"; using var ui = CompactControlHarness.Ui(box, 200, 40); ui.Update();
         Assert.False(box.TryStep(1)); Assert.Equal(0, box.DragBounds.Width); Assert.Equal(200, box.Editor.Bounds.Width);
         box.AdjustmentEnabled = true; ui.Update(); Assert.Equal(14, box.DragBounds.Width); Assert.Equal(186, box.Editor.Bounds.Width);
-        var drawing = new OutlineDrawing(); box.Draw(drawing); Assert.Contains(drawing.Fills, item => item.Bounds == new Rect(3, 20, 8, 1));
+        var drawing = new OutlineDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(box, drawing); Assert.Contains(drawing.Fills, item => item.Bounds == new Rect(3, 20, 8, 1));
         box.Editor.IsReadOnly = true; Assert.False(box.TryStep(1)); box.Editor.IsReadOnly = false;
         box.IsEnabled = false; Assert.False(box.TryStep(1)); box.IsEnabled = true;
         box.Editor.IsEnabled = false; Assert.False(box.TryStep(1)); box.Editor.IsEnabled = true;

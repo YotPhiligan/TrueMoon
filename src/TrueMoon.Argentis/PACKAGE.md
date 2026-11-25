@@ -60,9 +60,31 @@ contracts for TrueMoon Alloy. Requires .NET 11. Alpha API.
 ```
 
 Argentis defines element trees and controls, including the rich-text document/
-editing model. It has no renderer, native window, DI or application bootstrap
-dependency. A visual application also needs a compatible Alloy renderer and
-host; `TrueMoon.Alloy.Hosting` provides the optional App/window integration.
+editing model. It uses `TrueMoon.Contracts` for typed presenter factories, not a
+DI provider, renderer, native window or App bootstrap. A visual application also
+needs a compatible Alloy renderer and host; `TrueMoon.Alloy.Hosting` provides
+optional App/window integration.
+
+**Migrating custom drawing.** There is no `Element.Draw` or `DrawCore` hook.
+Import `TrueMoon.Argentis.Painting` and declare one static `ElementPresentation`
+per control kind. A stock descriptor can use `ElementPresentation.Create<MyControl>`
+with a static drawing operation or an `IFactory<IElementPresenter<MyControl>>`.
+Override `Presentation` to return the descriptor. Use `ElementPresentation.Required`
+instead when the application must supply an exact registration. Structural nodes
+need neither a descriptor nor a presenter. A derived type inherits the stock
+descriptor, not the application's registration for its base. Presenters read
+prepared geometry; do not retain a node, traverse its children, or change input
+state. `IAfterChildrenPresenter<T>` adds an optional overlay phase.
+
+At session creation pass `configurePresenters: p => ...` to `UiSession.Create`;
+use `p.RegisterIconButton(factory)` for the standard icon and
+`p.Register<MyControl, MyState>(capture, factory)` for your control. The registry
+creates the presenter on first use and disposes it with the session. The independent
+`AlloyPackageConsumer` presenter screen exercises both registrations with raster
+pixel and routed input checks.
+
+For hosted sessions use `options.ConfigurePresenters(p => ...)` on `AlloyOptions`.
+Configure a given exact type only once: duplicate registrations are rejected.
 
 `Window` / `Window<TData>` are standalone root components with the same content,
 bindings and scoped styles as View. Construction allocates no native resources.
@@ -70,12 +92,17 @@ The typed form implements `IView<TData>` and borrows its data; it derives from
 `Window`, so window factories and styles can share the non-generic root contract.
 
 ```csharp
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
+
 public sealed class SettingsWindow : Window<SettingsViewModel>
 {
     public SettingsWindow(SettingsViewModel data, IViewStyle<SettingsWindow> style)
     {
         this.WithTitle("Settings").WithClientSize(800, 600);
-        Content(data, model => new TextBox { Value = model!.Name });
+        Content(data, ui => ui.TextBox().BindValueTwoWay(model => model.Name).Element);
         this.WithViewStyle(style);
     }
 }

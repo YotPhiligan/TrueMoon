@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -23,7 +26,7 @@ public sealed class CheckBoxEditorStateTests
 
         void Check(Color outline, Color fill)
         {
-            var drawing = new OutlineDrawing(); box.Draw(drawing);
+            var drawing = new OutlineDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(box, drawing);
             Assert.Contains(drawing.Strokes, stroke => stroke == (new Rect(10.5f, 16.5f, 15, 15), outline, 1f));
             if (check) Assert.Contains(drawing.Fills, item => item == (new Rect(10, 16, 16, 16), fill));
             else Assert.DoesNotContain(drawing.Fills, item => item.Bounds == new Rect(10, 16, 16, 16));
@@ -51,13 +54,13 @@ public sealed class CheckBoxEditorStateTests
     public void StyledIndicatorBorderAndSemanticGlyphColorSurviveThemeAndTextUsesMeasuredVerticalCenter()
     {
         var box = new CheckBox("Да") { IsChecked = true, ColorRole = EditorColorRole.Boolean, FontSize = 12, Padding = new(28, 2, 4, 2), Style = new Style().With(UiProperties.BorderColor, new Color(12, 34, 56)) };
-        using var ui = CompactControlHarness.Ui(box, 96, 26); ui.SetTheme(Theme.Light); ui.Update(); var drawing = new OutlineDrawing(); box.Draw(drawing);
+        using var ui = CompactControlHarness.Ui(box, 96, 26); ui.SetTheme(Theme.Light); ui.Update(); var drawing = new OutlineDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(box, drawing);
         Assert.Contains(drawing.Strokes, item => item == (new Rect(10.5f, 5.5f, 15, 15), new Color(12, 34, 56), 1f));
         Assert.Equal(("Да", 28f, 7f), Assert.Single(drawing.Texts));
         Assert.Contains(drawing.Fills, item => item.Color == Theme.Light.OnEditorAccent);
         Assert.Contains(drawing.Fills, item => item == (new Rect(10, 5, 16, 16), Theme.Light.BooleanAccent));
         Assert.Equal(new Color(255, 255, 255), Theme.Light.OnEditorAccent); Assert.Equal(Theme.Dark.Surface, Theme.Dark.OnEditorAccent);
-        ui.SetTheme(Theme.Dark); ui.Update(); drawing = new(); box.Draw(drawing);
+        ui.SetTheme(Theme.Dark); ui.Update(); drawing = new(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(box, drawing);
         Assert.Contains(drawing.Strokes, item => item.Color == new Color(12, 34, 56));
         Assert.Contains(drawing.Fills, item => item == (new Rect(10, 5, 16, 16), Theme.Dark.BooleanAccent));
         Assert.True(box.IsChecked);

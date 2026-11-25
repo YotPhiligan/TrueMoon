@@ -1,4 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
+using TrueMoon.Alloy.Runtime.Semantics;
 using System.ComponentModel;
 using SkiaSharp;
 using Topten.RichTextKit;
@@ -17,6 +22,54 @@ public sealed class RichTextEditorTests
         => UiSession.Create(root, new SkiaRasterRenderBackend(Catalog()), new RasterUiTarget(), new(width, height), clipboard);
     private static void Key(UiSession ui, UiKey key, bool control = false, bool shift = false)
         => ui.HandleInput(new(InputKind.KeyDown, Key: key, Control: control, Shift: shift));
+
+    [Fact]
+    public void DocumentReplacementBeforeClick_RevealsNewCaretWithoutPainting()
+    {
+        var editor = new RichTextEditor { SemanticId = "body", Text = "old", Options = new() { SelectionColor = new Color(255, 0, 128) } };
+        using var ui = Session(editor); ui.Update();
+        var old = ui.CaptureSemantics();
+        var diagnostics = ui.EnableDiagnostics();
+        var document = RichTextDocument.FromText(string.Concat(Enumerable.Repeat("row\n", 24)) + "Final");
+        editor.Document = document;
+        editor.SelectAll();
+        var click = new UiInput(InputKind.PointerDown, editor.Padding.Left + 0.25f, editor.Bounds.Height - editor.Padding.Bottom - 8);
+        Assert.Equal(UiSemanticTargetStatus.StaleSnapshot, ui.HandleSemanticInput(old, "body", click).Status);
+        var posted = false; ui.Post(() => posted = true);
+        Assert.True(ui.HandleInput(click).PointerCaptured);
+        Assert.Equal(document.Text.Length - 5, editor.CaretIndex);
+        Assert.True(editor.VerticalOffset > 0);
+        Assert.Equal(UiSemanticTargetStatus.StaleSnapshot, ui.HandleSemanticInput(old, "body", click).Status);
+        Assert.False(ui.HandleInput(click with { Kind = InputKind.PointerUp }).PointerCaptured);
+        Key(ui, UiKey.Right, shift: true);
+        var offset = editor.VerticalOffset;
+        AssertState();
+        Assert.False(posted);
+        Assert.Equal(0, diagnostics.Snapshot.Update.Attempts);
+        Assert.Equal(0, diagnostics.Snapshot.Render.Attempts);
+        Assert.True(ui.Update()); Assert.True(posted);
+        using var first = ui.SnapshotRasterImage(); using var pixels = SKBitmap.FromImage(first);
+        Assert.Contains(new SKColor(255, 0, 128), pixels.Pixels);
+        Assert.Contains(Enumerable.Range((int)click.X, 12), x =>
+            Enumerable.Range((int)click.Y - 5, 11).Any(y => pixels.GetPixel(x, y) == new SKColor(255, 0, 128)));
+        AssertState();
+        ui.RequestFrame(); Assert.True(ui.Update());
+        using var next = ui.SnapshotRasterImage(); using var repeated = SKBitmap.FromImage(next);
+        Assert.Equal(pixels.Pixels, repeated.Pixels);
+        AssertState();
+        Assert.Equal(1, diagnostics.Snapshot.Measure.Attempts);
+        Assert.Equal(1, diagnostics.Snapshot.Arrange.Attempts);
+        Assert.False(ui.Update());
+
+        void AssertState()
+        {
+            Assert.Same(document, editor.Document);
+            Assert.Equal("F", editor.SelectedText);
+            Assert.Equal(document.Text.Length - 4, editor.CaretIndex);
+            Assert.Equal(offset, editor.VerticalOffset);
+            Assert.Equal(0, editor.HorizontalOffset);
+        }
+    }
 
     [Fact]
     public void Document_SnapshotsRunsAndCoalescesWithoutLosingStyles()

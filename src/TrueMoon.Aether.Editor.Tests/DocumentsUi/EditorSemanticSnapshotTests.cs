@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Styling;
 using System.Text.Json;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Hierarchy;
@@ -21,7 +25,7 @@ public sealed class EditorSemanticSnapshotTests(ITestOutputHelper output)
         using var inspectorModel = new InspectorFixture();
         var hierarchy = EditorHierarchyView.Create(hierarchyModel.Model, new EditorHierarchyViewStyle()).Width(370);
         var inspector = new EditorInspectorView(inspectorModel.Model, new EditorInspectorViewStyle()).Fill();
-        using var ui = InspectorFixture.Ui(HStack.Create(hierarchy, inspector));
+        using var ui = InspectorFixture.Ui(new HStack().WithChildren(hierarchy, inspector));
         Assert.Throws<InvalidOperationException>(() => ui.CaptureSemantics());
         ui.Update();
 
@@ -119,11 +123,11 @@ public sealed class EditorSemanticSnapshotTests(ITestOutputHelper output)
     [Fact]
     public void Snapshot_ReportsTruncationAndOverlayOrderAndRejectsDuplicateIds()
     {
-        var owner = Button.Simple("Open").SemanticId("owner");
+        var owner = new Button("Open").SemanticId("owner");
         var host = new OverlayHost(owner);
         using var ui = InspectorFixture.Ui(host);
         ui.Update();
-        var popup = Button.Simple("Popup").SemanticId("popup");
+        var popup = new Button("Popup").SemanticId("popup");
         host.Open(owner, popup, owner.Bounds, ui);
         ui.Focus(popup);
         ui.Capture(popup);

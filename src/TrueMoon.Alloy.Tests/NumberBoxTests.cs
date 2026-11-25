@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Bindings;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -97,7 +102,7 @@ internal static class CompactControlHarness
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => root.Draw(new RecordingDrawingContext());
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters);
         public void Dispose() { }
     }
     public static IEnumerable<Element> Tree(Element element) => new[] { element }.Concat(element.Children.SelectMany(Tree));

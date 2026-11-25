@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
 using TrueMoon.Aether.Abstractions.Scenes;
@@ -60,5 +62,5 @@ internal sealed class DocumentUiFixture : IDisposable, IAsyncDisposable
     private sealed class TextLayout : ITextLayoutService
     { public Size Measure(string text, float fontSize, string fontFamily) => new(text.Length * fontSize / 2, fontSize); }
     private sealed class Surface : IUiRenderSurface
-    { public ITextLayoutService TextLayout { get; } = new TextLayout(); public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { } }
+    { public ITextLayoutService TextLayout { get; } = new TextLayout(); public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { } }
 }

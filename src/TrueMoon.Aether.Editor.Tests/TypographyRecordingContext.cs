@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.Tests;
@@ -10,6 +11,7 @@ internal sealed class TypographyRecordingContext : ITextLayoutService, IDrawingC
     internal List<TextCall> Measures { get; } = [];
     internal List<TextCall> InkMeasures { get; } = [];
     internal List<(Rect Bounds, Color Color)> Fills { get; } = [];
+    internal Action<Rect>? OnImage { get; set; }
     public Size Measure(string text, float fontSize, string fontFamily) => throw new InvalidOperationException("Typography was omitted from measurement.");
     public Size Measure(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
     {
@@ -30,5 +32,5 @@ internal sealed class TypographyRecordingContext : ITextLayoutService, IDrawingC
     public void Translate(float x, float y) { }
     public void Fill(Rect rectangle, Color color, float radius = 0) => Fills.Add((rectangle, color));
     public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0) { }
-    public void Image(IImageSource source, Rect destination) { }
+    public void Image(IImageSource source, Rect destination) => OnImage?.Invoke(destination);
 }

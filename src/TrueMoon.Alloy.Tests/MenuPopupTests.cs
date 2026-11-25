@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -9,7 +13,7 @@ public sealed class MenuPopupTests
     [Fact]
     public void Navigation_SkipsUnavailableCommandsTrapsTabAndDismissesBeforeExecution()
     {
-        var trigger = Button.Simple("Open"); var host = new OverlayHost(trigger);
+        var trigger = new Button("Open"); var host = new OverlayHost(trigger);
         using var ui = Create(host); ui.Update(); var order = new List<string>();
         var first = new DelegateUiCommand(() => order.Add("first"));
         var last = new DelegateUiCommand(() => { Assert.Null(host.Popup); Assert.True(trigger.IsFocused); order.Add("last"); });
@@ -28,7 +32,7 @@ public sealed class MenuPopupTests
     [Fact]
     public void AllDisabled_FocusesPopupAndConsumesNavigationWithoutRunningActions()
     {
-        var trigger = Button.Simple("Open"); var host = new OverlayHost(trigger); using var ui = Create(host); ui.Update(); var calls = 0;
+        var trigger = new Button("Open"); var host = new OverlayHost(trigger); using var ui = Create(host); ui.Update(); var calls = 0;
         var popup = new MenuPopup([new("a", "Disabled", new DelegateUiCommand(() => calls++, () => false))], () => host.Close());
         host.Open(trigger, popup, trigger.Bounds, ui, trigger); popup.FocusFirst(ui); ui.Update(); Assert.True(popup.IsFocused);
         foreach (var key in new[] { UiKey.Up, UiKey.Down, UiKey.Home, UiKey.End, UiKey.Tab }) Assert.True(ui.HandleInput(new(InputKind.KeyDown, Key: key)).Handled);
@@ -69,7 +73,7 @@ public sealed class MenuPopupTests
     [Fact]
     public void Escape_DismissesFocusedContextBeforeAnExpandedMenuBar()
     {
-        var content = new VStack(); var host = new OverlayHost(content); var trigger = Button.Simple("Context");
+        var content = new VStack(); var host = new OverlayHost(content); var trigger = new Button("Context");
         var bar = new MenuBar(host, [new("file", "File", [new("new", "New", new DelegateUiCommand(() => { }))])]);
         content.WithChildren(bar, trigger); using var ui = Create(host); ui.Update(); ui.Focus(bar.MoreButton);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10)); Assert.True(bar.IsExpanded);
@@ -88,7 +92,7 @@ public sealed class MenuPopupTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class Command : IUiCommand

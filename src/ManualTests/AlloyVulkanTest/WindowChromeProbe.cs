@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Windows;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;

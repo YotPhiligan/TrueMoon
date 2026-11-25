@@ -1,5 +1,10 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
+using TrueMoon.Services;
 using Xunit;
 
 namespace TrueMoon.Alloy.Hosting.Tests;
@@ -12,7 +17,7 @@ public sealed class HostedUiSessionFactoryTests
     public void CommonFactoryBridge_PreservesCreationArgumentsAndSessionOwnership(bool genericBridge)
     {
         var backend = new Backend(); using var factory = new HostedUiSessionFactory(backend);
-        using var root = Text.Plain("typed session");
+        using var root = new Text("typed session");
         var target = new Target(); var viewport = new UiViewport(320, 240, 1.5f);
         var clipboard = new Clipboard();
         IFactory<UiSession, UiSessionCreation> typed = factory;
@@ -38,7 +43,7 @@ public sealed class HostedUiSessionFactoryTests
     public void CommonFactoryBridge_InvalidArgumentsDoNotTakeRootOwnership(string invalid)
     {
         var backend = new Backend(); using var factory = new HostedUiSessionFactory(backend);
-        using var root = Text.Plain("unowned");
+        using var root = new Text("unowned");
         IFactory<UiSession, UiSessionCreation> typed = factory;
         IFactory<UiSession> bridge = typed;
         switch (invalid)
@@ -159,7 +164,7 @@ public sealed class HostedUiSessionFactoryTests
     {
         var backend = new Backend(); using var factory = new HostedUiSessionFactory(backend);
         var root = new Panel(); using var session = Create(factory, root);
-        var child = Text.Plain("child"); Exception? failure = null;
+        var child = new Text("child"); Exception? failure = null;
         child.AttachmentChanged += () => { if (child.IsAttached) failure = Record.Exception(factory.Dispose); };
         root.Add(child);
         Assert.IsType<InvalidOperationException>(failure); Assert.Contains("reentrant", failure!.Message);
@@ -243,7 +248,7 @@ public sealed class HostedUiSessionFactoryTests
     public void Create_ReentrantStopIsRejectedWithoutTakingRootOwnership(bool attachmentCallback)
     {
         var backend = new Backend(); using var factory = new HostedUiSessionFactory(backend);
-        using var root = Text.Plain("construction");
+        using var root = new Text("construction");
         Action stopWhenAttached = () => { if (root.IsAttached) factory.Dispose(); };
         if (attachmentCallback) root.AttachmentChanged += stopWhenAttached;
         else backend.BeforeCreate = factory.Dispose;
@@ -258,12 +263,158 @@ public sealed class HostedUiSessionFactoryTests
         Assert.All(backend.Surfaces, s => Assert.Equal(1, s.Disposals));
     }
 
+    [Fact]
+    public async Task UseAlloy_UsesInjectedControlFactoryWithoutChangingOtherAppOrDirectSessions()
+    {
+        var custom = new UiControlFactories();
+        custom.Register(new Factory<Text>(() => new CountingText()));
+        await using var first = BuildApp(new Backend(), custom);
+        await using var second = BuildApp(new Backend());
+
+        using var firstRoot = new DeferredRow();
+        using var secondRoot = new DeferredRow();
+        using var directRoot = new DeferredRow();
+        using var firstSession = Required<IUiSessionFactory>(first).Create(firstRoot, new Target(), new(100, 100));
+        using var secondSession = Required<IUiSessionFactory>(second).Create(secondRoot, new Target(), new(100, 100));
+        using var directSession = new UiSession(directRoot, new Surface(), new(100, 100));
+
+        Assert.IsType<CountingText>(firstRoot.Label);
+        Assert.IsType<Text>(secondRoot.Label);
+        Assert.IsType<Text>(directRoot.Label);
+    }
+
+    [Fact]
+    public async Task UseAlloy_FailedDeferredFactoryReleasesDraftAndSurfaceAndAllowsFreshRoot()
+    {
+        var backend = new Backend();
+        var factories = new UiControlFactories();
+        var drafts = new List<CountingText>();
+        var failure = new InvalidOperationException("Row factory failed");
+        var fail = true;
+        factories.Register(new Factory<Text>(() =>
+        {
+            var text = new CountingText();
+            drafts.Add(text);
+            return text;
+        }));
+        factories.Register(new Factory<HStack>(() => fail ? throw failure : new HStack()));
+        await using var app = BuildApp(backend, factories);
+        var sessions = Required<IUiSessionFactory>(app);
+        var registry = Required<HostedUiSessionFactory>(app);
+        using var root = new DeferredRow();
+
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => sessions.Create(root, new Target(), new(100, 100))));
+        var draft = Assert.Single(drafts);
+        var surface = Assert.Single(backend.Surfaces);
+        Assert.True(draft.IsDisposed);
+        Assert.Equal(1, draft.Disposals);
+        Assert.Equal(1, surface.Disposals);
+        Assert.Equal(0, registry.ActiveSessionCount);
+        Assert.False(root.IsAttached);
+        Assert.False(root.IsDisposed);
+        Assert.Null(root.Child);
+        root.Dispose();
+
+        fail = false;
+        using var fresh = new DeferredRow();
+        using var retry = sessions.Create(fresh, new Target(), new(100, 100));
+        Assert.Equal(1, registry.ActiveSessionCount);
+        Assert.Equal(2, drafts.Count);
+        Assert.Same(drafts[1], fresh.Label);
+        Assert.True(fresh.Label.IsAttached);
+        Assert.Equal(2, backend.Surfaces.Count);
+        Assert.Equal(0, backend.Surfaces[1].Disposals);
+        retry.Dispose();
+        Assert.Equal(0, registry.ActiveSessionCount);
+        Assert.All(drafts, text => Assert.Equal(1, text.Disposals));
+        Assert.All(backend.Surfaces, s => Assert.Equal(1, s.Disposals));
+    }
+
+    [Fact]
+    public async Task BorrowAfterPresentation_BlocksOwnerCleanupButNotSiblingInputAndFrame()
+    {
+        var backend = new Backend();
+        using var registry = new HostedUiSessionFactory(backend);
+        var loop = new UiOwnerLoop();
+        var timeout = TimeSpan.FromSeconds(5);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sibling = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        UiSession first = null!, second = null!;
+        var firstPump = new UiFramePump(UiFrameMode.OnDemand, 60, loop.Wake);
+        var secondPump = new UiFramePump(UiFrameMode.OnDemand, 60, loop.Wake);
+        var clicks = 0;
+        try
+        {
+            loop.Schedule(() =>
+            {
+                first = Create(registry);
+                firstPump.Attach(first);
+            }, () =>
+            {
+                Assert.True(firstPump.Tick(false, () => true));
+                // Model a FramePresented subscriber retaining the texture after successful presentation.
+                ((Surface)first.Rendering).Borrowed = true;
+                return true;
+            }, () => { firstPump.Dispose(); first.Dispose(); }, () => false, new TaskCompletionSource(), closed);
+            loop.Schedule(() =>
+            {
+                var action = new Button("Continue"); action.Click += () => clicks++;
+                second = Create(registry, action);
+                secondPump.Attach(second);
+            }, () =>
+            {
+                if (!closed.Task.IsCompleted) return false;
+                Assert.False(first.IsDisposed);
+                Assert.Equal(0, ((Surface)first.Rendering).Disposals);
+                Assert.Equal(2, registry.ActiveSessionCount);
+                Assert.True(secondPump.Tick(false, () => true, immediate: true));
+                second.HandleInput(new(InputKind.PointerDown, 5, 5));
+                second.HandleInput(new(InputKind.PointerUp, 5, 5));
+                second.RequestFrame();
+                Assert.True(secondPump.Tick(false, () => true, immediate: true));
+                return true;
+            }, () =>
+            {
+                // The harness deliberately retains the first session so its owner can retry.
+                ((Surface)first.Rendering).Borrowed = false;
+                UiCleanup.Complete(null, first.Dispose, secondPump.Dispose, second.Dispose);
+            }, () => false, new TaskCompletionSource(), sibling);
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => closed.Task.WaitAsync(timeout));
+            Assert.Equal("Frame is borrowed.", error.Message);
+            await sibling.Task.WaitAsync(timeout);
+            Assert.Equal(1, clicks);
+            Assert.Equal(0, registry.ActiveSessionCount);
+            Assert.All(backend.Surfaces, surface => Assert.Equal(1, surface.Disposals));
+        }
+        finally { await loop.StopAsync().WaitAsync(timeout); }
+    }
+
+    private static IApp BuildApp(Backend backend, IUiControlFactories? factories = null) => App.Build(context =>
+    {
+        if (factories != null) context.Services(services => services.Singleton<IUiControlFactories>(_ => factories));
+        context.UseAlloy(options => options.UseRenderer(() => backend).UseExternalHost());
+    });
+
+    private static T Required<T>(IApp app) => Assert.IsAssignableFrom<T>(app.Services.GetService(typeof(T)));
+
+    private sealed class DeferredRow : View
+    {
+        public DeferredRow() => Content(ui => ui.HStack(ui.Create<Text>().Element));
+        public Text Label => Assert.IsAssignableFrom<Text>(Assert.Single(Assert.IsType<HStack>(Child).Items));
+    }
+
+    private sealed class CountingText : Text
+    {
+        public int Disposals { get; private set; }
+        public override void Dispose() { Disposals++; base.Dispose(); }
+    }
+
     private static UiSession Create(HostedUiSessionFactory factory, Element? root = null)
-        => factory.Create(root ?? Text.Plain("session"), new Target(), new(100, 100));
+        => factory.Create(root ?? new Text("session"), new Target(), new(100, 100));
 
     private static void AssertCreateBlocked(HostedUiSessionFactory factory, Backend backend)
     {
-        var count = backend.Surfaces.Count; using var unowned = Text.Plain("rejected");
+        var count = backend.Surfaces.Count; using var unowned = new Text("rejected");
         Assert.Throws<ObjectDisposedException>(() => Create(factory, unowned));
         Assert.False(unowned.IsAttached); Assert.False(unowned.IsDisposed);
         Assert.Equal(count, backend.Surfaces.Count);
@@ -290,7 +441,7 @@ public sealed class HostedUiSessionFactoryTests
         public void VerifyAvailable()
         { if (GuardError != null) throw GuardError; if (Borrowed) throw new InvalidOperationException("Frame is borrowed."); }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose()
         { Disposals++; BeforeDispose?.Invoke(); if (DisposalError != null) throw DisposalError; }
     }

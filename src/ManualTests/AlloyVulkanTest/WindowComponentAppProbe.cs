@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using TrueMoon;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
@@ -71,7 +74,8 @@ internal static class WindowComponentAppProbe
         internal AppWindow(Model data, IViewStyle<AppWindow> style)
         {
             this.WithTitle("App Window factory").WithClientSize(420, 260);
-            Content(data, _ => Input); this.WithViewStyle(style);
+            DataContext = data;
+            SetContent(Input); this.WithViewStyle(style);
         }
     }
     private sealed class AppWindowStyle : IViewStyle<AppWindow>

@@ -106,8 +106,8 @@ public sealed class RuntimeEditorSession : IStoppable, IAsyncDisposable
                     throw new InvalidOperationException("One live runtime EditorView presents this App. Dispose it before attaching another view.");
                 if (_presentedView == null) _presentedView = new(view); else _presentedView.SetTarget(view);
                 _viewport.Observe(ui, view);
-                if (_presentation.IsCompleted && view.Canvas.CanAcknowledgeDraw && view.Canvas.DrawnFrame is { } frame)
-                    _presentation = PresentAsync(frame);
+                if (_presentation.IsCompleted && view.Canvas.CurrentDraw is {} draw)
+                    _presentation = PresentAsync(draw.Frame);
             }
         }
         model.Refresh();

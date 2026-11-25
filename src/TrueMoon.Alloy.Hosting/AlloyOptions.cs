@@ -32,9 +32,17 @@ namespace TrueMoon.Alloy.Hosting
     {
         internal Func<IRenderBackend>? BackendFactory { get; private set; }
         internal bool ExternalHost { get; private set; }
+        internal Action<UiPresenters>? PresenterConfiguration { get; private set; }
         internal SilkUiWindowOptions? Window { get; private set; }
         /// <summary>Selected built-in renderer, or Custom for UseRenderer. Selection creates no native resources.</summary>
         public UiRendererKind Renderer { get; private set; }
+        /// <summary>Configures exact control presenters once per new session, before its first draw.</summary>
+        public AlloyOptions ConfigurePresenters(Action<UiPresenters> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            PresenterConfiguration += configure;
+            return this;
+        }
         /// <summary>Selects the Skia Vulkan renderer.</summary>
         public AlloyOptions UseSkiaVulkan() { BackendFactory = () => new SkiaVulkanRenderBackend(); Renderer = UiRendererKind.Vulkan; return this; }
         /// <summary>Selects Vulkan rendering with explicit font files and no system font lookup.</summary>
@@ -84,7 +92,7 @@ namespace TrueMoon.Alloy.Hosting
             Window?.ValidateChrome();
         }
         internal AlloyOptions Snapshot() => new()
-        { BackendFactory = BackendFactory, Renderer = Renderer, ExternalHost = ExternalHost, Window = Window?.Snapshot() };
+        { BackendFactory = BackendFactory, Renderer = Renderer, ExternalHost = ExternalHost, Window = Window?.Snapshot(), PresenterConfiguration = PresenterConfiguration };
     }
 
     /// <summary>Standalone window settings.</summary>
@@ -121,7 +129,7 @@ namespace TrueMoon.Alloy.Hosting
         public bool UseSystemAccentBorder { get; set; }
         /// <summary>Configures the fresh default title bar on the UI owner. Supplied header products become frame-owned;
         /// the close callback uses the host's vetoable/drainable close coordinator.</summary>
-        public Action<TrueMoon.Argentis.WindowTitleBar, TrueMoon.Argentis.Element, Action>? ConfigureDefaultTitleBar { get; set; }
+        public Action<TrueMoon.Argentis.Windows.WindowTitleBar, TrueMoon.Argentis.Element, Action>? ConfigureDefaultTitleBar { get; set; }
         internal void ValidateChrome()
         {
             if (Chrome != null)

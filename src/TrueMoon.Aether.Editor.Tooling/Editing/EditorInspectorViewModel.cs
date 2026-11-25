@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Bindings;
+using TrueMoon.Argentis.Editors;
 using System.Runtime.CompilerServices;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling.Documents;

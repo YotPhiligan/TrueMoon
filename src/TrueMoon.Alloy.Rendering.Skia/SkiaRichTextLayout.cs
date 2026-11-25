@@ -1,4 +1,6 @@
-﻿using SkiaSharp;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Styling;
+using SkiaSharp;
 using Topten.RichTextKit;
 using TrueMoon.Argentis;
 using TextBlock = Topten.RichTextKit.TextBlock;

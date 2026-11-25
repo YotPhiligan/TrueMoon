@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -159,14 +161,15 @@ internal sealed class SettingsGoldenProbe
     }
     private sealed class GoldenPanel : Panel
     {
-        protected override void DrawCore(IDrawingContext context)
+        private static readonly ElementPresentation Painter = ElementPresentation.Create<GoldenPanel>(static (_, context) =>
         {
             context.Fill(new Rect(760, 80, 80, 70), new Color(200, 80, 40, 128));
             context.Fill(new Rect(800, 110, 70, 70), new Color(40, 80, 200, 128), 8);
             context.Save();
             try { context.Clip(new Rect(760, 220, 90, 30)); context.Text("Clipping Привет", 745, 215, new Color(240, 240, 240, 180), 24, "unregistered-golden-family"); }
             finally { context.Restore(); }
-        }
+        });
+        public override ElementPresentation Presentation => Painter;
     }
 
     private void Report(Exception? failure, bool validation)

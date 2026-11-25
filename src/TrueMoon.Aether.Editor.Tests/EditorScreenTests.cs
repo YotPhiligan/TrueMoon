@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Windows;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using System.Collections.Concurrent;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.UI;
@@ -33,7 +39,7 @@ public sealed class EditorScreenTests
     public void EmptyViewportText_UsesConfiguredTypographyIncludingSize()
     {
         using var viewport = new EditorViewport { EmptyText = "Привет", FontFamily = "typography-family", FontSize = 21, FontWeight = 600, FontItalic = true };
-        var probe = new TypographyRecordingContext(); viewport.Measure(new(600, 420), probe); viewport.Arrange(new(0, 0, 600, 420)); viewport.Draw(probe);
+        var probe = new TypographyRecordingContext(); viewport.Measure(new(600, 420), probe); viewport.Arrange(new(0, 0, 600, 420)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(viewport, probe);
         var drawn = Assert.Single(probe.Texts);
         Assert.Equal(("Привет", 21f, "typography-family", 600, true), (drawn.Text, drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
     }
@@ -119,5 +125,5 @@ public sealed class EditorScreenTests
     private sealed class Box : Element { protected override Size MeasureCore(Size available, ITextLayoutService text) => new(10, 10); }
     private sealed class TextLayout : ITextLayoutService { public Size Measure(string text, float fontSize, string fontFamily) => new(text.Length * fontSize / 2, fontSize); }
     private sealed class Surface : IUiRenderSurface
-    { public ITextLayoutService TextLayout { get; } = new TextLayout(); public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { } }
+    { public ITextLayoutService TextLayout { get; } = new TextLayout(); public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { } }
 }

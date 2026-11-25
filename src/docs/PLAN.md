@@ -13,7 +13,8 @@
 | Очередь | Ближайший результат | План владельца |
 | --- | --- | --- |
 | Editor / свойства рендера | Видимость и слои проверены с Undo/Redo, перезапуском Editor и кадрами Vulkan. Открыто поведение при смене ресурсов, в Play и нативном Edit Preview | [Проверенный срез](engine/EDITOR_PLAN.md#ed4i-mesh-visibility), [очередь ED4i](engine/EDITOR_PLAN.md#ed4i-next) |
-| Alloy / качество текста | Выделить локальные измерения дробного позиционирования в свой набор и сверить их на поставляемой версии. Первый кандидат для включения — TextBox и NumberBox | [PA8c.1a](alloy/PLAN.md#pa8c1a-positioning-rollout) |
+| Alloy / качество текста | Ближайшая работа — сравнить дробную прокрутку `TextBox` и `NumberBox` на целевой версии. Решение о включении принять после проверки геометрии ввода и стоимости рендера | [Очередь UI](alloy/PLAN.md#current-ui-queue), [PA8c.1a](alloy/PLAN.md#pa8c1a-positioning-rollout) |
+| Alloy / композиция View | Независимо от типографики: проверить удержание динамических редакторов инспектора по ключу. Архитектурный блок UIA1g–j уже проверен локально и не входит в очередь реализации | [Исследование и критерии](alloy/PLAN.md#ui-reuse-study), [приёмка архитектуры](alloy/STATUS.md#uia1-architecture) |
 | Aether / доставка в игру | Пакетный Player показал изометрический маршрут TrueMoon.Tales до и после resize. Далее проход персонажа через ступени и скосы и открытие обзора. Смена сцены или сборки остаётся в очереди standalone Player | [ARCH1f.7](engine/PLAN.md#arch1f7-orthographic-camera), [ENG7b.4](engine/PLAN.md#eng7b4-tales-consumer) |
 | Сценарные проверки для агентов | Editor записывает и воспроизводит ввод по ID и сравнивает состояние, геометрию и кадры. Оконный и headless Player сверяют игровые наблюдения на одинаковых входах и тиках | [ENG9b](engine/PLAN.md#eng9b-scenario-testing), [Alloy UIQA](alloy/PLAN.md#uiqa-agent-checks) |
 | Kton / независимый performance-срез | Расширить матрицу PHYS8 до 10 000 тел, сравнить воркеров, callbacks и stalls. Ручной Win32 input/close — отдельная проверка PHYS8.4 | [PHYS8](physics/PLAN.md#phys8), [PHYS8.4](physics/PLAN.md#phys84) |
@@ -177,9 +178,11 @@ production consumer — Aether.Editor. DI/owner-thread factory route сохра�
 
 23.11.2026 завершён [UIA1f](alloy/PLAN.md#uia1f-minimal-view-authoring) на
 [обозревателе и диагностике](engine/EDITOR_PLAN.md#ed4c-view-authoring-pilot).
-Штатный подход для новых и целенаправленно обновляемых View использует
-`BuildContent()`, типизированные именованные части, привязки и команды
-текущего `DataContext`. Общие правила и примеры собраны в
+24.11.2026 [UIA1f.11](alloy/PLAN.md#uia1f11-contextual-content) закрепил
+штатный подход для новых и целенаправленно обновляемых View. Дерево объявляется
+в конструкторе через `Content(data, ui => ...)` и создаётся через фабрики
+сессии при первом attach. Именованные части генерируются из `.Named()`,
+а привязки используют текущий `DataContext`. Общие правила и пример собраны в
 [truemoon-ui](../../.agents/skills/truemoon-ui/SKILL.md). Решение по стилям
 зафиксировано в [UIA1f.4f](alloy/PLAN.md#uia1f4f-style-generation-study).
 

@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Aether.Runtime;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -22,10 +25,10 @@ namespace EngineSessionProbe;
 
 public sealed class GpuImportView : View
 {
-    public GpuImportView() => Content(() => VStack.Create().Padding(16).WithChildren(
-        Text.Plain("TrueMoon ENG4b — shared image proof"),
-        Text.Plain("Checking imported pixels, completion and cleanup."),
-        Text.Plain("The ordinary viewport continues to use CPU transport.")));
+    public GpuImportView() => Content(static ui => ui.VStack(
+        ui.Text("TrueMoon ENG4b — shared image proof"),
+        ui.Text("Checking imported pixels, completion and cleanup."),
+        ui.Text("The ordinary viewport continues to use CPU transport.")).Padding(16));
 }
 
 public static class GpuImportProbe

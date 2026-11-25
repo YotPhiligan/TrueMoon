@@ -177,8 +177,10 @@ context.UsePresentation(resolver => new MyView(), options => options
     }));
 ```
 
-Namespaces: `TrueMoon.Argentis`, `TrueMoon.Alloy.Runtime`,
-`TrueMoon.Alloy.Hosting`. Нативных API в Argentis нет.
+Для примера нужны `TrueMoon.Argentis` (`Size`), `TrueMoon.Alloy.Runtime` и
+`TrueMoon.Alloy.Hosting`. Сами `WindowFrame` и `WindowTitleBar` находятся в
+`TrueMoon.Argentis.Windows`, `Style` и `Theme` — в `TrueMoon.Argentis.Styling`.
+Нативных API в Argentis нет.
 
 `UseDefaultWindowFrame=true` по умолчанию, действует при Chrome и отсутствии
 `TitleBarFactory`. Пользовательская title factory имеет приоритет;

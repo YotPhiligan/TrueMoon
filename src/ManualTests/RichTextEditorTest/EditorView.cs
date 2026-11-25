@@ -1,4 +1,8 @@
-﻿using TrueMoon.Argentis;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis;
 
 namespace RichTextEditorTest;
 
@@ -22,22 +26,22 @@ public sealed class EditorView : View
     /// <summary>Creates the demo with independent toolbar controls.</summary>
     public EditorView()
     {
-        var wrap = CheckBox.Create("Word wrap"); wrap.IsChecked = true;
+        var wrap = new CheckBox("Word wrap"); wrap.IsChecked = true;
         wrap.OnClick(() => Editor.Options = Editor.Options with { WordWrap = wrap.IsChecked });
-        var readOnly = CheckBox.Create("Read only");
+        var readOnly = new CheckBox("Read only");
         readOnly.OnClick(() => Editor.Options = Editor.Options with { IsReadOnly = readOnly.IsChecked });
-        Content(() => VStack.Create().Padding(16).WithChildren(
-            Text.Plain("Alloy — RichTextKit editor"),
-            HStack.Create().WithChildren(
-                Button.Simple("Bold").OnClick(() => Editor.ApplyStyle(new() { Bold = !(Editor.SelectionStyle.Bold ?? false) })),
-                Button.Simple("Italic").OnClick(() => Editor.ApplyStyle(new() { Italic = !(Editor.SelectionStyle.Italic ?? false) })),
-                Button.Simple("Underline").OnClick(() => Editor.ApplyStyle(new() { Underline = !(Editor.SelectionStyle.Underline ?? false) })),
-                Button.Simple("Red").OnClick(() => Editor.ApplyStyle(new() { Foreground = new(240, 70, 70) })),
-                Button.Simple("Undo").OnClick(() => Editor.Undo()),
-                Button.Simple("Redo").OnClick(() => Editor.Redo())),
-            HStack.Create().WithChildren(wrap, readOnly),
+        SetContent(new VStack().Padding(16).WithChildren(
+            new Text("Alloy — RichTextKit editor"),
+            new HStack().WithChildren(
+                new Button("Bold").OnClick(() => Editor.ApplyStyle(new() { Bold = !(Editor.SelectionStyle.Bold ?? false) })),
+                new Button("Italic").OnClick(() => Editor.ApplyStyle(new() { Italic = !(Editor.SelectionStyle.Italic ?? false) })),
+                new Button("Underline").OnClick(() => Editor.ApplyStyle(new() { Underline = !(Editor.SelectionStyle.Underline ?? false) })),
+                new Button("Red").OnClick(() => Editor.ApplyStyle(new() { Foreground = new(240, 70, 70) })),
+                new Button("Undo").OnClick(() => Editor.Undo()),
+                new Button("Redo").OnClick(() => Editor.Redo())),
+            new HStack().WithChildren(wrap, readOnly),
             Editor,
-            Text.Plain("Выделение сохраняется при фокусе на toolbar. Clipboard — обычный текст.")));
+            new Text("Выделение сохраняется при фокусе на toolbar. Clipboard — обычный текст.")));
     }
 
     /// <summary>Runs a deterministic edit/format/history/option sequence after actual presented frames.</summary>

@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using System.ComponentModel;
 using System.Linq.Expressions;
 using TrueMoon.Alloy.Runtime;
@@ -25,7 +31,7 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
     /// <summary>Gets the Clear View button through its retained part.</summary>
     public Button Clear => this.ClearButton;
 
-    /// <summary>Creates a prepared console for callers that construct it directly.</summary>
+    /// <summary>Declares the console and its style for first attachment.</summary>
     public EditorDiagnosticsView(IEditorDiagnosticsViewModel model, IViewStyle<EditorDiagnosticsView> style)
         : this(model)
     {
@@ -33,7 +39,7 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
         ViewCreation.Prepare(this, style);
     }
 
-    /// <summary>Prepares the console and applies its style before the factory publishes it.</summary>
+    /// <summary>Creates a console with a borrowed style to apply at attachment.</summary>
     public static EditorDiagnosticsView Create(IEditorDiagnosticsViewModel model, IViewStyle<EditorDiagnosticsView> style)
     {
         ArgumentNullException.ThrowIfNull(style);
@@ -43,75 +49,79 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
     private EditorDiagnosticsView(IEditorDiagnosticsViewModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
-        DataContext = model;
         _clear = new(() => DataContext?.Clear(), () => DataContext?.CanClear == true);
         _refreshDetails = new(() => DataContext?.RefreshDetails(), () => DataContext?.CanRefreshDetails == true);
+        Content(model, ui =>
+        {
+            var layout = new ConsoleLayout();
+            var root = ui.Create<ContentControl>().Content(layout);
+            layout.SetSections(
+                [
+                    Row(ui,
+                        ui.Text("ДИАГНОСТИКА"),
+                        ui.Button().Named("Mode").OnClick(AdvanceMode),
+                        ui.Button().Named("Level").Bind(UiProperties.Enabled, data => data.CanClear).OnClick(AdvanceLevel),
+                        ui.Button().Named("Follow").OnClick(() =>
+                        {
+                            if (DataContext is { } data) data.FollowTail = !data.FollowTail;
+                        }),
+                        ui.Button().Named("Group").Bind(UiProperties.Enabled, data => data.CanClear).OnClick(() =>
+                        {
+                            if (DataContext is { } data) data.GroupRepeats = !data.GroupRepeats;
+                        }),
+                        ui.Button("Очистить вид").Named("ClearButton").WithCommand(_clear),
+                        ui.Button("Обновить детали").Named("RefreshDetails").WithCommand(_refreshDetails),
+                        ui.Button("Закрыть").Named("Close").OnClick(() =>
+                        {
+                            if (DataContext is { } data) data.IsOpen = false;
+                        })).Named("Actions"),
+                    Row(ui,
+                        ui.Text("Поиск"), Filter(ui, "Поиск по событию", data => data.Search).Named("Search"),
+                        ui.Text("Source"), Filter(ui, "Source", data => data.Source).Named("Source"),
+                        ui.Text("Event"), Filter(ui, "EventName", data => data.EventName, data => data.CanClear).Named("EventName")),
+                    Row(ui,
+                        ui.Text("Session"), Filter(ui, "SessionId (точно)", data => data.Session).Named("Session"),
+                        ui.Text("Generation"), Filter(ui, "Generation (точно)", data => data.Generation).Named("Generation"),
+                        ui.Text("Role"), Filter(ui, "RuntimeRole (точно)", data => data.RuntimeRole).Named("RuntimeRole")),
+                    ui.Text().Named("Summary").BindText(data => data.Summary)
+                ],
+                ui.HStack(
+                    ui.ScrollViewer().Named("Scroll").Fill().Content(
+                        ui.TreeView().Named("Events").AccessibleName("Диагностические события").OnSelectionChanged(Selected)),
+                    ui.RichTextEditor(new() { IsReadOnly = true, WordWrap = true })
+                        .Named("Details")
+                        .AccessibleName("Детали события · выделение и Ctrl+C")
+                        .Bind(RichTextEditor.TextProperty, data => data.Details)
+                        .Fill())
+                    .SetValue(UiProperties.Spacing, 8f),
+                ui.VStack(
+                    Row(ui,
+                        ui.CheckBox("Включить текст").Named("IncludeText")
+                            .BindTwoWay(CheckBox.IsCheckedProperty, data => data.ExportIncludesText)
+                            .Bind(UiProperties.Enabled, data => data.CanChangeExportOptions),
+                        ui.CheckBox("История запусков").Named("IncludeHistory")
+                            .BindTwoWay(CheckBox.IsCheckedProperty, data => data.ExportIncludesHistory)
+                            .Bind(UiProperties.Enabled, data => data.CanChangeExportOptions),
+                        ui.Button("Отменить экспорт").Named("CancelExport")
+                            .Bind(UiProperties.Enabled, data => data.CanCancelExport)
+                            .OnClick(() => DataContext?.CancelExport()),
+                        ui.Text().Named("ExportPrivacy").BindText(data => data.ExportPrivacyNotice)),
+                    Row(ui,
+                        ui.Button("Открыть исходник").Named("OpenSource")
+                            .Bind(UiProperties.Enabled, data => data.CanOpenSource)
+                            .OnClick(() => DataContext?.OpenSource()),
+                        ui.TextBox().Named("ExportPath").AccessibleName("Путь нового отчёта JSON")
+                            .BindValueTwoWay(data => data.ExportPath)
+                            .Bind(UiProperties.Enabled, data => data.CanChangeExportOptions),
+                        ui.Button("Экспорт без текста").Named("Export")
+                            .Bind(UiProperties.Enabled, data => data.CanExport)
+                            .OnClick(ExportReport))),
+                ui.VStack(
+                    ui.Text().Named("NavigationStatus").WithRole(LabelRole).BindText(data => data.NavigationStatus),
+                    ui.Text().Named("ExportStatus").WithRole(LabelRole).BindText(data => data.ExportStatus)));
+            return root;
+        });
     }
-
-    protected override Element BuildContent() => new ConsoleLayout(
-        [
-            Row(
-                Text.Plain("ДИАГНОСТИКА"),
-                Button.Simple().Named("Mode").OnClick(AdvanceMode),
-                Button.Simple().Named("Level").Bind(UiProperties.Enabled, this, data => data.CanClear).OnClick(AdvanceLevel),
-                Button.Simple().Named("Follow").OnClick(() =>
-                {
-                    if (DataContext is { } data) data.FollowTail = !data.FollowTail;
-                }),
-                Button.Simple().Named("Group").Bind(UiProperties.Enabled, this, data => data.CanClear).OnClick(() =>
-                {
-                    if (DataContext is { } data) data.GroupRepeats = !data.GroupRepeats;
-                }),
-                Button.Simple("Очистить вид").Named("ClearButton").WithCommand(_clear),
-                Button.Simple("Обновить детали").Named("RefreshDetails").WithCommand(_refreshDetails),
-                Button.Simple("Закрыть").Named("Close").OnClick(() =>
-                {
-                    if (DataContext is { } data) data.IsOpen = false;
-                })).Named("Actions"),
-            Row(
-                Text.Plain("Поиск"), Filter("Поиск по событию", data => data.Search).Named("Search"),
-                Text.Plain("Source"), Filter("Source", data => data.Source).Named("Source"),
-                Text.Plain("Event"), Filter("EventName", data => data.EventName, data => data.CanClear).Named("EventName")),
-            Row(
-                Text.Plain("Session"), Filter("SessionId (точно)", data => data.Session).Named("Session"),
-                Text.Plain("Generation"), Filter("Generation (точно)", data => data.Generation).Named("Generation"),
-                Text.Plain("Role"), Filter("RuntimeRole (точно)", data => data.RuntimeRole).Named("RuntimeRole")),
-            Text.Plain().Named("Summary").BindText(this, data => data.Summary)
-        ],
-        HStack.Create(
-            ScrollViewer.Create().Named("Scroll").Fill().Content(
-                TreeView.Create().Named("Events").AccessibleName("Диагностические события").OnSelectionChanged(Selected)),
-            new RichTextEditor(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true })
-                .Named("Details")
-                .AccessibleName("Детали события · выделение и Ctrl+C")
-                .Bind(RichTextEditor.TextProperty, this, data => data.Details)
-                .Fill())
-            .SetValue(UiProperties.Spacing, 8f),
-        VStack.Create(
-            Row(
-                CheckBox.Create("Включить текст").Named("IncludeText")
-                    .BindTwoWay(CheckBox.IsCheckedProperty, this, data => data.ExportIncludesText)
-                    .Bind(UiProperties.Enabled, this, data => data.CanChangeExportOptions),
-                CheckBox.Create("История запусков").Named("IncludeHistory")
-                    .BindTwoWay(CheckBox.IsCheckedProperty, this, data => data.ExportIncludesHistory)
-                    .Bind(UiProperties.Enabled, this, data => data.CanChangeExportOptions),
-                Button.Simple("Отменить экспорт").Named("CancelExport")
-                    .Bind(UiProperties.Enabled, this, data => data.CanCancelExport)
-                    .OnClick(() => DataContext?.CancelExport()),
-                Text.Plain().Named("ExportPrivacy").BindText(this, data => data.ExportPrivacyNotice)),
-            Row(
-                Button.Simple("Открыть исходник").Named("OpenSource")
-                    .Bind(UiProperties.Enabled, this, data => data.CanOpenSource)
-                    .OnClick(() => DataContext?.OpenSource()),
-                TextBox.Create().Named("ExportPath").AccessibleName("Путь нового отчёта JSON")
-                    .BindValueTwoWay(this, data => data.ExportPath)
-                    .Bind(UiProperties.Enabled, this, data => data.CanChangeExportOptions),
-                Button.Simple("Экспорт без текста").Named("Export")
-                    .Bind(UiProperties.Enabled, this, data => data.CanExport)
-                    .OnClick(ExportReport))),
-        VStack.Create(
-            Text.Plain().Named("NavigationStatus").WithRole(LabelRole).BindText(this, data => data.NavigationStatus),
-            Text.Plain().Named("ExportStatus").WithRole(LabelRole).BindText(this, data => data.ExportStatus)));
 
     protected override void OnContentPrepared()
     {
@@ -121,13 +131,14 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
         SynchronizeFromModel();
     }
 
-    private TextBox Filter(string name, Expression<Func<IEditorDiagnosticsViewModel, string>> value,
+    private static UiControl<TextBox, IEditorDiagnosticsViewModel> Filter(IUiBuildContext<IEditorDiagnosticsViewModel> ui,
+        string name, Expression<Func<IEditorDiagnosticsViewModel, string>> value,
         Expression<Func<IEditorDiagnosticsViewModel, bool>>? available = null) =>
-        TextBox.Create().WithRole(FilterRole).AccessibleName(name)
-            .BindValueTwoWay(this, value)
-            .Bind(UiProperties.Enabled, this, available ?? (data => data.CanFilter));
+        ui.TextBox().WithRole(FilterRole).AccessibleName(name)
+            .BindValueTwoWay(value)
+            .Bind(UiProperties.Enabled, available ?? (data => data.CanFilter));
 
-    private static HStack Row(params Element[] elements)
+    private static UiControl<HStack, IEditorDiagnosticsViewModel> Row(IUiBuildContext<IEditorDiagnosticsViewModel> ui, params Element[] elements)
     {
         foreach (var element in elements)
         {
@@ -135,7 +146,7 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
             else if (element is Button button) button.WithRole(CommandRole);
             else if (element is Text text) text.WithRole(LabelRole);
         }
-        return HStack.Create(elements).WithRole(RowRole);
+        return ui.HStack(elements).WithRole(RowRole);
     }
 
     private void AdvanceMode()
@@ -295,9 +306,13 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
 
     private sealed class ConsoleLayout : ElementList
     {
-        private readonly int _headers;
-        public ConsoleLayout(Element[] headers, HStack columns, Element export, Element status)
-        { _headers = headers.Length; foreach (var child in headers.Concat([columns, export, status])) Add(child); }
+        private int _headers;
+        public void SetSections(Element[] headers, HStack columns, Element export, Element status)
+        {
+            _headers = headers.Length;
+            foreach (var child in headers) Add(child);
+            Add(columns); Add(export); Add(status);
+        }
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
             for (var i = 0; i < Children.Count; i++) Children[i].Measure(i == _headers

@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -254,7 +256,7 @@ public sealed class UiDiagnosticsTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { if (Borrowed) throw new InvalidOperationException("borrowed"); }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { if (Error != null) throw Error; }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { if (Error != null) throw Error; }
         public void Dispose() { }
     }
 }

@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using SkiaSharp;
 using TrueMoon.Argentis;
@@ -80,7 +81,7 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
     }
 
     /// <inheritdoc />
-    public void Render(Element root, UiViewport viewport)
+    public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null)
     {
         VerifyAvailable(); ArgumentNullException.ThrowIfNull(root); viewport.Validate();
         if (viewport != _viewport) throw new ArgumentException("Resize the surface before rendering a different viewport.", nameof(viewport));
@@ -91,7 +92,7 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
             var canvas = _surface.Canvas;
             canvas.Clear(SKColors.Transparent);
             canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources, _surface)); }
+            try { canvas.Scale(viewport.Scale); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new SkiaDrawingContext(canvas, _drawingResources, _surface), presenters); }
             finally { canvas.Restore(); }
             _hasFrame = true;
         }

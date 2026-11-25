@@ -1,3 +1,10 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Aether.Abstractions.Scenes;
 using System.Collections.Concurrent;
 using TrueMoon.Aether.Editor.Tests.Documents;
@@ -314,7 +321,7 @@ public sealed class EditorHeaderViewTests
         using var test = new HeaderFixture(); var caption = test.Header.Caption;
         caption.Value = new string('W', 80); caption.FontFamily = "typography-family"; caption.FontWeight = 600; caption.FontItalic = true;
         var probe = new TypographyRecordingContext();
-        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); caption.Draw(probe);
+        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(caption, probe);
         var drawn = Assert.Single(probe.Texts);
         Assert.Equal(new string('W', 14) + "…", drawn.Text);
         Assert.Equal((14f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
@@ -324,7 +331,7 @@ public sealed class EditorHeaderViewTests
         Assert.Equal(9f, drawn.Y);
 
         caption.Value = "g *"; probe.Texts.Clear();
-        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); caption.Draw(probe);
+        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(caption, probe);
         Assert.Equal(ink, probe.InkMeasures[1]);
         Assert.Equal(drawn.Y, Assert.Single(probe.Texts).Y);
     }
@@ -338,7 +345,7 @@ public sealed class EditorHeaderViewTests
         var text = Assert.Single(DocumentUiFixture.Tree(test.Overlays.Popup!).OfType<Text>());
         text.Value = "AAAA BBBB CCCC"; text.FontFamily = "typography-family"; text.FontSize = 14; text.FontWeight = 600; text.FontItalic = true;
         var probe = new TypographyRecordingContext();
-        text.Measure(new(50, 200), probe); text.Arrange(new(0, 0, 50, 200)); text.Draw(probe);
+        text.Measure(new(50, 200), probe); text.Arrange(new(0, 0, 50, 200)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(text, probe);
         Assert.Equal(new[] { "AAAA ", "BBBB ", "CCCC" }, probe.Texts.Select(call => call.Text));
         Assert.Equal(60, text.DesiredSize.Height);
         Assert.All(probe.Texts, call => Assert.Equal((14f, "typography-family", 600, true), (call.Size, call.Family, call.Weight, call.Italic)));
@@ -448,7 +455,7 @@ internal sealed class HeaderFixture : IDisposable
     private sealed class HeaderSurface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new HeaderTextLayout();
-        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport) { } public void Dispose() { }
+        public void VerifyAvailable() { } public void Resize(UiViewport viewport) { } public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { } public void Dispose() { }
     }
     private sealed class HeaderTextLayout : ITextLayoutService
     { public Size Measure(string text, float fontSize, string fontFamily) => new(text.Length * fontSize / 2, fontSize); }

@@ -1,5 +1,18 @@
 # TrueMoon: общий статус
 
+**UIA1f.11, 24.11.2026.** Editor и демонстрационные View переведены на
+[новый контракт UI](alloy/PLAN.md#uia1f11-contextual-content). Локальная
+регрессия `1.2611.24.11-alpha` повторно прошла в Debug и Release. В каждой
+конфигурации прошёл 2 961 тест Alloy, Hosting и Editor. ENG9b подтвердил
+сохранение состояния и геометрии в девяти контрольных точках Editor.
+[Повторная проверка](alloy/HISTORY.md#uia1f11-recheck-2026-11-24).
+
+**UI-архитектура, 25.11.2026.** В `1.2611.25.6-alpha` общий обход Alloy
+заменил `DrawCore`, Editor и Player передают квитанции рисования отдельно
+от показа хостом. Для потребителей Argentis это breaking change:
+нужны новые импорты и пересборка. [Проверки и границы](alloy/STATUS.md#uia1-architecture),
+[карта типов](alloy/PLAN.md#uia1i-argentis-structure).
+
 **Ревизия 2026-11-21.** Основание `main` — `8a4e22c` на версии
 `1.2611.21.9-alpha`. В этой версии проверен первый оконный сценарий игры.
 NOM6.1 принят раньше, в чистой копии дерева `27129fe`.
@@ -30,7 +43,7 @@ headless Player совпали по вводу и игровым наблюде�
 | [Kton](physics/STATUS.md) | PHYS0–6 и PHYS8.1–3 проверены. В PHYS8.4 прошла автоматическая приёмка визуального consumer | [10 000 тел и воркеры](physics/PLAN.md#phys8). Ручной Win32 input/close открыт |
 | [Kul](audio/STATUS.md) | AUD1 и ARCH1h.2a проверены на Windows x64. Принятый аудио backend и ECS bridge покрыты своими профилями | [AUD2–3](audio/PLAN.md#current-audio-queue) |
 | [Nom](nom/STATUS.md) | NOM6.1 в `main`. Прошли чистая сборка, по 874 теста Nom в Debug/Release, backup/restore и пакетные проверки | [Приёмка NOM6.1](nom/PLAN.md#nom6-1-clean-checkout). VM-приёмка отложена |
-| [Alloy](alloy/STATUS.md) | В `main` стекло, цветная подложка и 32 векторных знака. Raster, OpenGL и Vulkan проверены. Есть попиксельные расхождения | [PA8c.1a](alloy/PLAN.md#pa8c1a-positioning-rollout) запланирован. Ввод, DPI, K7/K8 и матрица выпуска открыты |
+| [Alloy / Argentis](alloy/STATUS.md#uia1-architecture) | UIA1g–j проверены локально на `1.2611.25.6-alpha`, включая независимый NuGet-потребитель и окна OpenGL/Vulkan. Пакеты не опубликованы | [PA8c.1a и независимые треки](alloy/PLAN.md#current-ui-queue). Физический ввод, DPI, K7/K8 и матрица выпуска остаются открыты |
 | [Core](core/STATUS.md), [Cobalt](cobalt/STATUS.md), [Enerit](enerit/STATUS.md), [Mithril](mithril/STATUS.md) | CORE7 и CORE8 завершены в своих профилях. Последняя общая launch-регрессия — ENG7b.3 от 16.11.2026. ENE6e прошёл отдельную приёмку для consumer со строгими XML docs | [Core](core/PLAN.md), [Cobalt](cobalt/PLAN.md), [Enerit](enerit/PLAN.md), [Mithril](mithril/PLAN.md) |
 
 <a id="общие-проверки--датированные-сведения"></a>

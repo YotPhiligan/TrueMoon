@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using System.Collections.Concurrent;
 using TrueMoon.Argentis;
@@ -259,7 +261,7 @@ public sealed class UiDispatchTests
         public int Disposals { get; private set; }
         public void VerifyAvailable() { if (Borrowed) throw new InvalidOperationException("borrowed"); }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => Frames++;
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => Frames++;
         public void Dispose() => Disposals++;
     }
 }

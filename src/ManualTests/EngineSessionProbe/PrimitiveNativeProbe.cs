@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -31,8 +34,9 @@ public sealed class PrimitiveNativeView : View<PrimitiveNativeData>
     public PrimitiveNativeView(PrimitiveNativeData data, IViewStyle<PrimitiveNativeView> style)
     {
         ArgumentNullException.ThrowIfNull(data); ArgumentNullException.ThrowIfNull(style);
-        Stack = VStack.Create().WithChildren(Text.Plain(data.Title), Text.Plain(data.Description));
-        Content(data, _ => Stack); this.WithViewStyle(style);
+        Stack = new VStack().WithChildren(new Text(data.Title), new Text(data.Description));
+        DataContext = data;
+        SetContent(Stack); this.WithViewStyle(style);
     }
 }
 

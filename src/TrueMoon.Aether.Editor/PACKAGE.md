@@ -51,7 +51,7 @@ var fallback = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
     ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf")
 });
 var fonts = SkiaFontCatalog.FromSystemFonts(
-    [TrueMoon.Argentis.FontDefaults.Family, TrueMoon.Argentis.FontDefaults.FallbackFamily], fallback);
+    [TrueMoon.Argentis.Styling.FontDefaults.Family, TrueMoon.Argentis.Styling.FontDefaults.FallbackFamily], fallback);
 ```
 
 ```csharp

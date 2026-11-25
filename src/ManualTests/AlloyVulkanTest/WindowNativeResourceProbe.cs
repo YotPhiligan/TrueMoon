@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Windows;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Views;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Collections.Concurrent;

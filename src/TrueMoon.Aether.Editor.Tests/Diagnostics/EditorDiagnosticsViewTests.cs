@@ -1,3 +1,9 @@
+using TrueMoon.Argentis.Bindings;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using System.ComponentModel;
 using System.Reflection;
 using TrueMoon.Aether.Editor.Tooling;
@@ -38,9 +44,10 @@ public sealed class EditorDiagnosticsViewTests
         using var source = new DiagnosticConsoleFixture(); source.Add(Enumerable.Range(1, 100).Select(i => DiagnosticConsoleFixture.Record(i, "event " + i)).ToArray());
         using var model = source.Model(new() { RecordsPerRefresh = 128 }); model.IsOpen = true; model.Refresh();
         var clipboard = new Clipboard(); var first = new EditorDiagnosticsView(model, new EditorDiagnosticsViewStyle());
-        var firstEvents = first.Events;
+        TreeView firstEvents;
         using (var ui = new UiSession(first, new Surface(), new(1280, 360), clipboard))
         {
+            firstEvents = first.Events;
             ui.Update(); ui.Update(); Assert.True(first.Scroll.Offset > 0);
             first.Events.Select("2"); ui.Focus(first.Events); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.C, Control: true)); Assert.Equal(model.Details, clipboard.Text);
             source.Add(DiagnosticConsoleFixture.Record(101, "event 101")); model.Refresh(); ui.Update(); ui.Update();
@@ -231,18 +238,18 @@ public sealed class EditorDiagnosticsViewTests
     }
 
     [Fact]
-    public void FailedStyle_DisposesUnpublishedConsoleAndRetainsBorrowedModel()
+    public void FailedStyle_DisposesUnpublishedContentAndRetainsBorrowedModel()
     {
         using var source = new DiagnosticConsoleFixture(); using var model = source.Model();
-        EditorDiagnosticsView? created = null;
         TreeView? tree = null;
         var expected = new IOException("style failed");
-        var error = Assert.Throws<IOException>(() => new EditorDiagnosticsView(model, new FailingStyle(view =>
-        {
-            created = view;
-            tree = view.Events;
-        }, expected)));
-        Assert.Same(expected, error); Assert.NotNull(created); Assert.True(created.IsDisposed);
+        using var draft = new EditorDiagnosticsView(model, new FailingStyle(view => tree = view.Events, expected));
+        using var surface = new Surface();
+        var error = Assert.Throws<IOException>(() => new UiSession(draft, surface, new(1280, 800)));
+        Assert.Same(expected, error);
+        Assert.False(draft.IsDisposed);
+        Assert.False(draft.IsAttached);
+        Assert.Null(draft.Child);
         Assert.NotNull(tree); Assert.True(tree.IsDisposed);
         source.Add(DiagnosticConsoleFixture.Record(1)); model.Refresh(); Assert.Single(model.Entries); Assert.Equal(0, source.Disposals);
     }
@@ -278,7 +285,7 @@ public sealed class EditorDiagnosticsViewTests
         public ITextLayoutService TextLayout { get; } = new Layout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class Layout : ITextLayoutService, IRichTextLayoutService

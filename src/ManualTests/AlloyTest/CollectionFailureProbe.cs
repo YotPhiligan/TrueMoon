@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Views;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using TrueMoon;
@@ -97,6 +99,6 @@ public sealed class CollectionFailureView : View
     {
         state.Root = this;
         if (state.Initial) state.Rows.Add(new SettingsRow("fail"));
-        SetContent(VStack.Create().BindItems(state.Rows, state.CreateRow));
+        SetContent(new VStack().BindItems(state.Rows, state.CreateRow));
     }
 }

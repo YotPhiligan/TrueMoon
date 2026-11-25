@@ -1,4 +1,8 @@
-﻿using TrueMoon.Aether.Editor.UI;
+﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -162,7 +166,7 @@ public sealed class EditorIslandTests
         using var island = new EditorIsland(child) { Padding = new(8) };
         island.ApplyTheme(light ? Theme.Light : Theme.Dark);
         island.Measure(new(100, 70), new TextLayout()); island.Arrange(new(0, 0, 100, 70));
-        var before = child.Bounds; var drawing = new ShadowDrawing(); island.Draw(drawing);
+        var before = child.Bounds; var drawing = new ShadowDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(island, drawing);
         Assert.Equal(new Rect(8, 8, 84, 54), before); Assert.Equal(before, child.Bounds);
         Assert.Equal(6, drawing.Fills.Count); Assert.Equal(0, drawing.Depth);
         Assert.All(drawing.Fills, fill =>
@@ -208,7 +212,7 @@ public sealed class EditorIslandTests
         public ITextLayoutService TextLayout { get; } = new TextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
     private sealed class ShadowDrawing : IDrawingContext

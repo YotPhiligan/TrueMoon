@@ -1,4 +1,7 @@
-﻿using TrueMoon.Aether.Editor.Tests.Documents;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
@@ -86,8 +89,9 @@ public sealed class EditorInspectorShellTests
         EditorInspectorView product = null!; var resource = new Cleanup(); var failure = new IOException("root style failed");
         var error = Assert.Throws<IOException>(() => new EditorView(model, new FailingStyle(failure), null, null, false, null, null,
             new Factory<EditorInspectorView>(() => { product = new(test.Model, new EditorInspectorViewStyle()); product.Own(resource); return product; })));
-        Assert.Same(failure, error); Assert.Equal(1, resource.Disposals); Assert.True(product.IsDisposed); Assert.True(product.Scroll.IsDisposed);
-        Assert.All(product.Properties.Values, row => Assert.True(row.Input.IsDisposed));
+        Assert.Same(failure, error); Assert.Equal(1, resource.Disposals); Assert.True(product.IsDisposed);
+        Assert.Null(product.Child);
+        Assert.Empty(product.Properties);
         test.Refresh(); test.Property(DocumentData.Custom, "flag").BooleanValue = true; test.Model.Apply();
         Assert.True(test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["flag"].Value.GetBoolean());
         Assert.False(test.Owner.Commands.Read().Closed);

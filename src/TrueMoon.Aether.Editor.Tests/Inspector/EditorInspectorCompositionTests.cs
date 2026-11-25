@@ -1,4 +1,6 @@
-﻿using TrueMoon.Aether.Editor.Tests.Documents;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
@@ -65,6 +67,9 @@ public sealed class EditorInspectorCompositionTests
         using var current = Assert.IsType<EditorInspectorView>(app.Services.Resolve<IFactory<EditorInspectorView>>()!.Create());
         using var legacy = Assert.IsType<EditorTransformView>(app.Services.Resolve<IFactory<EditorTransformView>>()!.Create());
         Assert.Same(model, current.DataContext); Assert.Same(model, legacy.DataContext);
+        Assert.Null(current.Child);
+        using var ui = InspectorFixture.Ui(current);
+        ui.Update();
         Assert.Equal(5, current.Components.Count); Assert.Equal(9, legacy.Fields.Count);
         app.Dispose(); Assert.False(current.IsDisposed); Assert.False(legacy.IsDisposed);
     }

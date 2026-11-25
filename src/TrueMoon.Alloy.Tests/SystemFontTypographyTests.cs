@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
 using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -167,7 +172,7 @@ public sealed class SystemFontTypographyTests
         actual.Canvas.Clear(SKColors.Transparent); expected.Canvas.Clear(SKColors.Transparent);
         var empty = Pixels(actual);
         actual.Canvas.Scale(scale); expected.Canvas.Scale(scale);
-        label.Draw(drawing);
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(label, drawing);
         using var paint = new SKPaint { Color = new(235, 240, 245), IsAntialias = true };
         expected.Canvas.ClipRect(new SKRect(4, 8, 244, 88));
         expected.Canvas.DrawText(text, 4, 8 - font.Metrics.Ascent, SKTextAlign.Left, font, paint);

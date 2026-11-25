@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Alloy.Runtime;
 using SkiaSharp;
 using TrueMoon.Argentis;

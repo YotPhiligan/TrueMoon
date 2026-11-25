@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+
 namespace TrueMoon.Argentis;
 
 /// <summary>Immutable display data; IDs and parent links are independent of labels and icons.</summary>
@@ -224,34 +229,36 @@ public sealed class TreeView : Element, ITreeView
         var index = (int)MathF.Floor((y - Bounds.Y - Padding.Top) / RowHeight);
         return index >= 0 && index < _rows.Count ? index : -1;
     }
-    /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context)
+    private static readonly ElementPresentation TreeViewPresentation = ElementPresentation.Create<TreeView>(static (tree, context) =>
     {
-        var visible = VisibleArea(); if (visible.Width <= 0 || visible.Height <= 0) return;
-        var first = Math.Max(0, (int)MathF.Floor((visible.Y - Bounds.Y - Padding.Top) / RowHeight));
-        var end = Math.Min(_rows.Count, (int)MathF.Ceiling((visible.Y + visible.Height - Bounds.Y - Padding.Top) / RowHeight));
+        var visible = tree.VisibleArea(); if (visible.Width <= 0 || visible.Height <= 0) return;
+        var theme = tree.Theme;
+        var first = Math.Max(0, (int)MathF.Floor((visible.Y - tree.Bounds.Y - tree.Padding.Top) / tree.RowHeight));
+        var end = Math.Min(tree._rows.Count, (int)MathF.Ceiling((visible.Y + visible.Height - tree.Bounds.Y - tree.Padding.Top) / tree.RowHeight));
         for (var i = first; i < end; i++)
         {
-            var row = _rows[i]; var bounds = RowBounds(i); var selected = row.Item.Id == _selected;
-            if (selected) context.Fill(bounds, IsEffectivelyEnabled ? Theme.Accent : Theme.ControlDisabled);
-            else if (IsHovered && row.Item.Id == _hover) context.Fill(bounds, Theme.ControlHover);
-            var color = !IsEffectivelyEnabled ? Theme.Disabled : selected ? Theme.OnAccent : Foreground;
-            var x = bounds.X + Math.Min(row.Depth * Indent, Math.Max(0, bounds.Width - 36));
+            var row = tree._rows[i]; var bounds = tree.RowBounds(i); var selected = row.Item.Id == tree._selected;
+            if (selected) context.Fill(bounds, tree.IsEffectivelyEnabled ? theme.Accent : theme.ControlDisabled);
+            else if (tree.IsHovered && row.Item.Id == tree._hover) context.Fill(bounds, theme.ControlHover);
+            var color = !tree.IsEffectivelyEnabled ? theme.Disabled : selected ? theme.OnAccent : tree.Foreground;
+            var x = bounds.X + Math.Min(row.Depth * tree.Indent, Math.Max(0, bounds.Width - 36));
             var y = bounds.Y + (bounds.Height - 14) / 2;
-            if (_children[row.Item.Id].Count != 0)
-                UiSymbols.Draw(context, _expanded.Contains(row.Item.Id) ? UiSymbol.ChevronDown : UiSymbol.ChevronRight, new(x, y, 14, 14), color);
+            if (tree._children[row.Item.Id].Count != 0)
+                UiSymbols.Draw(context, tree._expanded.Contains(row.Item.Id) ? UiSymbol.ChevronDown : UiSymbol.ChevronRight, new(x, y, 14, 14), color);
             UiSymbols.Draw(context, row.Item.Icon, new(x + 16, y, 14, 14), color);
-            context.Text(Ellipsize(row.Item.Text, Math.Max(0, bounds.X + bounds.Width - x - 36)), x + 34,
-                bounds.Y + (bounds.Height - FontSize) / 2, color, FontSize, FontFamily, FontWeight, FontItalic);
-            if (_dragging && _dropValid)
+            context.Text(tree.Ellipsize(row.Item.Text, Math.Max(0, bounds.X + bounds.Width - x - 36)), x + 34,
+                bounds.Y + (bounds.Height - tree.FontSize) / 2, color, tree.FontSize, tree.FontFamily, tree.FontWeight, tree.FontItalic);
+            if (tree._dragging && tree._dropValid)
             {
-                if (_dropPosition == TreeDropPosition.Into && _dropParent == row.Item.Id) context.Stroke(bounds.Deflate(new Thickness(1)), Theme.Focus, 2);
-                else if (_dropPosition != TreeDropPosition.Into && _dropAnchor == row.Item.Id)
-                    context.Fill(new(bounds.X, _dropPosition == TreeDropPosition.Before ? bounds.Y : bounds.Y + bounds.Height - 2, bounds.Width, 2), Theme.Focus);
+                if (tree._dropPosition == TreeDropPosition.Into && tree._dropParent == row.Item.Id) context.Stroke(bounds.Deflate(new Thickness(1)), theme.Focus, 2);
+                else if (tree._dropPosition != TreeDropPosition.Into && tree._dropAnchor == row.Item.Id)
+                    context.Fill(new(bounds.X, tree._dropPosition == TreeDropPosition.Before ? bounds.Y : bounds.Y + bounds.Height - 2, bounds.Width, 2), theme.Focus);
             }
         }
-        if (_dragging && _dropValid && _dropPosition == TreeDropPosition.Into && _dropParent == null) context.Stroke(visible.Deflate(new Thickness(1)), Theme.Focus, 2);
-    }
+        if (tree._dragging && tree._dropValid && tree._dropPosition == TreeDropPosition.Into && tree._dropParent == null) context.Stroke(visible.Deflate(new Thickness(1)), theme.Focus, 2);
+    });
+    /// <inheritdoc />
+    public override ElementPresentation Presentation => TreeViewPresentation;
     private string Ellipsize(string value, float width)
     {
         if (_text == null || _text.Measure(value, FontSize, FontFamily, FontWeight, FontItalic).Width <= width) return value;

@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Abstractions.Preview;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
@@ -93,10 +96,11 @@ internal sealed class ViewportInputFixture : IDisposable
         Ui.Update();Controller.Observe(Ui);
         var surface=frame.Presentation;
         View.Canvas.Upload(SkiaImageSource.CopyBgraPixels(surface.Surface.Width,surface.Surface.Height,new byte[surface.Surface.Width*surface.Surface.Height*4]),frame,()=>ReferenceEquals(Frames.Presentation,surface));
-        View.Canvas.Draw(Drawing);
-        var b=View.Canvas.ImageBounds;var c=View.Canvas.DrawnClipBounds;
+        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(View.Canvas, Drawing);
         // A worker may advance while the UI draws the previous ticket. Production also rejects that stale ack and waits for the next frame.
-        return acknowledge&&Preview.Presented(frame,new(b.X,b.Y,b.Width,b.Height),new(c.X,c.Y,c.Width,c.Height),View.Canvas.LayoutRevision);
+        if (!acknowledge || View.Canvas.CurrentDraw is not {} draw) return false;
+        var (painted, b, c, revision) = draw;
+        return Preview.Presented(painted,new(b.X,b.Y,b.Width,b.Height),new(c.X,c.Y,c.Width,c.Height),revision);
     }
     internal (float X,float Y) Point(EntityId entity)
     {

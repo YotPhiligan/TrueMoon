@@ -1,3 +1,6 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -33,22 +36,31 @@ public sealed class GpuViewportCanvas : Element
     public void Clear()
     { VerifyAccess(); _image?.Dispose(); _image = null; Stamp = null; Drawn = null; Invalidate(); }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(available.Width, 160);
-    protected override void DrawCore(IDrawingContext context)
+    private static readonly ElementPresentation Painter = ElementPresentation.Create<GpuViewportCanvas>(static (canvas, context) =>
     {
-        context.Fill(Bounds, new(19, 37, 61));
+        var bounds = canvas.Bounds;
+        var image = canvas._image;
+        var stamp = canvas.Stamp;
+        context.Fill(bounds, new(19, 37, 61));
         context.Save();
-        try { context.Clip(Bounds); if (_image != null) context.Image(_image, new(Bounds.X + 8, Bounds.Y + 8, PixelWidth * Zoom, PixelHeight * Zoom)); }
+        try
+        {
+            context.Clip(bounds);
+            if (image != null) context.Image(image, new(bounds.X + 8, bounds.Y + 8, canvas.PixelWidth * canvas.Zoom, canvas.PixelHeight * canvas.Zoom));
+        }
         finally { context.Restore(); }
-        Drawn = Stamp;
-    }
+        canvas.ReportDrawn(image != null ? stamp : null);
+    });
+    public override ElementPresentation Presentation => Painter;
+    private void ReportDrawn(GpuFrameStamp? stamp) => Drawn = stamp;
     public override void Dispose() { if (IsDisposed) return; Clear(); base.Dispose(); }
 }
 
 public sealed class GpuViewportView : View
 {
     public GpuViewportCanvas Canvas { get; } = new() { Height = 160 };
-    public GpuViewportView() => Content(() => VStack.Create().Padding(16).WithChildren(
-        Text.Plain("TrueMoon — GPU viewport"), Canvas, Text.Plain("Vulkan child / borrowed GL texture / retained Skia GPU image")));
+    public GpuViewportView() => SetContent(new VStack().Padding(16).WithChildren(
+        new Text("TrueMoon — GPU viewport"), Canvas, new Text("Vulkan child / borrowed GL texture / retained Skia GPU image")));
 }
 
 public static class GpuViewportProbe

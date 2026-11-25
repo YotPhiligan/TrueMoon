@@ -85,12 +85,12 @@ public sealed class EditorSession : IStartable, IStoppable
         view.ViewportController?.Observe(ui);
         var active=view.ViewportController?.IsActive!=false;
         if(active)_viewport.Observe(ui, view);
-        if (active && view.Canvas.CanAcknowledgeDraw && view.Canvas.DrawnFrame is { } frame)
+        if (active && view.Canvas.CurrentDraw is {} draw)
         {
-            var image = view.Canvas.ImageBounds; var clip = view.Canvas.DrawnClipBounds;
+            var (frame, image, clip, revision) = draw;
             if (frame.Metadata.PreviewView != null)
                 _engine.Preview.Presented(frame, new(image.X, image.Y, image.Width, image.Height),
-                    new(clip.X, clip.Y, clip.Width, clip.Height), view.Canvas.LayoutRevision);
+                    new(clip.X, clip.Y, clip.Width, clip.Height), revision);
             else if (!_engine.Preview.Presented(frame))
             {
                 if (frame.Metadata.RenderView != null)

@@ -32,7 +32,7 @@ Runner публикует worker, фиксирует хеши его завис�
 [Контракт и проверки](../../docs/engine/RENDER_SURFACE.md#imported-base-color-texture).
 
 В обоих сценариях actual Vulkan→OpenGL RGBA readback показан в Skia window. Только
-DrawCore плюс `FramePresented` разрешают подтверждение stamp. ARCH1f.4 проверяет два куба
+рисование изображения презентером и последующее событие `FramePresented` разрешают подтверждение stamp. ARCH1f.4 проверяет два куба
 с общим mesh/material, independent linear tint, reset, shared material reload,
 delete, geometry revision, resize/suspend/resume, Stop/new generation, Unsupported
 checkpoint Replace без остановки текущей игры и failed camera после native upload.

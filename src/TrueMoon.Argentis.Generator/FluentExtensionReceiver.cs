@@ -12,6 +12,11 @@ internal sealed record FluentExtensionReceiver(string OwnerName, string OwnerTyp
     internal string Declare(string name) => IsSealed ? $"extension({OwnerType} {name})" :
         $"extension<T>(T {name}) where T : {OwnerType}";
 
+    internal string ControlType => $"global::TrueMoon.Argentis.Views.UiControl<{ReturnType}, TData>";
+
+    internal string DeclareControl(string name) => IsSealed ? $"extension<TData>({ControlType} {name})" :
+        $"extension<T, TData>({ControlType} {name}) where T : {OwnerType}";
+
     internal static FluentExtensionReceiver? TryCreate(INamedTypeSymbol owner, Compilation compilation)
     {
         if (owner is not { DeclaredAccessibility: Accessibility.Public, ContainingType: null, IsGenericType: false } ||

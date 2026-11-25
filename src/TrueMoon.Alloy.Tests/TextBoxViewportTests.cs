@@ -1,6 +1,11 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Styling;
 using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
+using TrueMoon.Alloy.Runtime.Semantics;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -27,6 +32,65 @@ public sealed class TextBoxViewportTests
                 if (compact.Bitmap.GetPixel(x, y) != spacious.Bitmap.GetPixel(x, y + shift))
                 { different++; first ??= (x, y); }
             Assert.True(different == 0, $"Clipped/shifted line: scale={scale}, numeric={numeric}, light={light}, error={error}, selected={selected}, pixels={different}, first={first}");
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ResizeBeforeClick_UsesNewScrolledLineWithoutPainting(bool shaped)
+    {
+        var field = new TextBox { Value = new string('M', 32), UseShapedText = shaped, SemanticId = "field", Height = 32 };
+        using var ui = UiSession.Create(field, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(800, 32));
+        ui.Update(); ui.Focus(field);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.End)); ui.Update();
+        Assert.Equal(0, field.HorizontalOffset);
+        var old = ui.CaptureSemantics();
+        var diagnostics = ui.EnableDiagnostics();
+        ui.Resize(new(120, 32));
+        var click = new UiInput(InputKind.PointerDown, 119, 16);
+        Assert.Equal(UiSemanticTargetStatus.StaleSnapshot, ui.HandleSemanticInput(old, "field", click).Status);
+        // The caret was visible without scrolling at the old width. The new right edge is
+        // still the end of the line only if arrange has revealed the caret before hit testing.
+        Assert.True(ui.HandleInput(click).Handled);
+        Assert.Equal(120, field.Bounds.Width);
+        Assert.Equal(field.Value.Length, field.CaretIndex);
+        Assert.True(field.HorizontalOffset > 0);
+        Assert.Equal(UiSemanticTargetStatus.StaleSnapshot, ui.HandleSemanticInput(old, "field", click).Status);
+        Assert.True(ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Left, Shift: true)).Handled);
+        var offset = field.HorizontalOffset;
+        AssertSelection();
+        Assert.Equal(0, diagnostics.Snapshot.Render.Attempts);
+        Assert.Equal(0, diagnostics.Snapshot.Update.Attempts);
+        Assert.True(ui.NeedsRender);
+        Assert.True(ui.Update());
+        using var first = Pixels();
+        ui.RequestFrame(); Assert.True(ui.Update());
+        using var repeated = Pixels();
+        Assert.Equal(first.Pixels, repeated.Pixels);
+        Assert.Equal(1, diagnostics.Snapshot.Measure.Attempts);
+        Assert.Equal(1, diagnostics.Snapshot.Arrange.Attempts);
+        AssertSelection();
+
+        ui.HandleInput(new(InputKind.FocusLost)); ui.Update();
+        using var unfocused = Pixels();
+        // Ignore borders: selection and caret must change actual pixels inside the text viewport.
+        bool TextPixelsDiffer(int x) => Enumerable.Range(5, 22).Any(y => unfocused.GetPixel(x, y) != first.GetPixel(x, y));
+        Assert.Contains(Enumerable.Range(80, 32), TextPixelsDiffer);
+        Assert.DoesNotContain(Enumerable.Range(8, 64), TextPixelsDiffer);
+        ui.Focus(field); ui.Update();
+        using var refocused = Pixels();
+        Assert.Equal(first.Pixels, refocused.Pixels);
+        AssertSelection();
+        Assert.False(ui.Update());
+
+        SKBitmap Pixels() { using var image = ui.SnapshotRasterImage(); return SKBitmap.FromImage(image); }
+        void AssertSelection()
+        {
+            Assert.Equal(field.Value.Length - 1, field.CaretIndex);
+            Assert.Equal(field.CaretIndex, field.SelectionStart);
+            Assert.Equal(1, field.SelectionLength);
+            Assert.Equal(offset, field.HorizontalOffset);
         }
     }
 

@@ -1,3 +1,7 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
@@ -20,7 +24,7 @@ public sealed class SplitViewTests
         split.Divider.Style = new Style().With(UiProperties.Foreground, theme.Accent); Check(theme.Accent);
         void Check(Color color)
         {
-            var drawing = new OutlineDrawing(); split.Divider.Draw(drawing);
+            var drawing = new OutlineDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(split.Divider, drawing);
             Assert.Contains(drawing.Fills, fill => fill == (line, color)); Assert.Equal(drawing.Saves, drawing.Restores);
         }
     }

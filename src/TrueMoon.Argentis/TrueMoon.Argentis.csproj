@@ -8,6 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="TrueMoon.Alloy" />
+        <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
         <ProjectReference Include="..\TrueMoon.Argentis.Generator\TrueMoon.Argentis.Generator.csproj"
                           ReferenceOutputAssembly="false" OutputItemType="Analyzer" PrivateAssets="all" />
         <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />

@@ -1,4 +1,11 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Runtime;
+using TrueMoon.Alloy.Runtime.Semantics;
 using SkiaSharp;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
@@ -41,10 +48,45 @@ public sealed class ControlInteractionTests
     }
 
     [Fact]
+    public void BlockingSubtreeInput_CancelsCaptureAndSkipsFocusWithoutChangingEnablement()
+    {
+        var clicks = 0;
+        const string id = "test.action";
+        var action = new Button("Action").SemanticId(id).OnClick(() => clicks++);
+        var group = new Panel().Fill().WithChildren(action);
+        var sibling = new Button("Other").Fill();
+        using var ui = Create(new HStack().WithChildren(group, sibling));
+        ui.Update();
+        var bounds = action.Bounds;
+        var x = bounds.X + bounds.Width / 2;
+        var y = bounds.Y + bounds.Height / 2;
+        Assert.True(ui.HandleInput(new(InputKind.PointerDown, x, y)).PointerCaptured);
+        Assert.True(action.IsPressed);
+
+        var snapshot = ui.CaptureSemantics();
+        group.IsInputBlocked = true;
+        Assert.True(action.IsEffectivelyEnabled);
+        Assert.Equal(UiSemanticTargetStatus.Disabled, ui.FindSemanticTarget(snapshot, id).Status);
+        var release = ui.HandleInput(new(InputKind.PointerUp, x, y));
+        Assert.False(release.PointerCaptured);
+        Assert.False(action.IsPressed);
+        Assert.False(action.IsFocused);
+        Assert.Equal(0, clicks);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Tab));
+        Assert.True(sibling.IsFocused);
+
+        group.IsInputBlocked = false;
+        ui.Update();
+        Assert.Equal(UiSemanticTargetStatus.Ready, ui.FindSemanticTarget(ui.CaptureSemantics(), id).Status);
+        Click(ui, x, y);
+        Assert.Equal(1, clicks);
+    }
+
+    [Fact]
     public void ButtonCommand_RechecksAdmissionAndReconnectsWithoutLeakingTheBorrowedCommand()
     {
         var command = new CountingCommand();
-        var button = Button.Simple("command").WithCommand(command);
+        var button = new Button("command").WithCommand(command);
         Assert.False(button.IsEnabled);
         Assert.Equal(0, command.Subscribers);
         Assert.Throws<InvalidOperationException>(() => button.WithCommand(command));
@@ -96,7 +138,7 @@ public sealed class ControlInteractionTests
         next.SetAvailable(true);
         var first = new CommandData(old);
         var context = new CommandContext { DataContext = first };
-        var button = Button.Simple("command").WithCommand(context, data => data.Command);
+        var button = new Button("command").WithCommand(context, data => data.Command);
         context.SetContent(button);
         using var ui = Create(context);
         ui.Update();
@@ -210,7 +252,7 @@ public sealed class ControlInteractionTests
     public void ProgressBar_DrawsExactNormalizedExtentAndDoesNotTakeKeyboardFocus(float value, float width)
     {
         using var progress = new ProgressBar { Value = value, Width = 200, Height = 20 };
-        progress.Measure(new Size(240, 140), new FixedTextLayout()); progress.Arrange(new Rect(10, 15, 200, 20)); var drawing = new Drawing(); progress.Draw(drawing);
+        progress.Measure(new Size(240, 140), new FixedTextLayout()); progress.Arrange(new Rect(10, 15, 200, 20)); var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(progress, drawing);
         Assert.False(progress.Focusable); Assert.Equal(2, drawing.Fills.Count); Assert.Equal(new Rect(10, 15, 200, 20), drawing.Fills[0].Bounds);
         Assert.Equal(new Rect(11, 16, width, 18), drawing.Fills[1].Bounds); Assert.Equal(Theme.Dark.Control, drawing.Fills[0].Color); Assert.Equal(Theme.Dark.Accent, drawing.Fills[1].Color);
         Assert.Equal(drawing.Saves, drawing.Restores);
@@ -236,7 +278,7 @@ public sealed class ControlInteractionTests
     {
         var check = new CheckBox("checked") { IsChecked = true }; var progress = new ProgressBar { Value = .5f, Height = 20 }; var slider = new Slider { Value = .5f, Height = 28 };
         var root = new VStack { IsEnabled = false }.WithChildren(check, progress, slider, new Text("label")); using var ui = Create(root); ui.Update();
-        var drawing = new Drawing(); root.Draw(drawing);
+        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing);
         Assert.All(drawing.Texts, text => Assert.Equal(Theme.Dark.Disabled, text.Color));
         Assert.Contains(drawing.Fills, fill => fill.Bounds.Width == 16 && fill.Bounds.Height == 16 && fill.Color == Theme.Dark.Disabled);
         Assert.Contains(drawing.Strokes, stroke => stroke.Bounds.Width == 13 && stroke.Color == Theme.Dark.Disabled);
@@ -248,12 +290,12 @@ public sealed class ControlInteractionTests
     public void TextBox_SelectionAndCaretUseDistinctDrawingGeometryAndDisabledInputCannotEdit()
     {
         var editor = new TextBox { Value = "AB", Width = 200, Height = 32 }; using var ui = Create(editor); ui.Update(); ui.Focus(editor);
-        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.A, Control: true)); var drawing = new Drawing(); editor.Draw(drawing);
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.A, Control: true)); var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing);
         Assert.Contains(drawing.Fills, fill => fill.Bounds == new Rect(8, 8, 16, 16) && fill.Color == Theme.Dark.Accent with { A = 100 });
         Assert.Contains(drawing.Fills, fill => fill.Bounds == new Rect(24, 8, 1, 16) && fill.Color == Theme.Dark.Foreground);
         Assert.Equal(2, editor.SelectionLength); Assert.Equal(2, editor.CaretIndex);
         editor.IsEnabled = false; ui.Update(); Assert.False(ui.HandleInput(new UiInput(InputKind.Text, Text: "replacement")).Handled); Assert.Equal("AB", editor.Value);
-        drawing = new Drawing(); editor.Draw(drawing); Assert.DoesNotContain(drawing.Fills, fill => fill.Color == Theme.Dark.Accent with { A = 100 });
+        drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(editor, drawing); Assert.DoesNotContain(drawing.Fills, fill => fill.Color == Theme.Dark.Accent with { A = 100 });
         Assert.Equal(Theme.Dark.Disabled, Assert.Single(drawing.Texts).Color); Assert.False(editor.IsFocused);
     }
 
@@ -262,7 +304,7 @@ public sealed class ControlInteractionTests
     {
         var first = new Button("first"); var check = new CheckBox("check"); var slider = new Slider(); var editor = new TextBox();
         var disabled = new Button("disabled") { IsEnabled = false }; var hidden = new Panel { IsVisible = false }.WithChildren(new Button("hidden"));
-        var root = new VStack().WithChildren(first, new Text("passive"), disabled, hidden, new ProgressBar(), Image.Create(), check, slider, editor);
+        var root = new VStack().WithChildren(first, new Text("passive"), disabled, hidden, new ProgressBar(), new Image(), check, slider, editor);
         using var ui = Create(root); ui.Update();
         ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Tab, Shift: true)); Assert.True(editor.IsFocused);
         foreach (var expected in new Element[] { first, check, slider, editor, first })
@@ -315,10 +357,10 @@ public sealed class ControlInteractionTests
     {
         var first = new BorrowedImage(new Size(16, 12)); var second = new BorrowedImage(new Size(8, 4));
         var image = new Image { Source = first, Padding = new Thickness(2) }; using var ui = Create(image); ui.Update();
-        Assert.Equal(new Size(20, 16), image.DesiredSize); var drawing = new Drawing(); image.Draw(drawing);
+        Assert.Equal(new Size(20, 16), image.DesiredSize); var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(image, drawing);
         Assert.Same(first, Assert.Single(drawing.Images).Source); Assert.Equal(new Rect(2, 2, 236, 136), drawing.Images[0].Bounds);
         image.Source = second; ui.Update(); Assert.Equal(new Size(12, 8), image.DesiredSize); Assert.Equal(0, first.Disposals);
-        image.Source = null; ui.Update(); drawing = new Drawing(); image.Draw(drawing); Assert.Empty(drawing.Images); Assert.Equal(new Size(4, 4), image.DesiredSize);
+        image.Source = null; ui.Update(); drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(image, drawing); Assert.Empty(drawing.Images); Assert.Equal(new Size(4, 4), image.DesiredSize);
         ui.Dispose(); Assert.Equal(0, first.Disposals); Assert.Equal(0, second.Disposals);
         first.Dispose(); second.Dispose(); Assert.Equal(1, first.Disposals); Assert.Equal(1, second.Disposals);
     }
@@ -408,7 +450,7 @@ public sealed class ControlInteractionTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) => root.Draw(new RecordingDrawingContext());
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new RecordingDrawingContext(), presenters);
         public void Dispose() { }
     }
     private sealed class Drawing : IDrawingContext

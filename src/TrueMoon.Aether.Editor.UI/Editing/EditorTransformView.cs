@@ -1,3 +1,8 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI.Editing;
@@ -18,13 +23,13 @@ public sealed class EditorTransformView : View<IEditorInspectorViewModel>
     /// <summary>Gets the stable inputs by property key.</summary>
     public IReadOnlyDictionary<string, TextBox> Fields => _fields;
     /// <summary>Gets the main form stack.</summary>
-    public VStack Form { get; } = VStack.Create();
+    public VStack Form { get; } = new VStack();
     /// <summary>Gets the draft action row.</summary>
-    public HStack Actions { get; } = HStack.Create();
+    public HStack Actions { get; } = new HStack();
     /// <summary>Gets the shared history action row.</summary>
-    public HStack History { get; } = HStack.Create();
+    public HStack History { get; } = new HStack();
     /// <summary>Gets preview controls.</summary>
-    public HStack PreviewActions { get; } = HStack.Create();
+    public HStack PreviewActions { get; } = new HStack();
     /// <summary>Gets the explicit commit button.</summary>
     public Button Apply { get; }
     /// <summary>Gets the draft cancellation button.</summary>
@@ -53,27 +58,27 @@ public sealed class EditorTransformView : View<IEditorInspectorViewModel>
         try
         {
             DataContext = model;
-            Form.Add(Text.Plain("Transform · десятичная точка"));
+            Form.Add(new Text("Transform · десятичная точка"));
             foreach (var field in model.Fields)
             {
-                var input = TextBox.Create().WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, field, x => x.DisplayValue)
+                var input = new TextBox().WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, field, x => x.DisplayValue)
                     .Bind(UiProperties.Enabled, model, x => x.CanEdit).Bind(UiProperties.AccessibleName, field, x => x.InputAccessibleName)
                     .Bind(UiProperties.HasError, field, x => x.HasError).Bind(UiProperties.ErrorMessage, field, x => x.Error);
                 _fields.Add(field.Key, input);
-                Form.Add(HStack.Create().WithRole(FieldRole).WithChildren(Text.Plain().WithRole(LabelRole).BindText(field, x => x.DisplayLabel), input));
+                Form.Add(new HStack().WithRole(FieldRole).WithChildren(new Text().WithRole(LabelRole).BindText(field, x => x.DisplayLabel), input));
             }
-            Apply = Button.Simple("Применить").Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply);
-            Cancel = Button.Simple("Отменить").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel);
-            Undo = Button.Simple("Undo").Bind(UiProperties.Enabled, model, x => x.CanUndo).OnClick(model.Undo);
-            Redo = Button.Simple("Redo").Bind(UiProperties.Enabled, model, x => x.CanRedo).OnClick(model.Redo);
-            ShowPreview = Button.Simple("Preview").Bind(UiProperties.Enabled, model, x => x.CanPreview).OnClick(model.ShowPreview);
-            StopPreview = Button.Simple("Стоп").Bind(UiProperties.Enabled, model, x => x.CanStopPreview).OnClick(() => { _ = Observe(model.StopPreviewAsync()); });
-            Error = Text.Plain().BindText(model, x => x.ErrorText);
-            PreviewStatus = Text.Plain().BindText(model, x => x.PreviewText);
+            Apply = new Button("Применить").Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply);
+            Cancel = new Button("Отменить").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel);
+            Undo = new Button("Undo").Bind(UiProperties.Enabled, model, x => x.CanUndo).OnClick(model.Undo);
+            Redo = new Button("Redo").Bind(UiProperties.Enabled, model, x => x.CanRedo).OnClick(model.Redo);
+            ShowPreview = new Button("Preview").Bind(UiProperties.Enabled, model, x => x.CanPreview).OnClick(model.ShowPreview);
+            StopPreview = new Button("Стоп").Bind(UiProperties.Enabled, model, x => x.CanStopPreview).OnClick(() => { _ = Observe(model.StopPreviewAsync()); });
+            Error = new Text().BindText(model, x => x.ErrorText);
+            PreviewStatus = new Text().BindText(model, x => x.PreviewText);
             PreviewActions.IsVisible = showPreviewControls; PreviewStatus.IsVisible = showPreviewControls;
             Actions.WithChildren(Apply, Cancel); History.WithChildren(Undo, Redo); PreviewActions.WithChildren(ShowPreview, StopPreview);
             Form.WithChildren(Actions, History, Error, PreviewActions, PreviewStatus);
-            Content(model, _ => Form); this.WithViewStyle(style);
+            SetContent(Form); this.WithViewStyle(style);
         }
         catch (Exception original)
         {

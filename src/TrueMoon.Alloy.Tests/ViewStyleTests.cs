@@ -1,4 +1,12 @@
-﻿using System.ComponentModel;
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
+using System.ComponentModel;
 using TrueMoon.Alloy.Runtime;
 using System.Collections.ObjectModel;
 using TrueMoon.Argentis;
@@ -13,20 +21,23 @@ public sealed class ViewStyleTests
     private static readonly UiProperty<int> Marker = new("Marker", 5);
 
     [Fact]
-    public void ViewCreation_BuildsOnceAfterConstructionAndBeforeStyle()
+    public void ViewCreation_BuildsOnceAtAttachAndBeforeStyle()
     {
-        using var draft = new FactoryView("ready", data => Text.Plain(data ?? "missing").Named("Label"));
+        using var draft = new FactoryView("ready", ui => ui.Text(ui.DataContext?.DataContext ?? "missing").Named("Label"));
         Assert.Null(draft.Child);
         var style = new Declaration<FactoryView>(styles =>
             styles.Part(view => view.GetRequiredPart<Text>("Label")).FontWeight(700));
 
         Assert.Same(draft, ViewCreation.Prepare(draft, style));
+        Assert.Null(draft.Child);
+        Assert.Equal(0, draft.Builds);
+        ViewCreation.Prepare(draft, style);
+        using var session = Create(draft);
         var label = draft.GetRequiredPart<Text>("Label");
         Assert.Equal("ready", label.Value);
         Assert.Equal(700, label.FontWeight);
         Assert.Same(label, draft.PreparedChild);
 
-        ViewCreation.Prepare(draft, style);
         Assert.Same(label, draft.Child);
         Assert.Equal(1, draft.Builds);
         Assert.Equal(1, draft.Preparations);
@@ -36,27 +47,35 @@ public sealed class ViewStyleTests
     public void ViewCreation_PreservesExplicitContent()
     {
         using var draft = new FactoryView("ready", _ => throw new InvalidOperationException("Unexpected build."));
-        draft.Content(() => Text.Plain("explicit").Named("Label"));
+        draft.SetContent(new Text("explicit").Named("Label"));
         var label = draft.GetRequiredPart<Text>("Label");
 
         ViewCreation.Prepare(draft);
+        using var ui = Create(draft);
 
         Assert.Same(label, draft.Child);
         Assert.Equal(0, draft.Preparations);
     }
 
     [Fact]
-    public void ViewCreation_DisposesDraftAndUnadoptedRootWhenInstallationFails()
+    public void FirstAttach_DisposesUnadoptedTreeAndLeavesDraftWithCallerWhenInstallationFails()
     {
-        var first = Text.Plain("first").Named("Label");
-        var second = Text.Plain("second").Named("Label");
-        var root = Panel.Create().WithChildren(first, second);
-        using var draft = new FactoryView("ready", _ => root);
+        Text first = null!, second = null!;
+        Panel root = null!;
+        using var draft = new FactoryView("ready", ui =>
+        {
+            first = ui.Text("first").Named("Label");
+            second = ui.Text("second").Named("Label");
+            return root = ui.Panel(first, second);
+        });
 
-        var failure = Assert.Throws<InvalidOperationException>(() => ViewCreation.Prepare(draft));
+        using var surface = new Surface();
+        var failure = Assert.Throws<InvalidOperationException>(() => new UiSession(draft, surface, new(400, 480)));
 
         Assert.Contains("already contains a part named 'Label'", failure.Message);
-        Assert.True(draft.IsDisposed);
+        Assert.False(draft.IsDisposed);
+        Assert.False(draft.IsAttached);
+        Assert.Null(draft.Child);
         Assert.True(root.IsDisposed);
         Assert.True(first.IsDisposed);
         Assert.True(second.IsDisposed);
@@ -70,8 +89,8 @@ public sealed class ViewStyleTests
         var outer = new TextBox().Named("Search");
         var inner = new PartView().Named("Root");
         var innerSearch = new TextBox().Named("Search");
-        inner.SetContent(new Panel().WithChildren(innerSearch, Text.Plain("private").Named("OnlyInner")));
-        parent.SetContent(new Panel().WithChildren(outer, inner, Text.Plain("separate case").Named("search")));
+        inner.SetContent(new Panel().WithChildren(innerSearch, new Text("private").Named("OnlyInner")));
+        parent.SetContent(new Panel().WithChildren(outer, inner, new Text("separate case").Named("search")));
 
         parent.WithViewStyle(new Declaration<PartView>(style => style.Part(view => view.GetRequiredPart<TextBox>("Search")).FontSize(19)));
         inner.WithViewStyle(new Declaration<PartView>(style => style.Part(view => view.GetRequiredPart<TextBox>("Search")).FontSize(23)));
@@ -126,6 +145,25 @@ public sealed class ViewStyleTests
     }
 
     [Fact]
+    public void NamedParts_ReplacementIsIndexedBeforeDetachAndAttachNotifications()
+    {
+        var view = new PartView();
+        using var previous = new TextBox().Named("Search");
+        var replacement = new TextBox().Named("Search");
+        view.SetContent(previous);
+        using var ui = Create(view);
+        var observed = new List<(Element Reporter, Element Indexed)>();
+        previous.AttachmentChanged += () => observed.Add((previous, view.GetRequiredPart<TextBox>("Search")));
+        replacement.AttachmentChanged += () => observed.Add((replacement, view.GetRequiredPart<TextBox>("Search")));
+
+        view.SetContent(replacement);
+
+        Assert.Collection(observed,
+            item => { Assert.Same(previous, item.Reporter); Assert.Same(replacement, item.Indexed); },
+            item => { Assert.Same(replacement, item.Reporter); Assert.Same(replacement, item.Indexed); });
+    }
+
+    [Fact]
     public void NamedParts_BoundBatchRejectsDuplicateDraftsAndAllowsReuseAfterRemoval()
     {
         var source = new ObservableCollection<NamedRow> { new("Search") };
@@ -163,7 +201,7 @@ public sealed class ViewStyleTests
         var titleBar = new WindowTitleBar("Window");
         var initialHeader = new TextBox().Named("Header");
         titleBar.SetHeader(initialHeader);
-        var anchor = Button.Simple("Open");
+        var anchor = new Button("Open");
         var host = new OverlayHost(new Panel().WithChildren(titleBar, anchor));
         view.SetContent(host);
         using var ui = Create(view);
@@ -259,7 +297,7 @@ public sealed class ViewStyleTests
     public void GeneratedTreeStyle_PreservesRuleOrderPrecedenceAndThemeRefresh()
     {
         using var view = new PartView();
-        var tree = TreeView.Create().Named("Tree");
+        var tree = new TreeView().Named("Tree");
         view.SetContent(tree);
         view.ApplyTheme(Theme.Dark with { FontSize = 16 });
         view.WithViewStyle(new Declaration<PartView>(styles =>
@@ -297,9 +335,9 @@ public sealed class ViewStyleTests
     public void TypedPart_RejectsNestedTreeAndKeepsActiveStyles()
     {
         using var view = new PartView();
-        var outerTree = TreeView.Create().Named("Tree");
+        var outerTree = new TreeView().Named("Tree");
         var inner = new PartView();
-        var innerTree = TreeView.Create().Named("Tree");
+        var innerTree = new TreeView().Named("Tree");
         inner.SetContent(innerTree);
         view.SetContent(new Panel().WithChildren(outerTree, inner));
         view.WithViewStyle(new Declaration<PartView>(styles =>
@@ -469,7 +507,7 @@ public sealed class ViewStyleTests
     public void TypedView_OptionalDataSupportsFluentBindingsWithoutOwningTheModel(bool withData)
     {
         var model = new CaptionModel(); var view = new OptionalDataView(withData ? model : null);
-        Assert.Equal(1, view.ContentBuilds); Assert.Equal(0, model.Subscribers);
+        Assert.Equal(0, view.ContentBuilds); Assert.Equal(0, model.Subscribers);
         if (withData) Assert.Same(model, view.DataContext); else Assert.Null(view.DataContext);
         using var ui = Create(view); ui.Update();
         Assert.Equal(withData ? "initial" : "unbound", view.Label.Value);
@@ -487,25 +525,47 @@ public sealed class ViewStyleTests
         model.Dispose(); Assert.Equal(1, model.Disposals);
     }
 
+    [Fact]
+    public void StyleAndThemeChanges_PreserveFocusedEditorAndBothBindingDirections()
+    {
+        using var model = new CaptionModel();
+        var view = new OptionalDataView(model);
+        using var ui = Create(view);
+        ui.Update();
+        var editor = view.Editor;
+        ui.Focus(editor);
+        view.WithViewStyle(new Declaration<OptionalDataView>(style =>
+            style.Part(v => v.Editor).Foreground(theme => theme.Focus)));
+        Assert.Equal(Theme.Dark.Focus, editor.Foreground);
+        ui.SetTheme(Theme.Light);
+        ui.Update();
+        Assert.Equal(Theme.Light.Focus, editor.Foreground);
+        Assert.Same(editor, view.Editor);
+        Assert.True(editor.IsFocused);
+        Assert.Equal(2, model.Subscribers);
+
+        model.Value = "model after restyle";
+        ui.Update();
+        Assert.Equal("model after restyle", editor.Value);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        ui.HandleInput(new(InputKind.Text, Text: "edited after restyle"));
+        ui.Update();
+        Assert.Equal("edited after restyle", model.Value);
+        Assert.Equal("edited after restyle", view.Label.Value);
+    }
+
     private sealed class FactoryView : View<string>
     {
-        private readonly Func<string?, Element> _build;
-
-        public FactoryView(string data, Func<string?, Element> build)
-        {
-            DataContext = data;
-            _build = build;
-        }
+        public FactoryView(string data, Func<IUiBuildContext<string>, Element> build)
+            => Content(data, ui =>
+            {
+                Builds++;
+                return build(ui);
+            });
 
         public int Builds { get; private set; }
         public int Preparations { get; private set; }
         public Element? PreparedChild { get; private set; }
-
-        protected override Element BuildContent()
-        {
-            Builds++;
-            return _build(DataContext);
-        }
 
         protected override void OnContentPrepared()
         {
@@ -528,23 +588,31 @@ public sealed class ViewStyleTests
         public ScrollViewer Scroll { get; } = new ScrollViewer().Height(80).Content(new SizedElement(100, 500));
         public NestedView Nested { get; } = new();
         public VStack Body { get; }
-        public SampleView() { Body = new VStack().WithChildren(Action, Secondary, SameNameRole, Editor, Scroll, Nested); Content(() => Body); }
+        public SampleView() { Body = new VStack().WithChildren(Action, Secondary, SameNameRole, Editor, Scroll, Nested); SetContent(Body); }
     }
     private sealed class NestedView : View
     {
         public Button Action { get; } = new Button("private").WithRole(ActionRole);
-        public NestedView() => Content(() => Action);
+        public NestedView() => SetContent(Action);
     }
     private sealed class OptionalDataView : View<CaptionModel>
     {
-        public Text Label { get; } = new("unbound");
-        public TextBox Editor { get; } = new();
+        public Text Label { get; private set; } = null!;
+        public TextBox Editor { get; private set; } = null!;
         public int ContentBuilds { get; private set; }
-        public OptionalDataView(CaptionModel? data = null) => Content(data, current =>
+        public OptionalDataView(CaptionModel? data = null) => Content(data, ui =>
         {
             ContentBuilds++;
-            if (current != null) { Label.BindText(current, value => value.Value); Editor.BindTwoWay(TextBox.ValueProperty, current, value => value.Value); }
-            return new VStack().WithChildren(Label, Editor);
+            var label = ui.Text("unbound");
+            var editor = ui.TextBox();
+            if (DataContext != null)
+            {
+                label.BindText(value => value.Value);
+                editor.BindValueTwoWay(value => value.Value);
+            }
+            Label = label;
+            Editor = editor;
+            return ui.VStack(label, editor);
         });
     }
     private sealed class CaptionModel : INotifyPropertyChanged, IDisposable
@@ -561,7 +629,7 @@ public sealed class ViewStyleTests
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
         public void VerifyAvailable() { }
         public void Resize(UiViewport viewport) { }
-        public void Render(Element root, UiViewport viewport) { }
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
 }

@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using AlloyTest;
@@ -210,10 +212,10 @@ internal static class SettingsPerformanceProbe
         public ITextLayoutService TextLayout => inner.TextLayout;
         public void VerifyAvailable() => inner.VerifyAvailable();
         public void Resize(UiViewport viewport) { ResizeCalls++; inner.Resize(viewport); }
-        public void Render(Element root, UiViewport viewport)
+        public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null)
         {
             var start = PerformanceClock.Begin();
-            try { inner.Render(root, viewport); }
+            try { inner.Render(root, viewport, presenters); }
             finally { Drawing = PerformanceClock.End(start); RenderCalls++; }
         }
         public void Dispose() { Disposals++; inner.Dispose(); }

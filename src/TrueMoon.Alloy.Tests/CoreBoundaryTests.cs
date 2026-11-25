@@ -20,11 +20,12 @@ public sealed class CoreBoundaryTests
     }
 
     [Fact]
-    public void Argentis_AssemblyReferences_ContainOnlyBcl()
+    public void Argentis_AssemblyReferences_ContainOnlySharedContractsAndBcl()
     {
         var references = typeof(Element).Assembly.GetReferencedAssemblies();
 
-        Assert.All(references, reference => Assert.True(reference.Name?.StartsWith("System.", StringComparison.Ordinal) == true,
+        Assert.Contains(references, reference => reference.Name == "TrueMoon.Contracts");
+        Assert.All(references, reference => Assert.True(reference.Name == "TrueMoon.Contracts" || reference.Name?.StartsWith("System.", StringComparison.Ordinal) == true,
             $"Unexpected Argentis dependency: {reference.Name}"));
     }
 

@@ -1,3 +1,10 @@
+using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Menus;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using System.ComponentModel;
 using TrueMoon.Argentis;
 
@@ -13,7 +20,7 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
     /// <summary>Viewport retaining scroll position across theme and data refresh.</summary>
     public ScrollViewer Scroll { get; private set; } = null!;
     /// <summary>Current scene caption.</summary>
-    public Text Caption { get; private set; } = null!;
+    public Text Caption => this.CaptionPart;
     /// <summary>Keyboard-accessible explicit move to scene root.</summary>
     public Button RootButton { get; private set; } = null!;
     /// <summary>Gesture/admission guidance.</summary>
@@ -22,7 +29,7 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
     public RichTextEditor Error { get; private set; } = null!;
     /// <summary>Panel geometry.</summary>
     public Element Layout { get; private set; } = null!;
-    /// <summary>Creates fresh controls on the UI owner. Borrowed model/style remain App-owned.</summary>
+    /// <summary>Declares the hierarchy for its first attachment. Model and style remain App-owned.</summary>
     public EditorHierarchyView(IEditorHierarchyViewModel model, IViewStyle<EditorHierarchyView> style)
         : this(model)
     {
@@ -31,71 +38,67 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
     }
 
     /// <summary>Creates and prepares a parent-owned hierarchy view on the UI owner thread.</summary>
-    public static EditorHierarchyView Create(IEditorHierarchyViewModel model, IViewStyle<EditorHierarchyView> style)
-    {
-        ArgumentNullException.ThrowIfNull(style);
-        return ViewCreation.Prepare(new EditorHierarchyView(model), style);
-    }
+    public static EditorHierarchyView Create(IEditorHierarchyViewModel model, IViewStyle<EditorHierarchyView> style) => new(model, style);
 
-    private EditorHierarchyView(IEditorHierarchyViewModel model)
+    internal EditorHierarchyView(IEditorHierarchyViewModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
         SemanticId = "editor.hierarchy";
-        DataContext = model;
         InitializeEntityCommands();
-    }
+        Content(model, ui =>
+        {
+            var layout = new HierarchyLayout();
+            var overlays = ui.OverlayHost(layout);
+            Overlays = overlays;
+            Layout = layout.WithChildren(
+                ui.HStack(
+                    ui.Text("ОБОЗРЕВАТЕЛЬ").Named("Title").Fill(),
+                    RootButton = ui.Button("В корень").SemanticId("editor.hierarchy.move-to-root").WithCommand(_entityCommands["root"]))
+                    .Configure(header => header.Spacing = 4),
+                ui.Text().Named("CaptionPart").BindText(data => data.Caption),
+                ui.HStack(
+                    CreateButton = ui.IconButton(UiSymbol.Add, "Создать объект · Insert").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create").WithCommand(_entityCommands["create.empty"]),
+                    CubeButton = ui.IconButton(UiSymbol.Cube, "Создать куб").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create-cube").WithCommand(_entityCommands["create.cube"]),
+                    DuplicateButton = ui.IconButton(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.duplicate").WithCommand(_entityCommands["duplicate"]),
+                    DeleteButton = ui.IconButton(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.delete").WithCommand(_entityCommands["delete"]),
+                    ContextButton = ui.IconButton(UiSymbol.More, "Действия объекта · Shift+F10").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.context").OnClick(RequestContext))
+                    .Named("Actions"),
+                ui.HStack(
+                    ui.TextBox()
+                        .Named("Search")
+                        .BindValueTwoWay(data => data.SearchText)
+                        .SemanticId("editor.hierarchy.search")
+                        .AccessibleName("Поиск по имени или ID · Enter следующее совпадение")
+                        .MinWidth(0),
+                    FindButton = ui.Button("Найти").SemanticId("editor.hierarchy.find").WithCommand(_entityCommands["find"]))
+                    .Named("SearchRow"),
+                Hint = ui.Text().BindText(data => data.Hint),
+                Error = ui.RichTextEditor(new() { IsReadOnly = true, WordWrap = true })
+                    .Bind(RichTextEditor.TextProperty, data => data.ErrorText)
+                    .Bind(UiProperties.Visible, data => data.HasError),
+                Scroll = ui.ScrollViewer().Fill().Content(new RenameLayer(
+                    ui.TreeView()
+                        .Named("Tree")
+                        .SemanticId("editor.hierarchy.tree")
+                        .AccessibleName("Обозреватель сущностей")
+                        .ReorderEnabled(true)
+                        .Bind(TreeView.MoveEnabledProperty, data => data.CanMove)
+                        .OnSelectionChanged(Select)
+                        .OnMoveRequested(Move)
+                        .OnPlacementRequested(Place),
+                    ui.TextBox()
+                        .Named("NameEditor")
+                        .BindValueTwoWay(data => data.RenameText)
+                        .SemanticId("editor.hierarchy.name")
+                        .AccessibleName("Имя сущности")
+                        .MinWidth(0)
+                        .Bind(UiProperties.Visible, data => data.IsRenaming)
+                        .Bind(UiProperties.HasError, data => data.HasRenameError)
+                        .Bind(UiProperties.ErrorMessage, data => data.RenameError))
+                    .Bind(RenameLayer.RenameIdProperty, this, data => data.RenameId)));
 
-    /// <inheritdoc />
-    protected override Element BuildContent()
-    {
-        Layout = new HierarchyLayout().WithChildren(
-            HStack.Create(
-                Text.Plain("ОБОЗРЕВАТЕЛЬ").Named("Title").Fill(),
-                RootButton = Button.Simple("В корень").SemanticId("editor.hierarchy.move-to-root").WithCommand(_entityCommands["root"]))
-                .Configure(header => header.Spacing = 4),
-            Caption = Text.Plain().BindText(this, data => data.Caption),
-            HStack.Create(
-                CreateButton = ActionIcon(UiSymbol.Add, "Создать объект · Insert").SemanticId("editor.hierarchy.create").WithCommand(_entityCommands["create.empty"]),
-                CubeButton = ActionIcon(UiSymbol.Cube, "Создать куб").SemanticId("editor.hierarchy.create-cube").WithCommand(_entityCommands["create.cube"]),
-                DuplicateButton = ActionIcon(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").SemanticId("editor.hierarchy.duplicate").WithCommand(_entityCommands["duplicate"]),
-                DeleteButton = ActionIcon(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").SemanticId("editor.hierarchy.delete").WithCommand(_entityCommands["delete"]),
-                ContextButton = ActionIcon(UiSymbol.More, "Действия объекта · Shift+F10").SemanticId("editor.hierarchy.context").OnClick(RequestContext))
-                .Named("Actions"),
-            HStack.Create(
-                TextBox.Create()
-                    .Named("Search")
-                    .SemanticId("editor.hierarchy.search")
-                    .AccessibleName("Поиск по имени или ID · Enter следующее совпадение")
-                    .MinWidth(0)
-                    .BindValueTwoWay(this, data => data.SearchText),
-                FindButton = Button.Simple("Найти").SemanticId("editor.hierarchy.find").WithCommand(_entityCommands["find"]))
-                .Named("SearchRow"),
-            Hint = Text.Plain().BindText(this, data => data.Hint),
-            Error = new RichTextEditor(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true })
-                .Bind(RichTextEditor.TextProperty, this, data => data.ErrorText)
-                .Bind(UiProperties.Visible, this, data => data.HasError),
-            Scroll = ScrollViewer.Create().Fill().Content(new RenameLayer(
-                TreeView.Create()
-                    .Named("Tree")
-                    .SemanticId("editor.hierarchy.tree")
-                    .AccessibleName("Обозреватель сущностей")
-                    .ReorderEnabled(true)
-                    .Bind(TreeView.MoveEnabledProperty, this, data => data.CanMove)
-                    .OnSelectionChanged(Select)
-                    .OnMoveRequested(Move)
-                    .OnPlacementRequested(Place),
-                TextBox.Create()
-                    .Named("NameEditor")
-                    .SemanticId("editor.hierarchy.name")
-                    .AccessibleName("Имя сущности")
-                    .MinWidth(0)
-                    .BindValueTwoWay(this, data => data.RenameText)
-                    .Bind(UiProperties.Visible, this, data => data.IsRenaming)
-                    .Bind(UiProperties.HasError, this, data => data.HasRenameError)
-                    .Bind(UiProperties.ErrorMessage, this, data => data.RenameError))
-                .Bind(RenameLayer.RenameIdProperty, this, data => data.RenameId)));
-
-        return Overlays = new(Layout);
+            return overlays;
+        });
     }
 
     /// <inheritdoc />

@@ -1,4 +1,10 @@
-﻿using TrueMoon.Aether.Editor.Tests.Documents;
+﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
+using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.UI.Documents;
@@ -119,9 +125,11 @@ public sealed class EditorHierarchyViewTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void DataContextSwap_RetainsFocusedEditorAndDiscardsPreviousModelUpdates(bool rename)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void DataContextSwap_RetainsFocusedEditorAndDiscardsPreviousModelUpdates(bool rename, bool deferred)
     {
         using var previous = new HierarchyFixture();
         using var next = new HierarchyFixture();
@@ -136,7 +144,10 @@ public sealed class EditorHierarchyViewTests
             next.Model.RenameText = "next draft";
         }
 
-        var view = EditorHierarchyView.Create(previous.Model, new EditorHierarchyViewStyle());
+        var style = new EditorHierarchyViewStyle();
+        var view = deferred ? ViewCreation.Prepare(new EditorHierarchyView(previous.Model), style)
+            : EditorHierarchyView.Create(previous.Model, style);
+        Assert.Null(view.Child);
         using var ui = DocumentUiFixture.Ui(view);
         ui.Update();
         var editor = rename ? view.NameEditor : view.Search;
@@ -154,6 +165,15 @@ public sealed class EditorHierarchyViewTests
         ui.Update();
         Assert.True(editor.IsFocused);
         Assert.Equal(rename ? "next draft" : "next search", editor.Value);
+
+        ui.SetTheme(Theme.Light);
+        view.WithViewStyle(style);
+        ui.Update();
+        Assert.Same(editor, rename ? view.NameEditor : view.Search);
+        Assert.True(editor.IsFocused);
+        Assert.Equal(rename ? "next draft" : "next search", editor.Value);
+        Assert.Equal(156, view.Search.Width);
+        Assert.Equal(new Thickness(2, 0, 2, 0), view.NameEditor.Padding);
 
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
         ui.HandleInput(new(InputKind.Text, Text: "edited in next"));
@@ -355,17 +375,24 @@ public sealed class EditorHierarchyViewTests
     public void StyleFailure_DisposesUnpublishedTreeAndPreservesBorrowedModelsAndPrimaryException(bool cleanupFailure)
     {
         using var test = new HierarchyFixture(); var failure = new IOException("hierarchy style failed"); var cleanup = new IOException("hierarchy cleanup failed");
-        EditorHierarchyView unpublished = null!; TreeView unpublishedTree = null!;
+        TreeView unpublishedTree = null!;
+        ScrollViewer unpublishedScroll = null!;
         var resource = new Resource(cleanupFailure ? cleanup : null);
-        var error = Record.Exception(() => new EditorHierarchyView(test.Model, new FailingStyle(view =>
+        using var draft = new EditorHierarchyView(test.Model, new FailingStyle(view =>
         {
-            unpublished = view;
             unpublishedTree = view.Tree;
-            view.Own(resource);
-        }, failure)));
+            unpublishedScroll = view.Scroll;
+            unpublishedTree.Own(resource);
+        }, failure));
+        var error = Record.Exception(() => DocumentUiFixture.Ui(draft));
         if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, cause => Assert.Same(failure, cause), cause => Assert.Same(cleanup, cause));
         else Assert.Same(failure, error);
-        Assert.Equal(1, resource.Disposals); Assert.True(unpublished.IsDisposed); Assert.True(unpublishedTree.IsDisposed); Assert.True(unpublished.Scroll.IsDisposed);
+        Assert.Equal(1, resource.Disposals);
+        Assert.Null(draft.Child);
+        Assert.False(draft.IsAttached);
+        Assert.False(draft.IsDisposed);
+        Assert.True(unpublishedTree.IsDisposed);
+        Assert.True(unpublishedScroll.IsDisposed);
         test.Model.Select(HierarchyFixture.Parent); Assert.Equal(HierarchyFixture.Parent, test.Workspace.SelectedId); Assert.False(test.Owner.Commands.Read().Closed);
         Assert.True(test.Model.Move(HierarchyFixture.Child, null)); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
     }

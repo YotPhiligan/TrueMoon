@@ -1,3 +1,5 @@
+using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Menus;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Hierarchy;
 using TrueMoon.Aether.Editor.Tests.Inspector;
@@ -31,7 +33,7 @@ public sealed class EditorSemanticInputTests
         Assert.Empty(view.Search.Value);
 
         var searchBounds = Ready(ui, initial, search).VisibleBounds;
-        var popup = Button.Simple("Cover search").Width(searchBounds.Width).Height(searchBounds.Height).SemanticId("test.search-cover");
+        var popup = new Button("Cover search").Width(searchBounds.Width).Height(searchBounds.Height).SemanticId("test.search-cover");
         view.Overlays.Open(view.Search, popup, new(searchBounds.X, searchBounds.Y, 0, 0), ui);
         ui.Update();
         var covered = ui.HandleSemanticInput(ui.CaptureSemantics(), search, At(InputKind.PointerDown, searchBounds));
@@ -100,7 +102,7 @@ public sealed class EditorSemanticInputTests
 
         var coverClicks = 0;
         var targetBounds = Ready(ui, ui.CaptureSemantics(), apply).VisibleBounds;
-        var popup = Button.Simple("Cover").Width(120).Height(36).SemanticId(blocker).OnClick(() => coverClicks++);
+        var popup = new Button("Cover").Width(120).Height(36).SemanticId(blocker).OnClick(() => coverClicks++);
         host.Open(view.Apply, popup, new(targetBounds.X, targetBounds.Y, 0, 0), ui);
         ui.Update();
         var covered = ui.CaptureSemantics();
@@ -119,7 +121,7 @@ public sealed class EditorSemanticInputTests
         host.Close(restoreFocus: false);
         ui.Update();
         Assert.Equal(UiSemanticTargetStatus.StaleSnapshot, ui.HandleSemanticInput(covered, apply, At(InputKind.PointerDown, targetBounds)).Status);
-        var elsewhere = Button.Simple("Non-overlapping popup").SemanticId("test.outside-popup");
+        var elsewhere = new Button("Non-overlapping popup").SemanticId("test.outside-popup");
         host.Open(view.Properties[(DocumentData.Transform, "x")].Input, elsewhere, new(750, 450, 0, 0), ui);
         ui.Update();
         var intercepted = ui.HandleSemanticInput(ui.CaptureSemantics(), apply, At(InputKind.PointerDown, targetBounds));

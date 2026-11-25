@@ -1,4 +1,5 @@
-﻿using TrueMoon.Argentis;
+﻿using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Hosting.Compatibility;
 
@@ -15,7 +16,7 @@ public class VisualTreeBuilder : IVisualTreeBuilder
     {
         IVisual root = CreateVisual(view);
         
-        var nestedContent = view?.GetContent();
+        var nestedContent = view?.Child;
         BuildContent(root, nestedContent);
         
         IVisualTree visualTree = new VisualTree(root);
@@ -36,7 +37,7 @@ public class VisualTreeBuilder : IVisualTreeBuilder
         {
             case IContent c:
             {
-                var nestedContent = c.GetContent();
+                var nestedContent = c.Child;
                 BuildContent(visual, nestedContent);
                 break;
             }

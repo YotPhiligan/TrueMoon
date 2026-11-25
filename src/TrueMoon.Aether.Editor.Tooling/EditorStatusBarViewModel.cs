@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Bindings;
 using System.ComponentModel;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;

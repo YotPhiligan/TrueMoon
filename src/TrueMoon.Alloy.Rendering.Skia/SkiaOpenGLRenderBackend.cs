@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Painting;
 using TrueMoon.Alloy.Runtime;
 using SkiaSharp;
 using TrueMoon.Argentis;
@@ -131,7 +132,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface, IUiRenderDiagnostics
     }
 
     /// <inheritdoc />
-    public void Render(Element root, UiViewport viewport)
+    public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null)
     {
         VerifyAvailable(); ArgumentNullException.ThrowIfNull(root); viewport.Validate();
         VerifyContext();
@@ -142,7 +143,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface, IUiRenderDiagnostics
         {
             _context.ResetContext();
             var canvas = _surface.Canvas; canvas.Clear(SKColors.Transparent); canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources, _surface)); }
+            try { canvas.Scale(viewport.Scale); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new SkiaDrawingContext(canvas, _drawingResources, _surface), presenters); }
             finally { canvas.Restore(); }
             _context.Flush(); VerifyContext(); _hasFrame = true;
         }
