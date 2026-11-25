@@ -31,6 +31,12 @@ Both overloads apply a DI-registered `IViewStyle<MyView>`
 if present; the second registers a default singleton style if not already registered.
 An error resolving the style fails creation before the view constructor runs.
 
+Use `.ViewWithArgs<RowView, Item>()` to generate `IFactory<RowView, Item>`.
+Pass `rows.Create` to `BindItems`; DI does not resolve the `Item` value.
+Exactly one parameter of the selected longest public constructor must match
+`Item` (`ARG021` otherwise). The other parameters and an optional DI-registered
+`IViewStyle<RowView>` follow the ordinary activation rules.
+
 Without the analyzer, register `IFactory<MyView>` explicitly or use
 `context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`.
 The window owns the returned root. Session/lifecycle facades borrow their target,

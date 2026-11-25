@@ -40,6 +40,19 @@ public readonly struct ViewConstructor
     /// <returns>The constructed parent view.</returns>
     public static TView Construct<TView>(IServiceResolver resolver, int childCount, Func<IServiceResolver, ViewConstructor, TView> create)
         where TView : View
+        => Construct<TView, Func<IServiceResolver, ViewConstructor, TView>>(resolver, childCount, create,
+            static (context, children, make) => make(context, children));
+
+    /// <summary>Constructs a view with a runtime argument and tracks its children until tree adoption.</summary>
+    /// <typeparam name="TView">The concrete parent view.</typeparam>
+    /// <typeparam name="TArguments">The runtime creation argument.</typeparam>
+    /// <param name="resolver">The application service resolver.</param>
+    /// <param name="childCount">The maximum number of child arguments.</param>
+    /// <param name="argument">The value supplied by the caller.</param>
+    /// <param name="create">The generated constructor call.</param>
+    /// <returns>The constructed parent view.</returns>
+    public static TView Construct<TView, TArguments>(IServiceResolver resolver, int childCount, TArguments argument,
+        Func<IServiceResolver, ViewConstructor, TArguments, TView> create) where TView : View
     {
         var path = _activationPath ??= [];
         var type = typeof(TView);
@@ -48,7 +61,7 @@ public readonly struct ViewConstructor
         path.Add(type);
         try
         {
-            var view = create(resolver, new(resolver, ownership));
+            var view = create(resolver, new(resolver, ownership), argument);
             ownership.TransferTo(view);
             return view;
         }

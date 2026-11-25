@@ -1,5 +1,45 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="uia1-view-with-args-2026-11-25"></a>
+## UIA1 — сгенерированные фабрики строк, 25.11.2026
+
+Локальный срез `1.2611.25.18-alpha`, Windows x64 / .NET 11, Debug. Команды из
+`src`: `dotnet test <проект> -p:NuGetAudit=false --filter "<фильтр>" -v:q`.
+
+| Проект | `FullyQualifiedName` содержит | Прошло |
+| --- | --- | ---: |
+| `TrueMoon.Alloy.Hosting.Tests` | `ViewRegistrationTests`, `ViewWithArgsRegistrationTests` или `AlloyIntegrationTests` | 65 |
+| `TrueMoon.Alloy.Tests` | `CollectionBindingTests` | 41 |
+
+В растровой `UiSession` на Cobalt и Microsoft DI проверены значения четырёх
+полей строки, двусторонние привязки, стиль, сохранение строки при перестановке
+и её освобождение при замене или удалении. При сбое конструктора освобождается
+дочерний View из фабрики, но не переданный вызывающим аргумент. Временный
+проект с `dotnet build` получил `ARG021` для нуля и двух точных совпадений.
+
+`dotnet pack -c Debug --no-build --no-restore` создал пакеты `TrueMoon.Argentis`
+и `TrueMoon.Alloy.Hosting`; в первом подтверждён `TrueMoon.Argentis.Generator.dll`.
+Независимый consumer и полная пакетная матрица не запускались.
+
+<a id="uia1-view-main-2026-11-25"></a>
+## UIA1 — проверка исходников перед публикацией `c595660`, 25.11.2026
+
+Версия `1.2611.25.17-alpha`, Windows x64 / .NET 11, Debug. Перед публикацией
+проверяемый срез изолировали от соседних локальных изменений. Команды из `src`:
+`dotnet test <проект> -p:NuGetAudit=false --filter "<фильтр>" -v:q`.
+
+| Проект | `FullyQualifiedName` содержит | Прошло |
+| --- | --- | ---: |
+| `TrueMoon.Alloy.Hosting.Tests` | `ViewRegistrationTests` или `AlloyIntegrationTests` | 61 |
+| `TrueMoon.Alloy.Tests` | `.OwnershipTests.`, `DeferredContentTests`, `ViewStyleTests` или `ControlFactoryTests` | 90 |
+| `TrueMoon.Aether.Editor.Tests` | `EditorHeaderViewTests` или `EditorHierarchyViewTests` | 42 |
+| `TrueMoon.Cobalt.Generator.Tests` | `ConstructorTests` или `GeneratedSourceTests` | 51 |
+
+Падений и пропусков нет. `dotnet run --project ManualTests/AlloyTest/AlloyTest.csproj -p:NuGetAudit=false -- --smoke`
+прошёл на OpenGL/Silk за 40 кадров. Это проверка исходников и штатного окна;
+новых проверок NuGet, Vulkan и полной матрицы выпуска на `.17` не было.
+[Контракт](PLAN.md#uia1-view-registration) · [Открытая приёмка](PLAN.md#uia1-view-package-acceptance)
+
 <a id="external-presenters-acceptance"></a>
 ## UIA1h.5 — внешний каталог презентеров, `1.2611.25.7-alpha`
 

@@ -418,6 +418,56 @@ nullable-параметра отсутствие фабрики даёт `null`,
 и прочие зависимости разрешаются из DI как раньше. Для ленивого, повторного
 или параметризованного создания внедряйте фабрику явно.
 
+#### Динамические строки из фабрики
+
+`.ViewWithArgs<TView, TArguments>()` регистрирует `IFactory<TView, TArguments>`.
+Вызов `Create(item)` передаёт `item` в единственный параметр с точным типом
+`TArguments` в самом длинном публичном конструкторе. Остальные зависимости
+генератор получает обычным путём. Если подходящих параметров нет или их
+несколько, компилятор выдаёт `ARG021`.
+
+```csharp
+app.Services(s => s
+    .Singleton<Catalog>(_ => new() { Items = { new Product("Кофе", "CF-1", .25f, true) } })
+    .ViewWithArgs<ProductRowView, Product>()
+    .View<ProductsView>());
+app.UsePresentation<ProductsView>(o => o.UseSkiaOpenGL().UseSilkWindow());
+
+internal sealed class Catalog
+{
+    public ObservableCollection<Product> Items { get; } = [];
+}
+
+internal sealed class ProductsView : View<Catalog>
+{
+    public ProductsView(Catalog model, IFactory<ProductRowView, Product> rows) =>
+        Content(model, ui => ui.VStack().BindItems(model.Items, rows.Create));
+}
+
+internal sealed class ProductRowView : View<Product>
+{
+    public ProductRowView(Product item) => Content(item, ui => ui.HStack(
+        ui.Text(item.Name),
+        ui.Text(item.Sku),
+        ui.Create<Slider>().BindTwoWay(ProgressBar.ValueProperty, x => x.Level),
+        ui.CheckBox("В продаже").BindTwoWay(CheckBox.IsCheckedProperty, x => x.Enabled)));
+}
+
+internal sealed class Product(string name, string sku, float level, bool enabled) : Bindable
+{
+    private float _level = level;
+    private bool _enabled = enabled;
+    public string Name { get; } = name;
+    public string Sku { get; } = sku;
+    public float Level { get => _level; set => SetProperty(ref _level, value); }
+    public bool Enabled { get => _enabled; set => SetProperty(ref _enabled, value); }
+}
+```
+
+`Product` не регистрируется в DI. Привязка сохраняет экземпляр строки при
+перестановке и освобождает его при удалении. Если `IViewStyle<ProductRowView>`
+зарегистрирован отдельно, фабрика его применит.
+
 #### Приоритет стилей
 
 WithViewStyle заменяет/снимает слой, не пересоздавая дерево. Приоритет:

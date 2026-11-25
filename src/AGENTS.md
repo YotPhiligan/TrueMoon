@@ -136,6 +136,12 @@ consumers. Правило распространяется и на обновл�
 он не задан — имя проекта. Каждая подпапка добавляет соответствующий сегмент
 namespace с сохранением названия и регистра.
 
+Для проектов с контрактами и моделями, имя которых оканчивается на `.Contracts`
+или `.Abstractions`, явно задавать в `.csproj` `RootNamespace` без этого
+конечного суффикса. Например, для проекта `TrueMoon.Aether.Abstractions`:
+`<RootNamespace>TrueMoon.Aether</RootNamespace>`. Имя проекта, сборки и пакета
+от этого не меняется. Подпапки по-прежнему добавляют сегменты к `RootNamespace`.
+
 Например, `TrueMoon.Aether/Frames/FrameSession.cs` должен использовать
 `namespace TrueMoon.Aether.Frames;`, а файл в `TrueMoon.Aether/Hosting/` —
 `namespace TrueMoon.Aether.Hosting;`.

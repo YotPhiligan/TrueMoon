@@ -17,6 +17,10 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
         "ARG020", "Unsupported generated view activation",
         "Cannot generate View activation for '{0}': {1}. Use a closed registration with a suitable constructor or register an explicit factory",
         "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor InvalidArgument = new(
+        "ARG021", "Unsupported runtime view argument",
+        "Cannot generate View activation for '{0}' with argument '{1}': {2}",
+        "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -24,14 +28,16 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
         var registrations = context.SyntaxProvider.CreateSyntaxProvider(
             static (node, _) => node is InvocationExpressionSyntax { Expression: var expression } && (expression switch
             {
-                MemberAccessExpressionSyntax { Name: GenericNameSyntax name } => name.Identifier.ValueText == "View",
-                MemberBindingExpressionSyntax { Name: GenericNameSyntax name } => name.Identifier.ValueText == "View",
-                GenericNameSyntax name => name.Identifier.ValueText == "View",
+                MemberAccessExpressionSyntax { Name: GenericNameSyntax name } => IsRegistration(name),
+                MemberBindingExpressionSyntax { Name: GenericNameSyntax name } => IsRegistration(name),
+                GenericNameSyntax name => IsRegistration(name),
                 _ => false
             }),
             static (input, cancellation) => ReadRegistration(input, cancellation)).Collect();
         context.RegisterSourceOutput(registrations, static (output, input) => Generate(output, input));
     }
+
+    private static bool IsRegistration(GenericNameSyntax name) => name.Identifier.ValueText is "View" or "ViewWithArgs";
 
     private static ImmutableArray<Activation> ReadRegistration(GeneratorSyntaxContext input, CancellationToken cancellation)
     {
@@ -40,13 +46,16 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
             !SymbolEqualityComparer.Default.Equals((method.ReducedFrom ?? method).ContainingType,
                 compilation.GetTypeByMetadataName(RegistrationType))) return [];
 
-        var activations = ImmutableArray.CreateBuilder<Activation>(method.TypeArguments.Length);
+        var argumentType = method.Name == "ViewWithArgs" ? method.TypeArguments[1] : null;
+        var count = argumentType is null ? method.TypeArguments.Length : 1;
+        var activations = ImmutableArray.CreateBuilder<Activation>(count);
         var location = input.Node.GetLocation();
         var viewType = compilation.GetTypeByMetadataName(ViewType);
-        for (var i = 0; i < method.TypeArguments.Length; i++)
+        for (var i = 0; i < count; i++)
         {
             var type = method.TypeArguments[i];
             var name = ConstructorActivation.TypeName(type);
+            var activationType = name;
             string? error;
             string? factory = null;
             if (type is not INamedTypeSymbol { TypeKind: TypeKind.Class, IsAbstract: false } concrete || !IsUsable(compilation, type))
@@ -62,15 +71,40 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
                 error = "the constructor must initialize required members with SetsRequiredMembers";
             else
             {
+                var argumentIndex = -1;
+                if (argumentType is not null)
+                {
+                    var argumentName = ConstructorActivation.TypeName(argumentType);
+                    var argumentError = FindArgument(compilation, constructor, argumentType, out argumentIndex);
+                    if (argumentError is not null)
+                    {
+                        activations.Add(new(name, null, Diagnostic.Create(InvalidArgument, location, name, argumentName, argumentError)));
+                        continue;
+                    }
+                    activationType = $"{name}, {argumentName}";
+                }
                 error = null;
-                factory = RenderFactory(name, constructor, i == 0 ? viewType : null);
+                factory = RenderFactory(name, constructor, i == 0 ? viewType : null, argumentIndex);
             }
-            activations.Add(new(name, factory, error is null ? null : Diagnostic.Create(InvalidActivation, location, name, error)));
+            activations.Add(new(activationType, factory, error is null ? null : Diagnostic.Create(InvalidActivation, location, name, error)));
         }
         return activations.MoveToImmutable();
     }
 
-    private static string RenderFactory(string type, IMethodSymbol constructor, INamedTypeSymbol? viewType)
+    private static string? FindArgument(Compilation compilation, IMethodSymbol constructor, ITypeSymbol type, out int index)
+    {
+        index = -1;
+        if (!IsUsable(compilation, type)) return "use an accessible, closed runtime argument type";
+        foreach (var parameter in constructor.Parameters)
+        {
+            if (!SymbolEqualityComparer.Default.Equals(parameter.Type, type)) continue;
+            if (index >= 0) return "more than one parameter of this type in the selected constructor";
+            index = parameter.Ordinal;
+        }
+        return index < 0 ? "no parameter of this type in the selected constructor" : null;
+    }
+
+    private static string RenderFactory(string type, IMethodSymbol constructor, INamedTypeSymbol? viewType, int argumentIndex)
     {
         var childCount = 0;
         var parameters = constructor.Parameters;
@@ -78,7 +112,8 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
         for (var i = 0; i < parameters.Length; i++)
         {
             var parameter = parameters[i];
-            if (viewType is not null && IsConcreteView(parameter.Type, viewType))
+            if (i == argumentIndex) arguments[i] = "argument";
+            else if (viewType is not null && IsConcreteView(parameter.Type, viewType))
             {
                 childCount++;
                 var factory = parameter.HasExplicitDefaultValue || parameter.NullableAnnotation == NullableAnnotation.Annotated
@@ -88,6 +123,9 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
             else arguments[i] = ConstructorActivation.Argument(parameter, i);
         }
         var call = $"new {type}({string.Join(", ", arguments)})";
+        if (argumentIndex >= 0)
+            return childCount == 0 ? $"static (context, argument) => {call}"
+                : $"static (resolver, value) => global::TrueMoon.Alloy.Hosting.Generation.ViewConstructor.Construct(resolver, {childCount}, value, static (context, children, argument) => {call})";
         return childCount == 0 ? $"static context => {call}"
             : $"static resolver => global::TrueMoon.Alloy.Hosting.Generation.ViewConstructor.Construct(resolver, {childCount}, static (context, children) => {call})";
     }

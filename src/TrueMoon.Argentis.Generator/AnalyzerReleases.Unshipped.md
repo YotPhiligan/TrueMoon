@@ -15,3 +15,4 @@ ARG011 | Argentis.Generation | Error | View role name conflict
 ARG012 | Argentis.Generation | Error | Incompatible inferred view role types
 ARG013 | Argentis.Generation | Error | Unsupported inferred view role
 ARG020 | Argentis.Generation | Error | Unsupported generated view activation
+ARG021 | Argentis.Generation | Error | Runtime View argument type must match exactly one constructor parameter
