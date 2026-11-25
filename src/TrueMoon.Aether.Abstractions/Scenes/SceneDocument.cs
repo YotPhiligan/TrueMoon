@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Immutable scene revision with frozen instance, definition and exact schema catalogs.</summary>

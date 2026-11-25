@@ -1,6 +1,4 @@
-using TrueMoon.Aether.Abstractions.Scenes;
-
-namespace TrueMoon.Aether.Abstractions.Ecs.Loading;
+namespace TrueMoon.Aether.Ecs.Loading;
 
 
 /// <summary>Stable scene-load failure categories; identity and inner cause are preserved separately.</summary>

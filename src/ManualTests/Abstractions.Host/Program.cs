@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.Json;
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 

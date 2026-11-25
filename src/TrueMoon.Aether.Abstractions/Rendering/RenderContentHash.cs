@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Unmanaged 32-byte SHA256 value; byte and text representations use standard digest order.</summary>

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Immutable opaque base color using the built-in unlit family.</summary>

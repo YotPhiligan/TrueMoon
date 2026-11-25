@@ -1,8 +1,13 @@
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Kul.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Scenes;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kul.Tests;
 
@@ -20,12 +25,12 @@ internal sealed class AudioGraph : IDisposable
         var audio = fixture.Subsystems.Create(new(scene, AudioFixture.Step))!;
         var scheduler = EcsScheduler.Create(scene.World,
         [
-            new(new A.EcsSystemDescription("builtin.primitive-extraction", A.EcsPhase.Extraction), new Factory<A.ISystem>(() => new Callback(_ => { }))),
+            new(new EcsSystemDescription("builtin.primitive-extraction", EcsPhase.Extraction), new Factory<ISystem>(() => new Callback(_ => { }))),
             .. audio.Systems, .. additional
         ]);
         return new(scene, audio, scheduler);
     }
-    internal A.EntityHandle Entity(int index = 0) => Scene.Entities[AudioFixture.Entity(index)];
+    internal EntityHandle Entity(int index = 0) => Scene.Entities[AudioFixture.Entity(index)];
     internal void Tick() => Scheduler.Tick(AudioFixture.Step);
     internal AudioSourceState State(int index = 0) => World.GetComponent<AudioSourceState>(Entity(index));
     internal AudioSourceState Current(int index = 0)
@@ -38,9 +43,9 @@ internal sealed class AudioGraph : IDisposable
         if (World.HasComponent<AudioPlaybackCommand>(entity)) World.SetComponent(entity, command); else World.AddComponent(entity, command);
     }
     public void Dispose() { Scheduler.Dispose(); Audio.Dispose(); Scene.Dispose(); }
-    internal sealed class Callback(Action<A.EcsSystemContext> execute) : A.ISystem
+    internal sealed class Callback(Action<EcsSystemContext> execute) : ISystem
     {
-        public void Execute(A.EcsSystemContext context) => execute(context);
+        public void Execute(EcsSystemContext context) => execute(context);
         public void Dispose() { }
     }
 }

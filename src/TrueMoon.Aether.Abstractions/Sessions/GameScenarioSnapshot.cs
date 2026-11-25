@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 /// <summary>Detached numeric observations sampled at a completed game tick.</summary>
 public sealed class GameScenarioSnapshot

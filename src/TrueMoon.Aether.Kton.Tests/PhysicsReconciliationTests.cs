@@ -1,12 +1,15 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Tests;
 
@@ -17,9 +20,9 @@ public sealed class PhysicsReconciliationTests
     public async Task GameplayHelpers_SpawnDetachReattachDeleteAndNeverReviveStaleGenerations(bool microsoft)
     {
         await using var app = PhysicsFixture.Build(microsoft); await app.StartAsync();
-        A.EntityHandle spawned = default;
-        var description = PhysicsEntityCommands.DeclareWrites(new A.EcsSystemDescription("test.lifecycle")).Write<LinearVelocity>();
-        var actions = new EcsSystemRegistration(description, new Factory<A.ISystem>(() => new PhysicsGraph.Callback(context =>
+        EntityHandle spawned = default;
+        var description = PhysicsEntityCommands.DeclareWrites(new EcsSystemDescription("test.lifecycle")).Write<LinearVelocity>();
+        var actions = new EcsSystemRegistration(description, new Factory<ISystem>(() => new PhysicsGraph.Callback(context =>
         {
             switch (context.TickNumber)
             {
@@ -34,7 +37,7 @@ public sealed class PhysicsReconciliationTests
         })));
         using var graph = PhysicsGraph.Create(app, PhysicsFixture.Document(new PhysicsFixture.BodySpec(PhysicsFixture.Body(PhysicsBodyMotion.Static), new(50, 0, 0))), actions);
         graph.Tick();
-        graph.World.Query<PhysicsBody>().ForEach((A.EntityHandle entity, in PhysicsBody body) => { if (body.Motion == PhysicsBodyMotion.Dynamic) spawned = entity; });
+        graph.World.Query<PhysicsBody>().ForEach((EntityHandle entity, in PhysicsBody body) => { if (body.Motion == PhysicsBodyMotion.Dynamic) spawned = entity; });
         Assert.True(graph.Physics.TryGetBody(spawned, out var firstBody));
         Assert.InRange(graph.World.GetComponent<LocalTransform>(spawned).Position.X, .0999f, .1001f);
         graph.Tick(); Assert.False(graph.Physics.TryGetBody(spawned, out _)); Assert.False(graph.Physics.TryGetEntity(firstBody, out _));
@@ -46,7 +49,7 @@ public sealed class PhysicsReconciliationTests
         var retiredEntity = spawned; graph.Tick(); Assert.False(graph.World.IsAlive(retiredEntity));
         Assert.False(graph.Physics.TryGetBody(retiredEntity, out _)); Assert.False(graph.Physics.TryGetEntity(secondBody, out _));
         graph.Tick();
-        graph.World.Query<PhysicsBody>().ForEach((A.EntityHandle entity, in PhysicsBody body) => { if (body.Motion == PhysicsBodyMotion.Dynamic) spawned = entity; });
+        graph.World.Query<PhysicsBody>().ForEach((EntityHandle entity, in PhysicsBody body) => { if (body.Motion == PhysicsBodyMotion.Dynamic) spawned = entity; });
         Assert.Equal(retiredEntity.Index, spawned.Index); Assert.NotEqual(retiredEntity.Generation, spawned.Generation);
         Assert.True(graph.Physics.TryGetBody(spawned, out var replacement)); Assert.NotEqual(secondBody, replacement);
         Assert.False(graph.Physics.TryGetBody(retiredEntity, out _)); Assert.False(graph.Physics.TryGetEntity(secondBody, out _));

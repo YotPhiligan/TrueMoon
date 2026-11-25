@@ -1,6 +1,6 @@
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Scenes;
 
 namespace EngineSessionProbe;
 

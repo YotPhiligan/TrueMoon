@@ -1,5 +1,5 @@
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Preview;
 
 namespace TrueMoon.Aether.Editor.Tooling;

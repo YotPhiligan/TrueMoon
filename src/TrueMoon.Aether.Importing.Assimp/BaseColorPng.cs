@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 using SkiaSharp;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Tooling.Importing;
 
 namespace TrueMoon.Aether.Importing.Assimp;

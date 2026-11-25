@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>A finite near-to-far segment parameterized by world distance. Default is invalid.</summary>

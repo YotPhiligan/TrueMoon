@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Detached bounded system state; contains no live Type, delegate, instance or exception.</summary>
 public sealed class ModSystemState

@@ -1,8 +1,8 @@
 using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Rendering;
+namespace TrueMoon.Aether.Ecs.Rendering;
 
 
 /// <summary>One detached draw value with its originating transient entity identity.</summary>

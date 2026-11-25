@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 
 /// <summary>Runtime value of the existing built-in interaction eligibility flag. Gameplay behavior is separate.</summary>

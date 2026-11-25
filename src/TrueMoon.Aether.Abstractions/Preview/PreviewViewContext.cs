@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 
 /// <summary>Explicit opening/view/content identity. Same-ID document reopen must use a fresh DocumentEpoch.</summary>

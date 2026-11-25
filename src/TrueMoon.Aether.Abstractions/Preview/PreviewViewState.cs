@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 
 /// <summary>Whole immutable external camera capture for one explicit document/view/content context.</summary>

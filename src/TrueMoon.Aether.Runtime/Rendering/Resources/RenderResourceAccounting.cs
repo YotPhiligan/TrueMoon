@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Rendering.Resources;
 

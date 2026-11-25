@@ -1,6 +1,6 @@
 # Mod SDK и managed collectible loader (ARCH3.6)
 
-SDK находится в `TrueMoon.Aether.Abstractions.Mods` и использует общие `IFactory`
+SDK находится в `TrueMoon.Aether.Mods` и использует общие `IFactory`
 из `TrueMoon.Contracts`. Мод с собственными компонентами/системами не требует
 Runtime, Tooling, Editor, Cobalt или Microsoft DI. Реализация загрузчика и
 App-интеграция находятся в Runtime; явная публикация артефактов — в Tooling.

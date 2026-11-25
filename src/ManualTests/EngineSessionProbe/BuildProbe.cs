@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Security;
 using TrueMoon;
 using TrueMoon.Aether.Tooling;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Diagnostics;
@@ -102,10 +101,10 @@ public static class BuildProbe
             <ItemGroup><Reference Include="TrueMoon.Aether.Abstractions"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
         var source = color == "invalid C#" ? color : $$"""
-            using TrueMoon.Aether.Abstractions.Scenes;
-            using TrueMoon.Aether.Abstractions.Sessions;
+            using TrueMoon.Aether.Scenes;
+            using TrueMoon.Aether.Sessions;
             namespace Game.Candidate;
-            public sealed class Game : IGameSession, TrueMoon.Aether.Abstractions.Runtime.IGameSessionEntry {
+            public sealed class Game : IGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry {
                 public static IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new Game();
                 public ulong TickNumber { get; private set; }
                 public long Revision { get; private set; }

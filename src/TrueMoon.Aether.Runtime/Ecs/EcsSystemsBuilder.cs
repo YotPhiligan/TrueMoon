@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Services;
 
 namespace TrueMoon.Aether.Runtime.Ecs;
@@ -19,10 +20,10 @@ public sealed class EcsSystemsBuilder
     }
     /// <summary>Registers a neutral system via IFactory&lt;T&gt; or an explicitly World-parameterized factory.</summary>
     /// <typeparam name="T">Owned neutral implementation.</typeparam><param name="description">Metadata copied now.</param><returns>This builder.</returns>
-    public EcsSystemsBuilder Add<T>(Abstractions.Ecs.EcsSystemDescription description) where T : class, Abstractions.Ecs.ISystem
+    public EcsSystemsBuilder Add<T>(Aether.Ecs.EcsSystemDescription description) where T : class, ISystem
         => Add<T>(description?.Freeze() ?? throw new ArgumentNullException(nameof(description)));
     /// <summary>Uses immutable metadata exported by an Abstractions-only library.</summary><typeparam name="T">Neutral implementation.</typeparam><param name="metadata">Frozen declarations.</param><returns>This builder.</returns>
-    public EcsSystemsBuilder Add<T>(Abstractions.Ecs.EcsSystemMetadata metadata) where T : class, Abstractions.Ecs.ISystem
+    public EcsSystemsBuilder Add<T>(EcsSystemMetadata metadata) where T : class, ISystem
     {
         var plan = EcsSystemDescription.FromContract(metadata).Snapshot();
         if (_entries.Count == 1024) throw new InvalidOperationException("System registration budget exhausted.");

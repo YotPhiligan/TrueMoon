@@ -4,6 +4,11 @@ Neutral managed game/ECS contracts, stable IDs and immutable scene/render values
 The only framework dependency is TrueMoon.Contracts. No World, scheduler, compiler,
 filesystem service, native handle, GPU/backend, IPC implementation or UI is exposed.
 
+Starting with `1.2611.25.19-alpha`, public types use `TrueMoon.Aether.*`
+instead of `TrueMoon.Aether.Abstractions.*`. The package ID and assembly name
+are unchanged. Update imports and fully qualified type names, then rebuild
+hosts, games and extensions against the same package version.
+
 ARCH3.3 makes these the canonical game/ECS/scene/render values used directly by
 TrueMoon.Aether.Runtime. Duplicate legacy value models were removed; Runtime World,
 typed pools and scheduler implement these contracts. Host-specific legacy system

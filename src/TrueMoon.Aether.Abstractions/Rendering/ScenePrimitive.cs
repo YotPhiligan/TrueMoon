@@ -1,6 +1,4 @@
-using System.Numerics;
-
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Control v3 wire representation of one opaque cube. SceneSnapshot owns a validated deep copy.</summary>

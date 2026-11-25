@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 /// <summary>Detached text for a non-interactive HUD. Journal entries are ordered oldest to newest.</summary>
 public sealed class GameHudSnapshot

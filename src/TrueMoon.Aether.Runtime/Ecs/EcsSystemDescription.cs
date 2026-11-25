@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.Aether.Runtime.Ecs;
 
@@ -34,11 +34,11 @@ public sealed class EcsSystemDescription
         target.Add(id);
     }
     internal SystemPlan Snapshot() => new(Id, Phase, new(_reads), new(_writes), [.. _after], [.. _before]);
-    internal static EcsSystemDescription FromContract(Abstractions.Ecs.EcsSystemDescription description)
+    internal static EcsSystemDescription FromContract(Aether.Ecs.EcsSystemDescription description)
     {
         ArgumentNullException.ThrowIfNull(description); return FromContract(description.Freeze());
     }
-    internal static EcsSystemDescription FromContract(Abstractions.Ecs.EcsSystemMetadata metadata)
+    internal static EcsSystemDescription FromContract(EcsSystemMetadata metadata)
     {
         ArgumentNullException.ThrowIfNull(metadata);
         var copy = new EcsSystemDescription(metadata.Id, (EcsPhase)metadata.Phase);

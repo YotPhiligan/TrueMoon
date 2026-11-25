@@ -1,6 +1,6 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Scenes;
 

@@ -2,7 +2,7 @@ using System.Numerics;
 using System.Security.Cryptography;
 using Assimp;
 using Assimp.Unmanaged;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Tooling.Importing;
 
 namespace TrueMoon.Aether.Importing.Assimp;

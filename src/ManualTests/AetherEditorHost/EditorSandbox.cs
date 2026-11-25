@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 
@@ -39,9 +39,9 @@ internal sealed class EditorSandbox(string directory)
             </Project>
             """);
         await File.WriteAllTextAsync(Path.Combine(gameDirectory, "SandboxGame.cs"), """
-            using TrueMoon.Aether.Abstractions.Runtime;
-            using TrueMoon.Aether.Abstractions.Scenes;
-            using TrueMoon.Aether.Abstractions.Sessions;
+            using TrueMoon.Aether.Runtime;
+            using TrueMoon.Aether.Scenes;
+            using TrueMoon.Aether.Sessions;
             using TrueMoon.Services;
 
             namespace EditorSandbox;

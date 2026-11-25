@@ -1,5 +1,5 @@
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.ManualTests.ContractHost;
 using Xunit;
 

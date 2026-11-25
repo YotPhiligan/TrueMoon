@@ -1,5 +1,4 @@
 using TrueMoon.Argentis.Bindings;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.Tooling.Hierarchy;
@@ -7,6 +6,7 @@ using TrueMoon.Aether.Editor.Tooling.Translation;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Translation;
 using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Editing;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Importing;

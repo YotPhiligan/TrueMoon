@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
 using System.Text.Json;
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Kton;
 using TrueMoon.Aether.Kton.Runtime;
 using TrueMoon.Aether.Runtime;

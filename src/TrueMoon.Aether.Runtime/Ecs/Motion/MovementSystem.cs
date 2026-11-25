@@ -1,13 +1,13 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs.Transforms;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Motion;
 
 /// <summary>Preflights finite parent-space displacement, then updates local positions before transform evaluation.</summary>
-public sealed class MovementSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
+public sealed class MovementSystem : IEcsSystem, Aether.Ecs.IEcsSystem
 {
     private readonly World _world;
     private readonly int _maximumEntities;
@@ -25,7 +25,7 @@ public sealed class MovementSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
     /// <summary>Creates fresh Movement phase metadata.</summary><returns>Read velocity/write local pose description.</returns>
     public static EcsSystemDescription Describe() => EcsSystemDescription.FromContract(DescribeContract());
     /// <summary>Neutral metadata for execution through the Abstractions binding.</summary><returns>Fresh access declarations.</returns>
-    public static Abstractions.Ecs.EcsSystemDescription DescribeContract() => new Abstractions.Ecs.EcsSystemDescription("builtin.movement", Abstractions.Ecs.EcsPhase.Movement).Read<LinearVelocity>().Read<ExternalMotion>().Write<LocalTransform>();
+    public static Aether.Ecs.EcsSystemDescription DescribeContract() => new Aether.Ecs.EcsSystemDescription("builtin.movement", EcsPhase.Movement).Read<LinearVelocity>().Read<ExternalMotion>().Write<LocalTransform>();
     /// <summary>Applies one positive step. Preflight failure/cancellation leaves every position unchanged.</summary>
     /// <param name="deltaTime">Positive duration.</param><param name="cancellationToken">Preflight cancellation.</param>
     public void Advance(TimeSpan deltaTime, CancellationToken cancellationToken = default)
@@ -68,7 +68,7 @@ public sealed class MovementSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
         Advance(context.DeltaTime, context.CancellationToken);
     }
     /// <summary>Executes against the injected World using only neutral invocation identity/time/cancellation.</summary><param name="context">Active neutral invocation.</param>
-    public void Execute(Abstractions.Ecs.EcsSystemContext context)
+    public void Execute(Aether.Ecs.EcsSystemContext context)
     {
         if (context.WorldId != _world.Id) throw new InvalidOperationException("Movement system World mismatch.");
         Advance(context.DeltaTime, context.CancellationToken);

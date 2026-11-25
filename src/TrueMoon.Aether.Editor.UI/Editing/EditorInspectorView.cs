@@ -6,7 +6,7 @@ using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis.Views;
 using System.ComponentModel;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI.Editing;

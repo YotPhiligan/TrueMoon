@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Optional marker for reference-free typed value components. It is never a storage or dispatch interface.</summary>
 public interface IComponent;

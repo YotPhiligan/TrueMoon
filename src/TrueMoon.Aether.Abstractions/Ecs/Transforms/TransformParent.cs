@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Transforms;
+namespace TrueMoon.Aether.Ecs.Transforms;
 
 
 /// <summary>Same-World hierarchy edge. The default handle means root; destruction never implicitly reparents children.</summary>

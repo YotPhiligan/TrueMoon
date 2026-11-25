@@ -1,7 +1,7 @@
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Generation-local immutable persistent-ID/handle map. Retained old maps return old, stale handles, never current handles.</summary>
 public interface IModEntityMap

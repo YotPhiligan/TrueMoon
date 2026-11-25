@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Stable CPU content validation outcomes.</summary>

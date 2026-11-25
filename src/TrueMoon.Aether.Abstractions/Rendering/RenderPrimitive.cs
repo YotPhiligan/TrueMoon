@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>An opaque unit cube centered at the origin, transformed into world space.</summary>

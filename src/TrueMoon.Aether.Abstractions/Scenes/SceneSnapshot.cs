@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Frozen legacy scene of at most64distinct finite entity values; no live World or authoring service.</summary>

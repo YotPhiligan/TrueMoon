@@ -2,14 +2,13 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Motion;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Mods;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
-using EcsSystemContext = TrueMoon.Aether.Abstractions.Ecs.EcsSystemContext;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
 
 namespace TrueMoon.ManualTests.ModConsumer.Runtime;
 

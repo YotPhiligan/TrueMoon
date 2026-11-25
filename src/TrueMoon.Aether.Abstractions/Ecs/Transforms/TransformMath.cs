@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Transforms;
+namespace TrueMoon.Aether.Ecs.Transforms;
 
 internal static class TransformMath
 {

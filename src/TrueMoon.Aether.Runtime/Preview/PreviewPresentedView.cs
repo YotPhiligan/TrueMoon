@@ -1,5 +1,5 @@
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Frames;
 
 namespace TrueMoon.Aether.Runtime.Preview;

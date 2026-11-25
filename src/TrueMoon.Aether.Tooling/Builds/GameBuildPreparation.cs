@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.Aether.Tooling.Builds;
 
@@ -94,7 +95,7 @@ internal sealed class GameBuildPreparation : IDisposable
             await capture.CapturePackagesAsync(assemblies, token).ConfigureAwait(false);
             await capture.AddTransitiveReferencesAsync(token).ConfigureAwait(false);
             await capture.CopyAsync(typeof(IFactory<>).Assembly.Location, token).ConfigureAwait(false);
-            await capture.CopyAsync(typeof(Abstractions.Ecs.ISystem).Assembly.Location, token).ConfigureAwait(false);
+            await capture.CopyAsync(typeof(ISystem).Assembly.Location, token).ConfigureAwait(false);
             if (request.RuntimeAccess) await capture.CopyAsync(typeof(GameBuildArtifact).Assembly.Location, token).ConfigureAwait(false);
             capture.ConfigureEnvironment();
             var sourceMilliseconds = clock.Elapsed.TotalMilliseconds;
@@ -158,7 +159,7 @@ internal sealed class GameBuildPreparation : IDisposable
             "-property:RestoreConfigFile=" + Path.Combine(_directory, "NuGet.Config"),
             "-property:RestorePackagesWithLockFile=false", "-property:RestoreLockedMode=false", "-property:NuGetLockFilePath=" + Path.Combine(work, "restore.lock.json"),
 
-            "-property:AetherAbstractionsPath=" + Mirror(typeof(Abstractions.Ecs.ISystem).Assembly.Location),
+            "-property:AetherAbstractionsPath=" + Mirror(typeof(ISystem).Assembly.Location),
             "-property:TrueMoonContractsPath=" + Mirror(typeof(IFactory<>).Assembly.Location) }) info.ArgumentList.Add(argument);
         foreach (var name in new[] { "Props", "Targets" })
         {
@@ -521,7 +522,7 @@ internal sealed class GameBuildPreparation : IDisposable
         value = value.Replace("$(MSBuildThisFileDirectory)", Path.GetDirectoryName(project)! + Path.DirectorySeparatorChar, StringComparison.Ordinal)
             .Replace("$(MSBuildProjectDirectory)", Path.GetDirectoryName(owner.Path)!, StringComparison.Ordinal)
             .Replace("$(AetherRuntimePath)", _request.RuntimeAccess ? typeof(GameBuildArtifact).Assembly.Location : "$(AetherRuntimePath)", StringComparison.Ordinal)
-            .Replace("$(AetherAbstractionsPath)", typeof(Abstractions.Ecs.ISystem).Assembly.Location, StringComparison.Ordinal)
+            .Replace("$(AetherAbstractionsPath)", typeof(ISystem).Assembly.Location, StringComparison.Ordinal)
             .Replace("$(TrueMoonContractsPath)", typeof(IFactory<>).Assembly.Location, StringComparison.Ordinal);
         if (value.Contains("$(", StringComparison.Ordinal) || value.IndexOfAny(['\r', '\n', '\0', ';']) >= 0 || string.IsNullOrWhiteSpace(value))
             throw new NotSupportedException("Frozen paths require literal paths or supported path properties.");

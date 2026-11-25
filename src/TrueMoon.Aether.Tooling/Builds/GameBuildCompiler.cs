@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -353,7 +354,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             "--verbosity", "quiet", "--disable-build-servers", "-property:IncludeProjectNameInArtifactsPaths=false",
             "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",
 
-            "-property:AetherAbstractionsPath=" + typeof(Abstractions.Ecs.ISystem).Assembly.Location,
+            "-property:AetherAbstractionsPath=" + typeof(ISystem).Assembly.Location,
             "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);
         if (request.RuntimeAccess) info.ArgumentList.Add("-property:AetherRuntimePath=" + typeof(GameBuildArtifact).Assembly.Location);
         var errorLog = Path.Combine(owned.Directory, GameBuildDiagnosticReader.FileName);

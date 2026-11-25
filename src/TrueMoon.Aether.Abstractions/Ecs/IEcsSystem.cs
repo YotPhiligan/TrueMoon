@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>A synchronous system, exclusively owned by one host scheduler after successful factory activation.</summary>
 /// <remarks>Stop runs once in reverse execution order while data remains available; Dispose completes owned cleanup.

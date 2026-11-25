@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Immutable template, or variant with a single base definition and local changes.</summary>

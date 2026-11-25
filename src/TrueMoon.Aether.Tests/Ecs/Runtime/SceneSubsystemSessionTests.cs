@@ -1,6 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
@@ -9,7 +10,11 @@ using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Aether.Tests.Ecs.Rendering;
 using TrueMoon.Dependencies;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Tests.Ecs.Runtime;
 
@@ -174,7 +179,7 @@ public sealed class SceneSubsystemSessionTests
         Assert.Throws<InvalidOperationException>(() => factory.Create(new(scene, TimeSpan.FromSeconds(.5))));
         Assert.Single(created); Assert.Throws<InvalidOperationException>(() => scene.Dispose());
         using var scheduler = EcsScheduler.Create(scene.World, [new(Aether.Runtime.Ecs.Motion.MovementSystem.DescribeContract(),
-            new Factory<A.ISystem, World>(world => new Aether.Runtime.Ecs.Motion.MovementSystem(world))), .. subsystems.Systems]);
+            new Factory<ISystem, World>(world => new Aether.Runtime.Ecs.Motion.MovementSystem(world))), .. subsystems.Systems]);
         Assert.Throws<InvalidOperationException>(() => subsystems.Dispose()); Assert.False(created[0].Disposed);
         scheduler.Dispose(); subsystems.Dispose(); Assert.True(created[0].Disposed); Assert.Equal(1, created[0].SystemDisposals);
         scene.Dispose(); Assert.True(scene.IsDisposed);
@@ -257,10 +262,10 @@ public sealed class SceneSubsystemSessionTests
             Step = arguments.FixedStep; _log = log; log.Add("prepare");
             var world = arguments.Scene.World; var entity = arguments.Scene.Entities[PrimitivePipelineFixture.Entity(1)];
             world.AddComponent(entity, new ExternalMotion());
-            var description = new A.EcsSystemDescription(systemId, A.EcsPhase.Movement).Write<LocalTransform>();
+            var description = new EcsSystemDescription(systemId, EcsPhase.Movement).Write<LocalTransform>();
             if (systemId != "builtin.movement") description.After("builtin.movement");
             Systems = [new(description,
-                new Factory<A.ISystem, World>(borrowed => { Assert.Same(world, borrowed); if (FailSystemCreation) throw new IOException("system creation"); SystemCreates++; return new System(this, world, entity); }))];
+                new Factory<ISystem, World>(borrowed => { Assert.Same(world, borrowed); if (FailSystemCreation) throw new IOException("system creation"); SystemCreates++; return new System(this, world, entity); }))];
         }
         public void SetPlaying(bool playing)
         {
@@ -273,9 +278,9 @@ public sealed class SceneSubsystemSessionTests
             if (CleanupFailures-- > 0) throw new IOException("cleanup");
             Disposed = true; _log.Add("resource-dispose");
         }
-        private sealed class System(Probe owner, World world, A.EntityHandle entity) : A.ISystem
+        private sealed class System(Probe owner, World world, EntityHandle entity) : ISystem
         {
-            public void Execute(A.EcsSystemContext context)
+            public void Execute(EcsSystemContext context)
             {
                 Assert.False(owner.Disposed); owner._log.Add($"execute:{context.TickNumber}");
                 if (owner.FailTick) throw new IOException("tick");

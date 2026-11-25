@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Runtime.Loader;
-using TrueMoon.Aether.Abstractions.Mods;
+using TrueMoon.Aether.Mods;
 
 namespace TrueMoon.Aether.Runtime.Mods;
 

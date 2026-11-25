@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Pure neutral component transformation. Factory results are group-owned and disposed before commit; failure remains retryable.</summary>
 public interface IModComponentMigrator : IDisposable

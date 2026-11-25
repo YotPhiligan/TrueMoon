@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Ecs;
@@ -10,10 +9,11 @@ using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using Xunit;
-using SceneWorldLoadError = TrueMoon.Aether.Abstractions.Ecs.Loading.SceneWorldLoadError;
+using SceneWorldLoadError = TrueMoon.Aether.Ecs.Loading.SceneWorldLoadError;
 
 namespace TrueMoon.Aether.Tests.Ecs.Runtime;
 

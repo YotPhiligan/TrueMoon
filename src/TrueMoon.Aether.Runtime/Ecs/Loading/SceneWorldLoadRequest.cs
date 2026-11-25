@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Ecs.Loading;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Loading;
 

@@ -1,5 +1,18 @@
 # Aether / Editor: состояние и точка продолжения
 
+25.11.2026 — `1.2611.25.19-alpha`: публичные контракты и модели перешли
+из `TrueMoon.Aether.Abstractions.*` в `TrueMoon.Aether.*`. Имя сборки и
+пакета осталось `TrueMoon.Aether.Abstractions`. Обновите импорты и
+пересоберите игры, моды и хосты на одном наборе пакетов.
+[Заметка о миграции](../../TrueMoon.Aether.Abstractions/PACKAGE.md).
+
+На изолированном срезе `dotnet build` в Debug собрал шесть тестовых проектов
+Aether (Abstractions, ядро, Editor, Player, Kton, Kul) и шесть стендов
+(Abstractions.Host, EcsContractHost, RuntimeConsumer, ToolingConsumer,
+AetherCameraContractProbe, AetherEditorHost). `dotnet pack` собрал Abstractions;
+проверены неизменное имя сборки и новый namespace `IGameSession`.
+Тесты и пакетная матрица не запускались.
+
 24.11.2026 — в `1.2611.24.11-alpha` повторно прошли по 1 548 тестов Editor в Debug
 и Release после перехода на отложенный `Content(...)`. Проверены фокус,
 стиль и переименование при смене модели в обозревателе, работа динамических

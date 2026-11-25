@@ -1,12 +1,12 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Scenes;
-using SceneDocument = TrueMoon.Aether.Abstractions.Scenes.SceneDocument;
-using SceneSnapshot = TrueMoon.Aether.Abstractions.Scenes.SceneSnapshot;
+using TrueMoon.Aether.Scenes;
+using SceneDocument = TrueMoon.Aether.Scenes.SceneDocument;
+using SceneSnapshot = TrueMoon.Aether.Scenes.SceneSnapshot;
 
 namespace TrueMoon.Aether.Runtime;
 

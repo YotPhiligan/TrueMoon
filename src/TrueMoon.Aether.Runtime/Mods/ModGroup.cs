@@ -1,5 +1,5 @@
-using TrueMoon.Aether.Abstractions.Mods;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Mods;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Mods;
 

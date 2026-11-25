@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;

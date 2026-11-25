@@ -1,7 +1,7 @@
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Inspector;

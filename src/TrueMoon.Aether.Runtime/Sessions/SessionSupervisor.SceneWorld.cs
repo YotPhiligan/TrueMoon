@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Transport;

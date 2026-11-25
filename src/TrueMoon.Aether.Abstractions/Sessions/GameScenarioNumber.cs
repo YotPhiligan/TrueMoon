@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 /// <summary>A numeric observation with a unit defined and versioned by the game.</summary>
 /// <param name="Value">Finite numeric value at the completed tick.</param>

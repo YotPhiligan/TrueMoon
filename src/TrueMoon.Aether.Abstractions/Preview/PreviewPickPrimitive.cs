@@ -1,7 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 
 /// <summary>One detached projected cube, with persistent identity and original draw position.</summary>

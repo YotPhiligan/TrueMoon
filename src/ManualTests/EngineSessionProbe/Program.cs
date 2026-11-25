@@ -3,7 +3,6 @@ using TrueMoon.Aether.Tooling;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using TrueMoon.Aether.Abstractions.Scenes;
 using EngineSessionProbe;
 using TrueMoon;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -12,6 +11,7 @@ using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Dependencies;
 using TrueMoon.Mithril;
 using EngineSessionProbe.Measurements;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Hosting;
 
 try

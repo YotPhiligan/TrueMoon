@@ -50,10 +50,10 @@ internal sealed record SourceGraph(ResolvedProject Project, GameBuildRequest Req
             if (profile == "bytes") File.WriteAllText(Path.Combine(directory, "Marker.cs"), $"namespace Perf.{name}; public static class Marker {{ public const int Value = 1; }}");
         }
         File.WriteAllText(Path.Combine(root, "Root", "Game.cs"), """
-            using TrueMoon.Aether.Abstractions.Scenes;
-            using TrueMoon.Aether.Abstractions.Sessions;
+            using TrueMoon.Aether.Scenes;
+            using TrueMoon.Aether.Sessions;
             namespace Perf.Root;
-            public sealed class Game : IGameSession, TrueMoon.Aether.Abstractions.Runtime.IGameSessionEntry
+            public sealed class Game : IGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
             {
                 public static IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new Game();
                 public ulong TickNumber { get; private set; }

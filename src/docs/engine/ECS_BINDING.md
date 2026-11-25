@@ -1,6 +1,6 @@
 # ECS binding к Abstractions — ARCH3.2
 
-`TrueMoon.Aether.Runtime` использует новый `TrueMoon.Aether.Abstractions.Ecs` API поверх
+`TrueMoon.Aether.Runtime` использует новый `TrueMoon.Aether.Ecs` API поверх
 существующих World, typed pools, scheduler и phase command buffer. Второго мира
 или отдельного scheduler для extensions нет. Контрактная библиотека не получает
 ссылку на Runtime, контейнер, concrete World или native/UI backend.

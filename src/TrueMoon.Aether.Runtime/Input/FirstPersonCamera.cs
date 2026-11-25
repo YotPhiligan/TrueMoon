@@ -1,6 +1,6 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Input;
 
 namespace TrueMoon.Aether.Runtime.Input;
 

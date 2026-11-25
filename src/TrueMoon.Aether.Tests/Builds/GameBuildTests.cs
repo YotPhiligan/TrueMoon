@@ -2,14 +2,15 @@ using System.Diagnostics;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Aether.Tooling.Hosting;
@@ -54,7 +55,7 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
         Assert.Equal(23, first.Session.Revision); Assert.Equal(1ul, first.Session.TickNumber);
         Assert.Equal(0xff2080c0u, first.Session.PatternColor); Assert.Equal(0xffc06020u, second.Session.PatternColor);
         Assert.Contains(typeof(IGameSession), first.Session.GetType().GetInterfaces());
-        Assert.Same(typeof(Abstractions.Ecs.ISystem), first.Session.GetType().GetProperty("SharedEcsContract")!.GetValue(null));
+        Assert.Same(typeof(ISystem), first.Session.GetType().GetProperty("SharedEcsContract")!.GetValue(null));
         Assert.DoesNotContain(AssemblyLoadContext.GetLoadContext(first.Session.GetType().Assembly)!.Assemblies,
             assembly => assembly.GetName().Name == "TrueMoon.Aether.Abstractions");
         Assert.NotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(first.Session.GetType().Assembly));

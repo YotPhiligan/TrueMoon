@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Immutable local changes. A missing override inherits; null/default remains an explicit override.</summary>

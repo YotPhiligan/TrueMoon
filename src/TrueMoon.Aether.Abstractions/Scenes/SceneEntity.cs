@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Legacy bounded scene input. SceneSnapshot copies it before activation.</summary>

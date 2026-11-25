@@ -2,16 +2,16 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Mods;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Mods;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
-using EntityHandle = TrueMoon.Aether.Abstractions.Ecs.EntityHandle;
-using EcsSystemContext = TrueMoon.Aether.Abstractions.Ecs.EcsSystemContext;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
 
 namespace TrueMoon.ManualTests.ModConsumer.Runtime;
 

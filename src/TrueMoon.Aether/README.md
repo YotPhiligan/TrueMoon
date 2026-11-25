@@ -330,7 +330,7 @@ Contracts/Enerit/Mithril и Silk.NET.Vulkan2.23.0; зависимостей на
 
 ```csharp
 using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Runtime.Scenes;
 
 var appearanceType = new ComponentTypeId(Guid.NewGuid());
@@ -416,7 +416,7 @@ Hierarchy/definitions/provenance остаются в authoring snapshot; callbac
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
 using TrueMoon.Dependencies;
@@ -656,7 +656,7 @@ cleanup. Failed reap блокирует следующий launch до успе�
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Hosting;
@@ -1368,14 +1368,14 @@ observer; compiler preflight остаётся обязательным.
 
 ## External preview camera geometry
 
-`TrueMoon.Aether.Abstractions.Preview.PreviewCamera` is an immutable external camera, separate
+`TrueMoon.Aether.Preview.PreviewCamera` is an immutable external camera, separate
 from authoring, World and game checkpoints. Default pose is (0,1,6), identity
 orientation, pivot(0,1,0), distance6, vertical FOV pi/3, near0.1/far100, revision1.
 WithView returns the same instance for an exact no-op; any changed camera/navigation
 value advances the exact ulong revision. Invalid candidates and overflow do not
 mutate the previous instance. Context epochs and publication remain caller-owned.
 
-`TrueMoon.Aether.Abstractions.Rendering.PerspectiveProjection` shares rigid-pose validation and
+`TrueMoon.Aether.Rendering.PerspectiveProjection` shares rigid-pose validation and
 RH row-vector Vulkan projection math with Ecs.Rendering.PerspectiveCamera.
 `camera.CreateProjection(width,height)` freezes a CameraProjection with a usable
 inverse and physical extent16..1920 by16..1080. TryProject accepts finite points in

@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tests.Builds;
 using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Builds;

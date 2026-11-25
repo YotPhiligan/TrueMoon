@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Motion;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Aether.Runtime.Ecs.Transforms;
@@ -32,9 +33,9 @@ internal sealed class PrimitiveSimulationFactory(IFactory<TransformSystem, World
             {
                 scheduler = EcsScheduler.Create(scene.World,
                 [
-                    new(MovementSystem.DescribeContract(), new Factory<Abstractions.Ecs.ISystem, World>(world => owner.Movement = movement.Create(world))),
-                    new(TransformSystem.DescribeContract(), new Factory<Abstractions.Ecs.ISystem, World>(world => owner.Transforms = transforms.Create(world))),
-                    new(PrimitiveExtractionSystem.DescribeContract(), new Factory<Abstractions.Ecs.ISystem, World>(world => owner.Extraction =
+                    new(MovementSystem.DescribeContract(), new Factory<ISystem, World>(world => owner.Movement = movement.Create(world))),
+                    new(TransformSystem.DescribeContract(), new Factory<ISystem, World>(world => owner.Transforms = transforms.Create(world))),
+                    new(PrimitiveExtractionSystem.DescribeContract(), new Factory<ISystem, World>(world => owner.Extraction =
                         extraction.Create(new(world, scene.Scene.Id, scene.Scene.Revision, _options)))),
                     .. owner.Subsystems?.Systems ?? []
                 ]);

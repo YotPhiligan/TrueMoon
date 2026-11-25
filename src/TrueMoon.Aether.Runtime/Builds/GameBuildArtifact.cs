@@ -3,7 +3,7 @@ using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Builds;
 

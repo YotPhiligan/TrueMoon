@@ -1,10 +1,11 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
@@ -27,7 +28,7 @@ public sealed class NativeRuntimeLaunchTests
     [
         typeof(SessionIdentity).Assembly.Location,
         typeof(IFactory<>).Assembly.Location,
-        typeof(Abstractions.Ecs.ISystem).Assembly.Location,
+        typeof(ISystem).Assembly.Location,
         typeof(PipesInvocationClient<>).Assembly.Location,
         typeof(ChildProcessUnitHandle).Assembly.Location
     ];

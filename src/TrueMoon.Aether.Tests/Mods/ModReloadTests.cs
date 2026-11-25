@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Mods;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Mods;
@@ -11,7 +11,7 @@ using TrueMoon.Aether.Tooling.Mods;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
-using EcsSystemContext = TrueMoon.Aether.Abstractions.Ecs.EcsSystemContext;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
 
 namespace TrueMoon.Aether.Tests.Mods;
 

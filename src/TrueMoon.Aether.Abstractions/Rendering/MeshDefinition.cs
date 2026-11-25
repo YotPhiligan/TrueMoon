@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Supported exact primitive topology.</summary>

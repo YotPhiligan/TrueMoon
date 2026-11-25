@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Frozen finite projection/inverse and physical extent for one camera capture.</summary>

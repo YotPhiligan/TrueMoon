@@ -1,7 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs.Transforms;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Motion;
+namespace TrueMoon.Aether.Ecs.Motion;
 
 
 /// <summary>Finite translation velocity in parent coordinates, in local-position units per second.</summary>

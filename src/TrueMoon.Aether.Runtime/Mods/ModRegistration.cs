@@ -1,8 +1,9 @@
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Mods;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Mods;
 
@@ -30,7 +31,7 @@ internal sealed class ModRegistration : IModRegistration
         Services.Add((id, factory));
     }
     public void AddMigratingComponent<T>(ComponentSchema schema, IFactory<T, ModComponentReadArguments> read,
-        IFactory<ComponentData, ModComponentWriteArguments<T>> write, IEnumerable<Abstractions.Ecs.Loading.ComponentReference>? references = null) where T : struct
+        IFactory<ComponentData, ModComponentWriteArguments<T>> write, IEnumerable<ComponentReference>? references = null) where T : struct
     { Check(); Migration.Add(schema, read, write, references); ComponentCount++; }
     public void AddComponentMigration(ComponentTypeId typeId, int sourceVersion, int targetVersion, IFactory<IModComponentMigrator> factory, IEnumerable<string>? removedProperties = null)
     { Check(); Migration.AddRule(typeId, sourceVersion, targetVersion, factory, removedProperties); }

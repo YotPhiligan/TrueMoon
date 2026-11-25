@@ -5,7 +5,6 @@ using TrueMoon.Argentis.Menus;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis.Windows;
-using TrueMoon.Aether.Abstractions.Scenes;
 using System.Collections.Concurrent;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;

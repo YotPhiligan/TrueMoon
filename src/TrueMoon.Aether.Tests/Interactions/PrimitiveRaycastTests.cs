@@ -1,5 +1,5 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Runtime.Interactions;
 using Xunit;
 

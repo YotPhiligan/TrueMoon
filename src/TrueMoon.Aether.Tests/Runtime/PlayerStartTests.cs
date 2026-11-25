@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Game.Logic;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -51,13 +52,13 @@ public sealed class PlayerStartTests
     {
         var root=Path.Combine(Path.GetTempPath(),"TrueMoon-player-identity-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
         var entry=typeof(ProbeGame).Assembly.Location;
-        foreach(var assembly in new[]{typeof(PlayerStart).Assembly,typeof(IFactory<>).Assembly,typeof(Abstractions.Ecs.ISystem).Assembly,typeof(TrueMoon.Enerit.IO.Pipes.PipesInvocationClient<>).Assembly,typeof(TrueMoon.Mithril.Units.ChildProcessUnitHandle).Assembly,typeof(ProbeGame).Assembly})
+        foreach(var assembly in new[]{typeof(PlayerStart).Assembly,typeof(IFactory<>).Assembly,typeof(ISystem).Assembly,typeof(TrueMoon.Enerit.IO.Pipes.PipesInvocationClient<>).Assembly,typeof(TrueMoon.Mithril.Units.ChildProcessUnitHandle).Assembly,typeof(ProbeGame).Assembly})
             File.Copy(assembly.Location,Path.Combine(root,Path.GetFileName(assembly.Location)));
         var path=Path.Combine(root,Path.GetFileName(entry));var id=BuildIdentity.ForPlayer(path);Assert.Equal(BuildIdentity.ForPlayer(entry),id);
         File.AppendAllText(path,"different entry");Assert.NotEqual(id,BuildIdentity.ForPlayer(path));
-        var neutral=Path.Combine(root,Path.GetFileName(typeof(Abstractions.Ecs.ISystem).Assembly.Location));
+        var neutral=Path.Combine(root,Path.GetFileName(typeof(ISystem).Assembly.Location));
         File.AppendAllText(neutral,"different Abstractions");Assert.Throws<InvalidDataException>(()=>BuildIdentity.ForPlayer(path));
-        File.Copy(typeof(Abstractions.Ecs.ISystem).Assembly.Location,neutral,true);
+        File.Copy(typeof(ISystem).Assembly.Location,neutral,true);
         File.AppendAllText(Path.Combine(root,Path.GetFileName(typeof(PlayerStart).Assembly.Location)),"tamper");
         Assert.Throws<InvalidDataException>(()=>BuildIdentity.ForPlayer(path));
     }

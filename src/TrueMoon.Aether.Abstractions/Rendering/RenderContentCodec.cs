@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 /// <summary>Strict canonical CPU asset bytes and manifest fingerprints. This is not a Runtime transport capability.</summary>
 public static class RenderContentCodec

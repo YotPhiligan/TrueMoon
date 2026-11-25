@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Transforms;
+namespace TrueMoon.Aether.Ecs.Transforms;
 
 
 /// <summary>Derived complete affine matrix at a published transform tick. Never decompose it to discard shear.</summary>

@@ -1,5 +1,5 @@
 using System.Reflection;
-using TrueMoon.Aether.Abstractions.Mods;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Tooling.Mods;
 
 if (args.Length is < 3 or > 5) throw new ArgumentException("artifactRoot modDll privateDependencyDll [entryType] [moduleVersion]");

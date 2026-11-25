@@ -1,9 +1,8 @@
 using System.Buffers.Binary;
-using System.Numerics;
 using System.Text;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 /// <summary>Exact little-endian preview-view/1 control payload and frame stamp; no reserved fields are reinterpreted.</summary>
 public static class PreviewViewCodec

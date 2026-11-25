@@ -1,12 +1,12 @@
 using Game.Logic;
 using System.Collections.Concurrent;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Scenes;
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Sessions;
 
 namespace TrueMoon.Aether.Tests.Checkpoints;
 

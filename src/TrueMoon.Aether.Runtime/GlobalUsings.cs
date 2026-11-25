@@ -1,16 +1,3 @@
-global using TrueMoon.Aether.Abstractions.Builds;
-global using TrueMoon.Aether.Abstractions.Checkpoints;
-global using TrueMoon.Aether.Abstractions.Ecs;
-global using TrueMoon.Aether.Abstractions.Ecs.Loading;
-global using TrueMoon.Aether.Abstractions.Ecs.Motion;
-global using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-global using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-global using TrueMoon.Aether.Abstractions.Input;
-global using TrueMoon.Aether.Abstractions.Preview;
-global using TrueMoon.Aether.Abstractions.Rendering;
-global using TrueMoon.Aether.Abstractions.Runtime;
-global using TrueMoon.Aether.Abstractions.Scenes;
-global using TrueMoon.Aether.Abstractions.Sessions;
 global using TrueMoon.Aether.Runtime.Scenes;
 global using TrueMoon.Aether.Runtime.Sessions;
 global using TrueMoon.Aether.Runtime.Hosting;

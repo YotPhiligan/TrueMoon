@@ -5,7 +5,6 @@ using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tests.Inspector;
 using TrueMoon.Aether.Editor.Tests.Projects;
 using TrueMoon.Aether.Runtime.Sessions;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.UI;

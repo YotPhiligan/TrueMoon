@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 /// <summary>Neutral physical image admission; no native surface or transport is involved.</summary>
 public static class RenderViewport

@@ -1,8 +1,8 @@
 using IEcsSystem = TrueMoon.Aether.Runtime.Ecs.IEcsSystem;
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Motion;
 using TrueMoon.Aether.Runtime.Ecs.Transforms;

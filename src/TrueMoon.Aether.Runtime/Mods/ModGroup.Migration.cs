@@ -1,8 +1,8 @@
-using TrueMoon.Aether.Abstractions.Mods;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Mods;
 

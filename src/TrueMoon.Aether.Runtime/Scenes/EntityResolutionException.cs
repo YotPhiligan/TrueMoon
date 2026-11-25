@@ -1,3 +1,5 @@
+using TrueMoon.Aether.Scenes;
+
 namespace TrueMoon.Aether.Runtime.Scenes;
 /// <summary>Resolution failure with a machine-readable category and ID-based authoring path.</summary>
 public sealed class EntityResolutionException : Exception

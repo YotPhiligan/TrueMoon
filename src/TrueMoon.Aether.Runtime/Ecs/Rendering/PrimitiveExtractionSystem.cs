@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Ecs.Transforms;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 
@@ -13,7 +13,7 @@ namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 public sealed record PrimitiveExtractionArguments(World World, SceneId SceneId, long Revision, PrimitiveSimulationOptions? Options = null);
 
 /// <summary>Validates all primitive roles before replacing its detached current snapshot.</summary>
-public sealed class PrimitiveExtractionSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
+public sealed class PrimitiveExtractionSystem : IEcsSystem, Aether.Ecs.IEcsSystem
 {
     private readonly World _world;
     private readonly SceneId _scene;
@@ -36,7 +36,7 @@ public sealed class PrimitiveExtractionSystem : IEcsSystem, Abstractions.Ecs.IEc
     /// <summary>Creates fresh Extraction phase read metadata.</summary><returns>Composition-time description.</returns>
     public static EcsSystemDescription Describe() => EcsSystemDescription.FromContract(DescribeContract());
     /// <summary>Neutral declarations for the existing detached snapshot extractor.</summary><returns>Fresh metadata.</returns>
-    public static Abstractions.Ecs.EcsSystemDescription DescribeContract() => new Abstractions.Ecs.EcsSystemDescription("builtin.primitive-extraction", Abstractions.Ecs.EcsPhase.Extraction)
+    public static Aether.Ecs.EcsSystemDescription DescribeContract() => new Aether.Ecs.EcsSystemDescription("builtin.primitive-extraction", EcsPhase.Extraction)
         .Read<PrimitiveAppearance>().Read<WorldTransform>();
     /// <summary>Captures complete current-tick matrices and material values, with no partial result on failure/cancellation.</summary>
     /// <param name="tick">Transform/extraction stamp, strictly newer than the previous frame; first zero is allowed.</param>
@@ -76,7 +76,7 @@ public sealed class PrimitiveExtractionSystem : IEcsSystem, Abstractions.Ecs.IEc
         Capture(context.TickNumber, context.CancellationToken);
     }
     /// <summary>Captures the same frame through a neutral invocation.</summary><param name="context">Active invocation.</param>
-    public void Execute(Abstractions.Ecs.EcsSystemContext context)
+    public void Execute(Aether.Ecs.EcsSystemContext context)
     {
         if (context.WorldId != _world.Id) throw new InvalidOperationException("Extraction system World mismatch.");
         Capture(context.TickNumber, context.CancellationToken);

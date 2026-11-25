@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Scenes;

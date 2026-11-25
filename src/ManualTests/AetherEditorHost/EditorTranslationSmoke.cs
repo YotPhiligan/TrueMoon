@@ -11,7 +11,6 @@ using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Runtime.Scenes;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Translation;
 using TrueMoon.Aether.Editor.UI.Documents;

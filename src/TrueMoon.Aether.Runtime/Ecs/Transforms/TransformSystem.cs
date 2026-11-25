@@ -1,13 +1,13 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Transforms;
 
 /// <summary>Bounded iterative hierarchy evaluator. Borrows one externally serialized World.</summary>
 /// <remarks>Preflight failures/cancellation preserve all previous caches. Commit is not interrupted after its final check.</remarks>
-public sealed class TransformSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
+public sealed class TransformSystem : IEcsSystem, Aether.Ecs.IEcsSystem
 {
     private readonly World _world;
     private readonly int _maximumEntities;
@@ -29,7 +29,7 @@ public sealed class TransformSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
     /// <summary>Creates fresh access metadata for the Transform phase.</summary><returns>Composition-time description.</returns>
     public static EcsSystemDescription Describe() => EcsSystemDescription.FromContract(DescribeContract());
     /// <summary>Neutral Transform phase declarations for the existing evaluator.</summary><returns>Fresh metadata.</returns>
-    public static Abstractions.Ecs.EcsSystemDescription DescribeContract() => new Abstractions.Ecs.EcsSystemDescription("builtin.transform", Abstractions.Ecs.EcsPhase.Transform)
+    public static Aether.Ecs.EcsSystemDescription DescribeContract() => new Aether.Ecs.EcsSystemDescription("builtin.transform", EcsPhase.Transform)
         .Read<LocalTransform>().Read<TransformParent>().Write<WorldTransform>();
 
     /// <summary>Seeds identity groups, scene parent edges and derived caches in a private initial scene.</summary>
@@ -133,7 +133,7 @@ public sealed class TransformSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
         Update(context.TickNumber, context.CancellationToken);
     }
     /// <summary>Runs the same atomic preflight/commit evaluator via neutral invocation data.</summary><param name="context">Active invocation.</param>
-    public void Execute(Abstractions.Ecs.EcsSystemContext context)
+    public void Execute(Aether.Ecs.EcsSystemContext context)
     {
         if (context.WorldId != _world.Id) throw new InvalidOperationException("Transform system World mismatch.");
         Update(context.TickNumber, context.CancellationToken);

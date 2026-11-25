@@ -6,8 +6,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelImportResearch;
 using TrueMoon;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;
@@ -97,11 +97,11 @@ File.WriteAllText(project, $$"""
 File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
     using System;
     using System.Threading;
-    using TrueMoon.Aether.Abstractions.Checkpoints;
-    using TrueMoon.Aether.Abstractions.Rendering;
-    using TrueMoon.Aether.Abstractions.Runtime;
-    using TrueMoon.Aether.Abstractions.Scenes;
-    using TrueMoon.Aether.Abstractions.Sessions;
+    using TrueMoon.Aether.Checkpoints;
+    using TrueMoon.Aether.Rendering;
+    using TrueMoon.Aether.Runtime;
+    using TrueMoon.Aether.Scenes;
+    using TrueMoon.Aether.Sessions;
     using TrueMoon.Aether.Runtime;
     using TrueMoon.Aether.Runtime.Ecs;
     using TrueMoon.Aether.Runtime.Ecs.Loading;

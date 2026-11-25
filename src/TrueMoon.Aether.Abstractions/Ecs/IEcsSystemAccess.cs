@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Host binding for typed invocation access. The concrete implementation belongs to Runtime.</summary>
 /// <remarks>Every method must reject an inactive/previous invocation, wrong thread, disposed/faulted host,

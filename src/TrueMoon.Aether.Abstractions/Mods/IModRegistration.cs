@@ -1,8 +1,8 @@
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Temporary group-local factory registration. Types/delegates never enter long-lived App registrations.</summary>
 public interface IModRegistration

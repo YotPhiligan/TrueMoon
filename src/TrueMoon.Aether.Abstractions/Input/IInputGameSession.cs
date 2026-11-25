@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Sessions;
 
-namespace TrueMoon.Aether.Abstractions.Input;
+namespace TrueMoon.Aether.Input;
 
 
 /// <summary>Optional fixed-tick gameplay input capability. Transient input is never checkpoint state.</summary>

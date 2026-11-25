@@ -46,12 +46,12 @@ internal static class SceneGameSource
             </Project>
             """);
         File.WriteAllText(Path.Combine(directory, "Game.cs"), """
-            using TrueMoon.Aether.Abstractions.Scenes;
-            using TrueMoon.Aether.Abstractions.Sessions;
-            using TrueMoon.Aether.Abstractions.Rendering;
-            using TrueMoon.Aether.Abstractions.Checkpoints;
+            using TrueMoon.Aether.Scenes;
+            using TrueMoon.Aether.Sessions;
+            using TrueMoon.Aether.Rendering;
+            using TrueMoon.Aether.Checkpoints;
             namespace Game.Logic;
-            public sealed class ProbeGame : ICheckpointGameSession, IRenderGameSession, TrueMoon.Aether.Abstractions.Runtime.IGameSessionEntry
+            public sealed class ProbeGame : ICheckpointGameSession, IRenderGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
             {
                 private PrimitiveScene? _scene;
                 private static CameraTransform Camera => new(0, 1, 6, 0, 0, 0);

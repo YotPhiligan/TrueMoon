@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Ecs;
 
 namespace TrueMoon.Aether.Runtime.Rendering.Resources;

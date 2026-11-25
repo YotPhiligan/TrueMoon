@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Transient value identity. Default is invalid; a slot is meaningful only with its World and generation.</summary>
 /// <remarks>Construction does not prove liveness. The host validates every use, including wrong-World and stale identities.</remarks>

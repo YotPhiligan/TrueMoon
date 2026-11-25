@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Explicit property override addressed by stable component occurrence and property IDs.</summary>

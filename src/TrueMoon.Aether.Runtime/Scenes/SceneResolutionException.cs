@@ -1,3 +1,5 @@
+using TrueMoon.Aether.Scenes;
+
 namespace TrueMoon.Aether.Runtime.Scenes;
 /// <summary>Scene failure with an ID-based path and the original entity/projector cause when present.</summary>
 public sealed class SceneResolutionException : Exception

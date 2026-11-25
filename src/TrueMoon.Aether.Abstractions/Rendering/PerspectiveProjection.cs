@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Perspective geometry shared by World and external cameras; RH, row vectors, Vulkan depth [0,1].</summary>

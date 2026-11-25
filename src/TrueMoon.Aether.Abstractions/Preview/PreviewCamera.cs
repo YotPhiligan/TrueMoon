@@ -1,7 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 
 /// <summary>Immutable transient camera, independent of authoring, World, history and demo checkpoints.</summary>

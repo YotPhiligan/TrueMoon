@@ -1,8 +1,3 @@
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Builds;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Diagnostics;
@@ -12,14 +7,20 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text.Json;
+using TrueMoon.Aether.Builds;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
-using A = TrueMoon.Aether.Abstractions.Ecs;
-using S = TrueMoon.Aether.Abstractions.Scenes;
+using A = TrueMoon.Aether.Ecs;
+using ComponentData = TrueMoon.Aether.Scenes.ComponentData;
+using ComponentSchema = TrueMoon.Aether.Scenes.ComponentSchema;
+using EcsSystemMetadata = TrueMoon.Aether.Ecs.EcsSystemMetadata;
+using IEcsSystem = TrueMoon.Aether.Ecs.IEcsSystem;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
+using S = TrueMoon.Aether.Scenes;
+using SceneDocument = TrueMoon.Aether.Scenes.SceneDocument;
 
 namespace TrueMoon.ManualTests.RuntimeConsumer;
 
@@ -40,13 +41,13 @@ internal static class Program
     }
 
     private static async Task Run<TCounter, TVelocity, TSystem, TObserver>(string[] args, Assembly assembly, GameBuildLoader load)
-        where TCounter : struct where TVelocity : struct where TSystem : class, A.ISystem where TObserver : class, A.ISystem
+        where TCounter : struct where TVelocity : struct where TSystem : class, ISystem where TObserver : class, ISystem
     {
         var calls = 0; TSystem? system = null; TObserver? observer = null;
-        var schema = (S.ComponentSchema)typeof(TSystem).GetProperty("ValueSchema")!.GetValue(null)!;
-        A.EcsSystemMetadata Metadata(Type type) => (A.EcsSystemMetadata)type.GetMethod("Describe")!.Invoke(null, null)!;
+        var schema = (ComponentSchema)typeof(TSystem).GetProperty("ValueSchema")!.GetValue(null)!;
+        EcsSystemMetadata Metadata(Type type) => (EcsSystemMetadata)type.GetMethod("Describe")!.Invoke(null, null)!;
         var prepared = File.ReadAllBytes(Path.GetFullPath(args[1]));
-        var resolution = new SceneResolutionService(new Factory<EntityResolver, S.SceneDocument>(scene => new(scene.Definitions, scene.Schemas)));
+        var resolution = new SceneResolutionService(new Factory<EntityResolver, SceneDocument>(scene => new(scene.Definitions, scene.Schemas)));
         var document = new SceneDocumentCodec(resolution).Decode(prepared);
         if (document.Revision != 41 || document.Entities.Length != 1) throw new InvalidDataException("Prepared scene witness mismatch.");
         load.Session.Load(new("prepared", document.Revision, [new() { Id = "seed", X = 7 }]));
@@ -60,12 +61,12 @@ internal static class Program
             {
                 services.Singleton<IFactory<TSystem>>(_ => new Factory<TSystem>(() => { calls++; return system = (TSystem)Activator.CreateInstance(typeof(TSystem))!; }));
                 services.Singleton<IFactory<TObserver>>(_ => new Factory<TObserver>(() => { calls++; return observer = (TObserver)Activator.CreateInstance(typeof(TObserver))!; }));
-                services.Singleton<IFactory<TCounter, S.ComponentData>>(_ => (IFactory<TCounter, S.ComponentData>)Activator.CreateInstance(assembly.GetType("TrueMoon.ManualTests.ContractExtension.CounterFactory", true)!)!);
+                services.Singleton<IFactory<TCounter, ComponentData>>(_ => (IFactory<TCounter, ComponentData>)Activator.CreateInstance(assembly.GetType("TrueMoon.ManualTests.ContractExtension.CounterFactory", true)!)!);
                 services.Singleton<IFactory<TVelocity>>(_ => new Factory<TVelocity>(() => (TVelocity)Activator.CreateInstance(typeof(TVelocity), 2)!));
             });
             context.UseAetherEcs();
             context.UseAetherEcsSystems(systems => systems.Add<TSystem>(Metadata(typeof(TSystem))).Add<TObserver>(Metadata(typeof(TObserver))));
-            context.UseAetherSceneLoading(resolver => new ComponentRegistryBuilder().RegisterValues(schema, resolver.Resolve<IFactory<TCounter, S.ComponentData>>()!).Build());
+            context.UseAetherSceneLoading(resolver => new ComponentRegistryBuilder().RegisterValues(schema, resolver.Resolve<IFactory<TCounter, ComponentData>>()!).Build());
         }).Build();
         if (calls != 0) throw new InvalidOperationException("Eager system activation.");
         await app.StartAsync();
@@ -100,11 +101,11 @@ internal static class Program
         await app.StopAsync();
         foreach (var owned in new object[] { system!, observer! })
             if (Number(owned, "Stops") != 1 || Number(owned, "Disposals") != 1) throw new InvalidOperationException("DI disposed caller-owned systems twice.");
-        var shared = typeof(TSystem).GetInterfaces().Single(t => t.FullName == typeof(A.IEcsSystem).FullName);
+        var shared = typeof(TSystem).GetInterfaces().Single(t => t.FullName == typeof(IEcsSystem).FullName);
         var subsystemChecks = await SessionSubsystemProof.Run(args.Length == 4);
         var context = AssemblyLoadContext.GetLoadContext(assembly)!;
         var privateExtension = context.IsCollectible && context != AssemblyLoadContext.Default;
-        var sharedContracts = ReferenceEquals(shared, typeof(A.IEcsSystem)) && context.Assemblies.All(a => a.GetName().Name is not ("TrueMoon.Contracts" or "TrueMoon.Aether.Abstractions"));
+        var sharedContracts = ReferenceEquals(shared, typeof(IEcsSystem)) && context.Assemblies.All(a => a.GetName().Name is not ("TrueMoon.Contracts" or "TrueMoon.Aether.Abstractions"));
         var forbidden = AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetName().Name is { } name &&
             (name == "TrueMoon.Aether" || name.StartsWith("TrueMoon.Aether.Editor") || name.StartsWith("TrueMoon.Aether.Tooling") || name.StartsWith("TrueMoon.Alloy") || name.StartsWith("SkiaSharp") || name.StartsWith("Silk.NET"))).Select(a => a.GetName().Name).ToArray();
         if (!privateExtension || !sharedContracts || forbidden.Length != 0) throw new InvalidOperationException("Unexpected runtime assembly graph.");
@@ -115,7 +116,7 @@ internal static class Program
             FactoryCalls = calls, PrivateExtension = privateExtension, SharedContracts = sharedContracts, ForbiddenAssemblies = forbidden, SceneSubsystemChecks = subsystemChecks,
             Executions = Number(system!, "Executions"), Stops = Number(system!, "Stops"), Disposals = Number(system!, "Disposals"),
             Total = Number(observer!, "Total"), Count = Number(observer!, "Count"), WorldId = worldId, Schema = schema.TypeId.Value,
-            ExtensionAssembly = assembly.Location, ContractAssembly = typeof(A.ISystem).Assembly.Location,
+            ExtensionAssembly = assembly.Location, ContractAssembly = typeof(ISystem).Assembly.Location,
             Unload = "Unload requested after scope; collectible mod replacement is ARCH3.7 acceptance"
         }, new JsonSerializerOptions { WriteIndented = true }));
     }

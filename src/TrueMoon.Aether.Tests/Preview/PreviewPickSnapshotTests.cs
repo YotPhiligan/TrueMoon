@@ -1,8 +1,8 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Scenes;
 using Xunit;
 using BuiltInScene = TrueMoon.Aether.Tests.Scenes.BuiltInSceneTests;
 

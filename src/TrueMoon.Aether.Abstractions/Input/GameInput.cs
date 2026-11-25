@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Input;
+namespace TrueMoon.Aether.Input;
 
 
 /// <summary>Held controls in the first gameplay profile.</summary>

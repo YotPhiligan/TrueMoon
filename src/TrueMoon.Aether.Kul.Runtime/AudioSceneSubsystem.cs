@@ -1,10 +1,13 @@
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Kul.Runtime.Content;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Kul;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kul.Runtime;
 
@@ -82,9 +85,9 @@ public sealed class AudioSceneSubsystem : ISceneSubsystem
             Apply(candidate); _world.SetComponent(candidate.Entity, Sample(_entries[candidate.Entity], 0));
         }
         token.ThrowIfCancellationRequested();
-        var description = new A.EcsSystemDescription("kul.audio", EcsPhase.Extraction).After("builtin.primitive-extraction")
+        var description = new EcsSystemDescription("kul.audio", EcsPhase.Extraction).After("builtin.primitive-extraction")
             .Read<AudioSource>().Read<AudioPlaybackCommand>().Write<AudioSourceState>();
-        Systems = [new(description, new Factory<A.ISystem, World>(world =>
+        Systems = [new(description, new Factory<ISystem, World>(world =>
         {
             if (!ReferenceEquals(world, _world)) throw new InvalidOperationException("Audio system World mismatch.");
             return systems.Create(this) ?? throw new InvalidOperationException("Audio system factory returned null.");
@@ -175,7 +178,7 @@ public sealed class AudioSceneSubsystem : ISceneSubsystem
         var phase = entry.Desired == AudioSourcePhase.Playing && !_playing ? AudioSourcePhase.Paused : entry.Desired;
         return new(tick, entry.LastCommand.Sequence, phase, entry.Slot.Voice.CursorFrames);
     }
-    internal void Advance(A.EcsSystemContext context)
+    internal void Advance(EcsSystemContext context)
     {
         Ready();
         if (context.WorldId != _world.Id || context.DeltaTime != _step || context.TickNumber != LastCompletedTick + 1) throw new InvalidOperationException("Audio scene World/step/tick mismatch.");

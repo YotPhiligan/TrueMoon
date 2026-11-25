@@ -1,5 +1,5 @@
 using System.Reflection;
-using TrueMoon.Aether.Abstractions.Mods;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Runtime.Mods;
 
 namespace TrueMoon.Aether.Tooling.Mods;

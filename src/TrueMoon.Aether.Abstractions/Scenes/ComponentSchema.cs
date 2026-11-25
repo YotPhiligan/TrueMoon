@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Immutable component contract; schemas can be inspected without loading game code.</summary>

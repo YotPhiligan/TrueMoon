@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using TrueMoon.Aether.Abstractions.Mods;
+using TrueMoon.Aether.Mods;
 
 namespace TrueMoon.Aether.Runtime.Mods;
 

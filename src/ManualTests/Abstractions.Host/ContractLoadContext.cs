@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.ManualTests.ContractHost;
 

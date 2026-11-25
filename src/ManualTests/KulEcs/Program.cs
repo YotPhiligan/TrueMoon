@@ -2,8 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Kul;
 using TrueMoon.Aether.Kul.Runtime;
 using TrueMoon.Aether.Kul.Runtime.Content;
@@ -15,7 +15,7 @@ using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Kul;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.ManualTests.KulEcs;
 

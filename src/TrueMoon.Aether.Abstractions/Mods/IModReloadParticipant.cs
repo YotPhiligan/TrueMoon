@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Opt-in reversible lifecycle for entries/services used in system replacement.</summary>
 /// <remarks>Start prepares private resources; externally retained callbacks must use IModGeneration.Guard.

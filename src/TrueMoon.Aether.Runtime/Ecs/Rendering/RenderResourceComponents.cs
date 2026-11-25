@@ -1,5 +1,5 @@
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 

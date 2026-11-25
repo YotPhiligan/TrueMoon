@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Immutable entity instance referencing a definition, local changes and a separate scene parent.</summary>

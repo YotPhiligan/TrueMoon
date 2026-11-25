@@ -1,14 +1,14 @@
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Ecs.Transforms;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Preview;
 using System.Numerics;
 using System.Text.Json;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.ManualTests.AetherCameraContractProbe;
 
@@ -69,7 +69,7 @@ internal static class Program
         void Check(string name, Func<bool> check)
         { if (!check()) throw new InvalidOperationException(name); checks.Add(name); }
         static bool Reject(Action action)
-        { try { action(); return false; } catch (TrueMoon.Aether.Abstractions.Rendering.RenderContentException) { return true; } }
+        { try { action(); return false; } catch (TrueMoon.Aether.Rendering.RenderContentException) { return true; } }
         static bool MatrixNear(Matrix4x4 a, Matrix4x4 b)
         {
             var av = new[] { a.M11,a.M12,a.M13,a.M14,a.M21,a.M22,a.M23,a.M24,a.M31,a.M32,a.M33,a.M34,a.M41,a.M42,a.M43,a.M44 };

@@ -1,7 +1,8 @@
 ﻿using System.Collections.Immutable;
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Scenes.Authoring;
 
 namespace TrueMoon.Aether.Tooling.Scenes.Authoring;
 

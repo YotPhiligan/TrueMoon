@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.Aether</RootNamespace>
     <Description>Neutral Aether game and ECS extension contracts, identifiers and immutable values. No runtime, tooling, UI or native backend dependency.</Description>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     <PackageTags>$(PackageTags);aether;abstractions;ecs;extensions</PackageTags>

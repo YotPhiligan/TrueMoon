@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 /// <summary>Optional text HUD supplied by the active game session.</summary>
 public interface IGameHudSource

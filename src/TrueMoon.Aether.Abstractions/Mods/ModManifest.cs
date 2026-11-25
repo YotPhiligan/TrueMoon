@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Versioned, data-only description of a managed module artifact. Runtime validates every field before activation.</summary>
 public sealed record ModManifest

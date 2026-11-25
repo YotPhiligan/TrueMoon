@@ -1,6 +1,4 @@
-using TrueMoon.Aether.Abstractions.Sessions;
-
-namespace TrueMoon.Aether.Abstractions.Builds;
+namespace TrueMoon.Aether.Builds;
 
 
 /// <summary>A child bootstrap reference to an already-published, validated artifact.</summary>

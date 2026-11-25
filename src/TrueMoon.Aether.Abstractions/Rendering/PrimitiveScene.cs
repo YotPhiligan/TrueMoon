@@ -1,9 +1,9 @@
-using System.Numerics;
 using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Sessions;
+using System.Numerics;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Sessions;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Optional observational rendering capability, captured at a serialized simulation boundary.</summary>

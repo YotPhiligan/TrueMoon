@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Mods;
+using TrueMoon.Aether.Mods;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Mods;

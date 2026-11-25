@@ -1,7 +1,7 @@
-using TrueMoon.Aether.Abstractions.Sessions;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Sessions;
 
-namespace TrueMoon.Aether.Abstractions.Checkpoints;
+namespace TrueMoon.Aether.Checkpoints;
 
 
 /// <summary>Finite camera position and Euler rotation in radians for the version-one demo checkpoint.</summary>

@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 
 /// <summary>Geometry query outcome; Unavailable must never clear selection.</summary>

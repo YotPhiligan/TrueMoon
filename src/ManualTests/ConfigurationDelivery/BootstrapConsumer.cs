@@ -7,7 +7,7 @@ using TrueMoon;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Diagnostics;
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;

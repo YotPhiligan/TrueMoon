@@ -5,6 +5,7 @@ using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Kton;
@@ -115,7 +116,7 @@ public sealed class PhysicsLifecycleTests
         Assert.Empty(native.Worlds); Assert.False(scene.World.IsDisposed);
     }
 
-    private static TrueMoon.Aether.Abstractions.Scenes.SceneDocument Document() => PhysicsFixture.Document(new PhysicsFixture.BodySpec(PhysicsFixture.Body(), Vector3.Zero));
+    private static SceneDocument Document() => PhysicsFixture.Document(new PhysicsFixture.BodySpec(PhysicsFixture.Body(), Vector3.Zero));
     private static IEnumerable<Exception> Flatten(Exception error)
     {
         yield return error;

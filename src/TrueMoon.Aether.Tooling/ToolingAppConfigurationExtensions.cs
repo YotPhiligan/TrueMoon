@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Aether.Tooling.Projects;
@@ -24,8 +25,8 @@ public static class ToolingAppConfigurationExtensions
             if (services.Exist<ToolingHost>() || services.Exist<EditorProjects>() || services.Exist<ToolingAppLifetime>() || services.Exist<AetherHost>())
                 throw new InvalidOperationException("Aether Tooling requires one headless or full workflow registration per App.");
             AppConfigurationExtensions.RegisterSceneResolution(services);
-            if (!services.Exist<IFactory<Scenes.Authoring.ISceneAuthoringSession, Abstractions.Scenes.SceneDocument>>())
-                services.Singleton<IFactory<Scenes.Authoring.ISceneAuthoringSession, Abstractions.Scenes.SceneDocument>>(resolver =>
+            if (!services.Exist<IFactory<Scenes.Authoring.ISceneAuthoringSession, SceneDocument>>())
+                services.Singleton<IFactory<Scenes.Authoring.ISceneAuthoringSession, SceneDocument>>(resolver =>
                     new Scenes.Authoring.SceneAuthoringSessionFactory(resolver.Resolve<Runtime.Scenes.SceneResolutionService>(), snapshot.Authoring));
         });
         context.UseAetherEditorDocuments();

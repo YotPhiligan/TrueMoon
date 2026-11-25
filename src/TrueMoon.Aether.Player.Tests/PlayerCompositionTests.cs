@@ -1,5 +1,5 @@
 using Game.Logic;
-using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Input;
 using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;

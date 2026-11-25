@@ -1,7 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Rendering;
+namespace TrueMoon.Aether.Ecs.Rendering;
 
 
 /// <summary>Unmanaged render data referencing an exact CPU manifest; it owns no resource leases.</summary>

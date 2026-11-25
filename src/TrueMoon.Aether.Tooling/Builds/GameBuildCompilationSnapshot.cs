@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using TrueMoon.Aether.Abstractions.Builds;
+using TrueMoon.Aether.Builds;
 
 namespace TrueMoon.Aether.Tooling.Builds;
 

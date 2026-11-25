@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Rendering;
+namespace TrueMoon.Aether.Ecs.Rendering;
 
 
 /// <summary>Legacy opaque unit-cube material in stored-sRGB. Disabling drawing does not stop movement.</summary>

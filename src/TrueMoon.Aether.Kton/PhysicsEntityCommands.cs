@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 
 namespace TrueMoon.Aether.Kton;
 

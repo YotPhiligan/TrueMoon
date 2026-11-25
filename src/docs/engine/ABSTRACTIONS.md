@@ -34,7 +34,7 @@ scene/control/frame/checkpoint byte formats сохранены.
 ## ECS
 
 ```csharp
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 
 public readonly record struct Counter(int Value) : IComponent;
 public sealed class CounterSystem : IEcsSystem

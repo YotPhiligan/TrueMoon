@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
-using TrueMoon.Aether.Abstractions.Preview;
+using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Runtime.Sessions;
 
 namespace TrueMoon.Aether.Runtime.Frames;

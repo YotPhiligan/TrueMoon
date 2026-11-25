@@ -1,6 +1,6 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Kton.Runtime;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
@@ -8,7 +8,7 @@ using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.Aether.Kton.Tests;
 

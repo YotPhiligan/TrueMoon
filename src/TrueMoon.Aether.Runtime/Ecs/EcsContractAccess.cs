@@ -1,24 +1,30 @@
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using CommandTarget = TrueMoon.Aether.Ecs.CommandTarget;
+using DeferredEntity = TrueMoon.Aether.Ecs.DeferredEntity;
+using Ecs_EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsPhase = TrueMoon.Aether.Ecs.EcsPhase;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using IEcsSystemAccess = TrueMoon.Aether.Ecs.IEcsSystemAccess;
 
 namespace TrueMoon.Aether.Runtime.Ecs;
 
 // One binding per owned system. No container, component boxing or independent storage.
 // Retained neutral descriptors keep this small binding, whose World reference is cleared after cleanup.
-internal sealed class EcsContractAccess(World world) : A.IEcsSystemAccess
+internal sealed class EcsContractAccess(World world) : IEcsSystemAccess
 {
     private World? _world = world;
     private EcsSystemContext? _context;
     private ulong _invocation;
     private int _thread;
     private CancellationToken _cancellation;
-    internal A.EcsSystemContext Activate(EcsSystemContext context)
+    internal Ecs_EcsSystemContext Activate(EcsSystemContext context)
     {
         if (_context != null) throw new InvalidOperationException("Contract invocation is reentrant.");
         if (_world == null) throw new ObjectDisposedException(nameof(EcsContractAccess));
         if (!ReferenceEquals(context.World, _world)) throw new InvalidOperationException("Contract system World mismatch.");
         _invocation = checked(_invocation + 1); _thread = Environment.CurrentManagedThreadId;
         _context = context; _cancellation = context.CancellationToken;
-        try { return new(this, _invocation, context.TickNumber, context.DeltaTime, (A.EcsPhase)context.Phase, _cancellation); }
+        try { return new(this, _invocation, context.TickNumber, context.DeltaTime, (EcsPhase)context.Phase, _cancellation); }
         catch { Deactivate(); throw; }
     }
     internal void Deactivate() { _context = null; _cancellation = default; }
@@ -32,10 +38,10 @@ internal sealed class EcsContractAccess(World world) : A.IEcsSystemAccess
         _cancellation.ThrowIfCancellationRequested();
     }
     public Guid GetWorldId(ulong invocation) { ValidateInvocation(invocation); return _world!.Id; }
-    public bool IsAlive(ulong invocation, A.EntityHandle entity) { ValidateInvocation(invocation); return _world!.IsAlive(Legacy(entity)); }
-    public bool HasComponent<T>(ulong invocation, A.EntityHandle entity) where T : struct
+    public bool IsAlive(ulong invocation, EntityHandle entity) { ValidateInvocation(invocation); return _world!.IsAlive(Legacy(entity)); }
+    public bool HasComponent<T>(ulong invocation, EntityHandle entity) where T : struct
     { ValidateInvocation(invocation); return _world!.HasComponent<T>(Legacy(entity)); }
-    public bool TryGetComponent<T>(ulong invocation, A.EntityHandle entity, out T value) where T : struct
+    public bool TryGetComponent<T>(ulong invocation, EntityHandle entity, out T value) where T : struct
     { ValidateInvocation(invocation); return _world!.TryGetComponent(Legacy(entity), out value); }
     public void ForEach<T>(ulong invocation, ReadOnlySpan<Type> excluded, A.QueryReadAction<T> action) where T : struct
     { ArgumentNullException.ThrowIfNull(action); Visit(invocation, excluded, action, null); }
@@ -86,18 +92,18 @@ internal sealed class EcsContractAccess(World world) : A.IEcsSystemAccess
         return new(copy);
     }
     public int CommandCount(ulong invocation) { ValidateInvocation(invocation); return _context!.Commands.Count; }
-    public A.DeferredEntity CreateEntity(ulong invocation)
+    public DeferredEntity CreateEntity(ulong invocation)
     { ValidateInvocation(invocation); var token = _context!.Commands.CreateEntity(); return new(token.BufferId, token.BatchId, token.Index); }
-    public void DestroyEntity(ulong invocation, A.CommandTarget entity) { ValidateInvocation(invocation); _context!.Commands.DestroyEntity(Legacy(entity)); }
-    public void AddComponent<T>(ulong invocation, A.CommandTarget entity, T value) where T : struct
+    public void DestroyEntity(ulong invocation, CommandTarget entity) { ValidateInvocation(invocation); _context!.Commands.DestroyEntity(Legacy(entity)); }
+    public void AddComponent<T>(ulong invocation, CommandTarget entity, T value) where T : struct
     { ValidateInvocation(invocation); _context!.Commands.AddComponent(Legacy(entity), value); }
-    public void SetComponent<T>(ulong invocation, A.CommandTarget entity, T value) where T : struct
+    public void SetComponent<T>(ulong invocation, CommandTarget entity, T value) where T : struct
     { ValidateInvocation(invocation); _context!.Commands.SetComponent(Legacy(entity), value); }
-    public void RemoveComponent<T>(ulong invocation, A.CommandTarget entity) where T : struct
+    public void RemoveComponent<T>(ulong invocation, CommandTarget entity) where T : struct
     { ValidateInvocation(invocation); _context!.Commands.RemoveComponent<T>(Legacy(entity)); }
     public void RequestStop(ulong invocation) { ValidateInvocation(invocation); _context!.RequestStop(); }
-    private static A.EntityHandle Legacy(A.EntityHandle entity) => entity;
-    private static A.EntityHandle Neutral(A.EntityHandle entity) => entity;
-    private static A.CommandTarget Legacy(A.CommandTarget target) => target.IsDeferred
-        ? new A.DeferredEntity(target.Deferred.BufferId, target.Deferred.BatchId, target.Deferred.Index) : Legacy(target.Live);
+    private static EntityHandle Legacy(EntityHandle entity) => entity;
+    private static EntityHandle Neutral(EntityHandle entity) => entity;
+    private static CommandTarget Legacy(CommandTarget target) => target.IsDeferred
+        ? new DeferredEntity(target.Deferred.BufferId, target.Deferred.BatchId, target.Deferred.Index) : Legacy(target.Live);
 }

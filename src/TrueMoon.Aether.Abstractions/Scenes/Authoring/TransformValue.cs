@@ -1,6 +1,4 @@
-using System.Collections.Immutable;
-
-namespace TrueMoon.Aether.Abstractions.Scenes.Authoring;
+namespace TrueMoon.Aether.Scenes.Authoring;
 
 
 /// <summary>Local built-in v1 Transform: position, pitch/yaw/roll in radians and positive scale.</summary>

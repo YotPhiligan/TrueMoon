@@ -1,13 +1,13 @@
 using System.Numerics;
 using Game.Logic;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Input;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Input;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Checkpoints;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Interactions;

@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Static entry factory invoked by the host's injected factory, never by the root DI container.</summary>
 /// <remarks>A failed Create must release its unpublished resources. Created entry results belong to the module group.</remarks>

@@ -1,13 +1,13 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Gpu;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Gpu.Surfaces;
 using TrueMoon.Aether.Runtime.Preview;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Preview;

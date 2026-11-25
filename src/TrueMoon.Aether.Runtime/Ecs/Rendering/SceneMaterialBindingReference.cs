@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 

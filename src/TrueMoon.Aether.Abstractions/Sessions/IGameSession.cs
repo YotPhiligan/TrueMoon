@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 
 /// <summary>One caller-owned game session. Its owner stops/drains use before disposal.</summary>

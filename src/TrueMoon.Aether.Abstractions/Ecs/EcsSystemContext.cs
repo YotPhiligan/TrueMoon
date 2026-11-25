@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Invocation-stamped value context. Copies cannot revive when the host starts a later invocation.</summary>
 /// <remarks>The borrowed host binding validates ownership and declared access. No concrete World or service resolver is returned.</remarks>

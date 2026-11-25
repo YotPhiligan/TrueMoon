@@ -1,8 +1,8 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using Xunit;

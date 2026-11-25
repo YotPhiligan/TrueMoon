@@ -1,5 +1,5 @@
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 

@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Loading;
 
@@ -16,16 +16,16 @@ public sealed class ComponentRegistryBuilder
     /// <param name="schema">Neutral immutable schema. Multiplicity remains unsupported.</param>
     /// <param name="factory">Borrowed DI factory receiving detached effective values, including defaults.</param><returns>This builder.</returns>
     /// <remarks>This data-only path provides no resource acquisition or entity/asset reference resolution. Use the explicit runtime importer for those capabilities.</remarks>
-    public ComponentRegistryBuilder RegisterValues<T>(Abstractions.Scenes.ComponentSchema schema,
-        IFactory<T, Abstractions.Scenes.ComponentData> factory) where T : struct
+    public ComponentRegistryBuilder RegisterValues<T>(ComponentSchema schema,
+        IFactory<T, ComponentData> factory) where T : struct
     {
         ArgumentNullException.ThrowIfNull(schema); ArgumentNullException.ThrowIfNull(factory);
         return Register<T>(ContractComponentValues.Legacy(schema), context =>
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             var component = context.Component;
-            var values = new Abstractions.Scenes.ComponentData(new(component.Id.Value), new(component.TypeId.Value), component.SchemaVersion,
-                component.Properties.Select(pair => new KeyValuePair<string, Abstractions.Scenes.PropertyValue>(pair.Key, ContractComponentValues.Neutral(pair.Value.Value))));
+            var values = new ComponentData(new(component.Id.Value), new(component.TypeId.Value), component.SchemaVersion,
+                component.Properties.Select(pair => new KeyValuePair<string, PropertyValue>(pair.Key, ContractComponentValues.Neutral(pair.Value.Value))));
             var value = factory.Create(values); context.CancellationToken.ThrowIfCancellationRequested(); return value;
         });
     }

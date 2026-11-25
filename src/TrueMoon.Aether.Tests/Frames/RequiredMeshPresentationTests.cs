@@ -3,7 +3,6 @@ using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Tests.Runtime;
 using Xunit;
 

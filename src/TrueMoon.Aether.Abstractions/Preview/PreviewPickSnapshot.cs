@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Preview;
+namespace TrueMoon.Aether.Preview;
 
 
 /// <summary>Bounded immutable cube geometry from the exact projected render payload; no World/UI/resource ownership.</summary>

@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 
 namespace TrueMoon.Aether.Runtime.Gpu.Vulkan;

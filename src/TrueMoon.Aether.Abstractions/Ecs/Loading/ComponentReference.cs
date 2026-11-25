@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Loading;
+namespace TrueMoon.Aether.Ecs.Loading;
 
 
 /// <summary>Reference semantics for a string-valued authoring property.</summary>

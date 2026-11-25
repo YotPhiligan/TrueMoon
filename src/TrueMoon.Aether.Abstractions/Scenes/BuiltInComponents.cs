@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 
 /// <summary>Stable v1 component roles understood by the primitive scene consumer. IDs and property keys are persistent contracts.</summary>

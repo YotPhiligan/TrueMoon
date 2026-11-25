@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>A reservation in exactly one structural command batch. Default is invalid.</summary>
 public readonly record struct DeferredEntity

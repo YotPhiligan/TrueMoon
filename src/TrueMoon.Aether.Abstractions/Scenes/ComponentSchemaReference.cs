@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Scenes;
+namespace TrueMoon.Aether.Scenes;
 
 /// <summary>Persistent schema identity, independent of CLR type names, layouts and assembly versions.</summary>
 public readonly record struct ComponentSchemaReference

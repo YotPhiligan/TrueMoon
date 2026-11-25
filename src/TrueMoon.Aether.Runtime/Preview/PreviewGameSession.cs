@@ -1,7 +1,7 @@
-﻿using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+﻿using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Preview;
 

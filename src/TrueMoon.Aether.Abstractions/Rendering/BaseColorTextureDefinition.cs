@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 /// <summary>Supported base-color sampling policies.</summary>
 public enum RenderTextureSampler

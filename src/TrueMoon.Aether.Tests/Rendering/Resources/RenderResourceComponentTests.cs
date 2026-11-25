@@ -1,11 +1,12 @@
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Rendering.Resources;

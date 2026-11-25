@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Invocation-stamped query. Structural mutation is deferred; refs exist only inside synchronous callbacks.</summary>
 /// <typeparam name="T">Required reference-free value component.</typeparam>

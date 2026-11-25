@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Editor.UI.Editing;
 

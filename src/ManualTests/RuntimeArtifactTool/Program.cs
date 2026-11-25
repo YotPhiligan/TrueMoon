@@ -1,8 +1,8 @@
 using TrueMoon.Aether.Runtime;
 using System.Text.Json;
 using TrueMoon.Aether.Runtime.Hosting;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Builds;
 
 namespace TrueMoon.ManualTests.RuntimeArtifactTool;

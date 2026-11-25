@@ -1,5 +1,5 @@
 using System.Reflection;
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Sessions;
 
 namespace TrueMoon.Aether.Runtime.Builds;
 

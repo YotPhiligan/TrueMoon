@@ -1,6 +1,9 @@
+using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
@@ -20,11 +23,11 @@ public sealed class RuntimeBoundaryTests
             reference.Name!.StartsWith("TrueMoon.Alloy", StringComparison.Ordinal) || reference.Name.StartsWith("TrueMoon.Argentis", StringComparison.Ordinal));
         Assert.DoesNotContain(assembly.GetExportedTypes(), type => type.Name is "GameBuildCompiler" or "GameEditor" or "SceneAuthoringSession" or "AetherHost");
         Assert.DoesNotContain(assembly.GetExportedTypes(), type => type.Name == "SceneWorldLoadError");
-        Assert.Equal(typeof(TrueMoon.Aether.Abstractions.Ecs.Loading.SceneWorldLoadError),
+        Assert.Equal(typeof(SceneWorldLoadError),
             typeof(TrueMoon.Aether.Runtime.Ecs.Loading.SceneWorldLoadException).GetProperty("Error")!.PropertyType);
         var artifact = typeof(TrueMoon.Aether.Runtime.Builds.GameBuildArtifact);
         Assert.Null(artifact.GetMethod("Publish")); Assert.Null(artifact.GetProperty("Inputs")); Assert.Null(artifact.GetProperty("Compilation"));
-        Assert.Same(typeof(TrueMoon.Aether.Abstractions.Scenes.SceneDocument).Assembly, typeof(TrueMoon.Aether.Abstractions.Sessions.IGameSession).Assembly);
+        Assert.Same(typeof(SceneDocument).Assembly, typeof(IGameSession).Assembly);
     }
 
     [Theory]

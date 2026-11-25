@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 
 /// <summary>Observes a component only within a synchronous callback.</summary>

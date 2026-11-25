@@ -11,7 +11,7 @@ using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Diagnostics;
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;

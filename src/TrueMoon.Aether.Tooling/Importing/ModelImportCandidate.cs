@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Security.Cryptography;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Tooling.Importing;
 

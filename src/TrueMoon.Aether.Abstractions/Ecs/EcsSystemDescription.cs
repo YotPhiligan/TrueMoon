@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Mutable composition-time declarations; Freeze creates an independent immutable host plan.</summary>
 public sealed class EcsSystemDescription

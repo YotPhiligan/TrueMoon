@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Exact identities and hard ceilings of the first CPU mesh/material profile.</summary>

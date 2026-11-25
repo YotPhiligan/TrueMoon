@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
-using TrueMoon.Aether.Abstractions.Scenes;
-using TrueMoon.Aether.Abstractions.Scenes.Authoring;
 using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;

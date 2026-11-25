@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Builds;
 

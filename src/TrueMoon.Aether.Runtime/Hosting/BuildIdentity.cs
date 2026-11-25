@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Mithril.Units;
@@ -12,7 +13,7 @@ public static class BuildIdentity
 {
     private static string Entry => Assembly.GetEntryAssembly()?.Location is { Length: > 0 } path ? path
         : throw new NotSupportedException("A managed entry assembly is required for build verification.");
-    private static string[] Shared => [typeof(GameBuildLoader).Assembly.Location, typeof(IFactory<>).Assembly.Location, typeof(Abstractions.Ecs.ISystem).Assembly.Location,
+    private static string[] Shared => [typeof(GameBuildLoader).Assembly.Location, typeof(IFactory<>).Assembly.Location, typeof(ISystem).Assembly.Location,
         typeof(PipesInvocationClient<>).Assembly.Location, typeof(ChildProcessUnitHandle).Assembly.Location];
 
     /// <summary>Exact current-entry/shared identity for an explicitly selected same-executable runtime profile.</summary>

@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.Aether.Runtime.Ecs;
 
@@ -178,7 +178,7 @@ public sealed partial class World : IDisposable
 
     internal static void ValidateComponent<T>() where T : struct
     {
-        Abstractions.Ecs.ComponentStorage.Validate<T>();
+        ComponentStorage.Validate<T>();
     }
 
     private bool Matches(EntityHandle entity)

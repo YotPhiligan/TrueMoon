@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.Aether.Kul.Runtime;
 

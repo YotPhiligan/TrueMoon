@@ -1,12 +1,15 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;
 using TrueMoon.Kton.Shapes;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Tests;
 
@@ -54,9 +57,9 @@ public sealed class PhysicsAllocationTests
     {
         await using var app = PhysicsFixture.Build(microsoft);
         await app.StartAsync();
-        A.EntityHandle original = default, replacement = default;
-        var description = PhysicsEntityCommands.DeclareWrites(new A.EcsSystemDescription("test.scratch.reuse"));
-        var actions = new EcsSystemRegistration(description, new Factory<A.ISystem>(() => new PhysicsGraph.Callback(context =>
+        EntityHandle original = default, replacement = default;
+        var description = PhysicsEntityCommands.DeclareWrites(new EcsSystemDescription("test.scratch.reuse"));
+        var actions = new EcsSystemRegistration(description, new Factory<ISystem>(() => new PhysicsGraph.Callback(context =>
         {
             if (context.TickNumber == 1)
                 PhysicsEntityCommands.AddCharacter(context.Commands, original, new PhysicsCharacter { MaximumSpeed = 1.5f }, new(new(1, 0), 4));
@@ -88,7 +91,7 @@ public sealed class PhysicsAllocationTests
         Assert.InRange(graph.World.GetComponent<LocalTransform>(regular).Position.X, 10.199f, 10.201f);
 
         graph.Tick();
-        graph.World.Query<PhysicsCharacter>().ForEach((A.EntityHandle entity, in PhysicsCharacter _) => replacement = entity);
+        graph.World.Query<PhysicsCharacter>().ForEach((EntityHandle entity, in PhysicsCharacter _) => replacement = entity);
         Assert.Equal(original.Index, replacement.Index);
         Assert.NotEqual(original.Generation, replacement.Generation);
         Assert.False(graph.Physics.TryGetBody(original, out _));
@@ -117,9 +120,9 @@ public sealed class PhysicsAllocationTests
     {
         await using var app = PhysicsFixture.Build(microsoft);
         await app.StartAsync();
-        A.EntityHandle character = default;
-        var description = PhysicsEntityCommands.DeclareWrites(new A.EcsSystemDescription("test.cached.character"));
-        var actions = new EcsSystemRegistration(description, new Factory<A.ISystem>(() => new PhysicsGraph.Callback(context =>
+        EntityHandle character = default;
+        var description = PhysicsEntityCommands.DeclareWrites(new EcsSystemDescription("test.cached.character"));
+        var actions = new EcsSystemRegistration(description, new Factory<ISystem>(() => new PhysicsGraph.Callback(context =>
         {
             if (context.TickNumber == 1)
                 PhysicsEntityCommands.AddCharacter(context.Commands, character, new PhysicsCharacter { MaximumSpeed = 2 }, new(new(1.5f, 0)));

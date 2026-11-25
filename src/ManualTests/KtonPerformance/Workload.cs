@@ -1,5 +1,5 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Kton;
 using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;

@@ -14,7 +14,7 @@ ticks. World, entity handles, typed pools, component values и номер сле
 
 ## SDK и границы профиля
 
-Новые contracts находятся в `TrueMoon.Aether.Abstractions.Mods`; SDK-only мод
+Новые contracts находятся в `TrueMoon.Aether.Mods`; SDK-only мод
 ссылается только на Abstractions/Contracts. Runtime и Tooling для создания модовых
 систем не требуются. Дополнительные stable game API assemblies задаёт host allowlist
 и exact shared descriptors manifest, как в ARCH3.6.

@@ -1,21 +1,20 @@
 using System.Text.Json;
-using TrueMoon.Aether.Abstractions.Checkpoints;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Configuration;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
-using SceneWorldLoadError = TrueMoon.Aether.Abstractions.Ecs.Loading.SceneWorldLoadError;
+using SceneWorldLoadError = TrueMoon.Aether.Ecs.Loading.SceneWorldLoadError;
 
 namespace TrueMoon.Aether.Tests.Configuration;
 

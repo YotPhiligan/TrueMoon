@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace TrueMoon.Aether.Abstractions.Checkpoints;
+namespace TrueMoon.Aether.Checkpoints;
 
 
 /// <summary>One stable entity's game-owned interaction state; authoring geometry is unchanged.</summary>

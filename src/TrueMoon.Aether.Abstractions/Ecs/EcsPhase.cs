@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 
 /// <summary>Ordered simulation phases, each followed by deferred command playback.</summary>

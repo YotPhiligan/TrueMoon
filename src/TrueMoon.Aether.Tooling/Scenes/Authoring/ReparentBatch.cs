@@ -1,5 +1,5 @@
 ﻿using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Tooling.Scenes.Authoring;
 

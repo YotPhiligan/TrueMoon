@@ -1,14 +1,17 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Kton.Bodies;
 using TrueMoon.Kton.Shapes;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Tests;
 
@@ -74,13 +77,13 @@ public sealed class PhysicsContractsTests
     public void PhaseHelpers_SpawnDetachReattachAndDeleteCompleteRolesWithoutChangingNeighbor()
     {
         using var world = new World(); var neighbor = world.CreateEntity(); world.AddComponent(neighbor, new PhysicsVelocity(new(9, 8, 7)));
-        A.EntityHandle bodyEntity = default;
+        EntityHandle bodyEntity = default;
         var body = new PhysicsBody(PhysicsBodyMotion.Kinematic, PhysicsColliderShape.Box, Vector3.One, 0);
         var pose = LocalTransform.Identity with { Position = new(2, 4, 6) };
         var velocity = new PhysicsVelocity(new(3, 0, 0));
-        var description = PhysicsEntityCommands.DeclareWrites(new A.EcsSystemDescription("test.commands"));
+        var description = PhysicsEntityCommands.DeclareWrites(new EcsSystemDescription("test.commands"));
         using var scheduler = EcsScheduler.Create(world,
-        [new(description, new Factory<A.ISystem>(() => new Callback(context =>
+        [new(description, new Factory<ISystem>(() => new Callback(context =>
         {
             switch (context.TickNumber)
             {
@@ -91,7 +94,7 @@ public sealed class PhysicsContractsTests
             }
         }))) ]);
         Assert.True(scheduler.Tick(TimeSpan.FromSeconds(1d / 60)));
-        world.Query<PhysicsBody>().ForEach((A.EntityHandle entity, in PhysicsBody _) => bodyEntity = entity);
+        world.Query<PhysicsBody>().ForEach((EntityHandle entity, in PhysicsBody _) => bodyEntity = entity);
         Assert.NotEqual(default, bodyEntity); Assert.Equal(2, world.EntityCount);
         Assert.Equal(pose, world.GetComponent<LocalTransform>(bodyEntity)); Assert.Equal(velocity, world.GetComponent<PhysicsVelocity>(bodyEntity));
         Assert.Equal(default, world.GetComponent<TransformParent>(bodyEntity).Parent);
@@ -112,15 +115,15 @@ public sealed class PhysicsContractsTests
         Assert.Throws<ArgumentNullException>(() => PhysicsEntityCommands.DeclareWrites(null!));
         using var world = new World();
         using var scheduler = EcsScheduler.Create(world,
-        [new(new A.EcsSystemDescription("test.missing-writes"), new Factory<A.ISystem>(() => new Callback(context =>
+        [new(new EcsSystemDescription("test.missing-writes"), new Factory<ISystem>(() => new Callback(context =>
             PhysicsEntityCommands.CreateBody(context.Commands, body, LocalTransform.Identity))))]);
         Assert.Throws<InvalidOperationException>(() => scheduler.Tick(TimeSpan.FromSeconds(1d / 60)));
         Assert.True(world.IsFaulted); Assert.Equal(0, world.EntityCount); Assert.Equal(0UL, scheduler.TickNumber);
     }
 
-    private sealed class Callback(Action<A.EcsSystemContext> execute) : A.ISystem
+    private sealed class Callback(Action<EcsSystemContext> execute) : ISystem
     {
-        public void Execute(A.EcsSystemContext context) => execute(context);
+        public void Execute(EcsSystemContext context) => execute(context);
         public void Dispose() { }
     }
 }

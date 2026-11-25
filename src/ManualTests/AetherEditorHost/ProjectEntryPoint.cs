@@ -1,6 +1,5 @@
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.Tooling;
-using TrueMoon.Aether.Abstractions.Scenes;
 using System.Text.Json;
 using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Projects;

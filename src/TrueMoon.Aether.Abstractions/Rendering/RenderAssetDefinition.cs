@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Immutable CPU asset data. It owns managed values, not native resources or service lifetimes.</summary>

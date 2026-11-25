@@ -3,11 +3,11 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Ecs.Transforms;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Kton;
 using TrueMoon.Aether.Kton.Runtime;
 using TrueMoon.Aether.Runtime;
@@ -22,7 +22,7 @@ using TrueMoon.Kton.Bepu;
 using TrueMoon.Kton.Bepu.Hosting;
 using TrueMoon.Kton.Bodies;
 using TrueMoon.Kton.Contacts;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.ManualTests.KtonEcs;
 

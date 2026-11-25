@@ -1,5 +1,4 @@
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Kton;
 

@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Loading;
+namespace TrueMoon.Aether.Ecs.Loading;
 
 
 /// <summary>Complete neutral authoring payload, not a primitive projection or runtime checkpoint.</summary>

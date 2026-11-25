@@ -1,5 +1,5 @@
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Frozen logical image rectangle, excluding letterbox bars. No UI or DPI dependency.</summary>

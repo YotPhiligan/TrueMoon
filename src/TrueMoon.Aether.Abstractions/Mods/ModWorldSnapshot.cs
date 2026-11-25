@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Abstractions.Mods;
+namespace TrueMoon.Aether.Mods;
 
 /// <summary>Neutral effective scene/component values plus copied system state. No CLR component types or live resources.</summary>
 public sealed class ModWorldSnapshot

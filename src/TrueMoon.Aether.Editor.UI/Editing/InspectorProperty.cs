@@ -1,6 +1,6 @@
 using TrueMoon.Argentis.Bindings;
 using System.Globalization;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI.Editing;

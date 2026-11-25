@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Transforms;
+namespace TrueMoon.Aether.Ecs.Transforms;
 
 
 /// <summary>Local row-vector S*R*T pose. Translation is in parent coordinates; scale must be positive.</summary>

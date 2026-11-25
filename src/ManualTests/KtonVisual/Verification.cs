@@ -111,7 +111,7 @@ internal static class Verification
     }
     internal static string WorldHash(VisualSession session)=>string.Join(";",Enumerable.Range(0,Level.Actors.Length).Select(i=>
     {
-        var pose=session.World.GetComponent<TrueMoon.Aether.Abstractions.Ecs.Transforms.LocalTransform>(session.Entity(i));
+        var pose=session.World.GetComponent<TrueMoon.Aether.Ecs.Transforms.LocalTransform>(session.Entity(i));
         return $"{i}:{pose.Position}:{pose.Rotation}";
     }));
 }

@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Detached immutable reservation mapping. Handles may already have been destroyed after creation.</summary>
 public sealed class CommandPlaybackResult

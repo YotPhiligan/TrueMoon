@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs.Motion;
+namespace TrueMoon.Aether.Ecs.Motion;
 
 /// <summary>Marks entities whose local pose is advanced by another system, such as a physics bridge.</summary>
 /// <remarks>Built-in velocity movement skips these entities. The owning subsystem adds/removes this marker at

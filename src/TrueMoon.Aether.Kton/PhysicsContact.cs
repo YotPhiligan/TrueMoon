@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Kton.Contacts;
 
 namespace TrueMoon.Aether.Kton;

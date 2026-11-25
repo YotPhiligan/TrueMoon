@@ -3,7 +3,6 @@ using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tooling;
@@ -12,6 +11,7 @@ using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Editor.UI.Hierarchy;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Argentis;
 using Xunit;
 

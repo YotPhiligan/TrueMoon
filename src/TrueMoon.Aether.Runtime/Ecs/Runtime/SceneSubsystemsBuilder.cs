@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Ecs;
 using TrueMoon.Services;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Runtime;
@@ -14,7 +15,7 @@ public sealed class SceneSubsystemsBuilder
         if (string.IsNullOrWhiteSpace(id) || id.Length > 128) throw new ArgumentException("A subsystem ID must contain1..128characters.", nameof(id));
         if (_entries.Count == 64) throw new InvalidOperationException("At most64scene subsystems are supported.");
         if (_entries.Any(e => e.Id == id)) throw new ArgumentException("Duplicate subsystem ID.", nameof(id));
-        if (typeof(IEcsSystem).IsAssignableFrom(typeof(T)) || typeof(Abstractions.Ecs.ISystem).IsAssignableFrom(typeof(T)))
+        if (typeof(IEcsSystem).IsAssignableFrom(typeof(T)) || typeof(ISystem).IsAssignableFrom(typeof(T)))
             throw new ArgumentException("Subsystem resource owners must be distinct from scheduler-owned systems.", nameof(T));
         _entries.Add((id, resolver =>
         {

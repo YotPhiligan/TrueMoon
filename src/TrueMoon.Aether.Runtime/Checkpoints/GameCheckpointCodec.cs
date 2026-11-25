@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
-using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Checkpoints;
 
 namespace TrueMoon.Aether.Runtime.Checkpoints;
 

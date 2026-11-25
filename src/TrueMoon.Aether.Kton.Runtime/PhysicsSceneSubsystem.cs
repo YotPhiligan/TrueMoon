@@ -1,8 +1,8 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
@@ -10,7 +10,10 @@ using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;
 using TrueMoon.Kton.Contacts;
 using TrueMoon.Kton.Shapes;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Runtime;
 
@@ -83,11 +86,11 @@ public sealed partial class PhysicsSceneSubsystem : ISceneSubsystem
             InitializeCharacterRoles(candidate);
         }
         token.ThrowIfCancellationRequested();
-        var description = new A.EcsSystemDescription("kton.physics", EcsPhase.Movement).Before("builtin.movement")
+        var description = new EcsSystemDescription("kton.physics", EcsPhase.Movement).Before("builtin.movement")
             .Read<PhysicsBody>().Read<PhysicsTeleport>().Read<ExternalMotion>().Read<TransformParent>().Read<WorldTransform>()
             .Write<LocalTransform>().Write<PhysicsVelocity>().Write<PhysicsContact>();
         description.Read<PhysicsCharacter>().Read<PhysicsCharacterInput>().Write<PhysicsCharacterState>();
-        Systems = [new(description, new Factory<A.ISystem, World>(world =>
+        Systems = [new(description, new Factory<ISystem, World>(world =>
         {
             if (!ReferenceEquals(world, _world)) throw new InvalidOperationException("Physics system World mismatch.");
             return systems.Create(this) ?? throw new InvalidOperationException("Physics system factory returned null.");
@@ -179,7 +182,7 @@ public sealed partial class PhysicsSceneSubsystem : ISceneSubsystem
         ReconcileCharacters();
         _removals.Clear();
     }
-    internal void Advance(A.EcsSystemContext context)
+    internal void Advance(EcsSystemContext context)
     {
         Ready();
         if (context.WorldId != _world.Id || context.DeltaTime != FixedStep || context.TickNumber != _physics!.LastCompletedTick + 1)

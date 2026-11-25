@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Silk.NET.Vulkan;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 using VkBuffer = Silk.NET.Vulkan.Buffer;
 

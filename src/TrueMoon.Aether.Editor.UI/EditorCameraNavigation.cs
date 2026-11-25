@@ -1,6 +1,6 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Preview;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 
 namespace TrueMoon.Aether.Editor.UI;
 

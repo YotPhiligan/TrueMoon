@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Input;
 using TrueMoon.Aether.Runtime;
 
 namespace TrueMoon.Aether.Player.Scenarios;

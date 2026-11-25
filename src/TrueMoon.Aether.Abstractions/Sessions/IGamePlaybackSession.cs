@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 /// <summary>Optional notification of actual runtime playback, including presentation-induced pauses.</summary>
 /// <remarks>Sessions start paused. The host serializes notifications with ticks. Preparation must not start audible

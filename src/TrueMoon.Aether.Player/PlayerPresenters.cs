@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Argentis.Painting;

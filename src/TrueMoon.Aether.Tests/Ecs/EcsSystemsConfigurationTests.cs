@@ -1,5 +1,5 @@
+using TrueMoon.Aether.Ecs;
 using IEcsSystem = TrueMoon.Aether.Runtime.Ecs.IEcsSystem;
-using TrueMoon.Aether.Abstractions.Ecs;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Dependencies;

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace TrueMoon.Aether.Abstractions.Rendering;
+namespace TrueMoon.Aether.Rendering;
 
 
 /// <summary>Explicit bounded sRGB transfer functions; no implicit clamp, alpha or HDR conversion.</summary>

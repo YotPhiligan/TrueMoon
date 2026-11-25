@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Security.Cryptography;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Rendering;

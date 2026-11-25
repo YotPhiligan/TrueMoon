@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using Xunit;

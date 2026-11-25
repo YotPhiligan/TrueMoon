@@ -3,8 +3,8 @@ using TrueMoon.Aether.Runtime.Sessions;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
-using TrueMoon.Aether.Abstractions.Ecs.Loading;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Loading;
 

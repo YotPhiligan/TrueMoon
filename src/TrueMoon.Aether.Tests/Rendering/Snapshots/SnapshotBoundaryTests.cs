@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Abstractions.Ecs.Rendering;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
 using TrueMoon.Aether.Tests.Rendering.Resources;

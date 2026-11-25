@@ -1,12 +1,15 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;
 using TrueMoon.Kton.Contacts;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Tests;
 
@@ -31,10 +34,10 @@ public sealed class PhysicsContactTests
     {
         await using var app = PhysicsFixture.Build(microsoft); await app.StartAsync();
         var seen = new List<(ulong Tick, List<PhysicsContact> Events)>();
-        var observer = new EcsSystemRegistration(new A.EcsSystemDescription("test.contacts").Read<PhysicsContact>(),
-            new Factory<A.ISystem>(() => new PhysicsGraph.Callback(context =>
+        var observer = new EcsSystemRegistration(new EcsSystemDescription("test.contacts").Read<PhysicsContact>(),
+            new Factory<ISystem>(() => new PhysicsGraph.Callback(context =>
             {
-                var events = new List<PhysicsContact>(); context.Query<PhysicsContact>().ForEach((A.EntityHandle _, in PhysicsContact value) => events.Add(value));
+                var events = new List<PhysicsContact>(); context.Query<PhysicsContact>().ForEach((EntityHandle _, in PhysicsContact value) => events.Add(value));
                 seen.Add((context.TickNumber, events));
             })));
         using var graph = PhysicsGraph.Create(app, PhysicsFixture.Document(Floor, Sensor()), observer);
@@ -102,10 +105,10 @@ public sealed class PhysicsContactTests
         Assert.True(graph.World.IsFaulted); Assert.Equal(1UL, graph.Physics.LastCompletedTick); Assert.Equal(0UL, graph.Scheduler.TickNumber); Assert.Equal(2, graph.World.EntityCount);
     }
 
-    private static List<(A.EntityHandle Entity, PhysicsContact Value)> Events(PhysicsGraph graph)
+    private static List<(EntityHandle Entity, PhysicsContact Value)> Events(PhysicsGraph graph)
     {
-        var result = new List<(A.EntityHandle Entity, PhysicsContact Value)>();
-        graph.World.Query<PhysicsContact>().ForEach((A.EntityHandle entity, in PhysicsContact value) => result.Add((entity, value)));
+        var result = new List<(EntityHandle Entity, PhysicsContact Value)>();
+        graph.World.Query<PhysicsContact>().ForEach((EntityHandle entity, in PhysicsContact value) => result.Add((entity, value)));
         return result;
     }
 }

@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Ecs;
+namespace TrueMoon.Aether.Ecs;
 
 /// <summary>Stamped recording-only value. It cannot play/reset/dispose the host's shared phase buffer.</summary>
 public readonly struct EcsCommandWriter

@@ -1,16 +1,19 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Ecs.Motion;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemContext = TrueMoon.Aether.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.ManualTests.RuntimeConsumer;
 
@@ -71,14 +74,14 @@ internal static class SessionSubsystemProof
             if (arguments.FixedStep != TimeSpan.FromSeconds(1d / 60)) throw new InvalidOperationException("Fixed step drift.");
             var world = arguments.Scene.World; var entity = arguments.Scene.Entities.Values.Single();
             world.AddComponent(entity, new ExternalMotion());
-            Systems = [new(new A.EcsSystemDescription("consumer.external-motion", EcsPhase.Movement).After("builtin.movement").Write<LocalTransform>(),
-                new Factory<A.ISystem, World>(borrowed => ReferenceEquals(borrowed, world) ? new Motion(this, world, entity) : throw new InvalidOperationException("World drift.")))];
+            Systems = [new(new EcsSystemDescription("consumer.external-motion", EcsPhase.Movement).After("builtin.movement").Write<LocalTransform>(),
+                new Factory<ISystem, World>(borrowed => ReferenceEquals(borrowed, world) ? new Motion(this, world, entity) : throw new InvalidOperationException("World drift.")))];
         }
         public void SetPlaying(bool playing) { if (Disposed) throw new ObjectDisposedException(nameof(ProofSubsystem)); Playing = playing; }
         public void Dispose() { if (SystemDisposals != 1 || Playing) throw new InvalidOperationException("Resource release order."); Disposed = true; }
-        private sealed class Motion(ProofSubsystem owner, World world, EntityHandle entity) : A.ISystem
+        private sealed class Motion(ProofSubsystem owner, World world, EntityHandle entity) : ISystem
         {
-            public void Execute(A.EcsSystemContext context)
+            public void Execute(EcsSystemContext context)
             { var pose = world.GetComponent<LocalTransform>(entity); world.SetComponent(entity, pose with { Position = pose.Position + new Vector3(4, 0, 0) }); }
             public void Dispose() { if (owner.Disposed) throw new InvalidOperationException("Dependency released before system."); owner.SystemDisposals++; }
         }

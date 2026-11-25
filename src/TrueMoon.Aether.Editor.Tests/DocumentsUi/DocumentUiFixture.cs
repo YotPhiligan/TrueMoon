@@ -2,7 +2,6 @@ using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
-using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Tooling.Documents;

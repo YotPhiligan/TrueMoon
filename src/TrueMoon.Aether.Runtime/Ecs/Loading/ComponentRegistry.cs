@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Loading;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Loading;
 

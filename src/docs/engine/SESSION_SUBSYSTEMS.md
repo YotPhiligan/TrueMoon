@@ -7,9 +7,9 @@
 
 ## Подключение и границы API
 
-- `TrueMoon.Aether.Abstractions.Sessions.IGamePlaybackSession` — необязательное
+- `TrueMoon.Aether.Sessions.IGamePlaybackSession` — необязательное
   уведомление о фактическом Play/Pause. Формат IPC не меняется.
-- `TrueMoon.Aether.Abstractions.Ecs.Motion.ExternalMotion` — reference-free marker:
+- `TrueMoon.Aether.Ecs.Motion.ExternalMotion` — reference-free marker:
   встроенный Movement не интегрирует velocity такой сущности. Подсистема управляет
   marker на structural boundaries и записывает позу до Transform/Extraction.
 - `TrueMoon.Aether.Runtime.Ecs.Runtime.ISceneSubsystem` — владелец подготовленных

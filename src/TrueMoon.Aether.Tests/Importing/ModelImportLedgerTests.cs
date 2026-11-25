@@ -1,6 +1,6 @@
 using System.Numerics;
 using System.Security.Cryptography;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Dependencies;

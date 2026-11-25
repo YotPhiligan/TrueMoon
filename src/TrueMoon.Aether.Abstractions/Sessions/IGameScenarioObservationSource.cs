@@ -1,4 +1,4 @@
-namespace TrueMoon.Aether.Abstractions.Sessions;
+namespace TrueMoon.Aether.Sessions;
 
 /// <summary>Optional game capability for inspecting completed fixed ticks in scenario runs.</summary>
 public interface IGameScenarioObservationSource

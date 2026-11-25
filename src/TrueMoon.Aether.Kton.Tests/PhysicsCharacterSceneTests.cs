@@ -1,13 +1,16 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Kton;
 using TrueMoon.Kton.Bodies;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Tests;
 
@@ -149,9 +152,9 @@ public sealed class PhysicsCharacterSceneTests
     {
         await using var app = PhysicsFixture.Build(microsoft, world: new());
         await app.StartAsync();
-        A.EntityHandle entity = default;
-        var description = PhysicsEntityCommands.DeclareWrites(new A.EcsSystemDescription("test.character.lifecycle"));
-        var actions = new EcsSystemRegistration(description, new Factory<A.ISystem>(() => new PhysicsGraph.Callback(context =>
+        EntityHandle entity = default;
+        var description = PhysicsEntityCommands.DeclareWrites(new EcsSystemDescription("test.character.lifecycle"));
+        var actions = new EcsSystemRegistration(description, new Factory<ISystem>(() => new PhysicsGraph.Callback(context =>
         {
             if (context.TickNumber == 2) PhysicsEntityCommands.RemoveCharacter(context.Commands, entity);
             if (context.TickNumber == 3) PhysicsEntityCommands.AddCharacter(context.Commands, entity, new PhysicsCharacter());

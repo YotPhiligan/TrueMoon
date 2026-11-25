@@ -1,13 +1,12 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Ecs.Motion;
-using TrueMoon.Aether.Abstractions.Ecs.Transforms;
-using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Kton.Runtime;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Kton;

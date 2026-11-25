@@ -1,7 +1,7 @@
-using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Services;
 
-namespace TrueMoon.Aether.Abstractions.Runtime;
+namespace TrueMoon.Aether.Runtime;
 
 
 /// <summary>Explicit game activation implemented in the selected game assembly.</summary>

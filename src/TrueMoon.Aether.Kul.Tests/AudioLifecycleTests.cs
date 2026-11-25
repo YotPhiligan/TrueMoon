@@ -4,7 +4,11 @@ using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Kul;
 using Xunit;
-using A = TrueMoon.Aether.Abstractions.Ecs;
+using A = TrueMoon.Aether.Ecs;
+using EcsSystemDescription = TrueMoon.Aether.Ecs.EcsSystemDescription;
+using EntityHandle = TrueMoon.Aether.Ecs.EntityHandle;
+using ISystem = TrueMoon.Aether.Ecs.ISystem;
+using LocalTransform = TrueMoon.Aether.Ecs.Transforms.LocalTransform;
 
 namespace TrueMoon.Aether.Kul.Tests;
 
@@ -14,9 +18,9 @@ public sealed class AudioLifecycleTests
     [InlineData(false)] [InlineData(true)]
     public async Task GameplayHelpers_AttachDetachReattachAndReuseEntityIndexWithoutRevivingOldCommands(bool microsoft)
     {
-        await using var fixture = new AudioFixture(microsoft); await fixture.Start(); A.EntityHandle spawned = default;
-        var actions = new EcsSystemRegistration(AudioEntityCommands.DeclareWrites(new A.EcsSystemDescription("test.audio.lifecycle")),
-            new Factory<A.ISystem>(() => new AudioGraph.Callback(context =>
+        await using var fixture = new AudioFixture(microsoft); await fixture.Start(); EntityHandle spawned = default;
+        var actions = new EcsSystemRegistration(AudioEntityCommands.DeclareWrites(new EcsSystemDescription("test.audio.lifecycle")),
+            new Factory<ISystem>(() => new AudioGraph.Callback(context =>
             {
                 switch (context.TickNumber)
                 {
@@ -28,15 +32,15 @@ public sealed class AudioLifecycleTests
                 }
             })));
         using var graph = AudioGraph.Create(fixture, AudioFixture.Document(), actions); graph.Audio.SetPlaying(true); graph.Tick();
-        graph.World.Query<AudioSource>().ForEach((A.EntityHandle entity, in AudioSource source) => spawned = entity);
+        graph.World.Query<AudioSource>().ForEach((EntityHandle entity, in AudioSource source) => spawned = entity);
         Assert.True(graph.Audio.TryGetState(spawned, out var active)); Assert.Equal(8UL, active.Sequence);
-        Assert.Contains(fixture.Render(), sample => sample > .24f); Assert.False(graph.World.HasComponent<A.Transforms.LocalTransform>(spawned));
+        Assert.Contains(fixture.Render(), sample => sample > .24f); Assert.False(graph.World.HasComponent<LocalTransform>(spawned));
         graph.Tick(); Assert.False(graph.Audio.TryGetState(spawned, out _)); AudioFixture.Silent(fixture.Render());
         Assert.False(graph.World.HasComponent<AudioSourceState>(spawned)); Assert.False(graph.World.HasComponent<AudioPlaybackCommand>(spawned));
         graph.Tick(); Assert.True(graph.Audio.TryGetState(spawned, out var reattached)); Assert.Equal(0UL, reattached.Sequence);
         Assert.Equal(AudioSourcePhase.Stopped, reattached.Phase); AudioFixture.Silent(fixture.Render());
         var retired = spawned; graph.Tick(); Assert.False(graph.World.IsAlive(retired)); Assert.False(graph.Audio.TryGetState(retired, out _));
-        graph.Tick(); graph.World.Query<AudioSource>().ForEach((A.EntityHandle entity, in AudioSource source) => spawned = entity);
+        graph.Tick(); graph.World.Query<AudioSource>().ForEach((EntityHandle entity, in AudioSource source) => spawned = entity);
         Assert.Equal(retired.Index, spawned.Index); Assert.NotEqual(retired.Generation, spawned.Generation);
         Assert.True(graph.Audio.TryGetState(spawned, out var replacement)); Assert.Equal(new AudioSourceState(5, 0, AudioSourcePhase.Stopped, 0), replacement);
         Assert.False(graph.Audio.TryGetState(retired, out _)); AudioFixture.Silent(fixture.Render());

@@ -1,7 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Rendering;
 
-namespace TrueMoon.Aether.Abstractions.Ecs.Rendering;
+namespace TrueMoon.Aether.Ecs.Rendering;
 
 /// <summary>Orthographic view settings. The camera pose comes from the current WorldTransform.</summary>
 /// <param name="VerticalSize">Full visible height in world units, independent of the physical extent.</param>
