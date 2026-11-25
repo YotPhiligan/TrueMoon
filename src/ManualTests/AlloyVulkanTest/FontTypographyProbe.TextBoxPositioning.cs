@@ -205,12 +205,23 @@ internal static partial class FontTypographyProbe
         return (root, field);
     }
 
-    private static void RenderScrollStep(UiSession ui, TextBox field, float scale, ScrollStep step)
+    private static (Panel Root, TextBox Field) CreateScrollNumberBox(ScrollSample sample, Theme theme)
     {
-        field.Width = ScrollFieldWidth + (0.75f - step.PhasePx) / scale;
+        var root = new Panel { Background = theme.Input };
+        var number = new NumberBox("X") { Width = ScrollFieldWidth + 0.75f, Height = 36,
+            HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start, Margin = new(16, 20, 0, 0) };
+        number.Editor.FontSize = ScrollFontSize;
+        number.Editor.Value = sample.Text;
+        root.Add(number);
+        return (root, number.Editor);
+    }
+
+    private static void RenderScrollStep(UiSession ui, TextBox field, float scale, ScrollStep step, Element? widthOwner = null)
+    {
+        (widthOwner ?? field).Width = ScrollFieldWidth + (0.75f - step.PhasePx) / scale;
         if (step.Returning)
         {
-            // Widening retains the current offset. Home resets it on draw, then End uses the new width.
+            // Widening retains the scroll offset. Home resets it before End uses the new width.
             ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Home));
             Require(field.CaretIndex == 0 && ui.Update(), "Home did not reset the scroll.");
             MoveToEnd(ui, field);

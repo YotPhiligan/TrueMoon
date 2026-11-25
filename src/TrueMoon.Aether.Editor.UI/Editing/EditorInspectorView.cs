@@ -740,18 +740,11 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         protected override Color ThemeBackground => Theme.Control;
     }
 
-    private sealed class ComponentHeader : Button
+    internal sealed class ComponentHeader : Button
     {
         private bool _expanded = true;
         public bool Expanded { get => _expanded; set { if (_expanded == value) return; _expanded = value; Invalidate(Invalidation.Render); } }
         protected override bool CentersLabel => false;
-        private static readonly ElementPresentation HeaderPresentation = ElementPresentation.Create<ComponentHeader>(static (header, context) =>
-        {
-            ButtonPresenter.DrawLabel(header, context);
-            UiSymbols.Draw(context, header.Expanded ? UiSymbol.ChevronDown : UiSymbol.ChevronRight,
-                new(header.Bounds.X + 3, header.Bounds.Y + (header.Bounds.Height - 12) / 2, 12, 12), header.Foreground);
-        });
-        public override ElementPresentation Presentation => HeaderPresentation;
     }
 
 }

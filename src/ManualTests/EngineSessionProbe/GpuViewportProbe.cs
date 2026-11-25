@@ -36,23 +36,8 @@ public sealed class GpuViewportCanvas : Element
     public void Clear()
     { VerifyAccess(); _image?.Dispose(); _image = null; Stamp = null; Drawn = null; Invalidate(); }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(available.Width, 160);
-    private static readonly ElementPresentation Painter = ElementPresentation.Create<GpuViewportCanvas>(static (canvas, context) =>
-    {
-        var bounds = canvas.Bounds;
-        var image = canvas._image;
-        var stamp = canvas.Stamp;
-        context.Fill(bounds, new(19, 37, 61));
-        context.Save();
-        try
-        {
-            context.Clip(bounds);
-            if (image != null) context.Image(image, new(bounds.X + 8, bounds.Y + 8, canvas.PixelWidth * canvas.Zoom, canvas.PixelHeight * canvas.Zoom));
-        }
-        finally { context.Restore(); }
-        canvas.ReportDrawn(image != null ? stamp : null);
-    });
-    public override ElementPresentation Presentation => Painter;
-    private void ReportDrawn(GpuFrameStamp? stamp) => Drawn = stamp;
+    internal IImageSource? Image => _image;
+    internal void ReportDrawn(GpuFrameStamp? stamp) => Drawn = stamp;
     public override void Dispose() { if (IsDisposed) return; Clear(); base.Dispose(); }
 }
 
@@ -80,7 +65,7 @@ public static class GpuViewportProbe
         await using var app = App.Build(c =>
         {
             c.UseAether(o => { o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory; o.RuntimeFactory = _ => factory; });
-            c.UsePresentation<GpuViewportView>(o => { o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 640; w.Height = 280; w.Title = "TrueMoon ENG4d GPU viewport"; w.EnableDiagnostics = true; }); });
+            c.UsePresentation<GpuViewportView>(o => { o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 640; w.Height = 280; w.Title = "TrueMoon ENG4d GPU viewport"; w.EnableDiagnostics = true; }); });
             c.Services(r => r.Transient<GpuViewportView>());
         });
         var host = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!; var sessions = app.Services.Resolve<HostedUiSessionFactory>()!;

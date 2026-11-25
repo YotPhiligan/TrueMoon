@@ -1,13 +1,7 @@
-using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Painting;
 
-namespace TrueMoon.Argentis.Painting;
-
-/// <summary>Visual inputs for the icon glyph; independent of the button's lifetime.</summary>
-public readonly record struct IconButtonPaintState(Rect Bounds, float IconSize, UiSymbol Symbol, Color Foreground, bool UseVectorSymbol)
-{
-    internal static IconButtonPaintState From(IconButton button) => new(button.Bounds, button.IconSize, button.Symbol,
-        button.IsEffectivelyEnabled ? button.Foreground : button.Theme.Disabled, button.UseVectorSymbol);
-}
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Default rendering of the centered geometric glyph of an icon button.</summary>
 public sealed class IconButtonPresenter : IElementPresenter<IconButtonPaintState>

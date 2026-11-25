@@ -14,11 +14,11 @@ internal static partial class FontTypographyProbe
     {
         var theme = light ? Theme.Light : Theme.Dark;
         var gallery = new IconCatalog { Background = theme.Surface };
-        using var ui = UiSession.Create(gallery, backend, target, viewport);
+        using var ui = UiSession.Create(gallery, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: ConfigureTypographyPresenters);
         ui.SetTheme(theme);
         Require(ui.Update() && !ui.Update(), "The icon catalog did not settle at idle.");
         var pixels = read(ui);
-        var coverage = gallery.Specimens.Select(specimen =>
+        var coverage = IconCatalogLayout.Samples.Select(specimen =>
         {
             var (symbol, bounds) = specimen;
             var ink = 0;
@@ -39,18 +39,19 @@ internal static partial class FontTypographyProbe
                 Require(rim > 0 && silver > 0, "The Argentis mark lost its colored rim or silver fill.");
             return new { Symbol = symbol.ToString(), Size = bounds.Width, Ink = ink };
         }).ToArray();
-        return new(gallery.Specimens.Select(specimen => specimen.Bounds).ToArray(), pixels, IconCoverage: coverage);
+        return new(IconCatalogLayout.Samples.Select(specimen => specimen.Bounds).ToArray(), pixels, IconCoverage: coverage);
     }
 
-    private sealed class IconCatalog : Element
-    {
-        private static readonly UiSymbol[] Symbols = Enum.GetValues<UiSymbol>();
-        private static readonly float[] Sizes = [12, 16, 24];
-        private static readonly string[] Labels = Array.ConvertAll(Symbols, static symbol => symbol.ToString());
-        private static readonly (UiSymbol Symbol, Rect Bounds)[] Samples = CreateSamples();
-        internal (UiSymbol Symbol, Rect Bounds)[] Specimens => Samples;
+    private sealed class IconCatalog : Element;
 
-        private static (int X, int Y) CellOrigin(int index) => (12 + index % 4 * 181, 76 + index / 4 * 68);
+    private static class IconCatalogLayout
+    {
+        internal static readonly UiSymbol[] Symbols = Enum.GetValues<UiSymbol>();
+        internal static readonly float[] Sizes = [12, 16, 24];
+        internal static readonly string[] Labels = Array.ConvertAll(Symbols, static symbol => symbol.ToString());
+        internal static readonly (UiSymbol Symbol, Rect Bounds)[] Samples = CreateSamples();
+
+        internal static (int X, int Y) CellOrigin(int index) => (12 + index % 4 * 181, 76 + index / 4 * 68);
 
         private static (UiSymbol Symbol, Rect Bounds)[] CreateSamples()
         {
@@ -66,27 +67,5 @@ internal static partial class FontTypographyProbe
             }
             return result;
         }
-
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<IconCatalog>(static (catalog, context) =>
-        {
-            var foreground = catalog.Foreground;
-            var fontFamily = catalog.FontFamily;
-            var background = catalog.Theme.Control;
-            UiSymbols.Draw(context, UiSymbol.TrueMoon, new(12, 12, 44, 44), foreground);
-            context.Text("Argentis · TrueMoon.Tales", 65, 18, foreground, 21, fontFamily);
-            context.Text("12 · 16 · 24 px", 66, 44, foreground, 12, fontFamily);
-            for (var i = 0; i < Symbols.Length; i++)
-            {
-                var (x, y) = CellOrigin(i);
-                context.Fill(new(x, y, 173, 60), background, 6);
-                context.Text(Labels[i], x + 9, y + 5, foreground, 13, fontFamily);
-                for (var s = 0; s < Sizes.Length; s++)
-                {
-                    var (symbol, bounds) = Samples[i * Sizes.Length + s];
-                    UiSymbols.Draw(context, symbol, bounds, foreground);
-                }
-            }
-        });
-        public override ElementPresentation Presentation => Painter;
     }
 }

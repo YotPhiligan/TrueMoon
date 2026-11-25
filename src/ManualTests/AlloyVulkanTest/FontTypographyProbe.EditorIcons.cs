@@ -161,7 +161,7 @@ internal static partial class FontTypographyProbe
         var oldButtons = Actions(legacy);
         foreach (var button in oldButtons) button.UseVectorSymbol = false;
 
-        using var ui = UiSession.Create(root, backend, target, viewport);
+        using var ui = UiSession.Create(root, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: EditorPresenters.Register);
         ui.SetTheme(theme);
         Update();
         var normal = read(ui);

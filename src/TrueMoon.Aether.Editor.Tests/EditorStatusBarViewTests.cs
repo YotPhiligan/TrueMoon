@@ -29,7 +29,8 @@ public sealed class EditorStatusBarViewTests
         ui.HandleInput(new(InputKind.PointerMove, summary.Bounds.X + 5, summary.Bounds.Y + 5)); test.Settle(ui);
         summary.Value = new string('W', 40); summary.FontFamily = "typography-family"; summary.FontWeight = 600; summary.FontItalic = true;
         var probe = new TypographyRecordingContext();
-        summary.Measure(new(120, 40), probe); summary.Arrange(new(0, 0, 120, 40)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(summary, probe);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        summary.Measure(new(120, 40), probe); summary.Arrange(new(0, 0, 120, 40)); UiTreeRenderer.Draw(summary, probe, presenters);
         var drawn = Assert.Single(probe.Texts); var area = summary.Bounds.Deflate(summary.Padding);
         Assert.EndsWith("…", drawn.Text);
         Assert.Equal((12f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
@@ -83,7 +84,8 @@ public sealed class EditorStatusBarViewTests
         Assert.All(actions, button => Assert.Equal(0, button.CornerRadius));
         Assert.Equal(5, test.BodyButton.CornerRadius);
         Assert.False(view.CancelButton.IsVisible); Assert.Equal(0, summary.BorderWidth); Assert.Equal(0, preview.BorderWidth);
-        var drawing = new RecordingDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(summary, drawing);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        var drawing = new RecordingDrawing(); UiTreeRenderer.Draw(summary, drawing, presenters);
         var text = Assert.Single(drawing.Texts);
         Assert.Equal(test.Model.Summary, text.Value); Assert.Equal(12, text.Font);
         var area = summary.Bounds.Deflate(summary.Padding);
@@ -98,7 +100,7 @@ public sealed class EditorStatusBarViewTests
         });
         Assert.Equal(area.X + 20, text.X);
         ui.HandleInput(new(InputKind.PointerMove, summary.Bounds.X + 5, summary.Bounds.Y + 5)); test.Settle(ui);
-        var hovered = new RecordingDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(summary, hovered);
+        var hovered = new RecordingDrawing(); UiTreeRenderer.Draw(summary, hovered, presenters);
         var highlight = Assert.Single(hovered.Fills, fill => fill.Color == summary.Theme.ControlHover);
         Assert.Equal(summary.Bounds.X, highlight.Bounds.X);
         Assert.True(highlight.Bounds.Width < summary.Bounds.Width);
@@ -376,7 +378,7 @@ public sealed class EditorStatusBarViewTests
             content.Add(BodyButton); content.Add(View);
         }
         public UiSession Ui(int width = 1280, bool raster = false) => raster ?
-            UiSession.Create(Overlays, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(width, 800)) :
+            UiSession.Create(Overlays, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(width, 800), null, new(), configurePresenters: EditorPresenters.Register) :
             new(Overlays, new Surface(), new(width, 800), null, new UiDispatchOptions(), Time);
         public void Settle(UiSession ui) { ui.Update(); Time.Advance(); ui.Update(); ui.Update(); }
         public void Dispose() { Overlays.Dispose(); Model.Dispose(); Source.Dispose(); }

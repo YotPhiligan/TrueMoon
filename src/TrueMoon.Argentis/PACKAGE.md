@@ -60,20 +60,20 @@ contracts for TrueMoon Alloy. Requires .NET 11. Alpha API.
 ```
 
 Argentis defines element trees and controls, including the rich-text document/
-editing model. It uses `TrueMoon.Contracts` for typed presenter factories, not a
-DI provider, renderer, native window or App bootstrap. A visual application also
-needs a compatible Alloy renderer and host; `TrueMoon.Alloy.Hosting` provides
+editing model. Controls own their input and layout, not their painters. Argentis
+does not depend on a DI provider, renderer, native window or App bootstrap.
+A visual application also needs a compatible Alloy renderer and host; `TrueMoon.Alloy.Hosting` provides
 optional App/window integration.
 
-**Migrating custom drawing.** There is no `Element.Draw` or `DrawCore` hook.
-Import `TrueMoon.Argentis.Painting` and declare one static `ElementPresentation`
-per control kind. A stock descriptor can use `ElementPresentation.Create<MyControl>`
-with a static drawing operation or an `IFactory<IElementPresenter<MyControl>>`.
-Override `Presentation` to return the descriptor. Use `ElementPresentation.Required`
-instead when the application must supply an exact registration. Structural nodes
-need neither a descriptor nor a presenter. A derived type inherits the stock
-descriptor, not the application's registration for its base. Presenters read
-prepared geometry; do not retain a node, traverse its children, or change input
+**Migrating custom drawing (`1.2611.25.7-alpha`, breaking).** Remove the
+`Presentation` override, its descriptor and any painter factory from the element.
+Move drawing to an external presenter or static drawing operation. Register it in
+the application that renders the tree, not in the element constructor.
+Structural nodes require no registration. Subclasses inherit the nearest *stock*
+painting, never a user registration for their parent. Declare
+`p.Require<MyControl>()` in the application catalog if a missing exact registration
+must raise an error instead. Presenters read prepared geometry; do not retain a
+node, traverse its children, or change input
 state. `IAfterChildrenPresenter<T>` adds an optional overlay phase.
 
 At session creation pass `configurePresenters: p => ...` to `UiSession.Create`;
@@ -83,8 +83,11 @@ creates the presenter on first use and disposes it with the session. The indepen
 `AlloyPackageConsumer` presenter screen exercises both registrations with raster
 pixel and routed input checks.
 
-For hosted sessions use `options.ConfigurePresenters(p => ...)` on `AlloyOptions`.
-Configure a given exact type only once: duplicate registrations are rejected.
+For hosted sessions pass the same registration method to `options.ConfigurePresenters`.
+For a DI-backed presenter, register `IFactory<IElementPresenter<MyState>>` with the
+app and call `options.UsePresenterFactory<MyControl, MyState>(capture)`. The factory
+is resolved at composition, not while drawing a node. Duplicate exact registrations
+are rejected.
 
 `Window` / `Window<TData>` are standalone root components with the same content,
 bindings and scoped styles as View. Construction allocates no native resources.

@@ -136,7 +136,7 @@ public sealed class SplitView : Element
         finally { _writing = false; }
     }
 
-    private sealed class DividerElement : Element
+    internal sealed class DividerElement : Element
     {
         private readonly SplitView _owner;
         private IInputContext? _context;
@@ -151,15 +151,7 @@ public sealed class SplitView : Element
         protected override Color ThemeBackground => Theme.Surface;
         protected override Color ThemeForeground => !IsEffectivelyEnabled ? Theme.Disabled : IsFocused ? Theme.Focus
             : IsResizing || IsHovered ? Theme.BorderHover : Theme.Border;
-        private static readonly ElementPresentation DividerElementPresentation = ElementPresentation.Create<DividerElement>(static (divider, context) =>
-        {
-            var bounds = divider.Bounds;
-            var horizontal = divider._owner.Horizontal;
-            context.Fill(horizontal ? new(bounds.X + Math.Max(0, (bounds.Width - 2) / 2), bounds.Y, Math.Min(2, bounds.Width), bounds.Height)
-                : new(bounds.X, bounds.Y + Math.Max(0, (bounds.Height - 2) / 2), bounds.Width, Math.Min(2, bounds.Height)), divider.Foreground);
-        });
-        /// <inheritdoc />
-        public override ElementPresentation Presentation => DividerElementPresentation;
+        internal bool Horizontal => _owner.Horizontal;
         public override bool HandleInput(UiInput input, IInputContext context)
         {
             if (!IsEffectivelyEnabled) return false;

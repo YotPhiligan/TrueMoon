@@ -50,10 +50,6 @@ public class Button : Text
         return LabelSize;
     }
     internal float? LabelInkCenter => _labelInkCenter;
-    private static readonly ElementPresentation ButtonLabel = ElementPresentation.Create<Button>(
-        new Factory<IElementPresenter<Button>>(static () => new ButtonPresenter()));
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => ButtonLabel;
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context)
     {

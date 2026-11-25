@@ -144,25 +144,12 @@ public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputO
         try { base.Dispose(); }
         finally { if (IsDisposed) { _overlays.Closed -= PopupClosed; AttachmentChanged -= Attachment; } }
     }
-    private sealed class MoreTrigger(MenuBar bar) : IconButton(UiSymbol.More, "Меню · F10")
+    internal sealed class MoreTrigger(MenuBar bar) : IconButton(UiSymbol.More, "Меню · F10")
     {
         private IInputContext? _context;
         protected override float ThemeBorderWidth => 0;
         protected override Color ThemeBackground => IsPressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Color.Transparent;
-        private float RevealProgress => bar.RevealProgress;
-        private static readonly ElementPresentation MoreTriggerPresentation = ElementPresentation.Create<MoreTrigger>(static (trigger, context) =>
-        {
-            var bounds = trigger.Bounds;
-            var angle = (1 - trigger.RevealProgress) * MathF.PI / 2;
-            var unit = Math.Min(12, Math.Min(bounds.Width, bounds.Height)) / 12;
-            var x = bounds.X + bounds.Width / 2; var y = bounds.Y + bounds.Height / 2;
-            var color = trigger.IsEffectivelyEnabled ? trigger.Foreground : trigger.Theme.Disabled;
-            for (var i = -1; i <= 1; i++)
-                context.Fill(new(x + i * 4 * unit * MathF.Cos(angle) - unit,
-                    y + i * 4 * unit * MathF.Sin(angle) - unit, 2 * unit, 2 * unit), color, unit);
-        });
-        /// <inheritdoc />
-        public override ElementPresentation Presentation => MoreTriggerPresentation;
+        internal float RevealProgress => bar.RevealProgress;
         public override bool HandleInput(UiInput input, IInputContext context) { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
         protected override void Activate()
         {

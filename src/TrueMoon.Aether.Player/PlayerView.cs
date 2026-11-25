@@ -15,12 +15,8 @@ public sealed record PlayerViewModel(string Title);
 /// <summary>One independently retained image and exact ticket. The parent tree owns this control.</summary>
 public sealed class PlayerCanvas(PlayerInput input):Element
 {
-    private static readonly ElementPresentation Paint = ElementPresentation.Create<PlayerCanvas, PaintState>(
-        static canvas => canvas.Capture(), new Factory<IElementPresenter<PaintState>>(static () => new Painter()));
     private readonly DrawReceipts _receipts = new();
     private Rect _imageBounds;
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Paint;
     private SkiaImageSource? _image;
     private ViewportFrame? _frame;
     private GameHudSnapshot? _hud;
@@ -82,66 +78,21 @@ public sealed class PlayerCanvas(PlayerInput input):Element
         }
     }
 
-    private readonly record struct PaintState(SkiaImageSource? Image, ViewportFrame? Frame, Rect Bounds, Rect VisibleImage,
+    internal readonly record struct DrawState(SkiaImageSource? Image, ViewportFrame? Frame, Rect Bounds, Rect VisibleImage,
         GameHudSnapshot? Hud, Color Card, Color Foreground, float Radius, float FontSize, string Family, int Weight,
-        bool Italic, DrawReceipts Receipts, ulong Generation);
+        bool Italic, ulong Generation);
 
-    private PaintState Capture()
+    internal DrawState BeginDraw()
     {
         var generation = _receipts.Reset();
         var image = _image; var frame = _frame;
         return new(image, _current?.Invoke() == true ? frame : null, _imageBounds, VisibleImage(), _hud,
-            Theme.Control, Foreground, CornerRadius, FontSize, FontFamily, FontWeight, FontItalic, _receipts, generation);
+            Theme.Control, Foreground, CornerRadius, FontSize, FontFamily, FontWeight, FontItalic, generation);
     }
 
-    private sealed class Painter : IElementPresenter<PaintState>
-    {
-        public void Draw(PaintState state, IDrawingContext context)
-        {
-            if (state.Frame is not {} frame || state.Image is not {} image ||
-                state.VisibleImage.Width <= 0 || state.VisibleImage.Height <= 0) return;
-            context.Image(image, state.Bounds);
-            if (state.Hud is {} hud) DrawHud(context, state, hud);
-            state.Receipts.Complete(state.Generation, frame, state.VisibleImage);
-        }
+    internal void CompleteDraw(in DrawState state, ViewportFrame frame) =>
+        _receipts.Complete(state.Generation, frame, state.VisibleImage);
 
-        // The HUD shares the viewport image's letterboxed destination and never becomes an input target.
-        private static void DrawHud(IDrawingContext context, PaintState state, GameHudSnapshot hud)
-        {
-            const float margin = 8;
-            var viewport = state.Bounds;
-            var line = state.FontSize + 6;
-            var width = Math.Min(400, viewport.Width - 2 * margin);
-            var height = viewport.Height - 2 * margin;
-            if (width < 2 * margin || height < line + 2 * margin) return;
-
-            var prompt = !string.IsNullOrWhiteSpace(hud.Prompt);
-            var status = !string.IsNullOrWhiteSpace(hud.Status);
-            var availableRows = Math.Min((int)((height - 2 * margin) / line), GameHudSnapshot.JournalCapacity + 2);
-            var rows = Math.Max(0, availableRows - (prompt ? 1 : 0) - (status ? 1 : 0));
-            var journalRows = Math.Min(rows, hud.Journal.Length);
-            var lineCount = Math.Min(availableRows, (prompt ? 1 : 0) + (status ? 1 : 0) + journalRows);
-            if (lineCount == 0) return;
-
-            var card = new Rect(viewport.X + margin, viewport.Y + margin, width, lineCount * line + 2 * margin);
-            context.Fill(card, state.Card, state.Radius);
-            context.Save();
-            try
-            {
-                context.Clip(card.Deflate(new Thickness(margin)));
-                var y = card.Y + margin;
-                void Show(string text)
-                {
-                    context.Text(text, card.X + margin, y, state.Foreground, state.FontSize, state.Family, state.Weight, state.Italic);
-                    y += line;
-                }
-                if (prompt) Show(hud.Prompt!);
-                if (status && (!prompt || availableRows >= 2)) Show(hud.Status!);
-                for (var index = hud.Journal.Length - journalRows; index < hud.Journal.Length; index++) Show(hud.Journal[index]);
-            }
-            finally { context.Restore(); }
-        }
-    }
     /// <inheritdoc />
     public override bool HandleInput(UiInput value,IInputContext context)
     {

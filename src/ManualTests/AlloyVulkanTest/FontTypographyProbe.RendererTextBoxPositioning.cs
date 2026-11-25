@@ -1,6 +1,7 @@
 using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Styling;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Silk.NET.OpenGL;
@@ -21,7 +22,21 @@ internal static partial class FontTypographyProbe
     private sealed record RendererScrollFrame(byte[] Pixels, ScrollGeometry Geometry, double GlyphCenter, int HitIndex,
         int SelectionStart, int SelectionLength, Rect HitCaretInk, Rect SelectionInk);
 
-    internal static void RunRendererTextBoxPositioning(string output, bool validation)
+    private enum FieldFixture { PlainAndShaped, TextBox, NumberBox }
+
+    internal static void RunRendererTextBoxPositioning(string output, bool validation) =>
+        RunRendererScrollMatrix(output, validation, FieldFixture.PlainAndShaped, Theme.Dark);
+
+    internal static void RunEditableFieldPositioning(string output, bool validation)
+    {
+        if (Directory.Exists(output) && Directory.EnumerateFileSystemEntries(output).Any())
+            throw new ArgumentException("Use a fresh editable field output directory.");
+        foreach (var theme in new[] { Theme.Light, Theme.Dark })
+        foreach (var fixture in new[] { FieldFixture.TextBox, FieldFixture.NumberBox })
+            RunRendererScrollMatrix(Path.Combine(output, theme == Theme.Light ? "Light" : "Dark", fixture.ToString()), validation, fixture, theme);
+    }
+
+    private static void RunRendererScrollMatrix(string output, bool validation, FieldFixture fixture, Theme theme)
     {
         output = Path.GetFullPath(output);
         if (Directory.Exists(output) && Directory.EnumerateFileSystemEntries(output).Any())
@@ -31,7 +46,10 @@ internal static partial class FontTypographyProbe
         using var font = new SKFont(face, ScrollFontSize);
         var plainDefault = font.Subpixel;
         var shapedDefault = new TextPaintOptions().SubpixelPositioning;
-        var theme = Theme.Dark;
+        bool editable = fixture != FieldFixture.PlainAndShaped;
+        ScrollSample[] samples = editable ? [new("draft", "123 456 789 012 345 678 901 234 567  7  ")] : DarkScrollSamples;
+        bool[] shapingModes = editable ? [false] : [false, true];
+        float[] scales = editable ? [1, 1.25f, 1.75f] : [1.25f, 1.75f];
         var hardware = new List<object>();
         var validationReports = new List<object>();
         var captures = new List<object>();
@@ -40,7 +58,7 @@ internal static partial class FontTypographyProbe
         var modeComparisons = new List<object>();
         var passed = true;
 
-        foreach (var scale in new[] { 1.25f, 1.75f })
+        foreach (var scale in scales)
         {
             var viewport = new UiViewport((int)(ScrollWidth * scale), (int)(ScrollHeight * scale), scale);
             var raster = Capture("raster", new SkiaRasterRenderBackend(), new RasterUiTarget(),
@@ -73,15 +91,19 @@ internal static partial class FontTypographyProbe
                 UiRenderTarget target, Func<UiSession, byte[]> read)
             {
                 var frames = new Dictionary<RendererScrollCase, RendererScrollFrame>();
-                foreach (var sample in DarkScrollSamples)
-                foreach (var shaped in new[] { false, true })
+                foreach (var sample in samples)
+                foreach (var shaped in shapingModes)
                 foreach (var subpixel in new bool?[] { null, false, true })
                 {
-                    var (root, editor) = CreateScrollTextBox(sample, theme);
+                    var (root, editor) = fixture == FieldFixture.NumberBox ? CreateScrollNumberBox(sample, theme) : CreateScrollTextBox(sample, theme);
                     editor.UseShapedText = shaped;
                     using var ui = UiSession.Create(root, renderer, target, viewport);
                     var layout = (SkiaDrawingContext)ui.Rendering.TextLayout;
-                    if (subpixel is bool enabled) layout.SetSubpixelPositioningForProbe(enabled);
+                    if (subpixel is bool enabled)
+                    {
+                        if (editable) layout.SetPlainSubpixelPositioningForProbe(enabled);
+                        else layout.SetSubpixelPositioningForProbe(enabled);
+                    }
                     ui.SetTheme(theme);
                     Require(ui.Update(), "Expected the TextBox fixture to render.");
                     ui.Focus(editor);
@@ -101,13 +123,16 @@ internal static partial class FontTypographyProbe
                     {
                         var key = new RendererScrollCase(sample.Name, shaped, subpixel, step);
                         var context = $"{backend}/{sample.Name}/{(shaped ? "shaped" : "plain")}/{PositioningMode(subpixel)}/{scale}/{step.Direction}/{step.Phase}";
-                        RenderScrollStep(ui, editor, scale, step);
+                        RenderScrollStep(ui, editor, scale, step, fixture == FieldFixture.NumberBox ? editor.Parent : null);
                         var field = editor.Bounds;
                         var content = field.Deflate(editor.Padding);
                         Require(content.Height >= lineHeight && endAdvance > content.Width - 2, $"Expected to scroll at {context}.");
                         var caret = new Rect(content.X + content.Width - 2, content.Y + (content.Height - lineHeight) / 2, 1, lineHeight);
                         var textX = caret.X - endAdvance;
                         var glyphLeft = textX + prefix;
+                        if (editable)
+                            Require(Math.Abs(content.X - editor.HorizontalOffset - textX) < 0.001f,
+                                $"Prepared scroll offset disagrees with the visible line at {context}.");
                         var glyphRight = textX + glyphAdvance;
                         var lineRect = new Rect(content.X, caret.Y, content.Width, lineHeight);
                         var geometry = new ScrollGeometry(field, lineRect, caret, textX, glyphLeft, glyphRight);
@@ -138,6 +163,7 @@ internal static partial class FontTypographyProbe
                     float Advance(int index) => line?.GetCaretBounds(index).X ?? layout.Measure(sample.Text[..index], ScrollFontSize, editor.FontFamily).Width;
                 }
 
+                bool sawPositioningDifference = false;
                 foreach (var (key, frame) in frames)
                 {
                     if (key.Step.Returning)
@@ -156,10 +182,13 @@ internal static partial class FontTypographyProbe
                         var pixels = PixelDifference.Compare(baseline.Pixels, frame.Pixels, viewport.Width, viewport.Height, 0);
                         var expectsExact = enabled == (key.Shaped ? shapedDefault : plainDefault);
                         passed &= sameLayout && (!expectsExact || pixels.Passed);
+                        if (!expectsExact && !pixels.Passed) sawPositioningDifference = true;
                         modeComparisons.Add(new { Scale = scale, Backend = backend, key.Sample, key.Shaped, Mode = PositioningMode(key.Subpixel),
                             key.Step.Direction, key.Step.PhasePx, SameLayout = sameLayout, ExpectsExact = expectsExact, Result = pixels });
                     }
                 }
+                if (editable) Require(sawPositioningDifference,
+                    $"Plain positioning never changed the readback for {fixture} on {backend} at {scale}.");
                 return frames;
             }
 
@@ -181,8 +210,10 @@ internal static partial class FontTypographyProbe
 
         File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new
         {
-            Completed = true, Passed = passed, ValidationEnabled = validation, PhysicalDpi = false, Theme = "Dark",
-            FontFamily = face.FamilyName, FontSize = ScrollFontSize, Samples = DarkScrollSamples,
+            Completed = true, Passed = passed, ValidationEnabled = validation, PhysicalDpi = false, Theme = theme == Theme.Light ? "Light" : "Dark",
+            Fixture = fixture.ToString(), FontFamily = face.FamilyName, FontSize = ScrollFontSize, Samples = samples,
+            RendererVersion = typeof(SkiaRasterRenderBackend).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
+            Runtime = Environment.Version.ToString(), SkiaSharp = typeof(SKFont).Assembly.FullName,
             DefaultSubpixel = new { Plain = plainDefault, Shaped = shapedDefault },
             NativeSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(SkiaNativeLibrary.LoadedPath!))),
             Hardware = hardware, ValidationReports = validationReports, Captures = captures,

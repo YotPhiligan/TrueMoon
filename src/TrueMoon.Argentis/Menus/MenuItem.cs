@@ -62,20 +62,12 @@ public sealed class MenuItem : Button
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
         var label = text.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic); var shortcut = text.Measure(_action.Shortcut, FontSize, FontFamily, FontWeight, FontItalic);
-        _shortcutWidth = shortcut.Width;
+        ShortcutWidth = shortcut.Width;
         return new(Math.Max(180, label.Width + (_action.Shortcut.Length == 0 ? 0 : shortcut.Width + 32)), Math.Max(18, label.Height));
     }
-    private static readonly ElementPresentation MenuItemPresentation = ElementPresentation.Create<MenuItem>(static (item, context) =>
-    {
-        var bounds = item.Bounds;
-        var color = item.IsEffectivelyEnabled ? item.Foreground : item.Theme.Disabled;
-        if (item._action.Icon is { } icon) UiSymbols.Draw(context, icon, new(bounds.X + 8, bounds.Y + (bounds.Height - 12) / 2, 12, 12), color);
-        var area = bounds.Deflate(item.Padding); context.Text(item.Value, area.X, area.Y, color, item.FontSize, item.FontFamily, item.FontWeight, item.FontItalic);
-        if (item._action.Shortcut.Length != 0) context.Text(item._action.Shortcut, bounds.X + bounds.Width - item.Padding.Right - item._shortcutWidth, area.Y, item.Theme.Disabled, item.FontSize, item.FontFamily, item.FontWeight, item.FontItalic);
-    });
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => MenuItemPresentation;
-    private float _shortcutWidth;
+    internal UiSymbol? ActionIcon => _action.Icon;
+    internal string Shortcut => _action.Shortcut;
+    internal float ShortcutWidth { get; private set; }
     /// <inheritdoc />
     protected override void Activate() { if (!_action.Command.CanExecute) return; var command = _action.Command; _dismiss(); command.Execute(); }
     /// <inheritdoc />

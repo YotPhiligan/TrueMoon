@@ -64,7 +64,8 @@ public sealed class OverlayWindowChromeTests
         frame.TitleBarOverContent = true;
         frame.ApplyWindowState(new(true, false, true, true, true));
         Arrange(frame);
-        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(frame, new RecordingDrawingContext());
+        using var presenters = UiPresenters.Create(ConfigurePresenters);
+        UiTreeRenderer.Draw(frame, new RecordingDrawingContext(), presenters);
         Assert.Equal(new[] { "body", "header" }, order);
         Assert.Equal(new Element[] { body, title, frame.ResizeGrip! }, frame.Children);
         Assert.True(title.OverlayContent);
@@ -300,7 +301,7 @@ public sealed class OverlayWindowChromeTests
         var viewport = new UiViewport((int)(400 * scale), (int)(200 * scale), scale);
         var frame = new WindowFrame(title, new SplitScene()) { TitleBarOverContent = true };
         var surface = new SkiaRasterRenderBackend().CreateSurface(new RasterUiTarget(), viewport);
-        using var ui = new UiSession(frame, surface, viewport, null, new UiDispatchOptions(), time);
+        using var ui = new UiSession(frame, surface, viewport, null, new UiDispatchOptions(), time, configurePresenters: ConfigurePresenters);
         ui.SetTheme(Theme.Dark with { PanelBackdrop = new(4, new(0, 0, 255, 64), new(30, 40, 50)) });
         ui.Update(); ui.HandleInput(new(InputKind.PointerMove, 20, 10));
         time.Advance(TimeSpan.FromMilliseconds(160)); ui.Update();
@@ -339,30 +340,27 @@ public sealed class OverlayWindowChromeTests
         public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
+    private static void ConfigurePresenters(UiPresenters presenters)
+    {
+        presenters.Register<PaintProbe>(static (probe, _) => probe.Order.Add(probe.Label));
+        presenters.Register<SplitScene>(static (scene, context) =>
+        {
+            context.Fill(new(0, 0, 80, scene.Bounds.Height), new(0, 0, 0));
+            context.Fill(new(80, 0, scene.Bounds.Width - 80, scene.Bounds.Height), new(255, 255, 255));
+        });
+        presenters.Register<WhitePatch>(static (patch, context) =>
+            context.Fill(new(patch.Bounds.X + 34, patch.Bounds.Y + 10, 10, 10), new(255, 255, 255)));
+    }
+
     private sealed class PaintProbe(string name, List<string> order) : Element
     {
-        private readonly string _name = name;
-        private readonly List<string> _order = order;
-        private static readonly ElementPresentation ProbePresentation = ElementPresentation.Create<PaintProbe>(static (probe, _) => probe._order.Add(probe._name));
-        public override ElementPresentation Presentation => ProbePresentation;
+        public readonly string Label = name;
+        public readonly List<string> Order = order;
     }
     private sealed class ActiveHeader : Element, IWindowHeaderActivity
     {
         public bool KeepsTitleBarActive { get; set; }
     }
-    private sealed class SplitScene : Element
-    {
-        private static readonly ElementPresentation ScenePresentation = ElementPresentation.Create<SplitScene>(static (scene, context) =>
-        {
-            context.Fill(new(0, 0, 80, scene.Bounds.Height), new(0, 0, 0));
-            context.Fill(new(80, 0, scene.Bounds.Width - 80, scene.Bounds.Height), new(255, 255, 255));
-        });
-        public override ElementPresentation Presentation => ScenePresentation;
-    }
-    private sealed class WhitePatch : Element
-    {
-        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<WhitePatch>(static (patch, context) =>
-            context.Fill(new(patch.Bounds.X + 34, patch.Bounds.Y + 10, 10, 10), new(255, 255, 255)));
-        public override ElementPresentation Presentation => PatchPresentation;
-    }
+    private sealed class SplitScene : Element;
+    private sealed class WhitePatch : Element;
 }

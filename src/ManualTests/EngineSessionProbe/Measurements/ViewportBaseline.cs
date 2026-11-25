@@ -66,7 +66,7 @@ internal static class ViewportBaseline
             });
             c.UsePresentation<ViewportView>(o =>
             {
-                o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
+                o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
                 { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG4e viewport baseline"; w.FrameMode = UiFrameMode.Continuous; w.FramesPerSecond = 60; });
             });
             c.Services(r => r.Singleton<Action<string>>(_ => _ => { }).Transient<ViewportView>());

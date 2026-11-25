@@ -69,7 +69,7 @@ internal static partial class FontTypographyProbe
             content.Add(standalone);
         }
         content.Add(menu);
-        var host = new OverlayHost(content); using var ui = UiSession.Create(host, backend, target, viewport); ui.SetTheme(theme); ui.Update();
+        var host = new OverlayHost(content); using var ui = UiSession.Create(host, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: ConfigureTypographyPresenters); ui.SetTheme(theme); ui.Update();
         ui.Focus(box); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true)); ui.Update();
         // Sample the badges before the hint overlays the panel.
         var validationPixels = read(ui);
@@ -152,15 +152,5 @@ internal static partial class FontTypographyProbe
     private static BoxShadow? WithoutShadowPaint(BoxShadow? shadow) => shadow == null ? null :
         new(shadow.BlurSigma, shadow.OffsetX, shadow.OffsetY, shadow.Color with { A = 0 });
 
-    private sealed class BackdropSplit : Element
-    {
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<BackdropSplit>(static (split, context) =>
-        {
-            var bounds = split.Bounds;
-            var half = bounds.Width / 2;
-            context.Fill(new(bounds.X, bounds.Y, half, bounds.Height), new(0, 0, 0));
-            context.Fill(new(bounds.X + half, bounds.Y, half, bounds.Height), new(255, 255, 255));
-        });
-        public override ElementPresentation Presentation => Painter;
-    }
+    private sealed class BackdropSplit : Element;
 }

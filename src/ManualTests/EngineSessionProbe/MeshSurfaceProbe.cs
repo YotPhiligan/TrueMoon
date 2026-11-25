@@ -27,6 +27,7 @@ using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Nom;
@@ -50,15 +51,9 @@ public sealed class MeshSurfaceCanvas : Element, IDisposable
         var old = _image; _image = next; _stamp = stamp; Drawn = null; old?.Dispose(); Invalidate();
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(640, 360);
-    private static readonly ElementPresentation Painter = ElementPresentation.Create<MeshSurfaceCanvas>(static (canvas, context) =>
-    {
-        if (canvas._image is not { } image) return;
-        var stamp = canvas._stamp;
-        context.Image(image, canvas.Bounds);
-        canvas.ReportDrawn(stamp);
-    });
-    public override ElementPresentation Presentation => Painter;
-    private void ReportDrawn(RenderSnapshotStamp? stamp) => Drawn = stamp;
+    internal IImageSource? Image => _image;
+    internal RenderSnapshotStamp? Stamp => _stamp;
+    internal void ReportDrawn(RenderSnapshotStamp? stamp) => Drawn = stamp;
     public override void Dispose() { VerifyAccess(); _image?.Dispose(); _image = null; base.Dispose(); }
 }
 public sealed class MeshSurfaceView : View<MeshSurfaceData>
@@ -81,6 +76,15 @@ public sealed class MeshSurfaceStyle : IViewStyle<MeshSurfaceView>
 // acknowledged only after the presenter draws the image and a real HostedUiWindow.FramePresented event fires.
 public static partial class MeshSurfaceProbe
 {
+    private static void ConfigurePresenters(UiPresenters presenters) =>
+        presenters.Register<MeshSurfaceCanvas>(static (canvas, context) =>
+        {
+            if (canvas.Image is not { } image) return;
+            var stamp = canvas.Stamp;
+            context.Image(image, canvas.Bounds);
+            canvas.ReportDrawn(stamp);
+        });
+
     public static async Task<int> RunAsync(string runtimePath, string gameDirectory, string reportDirectory,
         string? textureGameProject = null, string? workerDirectory = null)
     {
@@ -111,7 +115,7 @@ public static partial class MeshSurfaceProbe
             });
             context.UsePresentationFactory<MeshSurfaceView>(options =>
             {
-                options.UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
+                options.ConfigurePresenters(ConfigurePresenters).UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
                 { window.Width = 720; window.Height = 460; window.Title = "Aether mesh surface and Playing fence"; window.EnableDiagnostics = true; });
             });
             context.Services(services =>

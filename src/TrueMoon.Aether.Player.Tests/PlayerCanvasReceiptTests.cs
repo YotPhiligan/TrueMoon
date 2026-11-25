@@ -17,22 +17,23 @@ public sealed class PlayerCanvasReceiptTests
     [Fact]
     public void ImageAndHudMustBothSucceedAndDrawingDoesNotAcknowledgePresentation()
     {
+        using var presenters = UiPresenters.Create(PlayerPresenters.Register);
         using var canvas = new PlayerCanvas(new()); var context = new Drawing();
         var presentation = Presentation(); var frame = presentation.Issue(new(0,1,0,0,1));
         canvas.Arrange(new(10,20,200,160));
         canvas.Upload(Image(), frame, new GameHudSnapshot("Use", null, []), () => true);
-        UiTreeRenderer.Draw(canvas, context);
+        UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Equal(new Rect(10,50,200,100), Assert.Single(context.Images));
         Assert.Equal("Use", Assert.Single(context.Labels)); Assert.Same(frame, canvas.Drawn);
         Assert.False(presentation.FirstPresented.IsCompleted);
 
         context.OnText = () => throw new IOException("HUD failed.");
-        Assert.Throws<IOException>(() => UiTreeRenderer.Draw(canvas, context));
+        Assert.Throws<IOException>(() => UiTreeRenderer.Draw(canvas, context, presenters));
         Assert.Equal(2, context.Images.Count); Assert.Null(canvas.Drawn);
         Assert.False(presentation.FirstPresented.IsCompleted);
 
         canvas.Arrange(new(10,20,400,160)); context.OnText = null;
-        UiTreeRenderer.Draw(canvas, context);
+        UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Equal(new Rect(50,20,320,160), context.Images[^1]); Assert.Same(frame, canvas.Drawn);
         Assert.False(presentation.FirstPresented.IsCompleted);
         Assert.True(presentation.Presented(canvas.Drawn!)); Assert.Same(frame, presentation.FirstPresentedFrame);
@@ -41,22 +42,23 @@ public sealed class PlayerCanvasReceiptTests
     [Fact]
     public void SupersededAndSkippedImagesNeverConfirmReplacementAndForeignSurfaceInvalidatesDraw()
     {
+        using var presenters = UiPresenters.Create(PlayerPresenters.Register);
         using var canvas = new PlayerCanvas(new()); var context = new Drawing();
         canvas.Arrange(new(0,0,200,160)); var presentation = Presentation();
         var first = presentation.Issue(new(0,1,0,0,1)); var current = true;
         canvas.Upload(Image(), first, null, () => true);
         var second = presentation.Issue(new(1,2,0,0,2));
         context.OnImage = () => canvas.Upload(Image(), second, null, () => current);
-        UiTreeRenderer.Draw(canvas, context);
+        UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Single(context.Images); Assert.Null(canvas.Drawn);
         canvas.IsVisible = false; context.OnImage = null;
-        UiTreeRenderer.Draw(canvas, context);
+        UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Single(context.Images); Assert.Null(canvas.Drawn); Assert.False(presentation.FirstPresented.IsCompleted);
         canvas.IsVisible = true;
-        UiTreeRenderer.Draw(canvas, context);
+        UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Equal(2, context.Images.Count); Assert.Same(second, canvas.Drawn);
         current = false; Assert.Null(canvas.Drawn);
-        UiTreeRenderer.Draw(canvas, context);
+        UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Equal(2, context.Images.Count); Assert.Null(canvas.Drawn); Assert.False(presentation.FirstPresented.IsCompleted);
     }
 

@@ -241,15 +241,13 @@ public sealed class SessionPresenterTests(ITestOutputHelper output)
         root.Measure(new Size(32, 32), new FixedTextLayout());
         root.Arrange(new Rect(0, 0, 32, 32));
         var context = new RecordingDrawingContext();
-        var error = Assert.Throws<InvalidOperationException>(() => UiTreeRenderer.Draw(root, context));
+        using var registry = UiPresenters.Create(p => p.Require<UnregisteredButton>());
+        var error = Assert.Throws<InvalidOperationException>(() => UiTreeRenderer.Draw(root, context, registry));
         Assert.Contains(typeof(UnregisteredButton).FullName!, error.Message);
         Assert.Equal(context.Saves, context.Restores);
     }
 
-    private sealed class UnregisteredButton : Button
-    {
-        public override ElementPresentation Presentation => ElementPresentation.Required;
-    }
+    private sealed class UnregisteredButton : Button;
 
     private sealed class InheritedStop() : IconButton(UiSymbol.Stop, "Stop") { }
 

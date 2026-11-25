@@ -90,12 +90,7 @@ public sealed class View1 : View<SettingsModel>
         this.Bind(AppearanceProperty, model, x => x.Appearance);
     }
 
-    private sealed class LogoMark : Element
-    {
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<LogoMark>(
-            static (mark, context) => UiSymbols.Draw(context, UiSymbol.TrueMoon, mark.Bounds, mark.Foreground));
-        public override ElementPresentation Presentation => Painter;
-    }
+    internal sealed class LogoMark : Element;
 
     /// <inheritdoc />
     protected override void OnPropertyChanged(object property)

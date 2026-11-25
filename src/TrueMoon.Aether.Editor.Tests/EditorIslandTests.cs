@@ -166,7 +166,8 @@ public sealed class EditorIslandTests
         using var island = new EditorIsland(child) { Padding = new(8) };
         island.ApplyTheme(light ? Theme.Light : Theme.Dark);
         island.Measure(new(100, 70), new TextLayout()); island.Arrange(new(0, 0, 100, 70));
-        var before = child.Bounds; var drawing = new ShadowDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(island, drawing);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        var before = child.Bounds; var drawing = new ShadowDrawing(); UiTreeRenderer.Draw(island, drawing, presenters);
         Assert.Equal(new Rect(8, 8, 84, 54), before); Assert.Equal(before, child.Bounds);
         Assert.Equal(6, drawing.Fills.Count); Assert.Equal(0, drawing.Depth);
         Assert.All(drawing.Fills, fill =>

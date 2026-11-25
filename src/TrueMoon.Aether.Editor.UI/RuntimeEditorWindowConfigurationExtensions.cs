@@ -22,7 +22,7 @@ public static class RuntimeEditorWindowConfigurationExtensions
             services.Singleton<IStartable>(resolver => new WindowLifetime(resolver.Resolve<RuntimeEditorWindow>()));
             services.Singleton<IStoppable>(resolver => new WindowLifetime(resolver.Resolve<RuntimeEditorWindow>()));
         });
-        context.UsePresentationFactory<EditorView>(presentation => presentation.UseSkiaOpenGL(fonts).UseSilkWindow(window =>
+        context.UsePresentationFactory<EditorView>(presentation => presentation.ConfigurePresenters(EditorPresenters.Register).UseSkiaOpenGL(fonts).UseSilkWindow(window =>
         {
             window.Width = 1280; window.Height = 800; window.Title = "TrueMoon Aether Runtime"; window.FrameMode = UiFrameMode.Continuous;
             configure?.Invoke(window);

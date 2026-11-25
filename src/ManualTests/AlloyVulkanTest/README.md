@@ -565,6 +565,17 @@ reverse frames must match at the same phase. Explicit settings that match a
 renderer default must match its pixels exactly. Other mode comparisons
 record measured pixel differences. Each run also saves 864 field crops at 4×.
 
+`--typography-editable-fields --font-output fresh-directory --validation`
+compares a standalone `TextBox` and a `NumberBox` with its own prefix and editor.
+It resizes the **outer** control, focuses the editor and scrolls the same numeric
+draft to End. Spaces isolate the last digit for measuring its ink; this is
+not a test of number parsing. Only plain text positioning is overridden.
+Each `Light|Dark` / `TextBox|NumberBox` subdirectory contains a `report.json`
+and captures for all three backends at logical 100%, 125% and 175%.
+To measure tracking error, take `abs(GlyphMotionPx - ScrollMotionPx)` for
+nonzero scroll motion and compare `default`, `off` and `on` within each theme.
+These are pixel and input checks, not timing, cache or physical DPI measurements.
+
 ## TextBox positioning performance
 
 `--typography-textbox-performance --font-output fresh-directory` compares

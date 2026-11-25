@@ -81,7 +81,7 @@ internal static class OpenGLProbe
         using (var next = UiSession.Create(new Panel(), backend, target, new UiViewport(32, 32)))
             Require(next.Update(), "Disposing a UI session must preserve the borrowed host context.");
         var failing = new RetryView();
-        using (var retry = UiSession.Create(failing, backend, target, new UiViewport(32, 32)))
+        using (var retry = UiSession.Create(failing, backend, target, new UiViewport(32, 32), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters))
         {
             failing.DuringDraw = () =>
             {
@@ -99,7 +99,7 @@ internal static class OpenGLProbe
     internal static async Task RunFailureAsync()
     {
         var builder = App.Builder(b => b.UseDI());
-        builder.Setup(app => app.UsePresentation<OpenGLFailingView>(options => options.UseSkiaOpenGL().UseSilkWindow()));
+        builder.Setup(app => app.UsePresentation<OpenGLFailingView>(options => options.ConfigurePresenters(ConfigurePresenters).UseSkiaOpenGL().UseSilkWindow()));
         await using var app = builder.Build();
         var window = (HostedUiWindow)app.Services.GetService(typeof(HostedUiWindow))!;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -120,16 +120,21 @@ internal static class OpenGLProbe
         try { await app.DisposeAsync(); }
         catch (InvalidOperationException error) when (error.Message == "OpenGL draw failure probe") { }
     }
-    private sealed class RetryView : Panel
+    private static void ConfigurePresenters(UiPresenters presenters)
     {
-        internal bool Fail = true;
-        internal Action? DuringDraw;
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<RetryView>(static (view, _) =>
+        presenters.Register<RetryView>(static (view, _) =>
         {
             view.DuringDraw?.Invoke();
             if (view.Fail) throw new InvalidOperationException("Retry drawing");
         });
-        public override ElementPresentation Presentation => Painter;
+        presenters.Register<OpenGLFailingView>(
+            static (_, _) => throw new InvalidOperationException("OpenGL draw failure probe"));
+    }
+
+    private sealed class RetryView : Panel
+    {
+        internal bool Fail = true;
+        internal Action? DuringDraw;
     }
     private static void VerifyComposition(GL gl, UiSession ui, byte[] source)
     {
@@ -203,10 +208,4 @@ internal static class OpenGLProbe
 }
 
 /// <summary>Exercises diagnostic propagation from a failing standalone UI draw.</summary>
-public sealed class OpenGLFailingView : Panel
-{
-    private static readonly ElementPresentation Painter = ElementPresentation.Create<OpenGLFailingView>(
-        static (_, _) => throw new InvalidOperationException("OpenGL draw failure probe"));
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Painter;
-}
+public sealed class OpenGLFailingView : Panel;

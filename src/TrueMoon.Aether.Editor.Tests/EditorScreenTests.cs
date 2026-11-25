@@ -39,7 +39,8 @@ public sealed class EditorScreenTests
     public void EmptyViewportText_UsesConfiguredTypographyIncludingSize()
     {
         using var viewport = new EditorViewport { EmptyText = "Привет", FontFamily = "typography-family", FontSize = 21, FontWeight = 600, FontItalic = true };
-        var probe = new TypographyRecordingContext(); viewport.Measure(new(600, 420), probe); viewport.Arrange(new(0, 0, 600, 420)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(viewport, probe);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        var probe = new TypographyRecordingContext(); viewport.Measure(new(600, 420), probe); viewport.Arrange(new(0, 0, 600, 420)); UiTreeRenderer.Draw(viewport, probe, presenters);
         var drawn = Assert.Single(probe.Texts);
         Assert.Equal(("Привет", 21f, "typography-family", 600, true), (drawn.Text, drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
     }

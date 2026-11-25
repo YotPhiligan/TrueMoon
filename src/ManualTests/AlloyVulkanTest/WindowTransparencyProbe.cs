@@ -188,20 +188,23 @@ internal static unsafe class WindowTransparencyProbe
 
     internal sealed class Scene : Element
     {
-        private Rgb _color = WindowTransparencyProbe.Foreground;
-        private bool _bands;
+        internal Rgb BandColor { get; private set; } = WindowTransparencyProbe.Foreground;
+        internal bool Bands { get; private set; }
         internal void Set(Rgb color, bool bands)
-        { _color = color; _bands = bands; Invalidate(Invalidation.Render); }
+        { BandColor = color; Bands = bands; Invalidate(Invalidation.Render); }
         protected override Size MeasureCore(Size available, ITextLayoutService text) => available;
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<Scene>(static (scene, drawing) =>
+    }
+
+    private static void ConfigurePresenters(UiPresenters presenters)
+    {
+        presenters.Register<Scene>(static (scene, drawing) =>
         {
             ReadOnlySpan<byte> alphas = [0, 128, 255];
             var bounds = scene.Bounds;
             for (var band = 0; band < 3; band++)
                 drawing.Fill(new Rect(bounds.X + bounds.Width * band / 3, bounds.Y, bounds.Width / 3, bounds.Height),
-                    scene._color.Color(scene._bands ? alphas[band] : (byte)255));
+                    scene.BandColor.Color(scene.Bands ? alphas[band] : (byte)255));
         });
-        public override ElementPresentation Presentation => Painter;
     }
 
     internal sealed class ProbeWindow : IDisposable
@@ -263,7 +266,7 @@ internal static unsafe class WindowTransparencyProbe
                     Graphics = System.Text.Encoding.UTF8.GetString(properties.DeviceName, (int)Vk.MaxPhysicalDeviceNameSize).TrimEnd('\0') + $"; driverVersion={properties.DriverVersion}";
                     Presenter = appearance == null ? new VulkanWindowPresenter(_device, requestedAlpha)
                         : new VulkanWindowPresenter(_device, appearance.Transparency);
-                    Session = UiSession.Create(content ?? Scene, new SkiaVulkanRenderBackend(), SilkVulkanHost.CreateTarget(_device), Viewport());
+                    Session = UiSession.Create(content ?? Scene, new SkiaVulkanRenderBackend(), SilkVulkanHost.CreateTarget(_device), Viewport(), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
                 }
                 else
                 {
@@ -272,7 +275,7 @@ internal static unsafe class WindowTransparencyProbe
                     Graphics = $"{_gl.GetStringS(StringName.Version)} / {_gl.GetStringS(StringName.Renderer)}; alphaBits={alphaBits}";
                     var context = Window.GLContext ?? throw new NotSupportedException("OpenGL context is required.");
                     Session = UiSession.Create(content ?? Scene, new SkiaOpenGLRenderBackend(),
-                        new OpenGLUiTarget(name => context.TryGetProcAddress(name, out var address) ? address : 0, context.MakeCurrent), Viewport());
+                        new OpenGLUiTarget(name => context.TryGetProcAddress(name, out var address) ? address : 0, context.MakeCurrent), Viewport(), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
                 }
                 if (_host != null && content != null) _host.Input += HandleInput;
             }

@@ -46,6 +46,7 @@ internal sealed class ViewportInputFixture : IDisposable
     internal EditorViewportController Controller=>Assert.IsType<EditorViewportController>(View.ViewportController);
     internal SceneAuthoringState Content=>Owner.Document.Read().Content!;
     internal readonly TypographyRecordingContext Drawing=new();
+    internal readonly UiPresenters Presenters = UiPresenters.Create(EditorPresenters.Register);
     private ulong _frame;
     internal static readonly TimeSpan Deadline=TimeSpan.FromSeconds(5);
     internal ViewportInputFixture(bool wrap=false)
@@ -96,7 +97,7 @@ internal sealed class ViewportInputFixture : IDisposable
         Ui.Update();Controller.Observe(Ui);
         var surface=frame.Presentation;
         View.Canvas.Upload(SkiaImageSource.CopyBgraPixels(surface.Surface.Width,surface.Surface.Height,new byte[surface.Surface.Width*surface.Surface.Height*4]),frame,()=>ReferenceEquals(Frames.Presentation,surface));
-        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(View.Canvas, Drawing);
+        UiTreeRenderer.Draw(View.Canvas, Drawing, Presenters);
         // A worker may advance while the UI draws the previous ticket. Production also rejects that stale ack and waits for the next frame.
         if (!acknowledge || View.Canvas.CurrentDraw is not {} draw) return false;
         var (painted, b, c, revision) = draw;
@@ -116,6 +117,7 @@ internal sealed class ViewportInputFixture : IDisposable
     internal static void WaitUntil(Func<bool> ready)=>Assert.True(SpinWait.SpinUntil(ready,Deadline),"Tracked preview transition did not complete.");
     public void Dispose()
     {
+        Presenters.Dispose();
         Ui.Dispose();View.Dispose();DocumentUiFixture.Wait(Coordinator.StopAsync());Model.Dispose();Inspector.Dispose();Documents.Dispose();Coordinator.Dispose();State.Dispose();
         DocumentUiFixture.Wait(Preview.DisposeAsync().AsTask());DocumentUiFixture.Wait(Frames.DisposeAsync().AsTask());DocumentUiFixture.Wait(Supervisor.DisposeAsync().AsTask());Owner.Dispose();
     }

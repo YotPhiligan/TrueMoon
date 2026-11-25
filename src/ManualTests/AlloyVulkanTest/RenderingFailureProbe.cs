@@ -38,7 +38,7 @@ internal static class RenderingFailureProbe
                 try { return VulkanHostReadback.Read(device, lease.Info, state => layout = state); }
                 finally { lease.Return(layout); }
             });
-            using var ui = UiSession.Create(new View1(new SettingsModel()), new SkiaVulkanRenderBackend(), target, Viewport);
+            using var ui = UiSession.Create(new View1(new SettingsModel()), new SkiaVulkanRenderBackend(), target, Viewport, null, new UiDispatchOptions(), configurePresenters: DemoPresenters.Configure);
             ui.Update(); var borrowed = ui.AcquireVulkanTexture(); var info = borrowed.Info;
             var hostFailure = Failure(); ui.ReportRenderingFailure(hostFailure);
             Reject<InvalidOperationException>(ui.Dispose); Require(!ui.IsDisposed && ui.Root.IsAttached, "Fault disposed a borrowed frame.");
@@ -65,7 +65,7 @@ internal static class RenderingFailureProbe
     private static void Exercise(IRenderBackend backend, UiRenderTarget target, Func<UiSession, byte[]> read)
     {
         var model = new SettingsModel { Name = "Сохранено 👩‍💻" }; model.AddRow(); model.Rows[0].Name = "Строка Б"; var row = model.Rows[0];
-        var view = new View1(model); var root = new FailingRoot(view); using var ui = UiSession.Create(root, backend, target, Viewport);
+        var view = new View1(model); var root = new FailingRoot(view); using var ui = UiSession.Create(root, backend, target, Viewport, null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
         Require(ui.Update() && read(ui).Length == Viewport.Width * Viewport.Height * 4, "Initial real backend readback failed.");
         ui.Focus(view.NameEditor); ui.Capture(view.NameEditor); var reports = 0; var failure = Failure();
         ui.RenderingFailed += error => { Require(ReferenceEquals(error, failure), "Failure notification replaced original error."); reports++; };
@@ -76,7 +76,7 @@ internal static class RenderingFailureProbe
         Require(reports == 1 && !view.NameEditor.IsFocused && model.Name == "Сохранено 👩‍💻", "Failure did not cancel focus or mutated model.");
         ui.Dispose(); Require(root.IsDisposed && view.IsDisposed && !view.IsAttached, "Failed tree was not released.");
         model.Name = "Пересоздано 🧑‍💻"; Require(view.NameEditor.Value == "Сохранено 👩‍💻", "Old view remained subscribed.");
-        var nextView = new View1(model); using var next = UiSession.Create(nextView, backend, target, Viewport);
+        var nextView = new View1(model); using var next = UiSession.Create(nextView, backend, target, Viewport, null, new UiDispatchOptions(), configurePresenters: DemoPresenters.Configure);
         Require(next.Update() && !next.Update() && read(next).Length == Viewport.Width * Viewport.Height * 4, "Explicit new session did not draw/read back.");
         Require(nextView.NameEditor.Value == model.Name && ReferenceEquals(row, model.Rows[0]) && nextView.RowList.Items.Count == model.Rows.Count, "Recreation lost model/list identity.");
         Require(!nextView.NameEditor.IsFocused && !next.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.None)).PointerCaptured, "New session retained transient input.");
@@ -87,7 +87,7 @@ internal static class RenderingFailureProbe
     {
         var model = new SettingsModel { Name = "До отказа" }; var primary = Failure(); var cleanup = new Exception("controlled tree cleanup"); var close = new Exception("controlled close callback");
         var messages = new List<string>(); var closed = 0; var reports = 0; FailingRoot? root = null; View1? view = null; UiSession? oldSession = null;
-        using var factory = new HostedUiSessionFactory(openGL ? new SkiaOpenGLRenderBackend() : new SkiaVulkanRenderBackend());
+        using var factory = new HostedUiSessionFactory(openGL ? new SkiaOpenGLRenderBackend() : new SkiaVulkanRenderBackend(), configurePresenters: ConfigurePresenters);
         var options = Options(openGL, validation, messages);
         var window = new HostedUiWindow(options, factory, () =>
         { view = new View1(model); root = new FailingRoot(view); root.Own(new ThrowingResource(cleanup)); return root; }, () => { closed++; throw close; });
@@ -162,15 +162,19 @@ internal static class RenderingFailureProbe
         var rejected = new Panel(); try { Reject<ObjectDisposedException>(() => factory.Create(rejected, new Target(), Viewport)); } finally { rejected.Dispose(); }
     }
 
+    private static void ConfigurePresenters(UiPresenters presenters)
+    {
+        DemoPresenters.Configure(presenters);
+        presenters.Register<FailingRoot>(static (root, _) =>
+        {
+            if (root.Failure is { } failure) throw failure;
+        });
+    }
+
     private sealed class FailingRoot : Panel
     {
         internal UiRenderingException? Failure;
         internal FailingRoot(View1 view) => Add(view);
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<FailingRoot>(static (root, _) =>
-        {
-            if (root.Failure is { } failure) throw failure;
-        });
-        public override ElementPresentation Presentation => Painter;
     }
     private sealed class ThrowingResource(Exception error) : IDisposable { public void Dispose() => throw error; }
     private sealed class Target : UiRenderTarget;

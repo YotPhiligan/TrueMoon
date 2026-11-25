@@ -12,7 +12,7 @@ public class SkiaContentPresenterFactory : IFactory<IContentPresenter>
 
     public IContentPresenter? Create<TData>(TData? data = default)
     {
-        if (data is Rectagle rect)
+        if (data is Rectangle rect)
         {
             return new RectangleContentPresenter(rect);
         }

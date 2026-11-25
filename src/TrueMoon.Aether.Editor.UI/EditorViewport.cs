@@ -1,7 +1,6 @@
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
-using TrueMoon.Argentis.Windows;
 using TrueMoon.Aether.Abstractions.Rendering;
 using TrueMoon.Aether.Editor.UI.Translation;
 using TrueMoon.Aether.Runtime.Frames;
@@ -13,11 +12,7 @@ namespace TrueMoon.Aether.Editor.UI;
 
 public sealed class EditorViewport : Element, IUiFrameParticipant
 {
-    private static readonly ElementPresentation Paint = ElementPresentation.Create<EditorViewport, PaintState>(
-        static viewport => viewport.Capture(), new Factory<IElementPresenter<PaintState>>(static () => new Painter()));
     private readonly DrawReceipts _receipts = new();
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Paint;
     private IEditorViewportController? _controller;
     private UiViewport _observedViewport;
     private ulong _viewportEpoch;
@@ -104,7 +99,7 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
     }
 
     private DrawGeometry Geometry() => new(Bounds, ImageBounds, EffectiveClip(), _viewportEpoch);
-    private readonly record struct DrawGeometry(Rect Bounds, Rect Image, Rect Clip, ulong Epoch)
+    internal readonly record struct DrawGeometry(Rect Bounds, Rect Image, Rect Clip, ulong Epoch)
     {
         public bool HasVisibleImage => Math.Max(Image.X, Clip.X) < Math.Min(Image.X + Image.Width, Clip.X + Clip.Width) &&
             Math.Max(Image.Y, Clip.Y) < Math.Min(Image.Y + Image.Height, Clip.Y + Clip.Height);
@@ -128,11 +123,11 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
         }
     }
 
-    private readonly record struct PaintState(DrawGeometry Geometry, SkiaImageSource? Image, ViewportFrame? Frame,
+    internal readonly record struct DrawState(DrawGeometry Geometry, SkiaImageSource? Image, ViewportFrame? Frame,
         TranslationOverlay? Overlay, Theme Theme, string EmptyText, float FontSize, string FontFamily, int FontWeight,
-        bool FontItalic, DrawReceipts Receipts, ulong Generation);
+        bool FontItalic, ulong Generation);
 
-    private PaintState Capture()
+    internal DrawState BeginDraw()
     {
         var generation = _receipts.Supersede();
         try
@@ -142,35 +137,14 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
             var image = _image;
             if (_current?.Invoke() != true) frame = null;
             var overlay = frame != null && geometry.HasVisibleImage ? _controller?.CaptureTranslationOverlay(frame) : null;
-            return new(geometry, image, frame, overlay, Theme, EmptyText, FontSize, FontFamily, FontWeight, FontItalic, _receipts, generation);
+            return new(geometry, image, frame, overlay, Theme, EmptyText, FontSize, FontFamily, FontWeight, FontItalic, generation);
         }
         finally { _receipts.Clear(generation); }
     }
 
-    private sealed class Painter : IElementPresenter<PaintState>
-    {
-        public void Draw(PaintState state, IDrawingContext context)
-        {
-            var bounds = state.Geometry.Bounds;
-            var theme = state.Theme;
-            if (state.Frame is {} frame && state.Image is {} image)
-            {
-                context.Fill(bounds, new(10, 15, 26));
-                if (!state.Geometry.HasVisibleImage) return;
-                context.Image(image, state.Geometry.Image);
-                state.Overlay?.Draw(context, theme, state.FontFamily, state.FontWeight, state.FontItalic);
-                state.Receipts.Complete(state.Generation, frame, state.Geometry);
-                return;
-            }
-            if (theme.WindowGradient is not { } gradient || context is not IWindowGradientDrawingContext window ||
-                !window.TryDrawWindowGradient(bounds, gradient, 0)) context.Fill(bounds, theme.Surface);
-            var line = theme.Foreground with { A = 24 };
-            for (var x = bounds.X; x < bounds.X + bounds.Width; x += 32) context.Fill(new(x, bounds.Y, 1, bounds.Height), line);
-            for (var y = bounds.Y; y < bounds.Y + bounds.Height; y += 32) context.Fill(new(bounds.X, y, bounds.Width, 1), line);
-            context.Text(state.EmptyText, bounds.X + 24, bounds.Y + Math.Max(16, bounds.Height / 2 - 12),
-                theme.Foreground, state.FontSize, state.FontFamily, state.FontWeight, state.FontItalic);
-        }
-    }
+    internal void CompleteDraw(in DrawState state, ViewportFrame frame) =>
+        _receipts.Complete(state.Generation, frame, state.Geometry);
+
     private Rect EffectiveClip()
     {
         var clip = Bounds;

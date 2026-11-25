@@ -20,7 +20,7 @@ internal static class SettingsHudProbe
     internal static void Run(bool validation, bool interactive)
     {
         var builder = App.Builder(b => b.UseDI());
-        builder.Setup(app => app.UseAlloy(options => options.UseSkiaVulkan().UseExternalHost()));
+        builder.Setup(app => app.UseAlloy(options => options.ConfigurePresenters(DemoPresenters.Configure).UseSkiaVulkan().UseExternalHost()));
         using var app = builder.Build(); app.StartAsync().GetAwaiter().GetResult();
         var factory = (HostedUiSessionFactory)app.Services.GetService(typeof(IUiSessionFactory))!;
         using var window = new SilkWindowHost(1100, 1100, "TrueMoon shared settings HUD — Escape to close");

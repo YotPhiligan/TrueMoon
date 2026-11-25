@@ -177,45 +177,13 @@ public sealed class TextBox : Element
         _scrollX = Math.Clamp(_scrollX, Math.Max(0, _caretX - Math.Max(0, _viewport.Width - 2)), Math.Max(0, _caretX));
     }
 
-    private static readonly ElementPresentation Paint = ElementPresentation.Create<TextBox>(
-        new Factory<IElementPresenter<TextBox>>(static () => new Painter()));
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Paint;
+    internal Rect TextViewport => _viewport;
+    internal float LineY => _lineY;
+    internal float LineHeight => _lineHeight;
+    internal float CaretX => _caretX;
+    internal float AnchorX => _anchorX;
+    internal IRichTextLayout? ShapedLine => _shapedLine;
 
-    private sealed class Painter : IElementPresenter<TextBox>
-    {
-        public void Draw(TextBox field, IDrawingContext context)
-        {
-            var bounds = field.Bounds;
-            if (field.IsReadOnly && !field.HasError)
-                context.Fill(new(bounds.X + bounds.Width - 4, bounds.Y + 4, 2, Math.Max(0, bounds.Height - 8)), field.Theme.Border);
-            var x = field._viewport.X - field._scrollX;
-            var y = field._lineY;
-            var selection = field.IsFocused ? field.SelectionLength : 0;
-            var highlight = field.Theme.Accent with { A = 100 };
-            context.Save();
-            try
-            {
-                context.Clip(field._viewport);
-                if (field._shapedLine is { } shaped)
-                {
-                    if (context is not IRichTextDrawingContext rich)
-                        throw new InvalidOperationException("Shaped layout requires a matching rich text drawing context.");
-                    rich.RichText(shaped, x, y, field.SelectionStart, selection, highlight);
-                }
-                else
-                {
-                    if (selection > 0)
-                        context.Fill(new(x + Math.Min(field._caretX, field._anchorX), y,
-                            Math.Abs(field._caretX - field._anchorX), field._lineHeight), highlight);
-                    context.Text(field.Value, x, y, field.IsEffectivelyEnabled ? field.Foreground : field.Theme.Disabled,
-                        field.FontSize, field.FontFamily, field.FontWeight, field.FontItalic);
-                }
-                if (field.IsFocused) context.Fill(new(x + field._caretX, y, 1, field._lineHeight), field.Foreground);
-            }
-            finally { context.Restore(); }
-        }
-    }
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context)
     {

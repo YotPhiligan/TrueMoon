@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Painting;
@@ -184,9 +185,11 @@ public sealed class TreeView : Element, ITreeView
         var pending = new Stack<Row>(_items.Where(item => item.ParentId == null).Reverse().Select(item => new Row(item, 0)));
         while (pending.TryPop(out var row))
         {
-            _rows.Add(row);
-            if (!_expanded.Contains(row.Item.Id)) continue;
             var children = _children[row.Item.Id];
+            row.HasChildren = children.Count != 0;
+            row.Expanded = _expanded.Contains(row.Item.Id);
+            _rows.Add(row);
+            if (!row.Expanded) continue;
             for (var i = children.Count - 1; i >= 0; i--) pending.Push(new(children[i], row.Depth + 1));
         }
         _visible = Array.AsReadOnly(_rows.Select(row => row.Item).ToArray());
@@ -196,23 +199,28 @@ public sealed class TreeView : Element, ITreeView
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
         _text = text;
-        var width = _rows.Select(row => text.Measure(row.Item.Text, FontSize, FontFamily, FontWeight, FontItalic).Width + row.Depth * Indent + 36).DefaultIfEmpty(0).Max();
+        float width = 0;
+        foreach (ref var row in CollectionsMarshal.AsSpan(_rows))
+        {
+            row.TextWidth = text.Measure(row.Item.Text, FontSize, FontFamily, FontWeight, FontItalic).Width;
+            width = Math.Max(width, row.TextWidth + row.Depth * Indent + 36);
+        }
         return new(Math.Min(available.Width, width), _rows.Count * RowHeight);
     }
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
-        if (!_reveal || _selected == null || GetItemBounds(_selected) is not { } row) return;
+        if (!_reveal || _selected == null || GetItemBounds(_selected) is not { } selectedBounds) return;
         _reveal = false;
         for (var parent = Parent; parent != null; parent = parent.Parent)
-            if (parent is ScrollViewer scroll) { scroll.BringIntoView(row); break; }
+            if (parent is ScrollViewer scroll) { scroll.BringIntoView(selectedBounds); break; }
     }
-    private Rect RowBounds(int index)
+    internal Rect RowBounds(int index)
     {
         var area = Bounds.Deflate(Padding);
         return new(area.X, area.Y + index * RowHeight, area.Width, RowHeight);
     }
-    private Rect VisibleArea()
+    internal Rect VisibleArea()
     {
         var area = Bounds.Deflate(Padding);
         for (var parent = Parent; parent != null; parent = parent.Parent)
@@ -229,39 +237,17 @@ public sealed class TreeView : Element, ITreeView
         var index = (int)MathF.Floor((y - Bounds.Y - Padding.Top) / RowHeight);
         return index >= 0 && index < _rows.Count ? index : -1;
     }
-    private static readonly ElementPresentation TreeViewPresentation = ElementPresentation.Create<TreeView>(static (tree, context) =>
+    internal ReadOnlySpan<Row> Rows => CollectionsMarshal.AsSpan(_rows);
+    internal string? HoveredId => _hover;
+    internal bool HasDropTarget => _dragging && _dropValid;
+    internal TreeDropPosition DropPosition => _dropPosition;
+    internal string? DropParent => _dropParent;
+    internal string? DropAnchor => _dropAnchor;
+
+    internal string FitLabel(in Row row, float width)
     {
-        var visible = tree.VisibleArea(); if (visible.Width <= 0 || visible.Height <= 0) return;
-        var theme = tree.Theme;
-        var first = Math.Max(0, (int)MathF.Floor((visible.Y - tree.Bounds.Y - tree.Padding.Top) / tree.RowHeight));
-        var end = Math.Min(tree._rows.Count, (int)MathF.Ceiling((visible.Y + visible.Height - tree.Bounds.Y - tree.Padding.Top) / tree.RowHeight));
-        for (var i = first; i < end; i++)
-        {
-            var row = tree._rows[i]; var bounds = tree.RowBounds(i); var selected = row.Item.Id == tree._selected;
-            if (selected) context.Fill(bounds, tree.IsEffectivelyEnabled ? theme.Accent : theme.ControlDisabled);
-            else if (tree.IsHovered && row.Item.Id == tree._hover) context.Fill(bounds, theme.ControlHover);
-            var color = !tree.IsEffectivelyEnabled ? theme.Disabled : selected ? theme.OnAccent : tree.Foreground;
-            var x = bounds.X + Math.Min(row.Depth * tree.Indent, Math.Max(0, bounds.Width - 36));
-            var y = bounds.Y + (bounds.Height - 14) / 2;
-            if (tree._children[row.Item.Id].Count != 0)
-                UiSymbols.Draw(context, tree._expanded.Contains(row.Item.Id) ? UiSymbol.ChevronDown : UiSymbol.ChevronRight, new(x, y, 14, 14), color);
-            UiSymbols.Draw(context, row.Item.Icon, new(x + 16, y, 14, 14), color);
-            context.Text(tree.Ellipsize(row.Item.Text, Math.Max(0, bounds.X + bounds.Width - x - 36)), x + 34,
-                bounds.Y + (bounds.Height - tree.FontSize) / 2, color, tree.FontSize, tree.FontFamily, tree.FontWeight, tree.FontItalic);
-            if (tree._dragging && tree._dropValid)
-            {
-                if (tree._dropPosition == TreeDropPosition.Into && tree._dropParent == row.Item.Id) context.Stroke(bounds.Deflate(new Thickness(1)), theme.Focus, 2);
-                else if (tree._dropPosition != TreeDropPosition.Into && tree._dropAnchor == row.Item.Id)
-                    context.Fill(new(bounds.X, tree._dropPosition == TreeDropPosition.Before ? bounds.Y : bounds.Y + bounds.Height - 2, bounds.Width, 2), theme.Focus);
-            }
-        }
-        if (tree._dragging && tree._dropValid && tree._dropPosition == TreeDropPosition.Into && tree._dropParent == null) context.Stroke(visible.Deflate(new Thickness(1)), theme.Focus, 2);
-    });
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => TreeViewPresentation;
-    private string Ellipsize(string value, float width)
-    {
-        if (_text == null || _text.Measure(value, FontSize, FontFamily, FontWeight, FontItalic).Width <= width) return value;
+        var value = row.Item.Text;
+        if (row.TextWidth <= width || _text == null) return value;
         var low = 0; var high = value.Length;
         while (low < high)
         {
@@ -408,5 +394,9 @@ public sealed class TreeView : Element, ITreeView
             { _capture = null; _pressed = null; SelectionChanged = null; ExpansionChanged = null; MoveRequested = null; PlacementRequested = null; _text = null; }
         }
     }
-    private readonly record struct Row(TreeItem Item, int Depth);
+    internal record struct Row(TreeItem Item, int Depth)
+    {
+        internal bool HasChildren, Expanded;
+        internal float TextWidth;
+    }
 }

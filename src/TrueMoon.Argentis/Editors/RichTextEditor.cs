@@ -291,39 +291,10 @@ public sealed class RichTextEditor : Element
         }
         ClampScroll();
     }
-    private static readonly ElementPresentation Paint = ElementPresentation.Create<RichTextEditor>(
-        new Factory<IElementPresenter<RichTextEditor>>(static () => new Painter()));
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Paint;
+    internal IRichTextLayout? PreparedLayout => _layout;
+    internal Rect TextViewport => _viewport;
+    internal Rect CaretBounds => _caretBounds;
 
-    private sealed class Painter : IElementPresenter<RichTextEditor>
-    {
-        public void Draw(RichTextEditor editor, IDrawingContext context)
-        {
-            if (editor._layout is not { } layout) return;
-            if (context is not IRichTextDrawingContext rich) throw new NotSupportedException("RichTextEditor requires an IRichTextDrawingContext backend.");
-            var bounds = editor.Bounds;
-            if (editor.Options.IsReadOnly && !editor.HasError)
-                context.Fill(new(bounds.X + bounds.Width - 4, bounds.Y + 4, 2, Math.Max(0, bounds.Height - 8)), editor.Theme.Border);
-            var area = editor._viewport;
-            var x = area.X - editor._scrollX;
-            var y = area.Y - editor._scrollY;
-            context.Save();
-            try
-            {
-                context.Clip(area);
-                var selected = editor.IsFocused || editor.Options.ShowSelectionWhenUnfocused;
-                rich.RichText(layout, x, y, editor.SelectionStart, selected ? editor.SelectionLength : 0,
-                    editor.Options.SelectionColor ?? (editor.Theme.Accent with { A = 100 }));
-                if (editor.IsFocused && editor.IsEffectivelyEnabled)
-                {
-                    var caret = editor._caretBounds;
-                    context.Fill(new(x + caret.X, y + caret.Y, 1, caret.Height), editor.Foreground);
-                }
-            }
-            finally { context.Restore(); }
-        }
-    }
     private void Move(int position, bool extend, bool vertical = false)
     {
         _caret = Clamp(position); if (!extend) _anchor = _caret;

@@ -186,13 +186,15 @@ public sealed class RenderingFailureTests
     public void ExplicitRecreation_PreservesCallerModelRowsAndCreatesNewTreeWithoutOldSubscriptionsOrFocus()
     {
         var model = new SettingsModel { Name = "Сохранено 👩‍💻" }; model.AddRow(); model.Rows[0].Name = "Row Б"; var rows = model.Rows.ToArray();
-        var oldView = new View1(model); var surface = new Surface(); using var oldUi = new UiSession(oldView, surface, Viewport);
+        var oldView = new View1(model); var surface = new Surface(); using var oldUi = new UiSession(oldView, surface, Viewport,
+            null, new UiDispatchOptions(), null, configurePresenters: DemoPresenters.Configure);
         oldUi.Update(); oldUi.Focus(oldView.NameEditor); oldUi.Capture(oldView.NameEditor); surface.Error = Failure(); oldView.Background = new Color(1, 0, 0);
         Assert.Throws<UiRenderingException>(() => oldUi.Update()); Assert.False(oldView.NameEditor.IsFocused); oldUi.Dispose();
         var oldValue = oldView.NameEditor.Value; Assert.Equal("Сохранено 👩‍💻", oldValue);
         model.Name = "Новая модель 🧑‍💻"; model.AddRow(); Assert.Equal(rows.Length + 1, model.Rows.Count);
         Assert.Equal(oldValue, oldView.NameEditor.Value); Assert.True(oldView.RowList.IsDisposed);
-        var newView = new View1(model); using var newUi = new UiSession(newView, new Surface(), Viewport); Assert.True(newUi.Update());
+        var newView = new View1(model); using var newUi = new UiSession(newView, new Surface(), Viewport,
+            null, new UiDispatchOptions(), null, configurePresenters: DemoPresenters.Configure); Assert.True(newUi.Update());
         Assert.NotSame(oldView, newView); Assert.NotSame(oldView.NameEditor, newView.NameEditor);
         Assert.Equal("Новая модель 🧑‍💻", model.Name); Assert.Equal("Новая модель 🧑‍💻", newView.NameEditor.Value);
         Assert.Equal(rows.Length + 1, newView.RowList.Items.Count);

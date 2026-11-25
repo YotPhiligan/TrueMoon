@@ -14,7 +14,7 @@ namespace TrueMoon.Alloy.Tests;
 
 public sealed class DemoInteractionTests
 {
-    private static UiSession Create(View1 view, IUiClipboard? clipboard = null, Surface? surface = null) => new(view, surface ?? new Surface(), new UiViewport(800, 1100), clipboard);
+    private static UiSession Create(View1 view, IUiClipboard? clipboard = null, Surface? surface = null) => new(view, surface ?? new Surface(), new UiViewport(800, 1100), clipboard, new UiDispatchOptions(), null, configurePresenters: DemoPresenters.Configure);
 
     [Theory]
     [InlineData(null)]
@@ -156,18 +156,19 @@ public sealed class DemoInteractionTests
     {
         var model = new SettingsModel { Volume = volume }; var view = new View1(model); using var ui = Create(view); ui.Update();
         Assert.Equal(volume, view.VolumeSlider.Value); Assert.Equal(volume, view.Meter.Value); Assert.Equal(new Size(200, 36), view.Meter.DesiredSize);
-        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(view.Meter, drawing);
+        using var presenters = UiPresenters.Create(DemoPresenters.Configure);
+        var drawing = new Drawing(); UiTreeRenderer.Draw(view.Meter, drawing, presenters);
         Assert.Equal(view.Meter.Bounds, drawing.Fills[0].Bounds); Assert.Equal(new Rect(view.Meter.Bounds.X + 1, view.Meter.Bounds.Y + 1, (view.Meter.Bounds.Width - 2) * volume, view.Meter.Bounds.Height - 2), drawing.Fills[1].Bounds);
         Assert.Equal(view.Theme.Accent, drawing.Fills[1].Color); Assert.Equal($"Громкость: {volume:P0}", Assert.Single(drawing.Texts).Value); Assert.Equal(view.Theme.Foreground, drawing.Texts[0].Color);
         model.Volume = .6f; Assert.Equal(volume, view.Meter.Value); ui.Update(); Assert.Equal(.6f, view.Meter.Value);
-        model.ControlsEnabled = false; ui.Update(); drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(view.Meter, drawing); Assert.Equal(view.Theme.Disabled, drawing.Fills[1].Color); Assert.Equal(view.Theme.Disabled, Assert.Single(drawing.Texts).Color);
+        model.ControlsEnabled = false; ui.Update(); drawing = new Drawing(); UiTreeRenderer.Draw(view.Meter, drawing, presenters); Assert.Equal(view.Theme.Disabled, drawing.Fills[1].Color); Assert.Equal(view.Theme.Disabled, Assert.Single(drawing.Texts).Color);
     }
 
     [Fact]
     public void RealDemoIcon_RendersArgentisPaletteAndThemeBackgroundThroughSkia()
     {
         var model = new SettingsModel(); var view = new View1(model);
-        using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new UiViewport(800, 1100)); ui.Update();
+        using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new UiViewport(800, 1100), null, new UiDispatchOptions(), configurePresenters: DemoPresenters.Configure); ui.Update();
         Assert.Equal(48, view.Logo.Bounds.Width); Assert.Equal(48, view.Logo.Bounds.Height);
         using var snapshot = ui.SnapshotRasterImage(); using var bitmap = SKBitmap.FromImage(snapshot);
         var x = (int)view.Logo.Bounds.X; var y = (int)view.Logo.Bounds.Y;

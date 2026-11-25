@@ -65,21 +65,11 @@ public sealed class ViewportCanvas : Element
         var old = _image; _image = next; _imageFrame = (display, frame.Metadata); old?.Dispose(); Invalidate();
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(available.Width, 420);
-    private static readonly ElementPresentation Painter = ElementPresentation.Create<ViewportCanvas>(static (canvas, context) =>
-    {
-        context.Fill(canvas.Bounds, new(15, 19, 28));
-        var gpuFrame = canvas._gpuFrame;
-        if (canvas._image is not { } image || (gpuFrame != null && !canvas._gpuCurrent!()))
-        {
-            canvas.ReportDrawn(null, null);
-            return;
-        }
-        var imageFrame = canvas._imageFrame;
-        context.Image(image, canvas.ImageBounds);
-        canvas.ReportDrawn(imageFrame, gpuFrame);
-    });
-    public override ElementPresentation Presentation => Painter;
-    private void ReportDrawn((FrameDisplay Display, FrameMetadata Metadata)? imageFrame, ViewportFrame? gpuFrame)
+    internal IImageSource? Image => _image;
+    internal (FrameDisplay Display, FrameMetadata Metadata)? ImageFrame => _imageFrame;
+    internal ViewportFrame? GpuFrame => _gpuFrame;
+    internal bool IsGpuCurrent => _gpuCurrent!();
+    internal void ReportDrawn((FrameDisplay Display, FrameMetadata Metadata)? imageFrame, ViewportFrame? gpuFrame)
     {
         Drawn = imageFrame;
         DrawnViewport = gpuFrame;
@@ -187,7 +177,7 @@ public static class ViewportProbe
             });
             c.UsePresentation<ViewportView>(o =>
             {
-                o.UseSkiaOpenGL(fonts);
+                o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts);
                 o.UseSilkWindow(w => { w.Width = 900; w.Height = 740; w.Title = "TrueMoon Editor viewport"; w.EnableDiagnostics = true; w.FrameMode = UiFrameMode.Continuous; });
             });
             c.Services(r => r.Singleton<Action<string>>(_ => Dispatch).Transient<ViewportView>());

@@ -24,6 +24,7 @@
     <Compile Include="..\ManualTests\AlloyTest\SettingsRow.cs" Link="Demo\SettingsRow.cs" />
     <Compile Include="..\ManualTests\AlloyTest\View1.cs" Link="Demo\View1.cs" />
     <Compile Include="..\ManualTests\AlloyTest\VolumeMeter.cs" Link="Demo\VolumeMeter.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\DemoPresenters.cs" Link="Demo\DemoPresenters.cs" />
     <Compile Include="..\TrueMoon.Alloy.Platform.Silk\Win32Clipboard.cs" Link="Platform\Win32Clipboard.cs" />
     <Compile Include="..\TrueMoon.Alloy.Platform.Silk\Win32ClipboardApi.cs" Link="Platform\Win32ClipboardApi.cs" />
     <Compile Include="..\TrueMoon.Alloy.Platform.Silk\WindowPixelScale.cs" Link="Platform\WindowPixelScale.cs" />

@@ -71,6 +71,7 @@ Action<IAppConfigurationContext> configure = context => context
         )
         .UsePresentation<View1>(options =>
         {
+            options.ConfigurePresenters(DemoPresenters.Configure);
             if (useVulkan) options.UseSkiaVulkan(); else options.UseSkiaOpenGL();
             options.UseSilkWindow(window =>
             {

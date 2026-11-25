@@ -72,7 +72,7 @@ public static class EditorViewportProbe
             });
             c.UsePresentation<ViewportView>(o =>
             {
-                o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
+                o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
                 { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG3d Editor proof"; w.EnableDiagnostics = true; w.FrameMode = UiFrameMode.Continuous; });
             });
             c.Services(r => r.Singleton<Action<string>>(_ => Dispatch).Transient<ViewportView>());

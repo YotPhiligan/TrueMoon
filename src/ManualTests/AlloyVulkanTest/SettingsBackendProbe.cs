@@ -65,7 +65,7 @@ internal static class SettingsBackendProbe
     {
         var model = new SettingsModel { UseSquareOpaqueAppearance = golden != null }; var view = new View1(model); var script = new SettingsFormSmoke();
         var states = new List<string>(); var bounds = new List<Rect>(); var draws = 0;
-        using var ui = UiSession.Create(golden == null ? view : SettingsGoldenProbe.Wrap(view), backend, target, viewport);
+        using var ui = UiSession.Create(golden == null ? view : SettingsGoldenProbe.Wrap(view), backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: SettingsGoldenProbe.ConfigurePresenters);
         for (var frame = 0; frame < 40; frame++)
         {
             if (ui.Update()) draws++;

@@ -1,6 +1,7 @@
-using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Painting;
 
-namespace TrueMoon.Argentis.Painting;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Stock label painting for display text and controls that compose a text label.</summary>
 public sealed class TextPresenter : IElementPresenter<Text>

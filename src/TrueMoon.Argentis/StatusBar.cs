@@ -154,14 +154,6 @@ public sealed class StatusBar : ElementList, IStatusBar, IUiFrameParticipant, IU
         void Place(Element element, float x, float width) => element.Arrange(new(x, area.Y + Math.Max(0, (area.Height - 24) / 2), width, Math.Min(24, area.Height)));
     }
     private static bool FocusWithin(Element element) => element.IsFocused || element.Children.Any(FocusWithin);
-    private static readonly ElementPresentation StatusBarPresentation = ElementPresentation.Create<StatusBar>(static (bar, context) =>
-    {
-        var bounds = bar.Bounds;
-        context.Fill(new(bounds.X, bounds.Y, bounds.Width, Math.Min(1, bounds.Height)),
-            bar.OverlayContent ? bar.Theme.Border with { A = (byte)MathF.Round(40 + 100 * bar.OverlayReveal) } : bar.Theme.Border);
-    });
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => StatusBarPresentation;
     /// <inheritdoc />
     public override void Dispose()
     { try { base.Dispose(); } finally { if (IsDisposed) { AttachmentChanged -= Attached; _returnFocus = _pointerInside = _overlayTarget = false; _overlay.MoveTo(0, TimeSpan.Zero); _overflow = Array.Empty<Element>(); OverflowChanged = null; } } }

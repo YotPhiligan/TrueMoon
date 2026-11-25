@@ -1,11 +1,32 @@
 # Alloy / Argentis: состояние и точка продолжения
 
+<a id="external-presenters"></a>
+### UIA1h.5 — презентеры за пределами элементов
+
+В `1.2611.25.7-alpha` штатные описания и реализация рисования принадлежат
+общему рендереру Alloy, не контролам и не Skia. Прикладной экран подключает
+собственные регистрации в точке создания сессии. Публичное свойство
+`Element.Presentation` удалено без переходного API. [Граница и владение](PLAN.md#uia1h5-external-presenters) ·
+[миграция пакетного потребителя](../../ManualTests/AlloyPackageConsumer/README.md).
+Проверка Release: 884 адресных теста прошли; 864 кадра `TextBox`/`NumberBox`
+совпали с предыдущей версией побайтно. Проверены независимый NuGet-потребитель
+и показ в окне OpenGL. [Протокол и границы](HISTORY.md#external-presenters-acceptance).
+
+### PA8c.1a — дробная прокрутка редактируемых полей
+
+Для `TextBox` и `NumberBox.Editor` проверены пиксели и ввод в обеих темах
+при логических масштабах 1×, 1,25× и 1,75×. На изолированной цифре `7`
+дробное позиционирование точнее воспроизвело движение строки; каретка,
+выделение, клик и отсечение прошли проверку на raster, OpenGL и Vulkan.
+Штатный режим не менялся. Остались окно Editor при смене DPI и стоимость
+кадра/кэша. [Измерения](HISTORY.md#pa8c1a-editable-fields) · [План](PLAN.md#pa8c1a-positioning-rollout).
+
 <a id="uia1-architecture"></a>
 ### Архитектурный блок UIA1g/h/i/j — `1.2611.25.6-alpha`
 
 - Один `UiTreeRenderer` обслуживает Raster, OpenGL, Vulkan и тесты без окна.
-  `UiPresenters` разрешает точный тип, затем штатное описание; узел с
-  `ElementPresentation.Required` без регистрации выдаёт ошибку с именем типа.
+  В этой версии `UiPresenters` разрешал точный тип, затем штатное описание на
+  элементе. Этот путь заменён в [UIA1h.5](#external-presenters).
   Фабрики живут отдельно от созданных для сессии презентеров.
 - Layout обновляется перед вводом без выдачи кадра. `TextBox` и `RichTextEditor`
   не меняют выделение, каретку и прокрутку при рисовании. Пустой после detach
@@ -65,7 +86,7 @@ TextBoxViewport/RichTextEditor и 2 EditorViewportReceipt. Это исходны
 не было.
 
 25.11.2026 — на `1.2611.25.2-alpha` содержимое `IconButton` рисует
-[`IconButtonPresenter`](../../TrueMoon.Argentis/Painting/IconButtonPresenter.cs) по снимку
+`IconButtonPresenter` по снимку
 `IconButtonPaintState`. При создании `UiSession` можно заменить его фабрику;
 реестр выбирает точный тип, переиспользует экземпляр и освобождает его
 с сессией. [SessionPresenterTests](../../TrueMoon.Alloy.Tests/SessionPresenterTests.cs)

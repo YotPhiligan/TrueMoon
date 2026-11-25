@@ -52,7 +52,7 @@ public static class EditorWindowConfigurationExtensions
             headers = resolver.Resolve<IFactory<EditorHeaderView, EditorHeaderArguments>>();
             return resolver.Resolve<IFactory<EditorMainWindow, EditorMainWindowArguments>>().Create(arguments)
                 ?? throw new InvalidOperationException("Editor window factory returned null.");
-        }, presentation => presentation.UseSkiaOpenGL(fonts).UseSilkWindow(window =>
+        }, presentation => presentation.ConfigurePresenters(EditorPresenters.Register).UseSkiaOpenGL(fonts).UseSilkWindow(window =>
         {
             window.Width = 1280; window.Height = 800; window.Title = "TrueMoon Aether Editor";
             window.Appearance = new WindowAppearance { Decorated = false };

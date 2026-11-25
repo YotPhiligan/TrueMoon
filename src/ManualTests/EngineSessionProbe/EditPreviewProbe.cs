@@ -48,7 +48,7 @@ internal static class EditPreviewProbe
             });
             context.UsePresentationFactory<ViewportView>(options =>
             {
-                options.UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
+                options.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
                 { window.Width = 1000; window.Height = 760; window.Title = "TrueMoon Edit preview proof"; window.FrameMode = UiFrameMode.Continuous; });
             });
         });

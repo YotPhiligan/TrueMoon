@@ -22,6 +22,14 @@ create a native window. Choose `TrueMoon.Alloy.Rendering.Skia` for rendering,
 `TrueMoon.Alloy.Platform.Silk` for the supported native window integration, or
 `TrueMoon.Alloy.Hosting` to compose these with a TrueMoon App.
 
+`TrueMoon.Alloy.Runtime` owns the stock painter catalog for all backends. Custom
+controls do not reference it. Register application drawing with
+`UiPresenters.Register<TControl>(paint)` or `Register<TControl,TState>(capture, factory)`.
+Use the same registration method with `configurePresenters` for a session, with
+`UiPresenters.Create` for standalone drawing, or `ConfigurePresenters` for Hosting.
+Factories can be shared; the registry owns the instances it creates and releases
+them with its session. Keep a registry across repeated standalone draws.
+
 Sessions, tree mutation, surface operations and cleanup retain owner-thread and
 frame-lease requirements. Posted work is bounded; scheduling/diagnostics do not
 promise a particular GPU frame rate or release hardware acceptance. External

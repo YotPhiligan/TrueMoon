@@ -1,5 +1,62 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="external-presenters-acceptance"></a>
+## UIA1h.5 — внешний каталог презентеров, `1.2611.25.7-alpha`
+
+Windows x64, .NET 11, Release. Проверялся [перенос штатного и прикладного рисования](PLAN.md#uia1h5-external-presenters), а не полная матрица выпуска.
+
+| Адресные проверки `dotnet test` | Прошло |
+|---|---:|
+| Alloy: регистрация, рендер, поля ввода, меню и оформление | 449 |
+| Hosting: DI и время жизни сессий | 28 |
+| Editor: контролы, инспектор, viewport | 404 |
+| Editor: отдельный `SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform` | 1 |
+| Player: квитанции `PlayerCanvas` | 2 |
+
+Падений и пропусков не было. [TRX, журналы сборок и рендеринга](../../TestResults/UIA1h5-external/).
+Собраны `AlloyTest`, `EngineSessionProbe`, `KtonVisual/Probe`, `AetherPackageConsumer/Gui` и `Examples/AetherEditor`.
+
+- `AlloyVulkanTest --typography-editable-fields --validation`: 864 исходных PNG
+  двух полей на raster/OpenGL/Vulkan совпали побайтно с [профилем до переноса](#pa8c1a-editable-fields).
+  Vulkan validation: 0 ошибок, 0 предупреждений. Сравнение охватывает эти поля, не весь UI.
+- `AlloyVulkanTest --opengl-window`: 30 кадров настоящего окна, resize до 960×540
+  пикселей при масштабе 1,5, minimize/restore; проверка ошибок GL прошла.
+- `pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -PresentersOnly -PackageVersion 1.2611.25.7-alpha`:
+  четыре пакета собраны в локальный feed, независимый CPU-потребитель прошёл
+  restore/build/run, включая отказ без обязательной регистрации, подмену двух
+  презентеров, клик и изоляцию соседней сессии.
+  [Отчёт пакетного экрана](../../TestResults/AlloyPackages/UIA1h5-external/direct-Release-build-presenters.json).
+  Публикации в NuGet не было.
+
+<a id="pa8c1a-editable-fields"></a>
+## PA8c.1a — прокрутка обычного и вложенного редактора
+
+Windows x64, Release `1.2611.25.6-alpha+81fc62f`, RTX 5070 Ti.
+Из `src`: `dotnet run -c Release --project ManualTests/AlloyVulkanTest -- --typography-editable-fields --font-output TestResults/PA8c1a-editable-20261125 --validation`
+(нужен новый каталог вывода и доступный слой Vulkan validation).
+Четыре `report.json` в `{Light,Dark}/{TextBox,NumberBox}` содержат параметры
+сборки, SHA-256 native Skia, координаты и ссылки на PNG.
+
+864 кадра: два поля × две темы × три логических масштаба (1×, 1,25×, 1,75×)
+× три backend × три режима × восемь шагов. Во всех четырёх отчётах `Passed=true`.
+Клик на последней цифре и выделение проверены по readback; End восстанавливал
+кадр, обратный ход совпадал с прямым, `default` совпадал с `off` побитово.
+Между backend применялся допуск существующего профиля, не побитовое равенство.
+Vulkan validation: 0 ошибок, 0 предупреждений.
+
+Средняя абсолютная ошибка движения центра последней цифры `7` относительно
+заданного смещения, в физических пикселях. Для каждого поля — 54 ненулевых
+смещения на тему и режим; на этом черновике результаты двух полей совпали.
+
+| Тема | Штатный (`off`) | `on` |
+|---|---:|---:|
+| Light | 0,417 | 0,012 |
+| Dark | 0,417 | 0,030 |
+
+Это проверка рисования и ввода, не производительности. Она не измеряет
+остальной текст, смену DPI физического окна Editor или расход кэша и не
+меняет настройки приложений.
+
 <a id="uia1-architecture-2026-11-25"></a>
 ## UIA1g/h/i/j — проверка `1.2611.25.6-alpha`, 25.11.2026
 

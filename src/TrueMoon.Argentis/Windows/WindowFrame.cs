@@ -145,8 +145,4 @@ public sealed class WindowResizeGrip : Element
     public WindowResizeGrip() { WindowRegion = WindowRegionRole.ResizeBottomRight; IsVisible = false; }
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text) => new(16, 16);
-    private static readonly ElementPresentation WindowResizeGripPresentation = ElementPresentation.Create<WindowResizeGrip>(static (grip, context) =>
-        UiSymbols.Draw(context, UiSymbol.ResizeGrip, grip.Bounds.Deflate(new Thickness(2)), grip.Theme.Border));
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => WindowResizeGripPresentation;
 }

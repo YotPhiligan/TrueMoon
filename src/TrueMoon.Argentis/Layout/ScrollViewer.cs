@@ -14,8 +14,8 @@ public class ScrollViewer : ContentControl
     public static readonly UiProperty<bool> ShowScrollBarProperty = new("ShowScrollBar", true, Invalidation.Layout);
     /// <summary>Whether an overflowing viewport reserves a ten-unit track.</summary>
     public bool ShowScrollBar { get => Get(ShowScrollBarProperty); set => Set(ShowScrollBarProperty, value); }
-    private bool HasScrollBar => ShowScrollBar && Extent > Bounds.Deflate(Padding).Height;
-    private Rect Track
+    internal bool HasScrollBar => ShowScrollBar && Extent > Bounds.Deflate(Padding).Height;
+    internal Rect Track
     {
         get
         {
@@ -23,7 +23,7 @@ public class ScrollViewer : ContentControl
             return new(area.X + area.Width - width, area.Y, width, area.Height);
         }
     }
-    private Rect Thumb
+    internal Rect Thumb
     {
         get
         {
@@ -70,15 +70,7 @@ public class ScrollViewer : ContentControl
         _offset = Math.Clamp(_offset, 0, Math.Max(0, Extent - area.Height));
         Child?.Arrange(new Rect(area.X, area.Y - _offset, Math.Max(0, area.Width - (HasScrollBar ? 10 : 0)), Math.Max(area.Height, Extent)));
     }
-    private static readonly ElementPresentation ScrollViewerPresentation = ElementPresentation.Create<ScrollViewer>(static (viewer, context) =>
-    {
-        if (!viewer.HasScrollBar) return;
-        var theme = viewer.Theme;
-        context.Fill(viewer.Track, theme.Surface);
-        context.Fill(viewer.Thumb, !viewer.IsEffectivelyEnabled ? theme.Disabled : viewer._scrollDragging || viewer.IsHovered ? theme.Accent : theme.Border);
-    });
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => ScrollViewerPresentation;
+    internal bool IsScrollDragging => _scrollDragging;
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context)
     {

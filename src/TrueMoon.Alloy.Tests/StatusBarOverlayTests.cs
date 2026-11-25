@@ -107,7 +107,7 @@ public sealed class StatusBarOverlayTests
         root.Add(bar);
         var viewport = new UiViewport((int)(400 * scale), (int)(200 * scale), scale);
         var surface = new SkiaRasterRenderBackend().CreateSurface(new RasterUiTarget(), viewport);
-        using var ui = new UiSession(root, surface, viewport, null, new UiDispatchOptions(), time);
+        using var ui = new UiSession(root, surface, viewport, null, new UiDispatchOptions(), time, configurePresenters: ConfigurePresenters);
         ui.SetTheme(Theme.Dark with { PanelBackdrop = new(4, new(0, 0, 255, 64), new(30, 40, 50)) });
         ui.Update(); ui.HandleInput(new(InputKind.PointerMove, 300, 199)); time.Advance(160); ui.Update();
         using var image = ui.SnapshotRasterImage(); using var pixels = SKBitmap.FromImage(image);
@@ -156,19 +156,17 @@ public sealed class StatusBarOverlayTests
         public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
-    private sealed class SplitScene : Element
+    private static void ConfigurePresenters(UiPresenters presenters)
     {
-        private static readonly ElementPresentation ScenePresentation = ElementPresentation.Create<SplitScene>(static (scene, context) =>
+        presenters.Register<SplitScene>(static (scene, context) =>
         {
             context.Fill(new(0, 0, 80, scene.Bounds.Height), new(0, 0, 0));
             context.Fill(new(80, 0, scene.Bounds.Width - 80, scene.Bounds.Height), new(255, 255, 255));
         });
-        public override ElementPresentation Presentation => ScenePresentation;
-    }
-    private sealed class WhitePatch : Element
-    {
-        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<WhitePatch>(static (patch, context) =>
+        presenters.Register<WhitePatch>(static (patch, context) =>
             context.Fill(new(patch.Bounds.X + 34, patch.Bounds.Y + 10, 10, 10), new(255, 255, 255)));
-        public override ElementPresentation Presentation => PatchPresentation;
     }
+
+    private sealed class SplitScene : Element;
+    private sealed class WhitePatch : Element;
 }

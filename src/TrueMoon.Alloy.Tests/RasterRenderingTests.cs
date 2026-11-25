@@ -60,7 +60,7 @@ public sealed class RasterRenderingTests
     }
 
     private static UiSession Create(Element root, UiViewport? viewport = null) => UiSession.Create(
-        root, new SkiaRasterRenderBackend(), new RasterUiTarget(), viewport ?? new UiViewport(120, 80));
+        root, new SkiaRasterRenderBackend(), new RasterUiTarget(), viewport ?? new UiViewport(120, 80), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
 
     private static byte[] Pixels(SKImage image)
     {
@@ -412,28 +412,27 @@ public sealed class RasterRenderingTests
     }
 
     private sealed class ForeignTarget : UiRenderTarget;
-    private sealed class OverflowFill : Element
+    private static void ConfigurePresenters(UiPresenters presenters)
     {
-        private static readonly ElementPresentation FillPresentation = ElementPresentation.Create<OverflowFill>(static (_, context) =>
+        presenters.Register<OverflowFill>(static (_, context) =>
             context.Fill(new Rect(-100, -100, 300, 300), new Color(255, 0, 0)));
-        public override ElementPresentation Presentation => FillPresentation;
-    }
-    private sealed class CountingFill : Element
-    {
-        internal int Draws { get; private set; }
-        private static readonly ElementPresentation FillPresentation = ElementPresentation.Create<CountingFill>(static (fill, context) =>
+        presenters.Register<CountingFill>(static (fill, context) =>
         {
             fill.Draws++; context.Fill(fill.Bounds, fill.Foreground);
         });
-        public override ElementPresentation Presentation => FillPresentation;
+        presenters.Register<CallbackFill>(static (fill, context) =>
+        {
+            fill.Callback?.Invoke(); context.Fill(fill.Bounds, new Color(0, 0, 255));
+        });
+    }
+
+    private sealed class OverflowFill : Element;
+    private sealed class CountingFill : Element
+    {
+        internal int Draws { get; set; }
     }
     private sealed class CallbackFill : Element
     {
         internal Action? Callback { get; set; }
-        private static readonly ElementPresentation FillPresentation = ElementPresentation.Create<CallbackFill>(static (fill, context) =>
-        {
-            fill.Callback?.Invoke(); context.Fill(fill.Bounds, new Color(0, 0, 255));
-        });
-        public override ElementPresentation Presentation => FillPresentation;
     }
 }

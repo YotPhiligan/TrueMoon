@@ -1,7 +1,10 @@
-namespace TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Painting;
 
-/// <summary>Immutable default painting contract shared by controls of the same kind. Never stores a control or a live presenter.</summary>
-public abstract class ElementPresentation
+namespace TrueMoon.Alloy.Runtime;
+
+/// <summary>A drawing registration, without an element instance or a live presenter.</summary>
+internal abstract class ElementPresentation
 {
     private protected ElementPresentation() { }
 

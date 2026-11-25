@@ -70,7 +70,7 @@ internal static class Program
         var fonts=SkiaFontCatalog.Load("Noto Sans",new Dictionary<string,string>{{"Noto Sans",Path.Combine(AppContext.BaseDirectory,"Assets/Fonts/NotoSans-Regular.ttf")}});
         context.UsePresentationFactory<VisualView>(options=>
         {
-            options.UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=1000;window.Height=690;window.Title="Kton visual acceptance";});
+            options.ConfigurePresenters(VisualPresenters.Configure).UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=1000;window.Height=690;window.Title="Kton visual acceptance";});
         });
         context.Services(services=>
         {

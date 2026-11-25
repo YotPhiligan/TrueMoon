@@ -87,14 +87,15 @@ public sealed partial class OverlayHost
         protected override Color ThemeBackground => Backdrop == null ? Theme.Surface : Color.Transparent;
         protected override BoxShadow? ThemeShadow => Theme.MenuShadow;
     }
-    private sealed class ValidationHintText(string value) : Text(value)
+    internal sealed class ValidationHintText(string value) : Text(value)
     {
         private readonly List<string> _lines = [];
-        private float _lineHeight;
+        internal IReadOnlyList<string> Lines => _lines;
+        internal float LineHeight { get; private set; }
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
             var width = Math.Min(400, available.Width); var widest = 0f;
-            _lineHeight = Math.Max(FontSize, text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height) + 2;
+            LineHeight = Math.Max(FontSize, text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height) + 2;
             _lines.Clear();
             foreach (var paragraph in Value.ReplaceLineEndings("\n").Split('\n'))
             {
@@ -108,14 +109,7 @@ public sealed partial class OverlayHost
                 }
                 _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily, FontWeight, FontItalic).Width);
             }
-            return new(Math.Min(width, widest), _lines.Count * _lineHeight);
+            return new(Math.Min(width, widest), _lines.Count * LineHeight);
         }
-        private static readonly ElementPresentation ValidationHintTextPresentation = ElementPresentation.Create<ValidationHintText>(static (hint, context) =>
-        {
-            var y = hint.Bounds.Y;
-            foreach (var line in hint._lines) { context.Text(line, hint.Bounds.X, y, hint.Foreground, hint.FontSize, hint.FontFamily, hint.FontWeight, hint.FontItalic); y += hint._lineHeight; }
-        });
-        /// <inheritdoc />
-        public override ElementPresentation Presentation => ValidationHintTextPresentation;
     }
 }

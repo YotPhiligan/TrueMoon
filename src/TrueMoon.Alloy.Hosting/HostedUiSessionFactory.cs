@@ -19,18 +19,11 @@ public sealed class HostedUiSessionFactory : IUiWindowSessionFactory, IStoppable
     public int ActiveSessionCount { get { lock (_gate) return _sessions.Count; } }
     /// <summary>Built-in renderer compatibility, or Custom when the backend owns its target contract.</summary>
     public UiRendererKind Renderer { get; }
-    /// <summary>Creates a registry without allocating a graphics context.</summary>
-    public HostedUiSessionFactory(IRenderBackend backend, IUiControlFactories? controlFactories = null)
-        : this(backend, controlFactories, UiPresenters.StockIconFactory) { }
-
-    /// <summary>Creates a registry whose sessions borrow the factory and own the presenters it creates.</summary>
-    public HostedUiSessionFactory(IRenderBackend backend, IUiControlFactories? controlFactories,
-        IFactory<IElementPresenter<IconButtonPaintState>> iconButtonFactory, Action<UiPresenters>? configurePresenters = null)
+    /// <summary>Creates a session factory without allocating graphics resources. Each session owns the presenters created from its registrations.</summary>
+    public HostedUiSessionFactory(IRenderBackend backend, IUiControlFactories? controlFactories = null,
+        Action<UiPresenters>? configurePresenters = null)
     {
-        ArgumentNullException.ThrowIfNull(iconButtonFactory);
-        _configurePresenters = ReferenceEquals(iconButtonFactory, UiPresenters.StockIconFactory)
-            ? configurePresenters
-            : (Action<UiPresenters>)(p => p.RegisterIconButton(iconButtonFactory)) + configurePresenters;
+        _configurePresenters = configurePresenters;
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _controlFactories = controlFactories;
         Renderer = UiRendererCompatibility.Identify(backend);

@@ -35,7 +35,7 @@ internal static partial class FontTypographyProbe
         var content = new Panel(); content.Add(canvas); content.Add(card);
         var frame = WindowFrame.CreateDefault("Alloy Editor", content);
         frame.TitleBarOverContent = true;
-        using var ui = UiSession.Create(frame, backend, target, viewport);
+        using var ui = UiSession.Create(frame, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: EditorPresenters.Register);
         ui.SetTheme(theme);
         Require(ui.Update(), "The default window did not paint.");
         var windowPixels = read(ui);

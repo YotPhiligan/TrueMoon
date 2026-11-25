@@ -78,7 +78,7 @@ internal static unsafe class Program
             var number=new NumberBox("X"){Width=140,Height=32,HasError=true,ErrorMessage="Enter a finite number",Margin=new(180,200,0,0),HorizontalAlignment=LayoutAlignment.Start,VerticalAlignment=LayoutAlignment.Start};number.Editor.Value="-";
             var rich=new RichTextEditor{Text="Rejected text",Width=140,Height=70,MinWidth=0,MinHeight=0,HasError=true,ErrorMessage="Invalid text",Margin=new(340,200,0,0),HorizontalAlignment=LayoutAlignment.Start,VerticalAlignment=LayoutAlignment.Start};
             root.Add(text);root.Add(number);root.Add(rich);var overlays=new OverlayHost(root);
-            using var ui=UiSession.Create(overlays,new SkiaVulkanRenderBackend(),new VulkanUiTarget(descriptor),new((int)(500*scale),(int)(320*scale),scale));
+            using var ui=UiSession.Create(overlays,new SkiaVulkanRenderBackend(),new VulkanUiTarget(descriptor),new((int)(500*scale),(int)(320*scale),scale), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
             var theme=light?Theme.Light:Theme.Dark;ui.SetTheme(theme);ui.Update();
             if(menu.Backdrop!=theme.MenuBackdrop||ui.Update())throw new Exception("Default backdrop/idle failed");
             var lease=ui.AcquireVulkanTexture();var layout=(ImageLayout)lease.Info.Layout;byte[] pixels;
@@ -108,16 +108,17 @@ internal static unsafe class Program
         File.WriteAllText(args[0]+".json",JsonSerializer.Serialize(new{Passed=true,Cases=cases,Errors=device.ValidationErrorCount,Warnings=device.ValidationWarningCount,
             Native=SkiaNativeLibrary.LoadedPath,NativeSha256=Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(SkiaNativeLibrary.LoadedPath!))),Assembly=typeof(SkiaVulkanRenderBackend).Assembly.Location},new JsonSerializerOptions{WriteIndented=true}));
     }
-    private sealed class SplitBackground:Panel
+    private sealed class SplitBackground : Panel;
+
+    private static void ConfigurePresenters(UiPresenters presenters)
     {
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<SplitBackground>(static (panel, c) =>
+        presenters.Register<SplitBackground>(static (panel, c) =>
         {
             var bounds = panel.Bounds;
             var half = bounds.Width / 2;
             c.Fill(new(bounds.X, bounds.Y, half, bounds.Height), new(0,0,0));
             c.Fill(new(bounds.X + half, bounds.Y, half, bounds.Height), new(255,255,255));
         });
-        public override ElementPresentation Presentation => Painter;
     }
 }
 '@)

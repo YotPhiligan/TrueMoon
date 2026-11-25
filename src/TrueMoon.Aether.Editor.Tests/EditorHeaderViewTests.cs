@@ -321,7 +321,8 @@ public sealed class EditorHeaderViewTests
         using var test = new HeaderFixture(); var caption = test.Header.Caption;
         caption.Value = new string('W', 80); caption.FontFamily = "typography-family"; caption.FontWeight = 600; caption.FontItalic = true;
         var probe = new TypographyRecordingContext();
-        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(caption, probe);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); UiTreeRenderer.Draw(caption, probe, presenters);
         var drawn = Assert.Single(probe.Texts);
         Assert.Equal(new string('W', 14) + "…", drawn.Text);
         Assert.Equal((14f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
@@ -331,7 +332,7 @@ public sealed class EditorHeaderViewTests
         Assert.Equal(9f, drawn.Y);
 
         caption.Value = "g *"; probe.Texts.Clear();
-        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(caption, probe);
+        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); UiTreeRenderer.Draw(caption, probe, presenters);
         Assert.Equal(ink, probe.InkMeasures[1]);
         Assert.Equal(drawn.Y, Assert.Single(probe.Texts).Y);
     }
@@ -345,7 +346,8 @@ public sealed class EditorHeaderViewTests
         var text = Assert.Single(DocumentUiFixture.Tree(test.Overlays.Popup!).OfType<Text>());
         text.Value = "AAAA BBBB CCCC"; text.FontFamily = "typography-family"; text.FontSize = 14; text.FontWeight = 600; text.FontItalic = true;
         var probe = new TypographyRecordingContext();
-        text.Measure(new(50, 200), probe); text.Arrange(new(0, 0, 50, 200)); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(text, probe);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        text.Measure(new(50, 200), probe); text.Arrange(new(0, 0, 50, 200)); UiTreeRenderer.Draw(text, probe, presenters);
         Assert.Equal(new[] { "AAAA ", "BBBB ", "CCCC" }, probe.Texts.Select(call => call.Text));
         Assert.Equal(60, text.DesiredSize.Height);
         Assert.All(probe.Texts, call => Assert.Equal((14f, "typography-family", 600, true), (call.Size, call.Family, call.Weight, call.Italic)));

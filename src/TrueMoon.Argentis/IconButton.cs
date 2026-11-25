@@ -40,11 +40,4 @@ public class IconButton : Button
     /// <inheritdoc />
     protected override byte ThemedControlTintAlpha => RevealOnInteraction
         ? Math.Min(Theme.ControlTintAlpha, (byte)208) : base.ThemedControlTintAlpha;
-    internal static IFactory<IElementPresenter<IconButtonPaintState>> StockFactory { get; } =
-        new Factory<IElementPresenter<IconButtonPaintState>>(static () => new IconButtonPresenter());
-    private static readonly ElementPresentation Glyph = ElementPresentation.Create<IconButton, IconButtonPaintState>(
-        IconButtonPaintState.From, StockFactory);
-
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Glyph;
 }

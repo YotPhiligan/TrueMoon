@@ -45,7 +45,7 @@ internal static class RoomViewportProbe
             });
             c.UsePresentation<ViewportView>(o =>
             {
-                o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
+                o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
                 { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG5c Room"; w.FrameMode = UiFrameMode.Continuous; });
             });
             c.Services(r => r.Transient<ViewportView>(_ =>

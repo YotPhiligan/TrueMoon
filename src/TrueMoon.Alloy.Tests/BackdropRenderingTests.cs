@@ -117,11 +117,12 @@ public sealed class BackdropRenderingTests
     public void UnsupportedSampling_PaintsOpaqueFallbackBeforeForeground()
     {
         var material = new BackdropMaterial(8, new(20, 30, 40, 128), new(50, 60, 70));
+        using var presenters = UiPresenters.Create(ConfigurePresenters);
         using var panel = new ForegroundPatch().WithBackdrop(material);
         panel.Measure(new(120, 80), new FixedTextLayout()); panel.Arrange(new(0, 0, 120, 80));
-        var drawing = new LegacyDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, drawing);
+        var drawing = new LegacyDrawing(); UiTreeRenderer.Draw(panel, drawing, presenters);
         Assert.Equal(new[] { material.Fallback, new Color(255, 0, 0) }, drawing.Fills);
-        panel.Backdrop = null; drawing.Fills.Clear(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(panel, drawing);
+        panel.Backdrop = null; drawing.Fills.Clear(); UiTreeRenderer.Draw(panel, drawing, presenters);
         Assert.Equal(new[] { new Color(255, 0, 0) }, drawing.Fills);
     }
 
@@ -246,7 +247,7 @@ public sealed class BackdropRenderingTests
     }
 
     private static UiSession Create(Element root, float scale = 1) => UiSession.Create(root,
-        new SkiaRasterRenderBackend(), new RasterUiTarget(), new((int)(160 * scale), (int)(100 * scale), scale));
+        new SkiaRasterRenderBackend(), new RasterUiTarget(), new((int)(160 * scale), (int)(100 * scale), scale), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
 
     private static SKColor Pixel(SKImage image, int x, int y, float scale = 1)
     {
@@ -254,22 +255,20 @@ public sealed class BackdropRenderingTests
         return bitmap.GetPixel((int)(x * scale), (int)(y * scale));
     }
 
-    private sealed class SplitBackground : Panel
+    private static void ConfigurePresenters(UiPresenters presenters)
     {
-        private static readonly ElementPresentation SplitPresentation = ElementPresentation.Create<SplitBackground>(static (_, context) =>
+        presenters.Register<SplitBackground>(static (_, context) =>
         {
             context.Fill(new(0, 0, 60, 100), new(0, 0, 0));
             context.Fill(new(60, 0, 100, 100), new(255, 255, 255));
         });
-        public override ElementPresentation Presentation => SplitPresentation;
+        presenters.Register<ForegroundPatch>(static (patch, context) =>
+            context.Fill(new(patch.Bounds.X + 20, patch.Bounds.Y + 15, 8, 10), new(255, 0, 0)));
     }
 
-    private sealed class ForegroundPatch : Border
-    {
-        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<ForegroundPatch>(static (patch, context) =>
-            context.Fill(new(patch.Bounds.X + 20, patch.Bounds.Y + 15, 8, 10), new(255, 0, 0)));
-        public override ElementPresentation Presentation => PatchPresentation;
-    }
+    private sealed class SplitBackground : Panel;
+
+    private sealed class ForegroundPatch : Border;
 
     private sealed class LegacyDrawing(bool canSample = false) : IDrawingContext, IBackdropDrawingContext
     {

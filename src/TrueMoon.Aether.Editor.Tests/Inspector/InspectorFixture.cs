@@ -3,6 +3,7 @@ using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tests.Editing;
 using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Tooling.Preview;
@@ -41,7 +42,7 @@ internal sealed class InspectorFixture : IDisposable
     {
         var viewport = new UiViewport(width, height);
         var surface = new SkiaRasterRenderBackend(Fonts.Value).CreateSurface(new RasterUiTarget(), viewport);
-        try { return new(root, surface, viewport, null, new UiDispatchOptions(), clock); }
+        try { return new(root, surface, viewport, null, new UiDispatchOptions(), clock, configurePresenters: EditorPresenters.Register); }
         catch { surface.Dispose(); throw; }
     }
 

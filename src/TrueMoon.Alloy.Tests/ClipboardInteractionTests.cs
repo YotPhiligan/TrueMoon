@@ -19,7 +19,8 @@ public sealed class ClipboardInteractionTests
     {
         var model = new SettingsModel { Name = "Latin Привет 🧑‍💻" };
         var view = new View1(model); var clipboard = new Clipboard { Text = "replacement" };
-        var surface = new Surface(); using var ui = new UiSession(view, surface, new UiViewport(900, 1100), clipboard);
+        var surface = new Surface(); using var ui = new UiSession(view, surface, new UiViewport(900, 1100), clipboard,
+            new UiDispatchOptions(), null, configurePresenters: DemoPresenters.Configure);
         ui.Update(); ui.Focus(view.NameEditor); ui.Capture(view.NameEditor);
         ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.End));
         ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.Left, Shift: true));

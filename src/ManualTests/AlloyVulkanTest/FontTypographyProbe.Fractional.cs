@@ -157,7 +157,7 @@ internal static partial class FontTypographyProbe
         var lines = new FractionalLines { Width = 248, Height = 32, Margin = new(24, 159, 0, 0),
             HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start };
         root.Add(text); root.Add(editor); root.Add(lines);
-        using var ui = UiSession.Create(root, backend, target, viewport);
+        using var ui = UiSession.Create(root, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: ConfigureTypographyPresenters);
         ui.SetTheme(theme);
         ui.Update();
         ui.Focus(editor);
@@ -247,19 +247,5 @@ internal static partial class FontTypographyProbe
         return false;
     }
 
-    private sealed class FractionalLines : Element
-    {
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<FractionalLines>(static (lines, context) =>
-        {
-            var bounds = lines.Bounds;
-            var color = lines.Foreground;
-            context.Fill(new(bounds.X + 4, bounds.Y + 4, 72, 1), color);
-            context.Fill(new(bounds.X + 4, bounds.Y + 14.5f, 72, 1), color);
-            context.Fill(new(bounds.X + 94, bounds.Y + 4, 1, 24), color);
-            context.Fill(new(bounds.X + 110.5f, bounds.Y + 4, 1, 24), color);
-            context.Stroke(new(bounds.X + 132, bounds.Y + 5, 42, 20), color, 1);
-            context.Stroke(new(bounds.X + 188.5f, bounds.Y + 5.5f, 42, 20), color, 1);
-        });
-        public override ElementPresentation Presentation => Painter;
-    }
+    private sealed class FractionalLines : Element;
 }

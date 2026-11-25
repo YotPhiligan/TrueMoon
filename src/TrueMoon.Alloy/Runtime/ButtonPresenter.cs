@@ -1,6 +1,7 @@
-using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Painting;
 
-namespace TrueMoon.Argentis.Painting;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Stock button label painting using geometry prepared by measurement.</summary>
 public sealed class ButtonPresenter : IElementPresenter<Button>

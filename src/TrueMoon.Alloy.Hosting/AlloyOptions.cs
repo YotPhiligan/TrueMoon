@@ -1,3 +1,6 @@
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Painting;
+using TrueMoon.Services;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -33,6 +36,8 @@ namespace TrueMoon.Alloy.Hosting
         internal Func<IRenderBackend>? BackendFactory { get; private set; }
         internal bool ExternalHost { get; private set; }
         internal Action<UiPresenters>? PresenterConfiguration { get; private set; }
+        private List<Func<IServiceResolver, Action<UiPresenters>>>? _presenterFactories;
+        private bool _bindsIconButton;
         internal SilkUiWindowOptions? Window { get; private set; }
         /// <summary>Selected built-in renderer, or Custom for UseRenderer. Selection creates no native resources.</summary>
         public UiRendererKind Renderer { get; private set; }
@@ -42,6 +47,28 @@ namespace TrueMoon.Alloy.Hosting
             ArgumentNullException.ThrowIfNull(configure);
             PresenterConfiguration += configure;
             return this;
+        }
+        /// <summary>Binds an application-registered presenter factory to the exact control type.
+        /// The hosted session factory borrows the DI factory once; each session owns its own presenters.</summary>
+        public AlloyOptions UsePresenterFactory<TControl, TState>(Func<TControl, TState> capture) where TControl : Element
+        {
+            ArgumentNullException.ThrowIfNull(capture);
+            if (typeof(TControl) == typeof(IconButton)) _bindsIconButton = true;
+            (_presenterFactories ??= []).Add(resolver =>
+            {
+                var factory = resolver.Resolve<IFactory<IElementPresenter<TState>>>();
+                return presenters => presenters.Register(capture, factory);
+            });
+            return this;
+        }
+
+        internal Action<UiPresenters>? BindPresenters(IServiceResolver resolver, IFactory<IElementPresenter<IconButtonPaintState>>? iconOverride)
+        {
+            Action<UiPresenters>? configure = iconOverride == null || _bindsIconButton
+                ? null : presenters => presenters.RegisterIconButton(iconOverride);
+            if (_presenterFactories != null)
+                foreach (var bind in _presenterFactories) configure += bind(resolver);
+            return configure + PresenterConfiguration;
         }
         /// <summary>Selects the Skia Vulkan renderer.</summary>
         public AlloyOptions UseSkiaVulkan() { BackendFactory = () => new SkiaVulkanRenderBackend(); Renderer = UiRendererKind.Vulkan; return this; }
@@ -92,7 +119,11 @@ namespace TrueMoon.Alloy.Hosting
             Window?.ValidateChrome();
         }
         internal AlloyOptions Snapshot() => new()
-        { BackendFactory = BackendFactory, Renderer = Renderer, ExternalHost = ExternalHost, Window = Window?.Snapshot(), PresenterConfiguration = PresenterConfiguration };
+        {
+            BackendFactory = BackendFactory, Renderer = Renderer, ExternalHost = ExternalHost, Window = Window?.Snapshot(),
+            PresenterConfiguration = PresenterConfiguration, _bindsIconButton = _bindsIconButton,
+            _presenterFactories = _presenterFactories is null ? null : [.. _presenterFactories]
+        };
     }
 
     /// <summary>Standalone window settings.</summary>

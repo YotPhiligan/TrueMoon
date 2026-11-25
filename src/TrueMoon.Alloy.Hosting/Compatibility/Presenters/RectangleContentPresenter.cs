@@ -3,9 +3,9 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Hosting.Compatibility.Presenters;
 
-public class RectangleContentPresenter : IContentPresenter<Rectagle>
+public class RectangleContentPresenter : IContentPresenter<Rectangle>
 {
-    public RectangleContentPresenter(Rectagle? content)
+    public RectangleContentPresenter(Rectangle? content)
     {
         Content = content;
     }
@@ -20,5 +20,5 @@ public class RectangleContentPresenter : IContentPresenter<Rectagle>
         }
     }
 
-    public Rectagle? Content { get; }
+    public Rectangle? Content { get; }
 }

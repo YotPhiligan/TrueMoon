@@ -290,7 +290,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
         protected override Color ThemeBackground => Theme.MenuBackdrop == null ? Theme.Surface : Color.Transparent;
         protected override BackdropMaterial? ThemeBackdrop => Theme.MenuBackdrop;
     }
-    private sealed class HeaderHintText(string value) : Text(value)
+    internal sealed class HeaderHintText(string value) : Text(value)
     {
         private readonly List<string> _lines = [];
         private float _lineHeight;
@@ -313,30 +313,14 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             }
             return new(Math.Min(width, widest), _lines.Count * _lineHeight);
         }
-        private static readonly ElementPresentation HintPresentation = ElementPresentation.Create<HeaderHintText>(static (hint, context) =>
-        {
-            var y = hint.Bounds.Y;
-            foreach (var line in hint._lines)
-            {
-                context.Text(line, hint.Bounds.X, y, hint.Foreground, hint.FontSize, hint.FontFamily, hint.FontWeight, hint.FontItalic);
-                y += hint._lineHeight;
-            }
-        });
-        public override ElementPresentation Presentation => HintPresentation;
+        internal ReadOnlySpan<string> Lines => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_lines);
+        internal float LineHeight => _lineHeight;
     }
 
-    private sealed class BrandMark : Element
+    internal sealed class BrandMark : Element
     {
         public BrandMark() { AccessibleName = "TrueMoon"; WindowRegion = WindowRegionRole.Caption; }
         protected override Size MeasureCore(Size available, ITextLayoutService text) => new(28, 32);
-        private static readonly ElementPresentation MarkPresentation = ElementPresentation.Create<BrandMark>(static (mark, context) =>
-        {
-            var bounds = mark.Bounds;
-            var size = Math.Min(20, Math.Min(bounds.Width, bounds.Height));
-            UiSymbols.Draw(context, UiSymbol.TrueMoon, new(bounds.X + (bounds.Width - size) / 2,
-                bounds.Y + (bounds.Height - size) / 2, size, size), mark.Foreground);
-        });
-        public override ElementPresentation Presentation => MarkPresentation;
     }
 
     private sealed class HeaderLayout : ElementList
@@ -377,7 +361,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
                 Children[i].Arrange(new(area.X + i * 32, area.Y, 32, area.Height));
         }
     }
-    private sealed class CaptionText(string value) : Text(value)
+    internal sealed class CaptionText(string value) : Text(value)
     {
         private ITextLayoutService? _text;
         private string _display = value;
@@ -401,9 +385,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             if (count > 0 && char.IsHighSurrogate(Value[count - 1])) count--;
             _display = Value[..count] + ellipsis;
         }
-        private static readonly ElementPresentation CaptionPresentation = ElementPresentation.Create<CaptionText>(static (caption, context) =>
-            context.Text(caption._display, caption.Bounds.X, caption.Bounds.Y + caption.Bounds.Height / 2 - (caption._inkCenter ?? caption.FontSize / 2),
-                caption.Foreground, caption.FontSize, caption.FontFamily, caption.FontWeight, caption.FontItalic));
-        public override ElementPresentation Presentation => CaptionPresentation;
+        internal string DisplayText => _display;
+        internal float InkCenter => _inkCenter ?? FontSize / 2;
     }
 }

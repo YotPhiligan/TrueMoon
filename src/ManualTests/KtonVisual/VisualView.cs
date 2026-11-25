@@ -30,15 +30,9 @@ internal sealed class VisualCanvas(Controls controls):Element
     }
     internal void Clear(){VerifyAccess();_image?.Dispose();_image=null;Drawn=0;Invalidate();}
     protected override Size MeasureCore(Size available,ITextLayoutService text)=>new(Math.Min(960,available.Width),540);
-    private static readonly ElementPresentation Painter = ElementPresentation.Create<VisualCanvas>(static (canvas, context) =>
-    {
-        if (canvas._image is not { } image) return;
-        var version = canvas._version;
-        context.Image(image, canvas.DrawBounds);
-        canvas.ReportDrawn(version);
-    });
-    public override ElementPresentation Presentation => Painter;
-    private void ReportDrawn(long version) => Drawn = version;
+    internal IImageSource? Image => _image;
+    internal long ImageVersion => _version;
+    internal void ReportDrawn(long version) => Drawn = version;
     public override bool HandleInput(UiInput input,IInputContext context)
     {
         if(input.Kind==InputKind.PointerDown){context.Focus(this);return true;}

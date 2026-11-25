@@ -127,7 +127,7 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
     }
     private static async Task Observe(Task pending) { try { await pending.ConfigureAwait(false); } catch { /* Diagnostics stay with the command/preview owner. */ } }
     private sealed class Release(Action release) : IDisposable { public void Dispose() => release(); }
-    private sealed class DetailsAction : IconButton
+    internal sealed class DetailsAction : IconButton
     {
         private IInputContext? _context;
         private readonly Action<IInputContext, Element> _action;
@@ -135,15 +135,11 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         { _action = action; Clear(UiProperties.Width); Clear(UiProperties.Height); }
         protected override float ThemeBorderWidth => 0;
         protected override Color ThemeBackground => IsPressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Color.Transparent;
-        private static readonly ElementPresentation ActionPresentation = ElementPresentation.Create<DetailsAction>(static (action, context) =>
-            UiSymbols.Draw(context, action.Symbol, new(action.Bounds.X + (action.Bounds.Width - 14) / 2,
-                action.Bounds.Y + (action.Bounds.Height - 14) / 2, 14, 14), action.Foreground));
-        public override ElementPresentation Presentation => ActionPresentation;
         public override bool HandleInput(UiInput input, IInputContext context)
         { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
         protected override void Activate() => _action(_context!, this);
     }
-    private sealed class SegmentButton : Button
+    internal sealed class SegmentButton : Button
     {
         private IInputContext? _context;
         private UiSymbol _symbol;
@@ -158,38 +154,32 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         protected override Thickness ThemePadding => new(4, 2, 4, 2);
         protected override Color ThemeBackground => Color.Transparent;
         protected override Size MeasureCore(Size available, ITextLayoutService text)
-        { _text = text; var size = base.MeasureCore(available, text); return new(size.Width + 20, Math.Max(14, size.Height)); }
-        private ITextLayoutService? _text;
-        private static readonly ElementPresentation SegmentPresentation = ElementPresentation.Create<SegmentButton>(static (button, context) =>
         {
-            if (button.IsHovered || button.IsPressed)
-            {
-                var labelWidth = button._text?.Measure(button.Value, button.FontSize, button.FontFamily, button.FontWeight, button.FontItalic).Width ?? 0;
-                var width = Math.Min(button.Bounds.Width, labelWidth + 20 + button.Padding.Left + button.Padding.Right);
-                context.Fill(new(button.Bounds.X, button.Bounds.Y, width, button.Bounds.Height), button.IsPressed ? button.Theme.ControlPressed : button.Theme.ControlHover);
-            }
-            DrawSegment(context, button, button.Symbol, button.Value, button._text);
-        });
-        public override ElementPresentation Presentation => SegmentPresentation;
+            _text = text;
+            var size = base.MeasureCore(available, text);
+            return new(size.Width + 20, Math.Max(14, size.Height));
+        }
+        private ITextLayoutService? _text;
+        internal float LabelWidth => LabelSize.Width;
+        internal string DisplayText { get; private set; } = "";
+        protected override void ArrangeCore(Rect area) => DisplayText = FitSegment(this, area.Width, _text);
         public override bool HandleInput(UiInput input, IInputContext context)
         { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
         protected override void Activate() => _action(_context!, this);
     }
-    private sealed class SegmentLabel(UiSymbol symbol) : Text
+    internal sealed class SegmentLabel(UiSymbol symbol) : Text
     {
         private ITextLayoutService? _text;
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         { _text = text; var size = base.MeasureCore(available, text); return new(size.Width + 20, Math.Max(14, size.Height)); }
-        private readonly UiSymbol _symbol = symbol;
-        private static readonly ElementPresentation SegmentPresentation = ElementPresentation.Create<SegmentLabel>(static (label, context) =>
-            DrawSegment(context, label, label._symbol, label.Value, label._text));
-        public override ElementPresentation Presentation => SegmentPresentation;
+        internal UiSymbol Symbol { get; } = symbol;
+        internal string DisplayText { get; private set; } = "";
+        protected override void ArrangeCore(Rect area) => DisplayText = FitSegment(this, area.Width, _text);
     }
-    private static void DrawSegment(IDrawingContext context, Element element, UiSymbol symbol, string text, ITextLayoutService? layout)
+    private static string FitSegment(Text element, float areaWidth, ITextLayoutService? layout)
     {
-        var area = element.Bounds.Deflate(element.Padding); var color = element.IsEffectivelyEnabled ? element.Foreground : element.Theme.Disabled;
-        UiSymbols.Draw(context, symbol, new(area.X, area.Y + (area.Height - 14) / 2, 14, 14), color);
-        var width = Math.Max(0, area.Width - 20); var display = text;
+        var width = Math.Max(0, areaWidth - 20);
+        var display = element.Value;
         if (layout != null && layout.Measure(display, element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic).Width > width)
         {
             var count = display.Length;
@@ -197,6 +187,6 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
             if (count > 0 && char.IsHighSurrogate(display[count - 1])) count--;
             display = count == 0 ? "" : display[..count] + "…";
         }
-        context.Text(display, area.X + 20, area.Y + (area.Height - element.FontSize) / 2, color, element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic);
+        return display;
     }
 }

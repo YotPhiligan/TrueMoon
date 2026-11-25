@@ -21,6 +21,8 @@
   <ItemGroup>
     <!-- Reuse the actual standalone scene and script; do not reference its executable. -->
     <Compile Include="../AlloyTest/View1.cs" Link="Settings/View1.cs" />
+    <Compile Include="../AlloyTest/DemoPresenters.cs" Link="Settings/DemoPresenters.cs" />
+    <Compile Include="../AlloyTest/CustomTitleBar.cs" Link="Settings/CustomTitleBar.cs" />
     <Compile Include="../AlloyTest/SettingsModel.cs" Link="Settings/SettingsModel.cs" />
     <Compile Include="../AlloyTest/SettingsRow.cs" Link="Settings/SettingsRow.cs" />
     <Compile Include="../AlloyTest/LoadStatus.cs" Link="Settings/LoadStatus.cs" />

@@ -85,6 +85,35 @@ public sealed class HostedIconButtonPresenterTests
         Assert.Equal(new[] { "before outer", "before inner", "after inner", "after outer" }, calls);
     }
 
+    [Fact]
+    public async Task TypedPresenterFactory_ResolvesOnceWhenHostedFactoryIsCreated()
+    {
+        var resolutions = 0;
+        var creations = 0;
+        var calls = new List<string>();
+        await using var app = App.Build(context =>
+        {
+            context.Services(services => services.Transient<IFactory<IElementPresenter<string>>>(_ =>
+            {
+                resolutions++;
+                return new Factory<IElementPresenter<string>>(() => { creations++; return new LayerRecorder(calls); });
+            }));
+            context.UseAlloy(o => o.UseSkiaRaster().UseExternalHost()
+                .UsePresenterFactory<Button, string>(button => button.Value));
+        });
+        var sessions = Required<IUiSessionFactory>(app);
+        Assert.Equal(1, resolutions);
+        var button = new Button("first");
+        using var session = sessions.Create(button, new RasterUiTarget(), new UiViewport(32, 32));
+        Assert.Equal(0, creations);
+        Assert.True(session.Update());
+        button.Value = "second";
+        Assert.True(session.Update());
+        Assert.Equal(new[] { "before first", "after first", "before second", "after second" }, calls);
+        Assert.Equal(1, resolutions);
+        Assert.Equal(1, creations);
+    }
+
     private sealed class LayerRecorder(List<string> calls) : IAfterChildrenPresenter<string>
     {
         public void Draw(string state, IDrawingContext context) => calls.Add("before " + state);

@@ -190,7 +190,8 @@ internal sealed class SourcePresentationFixture : IDisposable
     }
     internal void Refresh() { Workspace.SetProject(Projects.Active); Model.Refresh(Runtime, EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); }
     internal void StartPaused() { Assert.True(Playback.Execute(EditorCommand.Start)); Wait(Playback.Pending); Assert.Null(Playback.Error); }
-    internal UiSession Ui() => UiSession.Create(Overlays, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(1280, 800));
+    internal UiSession Ui() => UiSession.Create(Overlays, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(1280, 800),
+        null, new(), configurePresenters: EditorPresenters.Register);
     internal void Bind() => Watch.Bind(SourceWatchFixture.BuildA, SourceWatchFixture.Inputs, Control.Files.Descriptor());
     internal void Until(Func<EditorSourceSnapshot, bool> predicate) => Wait(SourceWatchFixture.Eventually(() => predicate(Watch.Read())));
     internal EditorStatusBarView CreateView() => new(Status, new EditorStatusBarViewStyle(),

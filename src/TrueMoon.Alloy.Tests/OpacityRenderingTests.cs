@@ -128,10 +128,11 @@ public sealed class OpacityRenderingTests
     {
         using var root = new Panel { Opacity = .5f };
         var error = new InvalidOperationException("draw failed");
+        using var presenters = UiPresenters.Create(ConfigurePresenters);
         root.Add(new ThrowingElement(error) { Opacity = .25f }); Arrange(root);
         var drawing = new OpacityDrawing();
 
-        Assert.Same(error, Assert.Throws<InvalidOperationException>(() => TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, drawing)));
+        Assert.Same(error, Assert.Throws<InvalidOperationException>(() => UiTreeRenderer.Draw(root, drawing, presenters)));
 
         Assert.Equal(new[] { "save", "clip", "opacity", "save", "clip", "opacity",
             "restore", "restore", "restore", "restore" }, drawing.Events);
@@ -284,7 +285,7 @@ public sealed class OpacityRenderingTests
         HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start
     };
     private static UiSession Create(Element root, float scale = 1) => UiSession.Create(root,
-        new SkiaRasterRenderBackend(), new RasterUiTarget(), new((int)(160 * scale), (int)(100 * scale), scale));
+        new SkiaRasterRenderBackend(), new RasterUiTarget(), new((int)(160 * scale), (int)(100 * scale), scale), null, new UiDispatchOptions(), configurePresenters: ConfigurePresenters);
     private static SKColor Pixel(SKImage image, int x, int y, float scale = 1)
     {
         using var bitmap = SKBitmap.FromImage(image);
@@ -293,6 +294,19 @@ public sealed class OpacityRenderingTests
     private static void Arrange(Element element)
     {
         element.Measure(new(160, 100), new FixedTextLayout()); element.Arrange(new(0, 0, 160, 100));
+    }
+
+    private static void ConfigurePresenters(UiPresenters presenters)
+    {
+        presenters.Register<ThrowingElement>(static (element, _) => throw element.Error);
+        presenters.Register<ImagePatch>(static (patch, context) =>
+            context.Image(patch.ImageSource, new(20, 20, 20, 20)));
+        presenters.Register<SplitBackground>(static (split, context) =>
+        {
+            context.Fill(new(0, 0, 60, 100), split.Left); context.Fill(new(60, 0, 100, 100), split.Right);
+        });
+        presenters.Register<ForegroundPatch>(static (patch, context) =>
+            context.Fill(new(patch.Bounds.X + 20, patch.Bounds.Y + 15, 8, 10), new(255, 0, 0)));
     }
 
     private sealed class CountingPanel : Panel
@@ -304,32 +318,17 @@ public sealed class OpacityRenderingTests
     private sealed class ThrowingElement(Exception error) : Element
     {
         protected override Size MeasureCore(Size available, ITextLayoutService text) => new(20, 20);
-        private readonly Exception _error = error;
-        private static readonly ElementPresentation ThrowingPresentation = ElementPresentation.Create<ThrowingElement>(static (element, _) => throw element._error);
-        public override ElementPresentation Presentation => ThrowingPresentation;
+        public readonly Exception Error = error;
     }
     private sealed class ImagePatch(IImageSource image) : Panel
     {
-        private readonly IImageSource _image = image;
-        private static readonly ElementPresentation ImagePresentation = ElementPresentation.Create<ImagePatch>(static (patch, context) =>
-            context.Image(patch._image, new(20, 20, 20, 20)));
-        public override ElementPresentation Presentation => ImagePresentation;
+        public readonly IImageSource ImageSource = image;
     }
     private sealed class SplitBackground : Panel
     {
         public Color Left = new(0, 0, 0), Right = new(255, 255, 255);
-        private static readonly ElementPresentation SplitPresentation = ElementPresentation.Create<SplitBackground>(static (split, context) =>
-        {
-            context.Fill(new(0, 0, 60, 100), split.Left); context.Fill(new(60, 0, 100, 100), split.Right);
-        });
-        public override ElementPresentation Presentation => SplitPresentation;
     }
-    private sealed class ForegroundPatch : Panel
-    {
-        private static readonly ElementPresentation PatchPresentation = ElementPresentation.Create<ForegroundPatch>(static (patch, context) =>
-            context.Fill(new(patch.Bounds.X + 20, patch.Bounds.Y + 15, 8, 10), new(255, 0, 0)));
-        public override ElementPresentation Presentation => PatchPresentation;
-    }
+    private sealed class ForegroundPatch : Panel;
     private class LegacyDrawing : IDrawingContext
     {
         public List<Color> Fills { get; } = [];

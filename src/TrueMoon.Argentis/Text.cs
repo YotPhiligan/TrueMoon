@@ -13,8 +13,4 @@ public class Text : Element, ITextElement
     public string Value { get => Get(ValueProperty); set => Set(ValueProperty, value); }
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text) => text.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic);
-    private static readonly ElementPresentation Label = ElementPresentation.Create<Text>(
-        new Factory<IElementPresenter<Text>>(static () => new TextPresenter()));
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => Label;
 }

@@ -126,7 +126,7 @@ internal static class Program
                 capture.Parent = new Border { Padding = new(12) };
                 capture.Parent.SetContent(capture.View);
                 return capture.Parent;
-            }, p => p.UseSkiaOpenGL(fonts).UseSilkWindow(w =>
+            }, p => p.ConfigurePresenters(EditorPresenters.Register).UseSkiaOpenGL(fonts).UseSilkWindow(w =>
             {
                 w.Title = "Consumer-owned UI · embedded Editor"; w.Width = 1280; w.Height = 800;
                 w.FrameMode = UiFrameMode.Continuous;

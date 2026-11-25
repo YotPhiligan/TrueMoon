@@ -67,12 +67,13 @@ public sealed class EditorIslandLayoutTests
     public void PaintAndInputOrder_PlaceBothIslandsAboveFullViewportAndLeaveExposedBodyInteractive()
     {
         var painted = new List<string>();
-        var viewport = new Box(1000, 1000, "viewport", painted);
-        var left = new Box(20, 40, "hierarchy", painted); var right = new Box(20, 40, "inspector", painted);
-        var toolbar = new Box(10, 10, "toolbar", painted); var status = new Box(10, 10, "status", painted);
+        var viewport = new Box(1000, 1000, "viewport");
+        var left = new Box(20, 40, "hierarchy"); var right = new Box(20, 40, "inspector");
+        var toolbar = new Box(10, 10, "toolbar"); var status = new Box(10, 10, "status");
         using var root = new EditorLayout(toolbar, left, viewport, right, status);
         using var ui = new UiSession(root, new Surface(), new(1280, 720)); ui.Update();
-        TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(root, new Drawing());
+        using var presenters = UiPresenters.Create(p => p.Register<Box>((box, _) => painted.Add(box.Label)));
+        UiTreeRenderer.Draw(root, new Drawing(), presenters);
         Assert.Equal(new[] { "toolbar", "viewport", "hierarchy", "inspector", "status" }, painted);
         Click(ui, 40, 70); Click(ui, 1000, 70); Click(ui, 640, 70); Click(ui, 40, 200);
         Assert.Equal(1, left.Clicks); Assert.Equal(1, right.Clicks); Assert.Equal(2, viewport.Clicks);
@@ -102,18 +103,12 @@ public sealed class EditorIslandLayoutTests
     private static void Click(UiSession ui, float x, float y)
     { ui.HandleInput(new(InputKind.PointerDown, x, y)); ui.HandleInput(new(InputKind.PointerUp, x, y)); }
 
-    private sealed class Box(float width, float height, string? name = null, List<string>? painted = null) : Element
+    private sealed class Box(float width, float height, string label = "") : Element
     {
         public int Clicks { get; private set; }
         protected override Size MeasureCore(Size available, ITextLayoutService text) =>
             new(Math.Min(width, available.Width), Math.Min(height, available.Height));
-        private readonly string? _name = name;
-        private readonly List<string>? _painted = painted;
-        private static readonly ElementPresentation BoxPresentation = ElementPresentation.Create<Box>(static (box, _) =>
-        {
-            if (box._name != null) box._painted!.Add(box._name);
-        });
-        public override ElementPresentation Presentation => BoxPresentation;
+        internal string Label { get; } = label;
         public override bool HandleInput(UiInput input, IInputContext context)
         { if (input.Kind != InputKind.PointerDown) return false; Clicks++; return true; }
     }

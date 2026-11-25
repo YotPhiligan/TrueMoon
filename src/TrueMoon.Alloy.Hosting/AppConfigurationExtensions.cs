@@ -82,10 +82,14 @@ public static class AppConfigurationExtensions
             if (services.Exist<IUiSessionFactory>()) throw new InvalidOperationException("Alloy is already registered in this App.");
             if (!services.Exist<IUiControlFactories>()) services.Singleton<IUiControlFactories>(_ => new UiControlFactories());
             if (!services.Exist<IFactory<IElementPresenter<IconButtonPaintState>>>())
-                services.Singleton<IFactory<IElementPresenter<IconButtonPaintState>>>(_ => UiPresenters.StockIconFactory);
+                services.Singleton<IFactory<IElementPresenter<IconButtonPaintState>>>(_ => StockPresenters.StockIconFactory);
             services.Singleton<IRenderBackend>(_ => options.BackendFactory!())
-                .Singleton<HostedUiSessionFactory>(resolver => new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>(),
-                    resolver.Resolve<IUiControlFactories>(), resolver.Resolve<IFactory<IElementPresenter<IconButtonPaintState>>>(), options.PresenterConfiguration))
+                .Singleton<HostedUiSessionFactory>(resolver =>
+                {
+                    var icon = resolver.Resolve<IFactory<IElementPresenter<IconButtonPaintState>>>();
+                    var configure = options.BindPresenters(resolver, ReferenceEquals(icon, StockPresenters.StockIconFactory) ? null : icon);
+                    return new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>(), resolver.Resolve<IUiControlFactories>(), configure);
+                })
                 .Singleton<IUiSessionFactory>(resolver => new BorrowedUiSessionFactory(resolver.Resolve<HostedUiSessionFactory>()));
             services.Singleton<IFactory<UiSession, UiSessionCreation>>(resolver =>
             {

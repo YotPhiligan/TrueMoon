@@ -30,7 +30,7 @@ public static class PlayerConfigurationExtensions
             });
         });
         context.UsePresentationFactory<PlayerView>(options=>
-        {options.UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=settings.Width;window.Height=settings.Height;window.Title=settings.Title;});});
+        {options.ConfigurePresenters(PlayerPresenters.Register).UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=settings.Width;window.Height=settings.Height;window.Title=settings.Title;});});
         context.Services(services=>
         {
             services.Singleton<PlayerWindow>(resolver=>new(resolver.Resolve<HostedUiWindow>(),resolver.Resolve<PlayerSession>(),resolver.Resolve<PlayerInput>(),settings));

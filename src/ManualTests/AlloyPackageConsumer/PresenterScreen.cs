@@ -13,10 +13,7 @@ namespace AlloyPackageConsumer;
 
 internal static class PresenterScreen
 {
-    private sealed class SignalButton : Button
-    {
-        public override ElementPresentation Presentation => ElementPresentation.Required;
-    }
+    private sealed class SignalButton : Button;
 
     private sealed class Stripe : IElementPresenter<IconButtonPaintState>
     {
@@ -30,6 +27,15 @@ internal static class PresenterScreen
             context.Fill(bounds.Deflate(new Thickness(6)), new Color(0, 210, 90));
     }
 
+
+    private static void Configure(UiPresenters presenters, bool registerSignal)
+    {
+        presenters.RegisterIconButton(new Factory<IElementPresenter<IconButtonPaintState>>(static () => new Stripe()));
+        presenters.Require<SignalButton>();
+        if (registerSignal)
+            presenters.Register<SignalButton, Rect>(static button => button.Bounds,
+                new Factory<IElementPresenter<Rect>>(static () => new Signal()));
+    }
     private static IconButton Stop() => new(UiSymbol.Stop, "Stop")
     {
         SemanticId = "stop", RevealOnInteraction = true, BorderWidth = 0, Foreground = new Color(20, 80, 160)
@@ -37,6 +43,7 @@ internal static class PresenterScreen
 
     internal static void Verify(SkiaFontCatalog fonts, string reportPath)
     {
+        VerifyMissingRegistration(fonts);
         var icon = Stop();
         var signal = new SignalButton { Width = 32, Height = 32, SemanticId = "signal", AccessibleName = "Signal" };
         var row = new HStack { Spacing = 0 };
@@ -46,12 +53,7 @@ internal static class PresenterScreen
         using var unmodified = UiSession.Create(stock, new SkiaRasterRenderBackend(fonts), new RasterUiTarget(), new UiViewport(32, 32));
         object[] choices;
         using (var custom = UiSession.Create(row, new SkiaRasterRenderBackend(fonts), new RasterUiTarget(), new UiViewport(64, 32),
-            null, new UiDispatchOptions(), configurePresenters: presenters =>
-            {
-                presenters.RegisterIconButton(new Factory<IElementPresenter<IconButtonPaintState>>(static () => new Stripe()));
-                presenters.Register<SignalButton, Rect>(static button => button.Bounds,
-                    new Factory<IElementPresenter<Rect>>(static () => new Signal()));
-            }))
+            null, new UiDispatchOptions(), configurePresenters: static p => Configure(p, registerSignal: true)))
         {
             custom.Update();
             unmodified.Update();
@@ -86,6 +88,15 @@ internal static class PresenterScreen
         Require(stockClicks == 1, "Closing the custom session broke the stock button.");
         File.WriteAllText(reportPath, JsonSerializer.Serialize(new { Choices = choices, StockSurvivedCustomSession = true },
             new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static void VerifyMissingRegistration(SkiaFontCatalog fonts)
+    {
+        using var ui = UiSession.Create(new SignalButton(), new SkiaRasterRenderBackend(fonts), new RasterUiTarget(), new UiViewport(32, 32),
+            null, new UiDispatchOptions(), configurePresenters: static p => Configure(p, registerSignal: false));
+        try { ui.Update(); }
+        catch (InvalidOperationException error) when (error.Message.Contains(typeof(SignalButton).FullName!, StringComparison.Ordinal)) { return; }
+        throw new InvalidOperationException("The required signal presenter was missing but the draw succeeded.");
     }
 
     private static object Choice(string session, Button button, Type presenter, string reason) =>

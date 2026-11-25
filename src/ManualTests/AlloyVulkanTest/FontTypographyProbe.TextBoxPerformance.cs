@@ -10,6 +10,7 @@ using Silk.NET.OpenGL;
 using SkiaSharp;
 using TrueMoon;
 using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Alloy.Hosting;
@@ -124,7 +125,7 @@ internal static partial class FontTypographyProbe
                     var startCache = ObserveFontCache();
                     (Element root, TextBox[] fields) = inspectorFactory != null ? CreateInspectorPerformanceRoot(inspectorFactory) : CreatePerformanceTextBoxes(scale);
                     var profiler = new SettingsPerformanceProbe.ProfiledBackend(renderer);
-                    using var ui = UiSession.Create(root, profiler, target, viewport);
+                    using var ui = UiSession.Create(root, profiler, target, viewport, null, new UiDispatchOptions(), configurePresenters: inspector ? EditorPresenters.Register : null);
                     var surface = profiler.Surface!;
                     var layout = (SkiaDrawingContext)surface.TextLayout;
                     if (inspector) layout.SetPlainSubpixelPositioningForProbe(subpixel);

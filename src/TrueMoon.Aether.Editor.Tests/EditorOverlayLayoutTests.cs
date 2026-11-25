@@ -60,12 +60,14 @@ public sealed class EditorOverlayLayoutTests
     public void ContextualTools_PaintAndReceiveInputAboveIslandsWithoutResizingTheScene()
     {
         var painted = new List<string>();
-        var tools = new Box(600, 120, "tools", painted) { IsVisible = false };
-        var hierarchy = new Box(300, 200, "hierarchy", painted); var inspector = new Box(300, 200, "inspector", painted);
-        var viewport = new Box(2000, 2000, "viewport", painted); var status = new Box(30, 20, "status", painted);
+        var tools = new Box(600, 120, "tools") { IsVisible = false };
+        var hierarchy = new Box(300, 200, "hierarchy"); var inspector = new Box(300, 200, "inspector");
+        var viewport = new Box(2000, 2000, "viewport"); var status = new Box(30, 20, "status");
         using var layout = new EditorLayout(tools, hierarchy, viewport, inspector, status, overlayChrome: true);
         using var ui = new UiSession(layout, new Surface(), new(800, 500)); ui.Update();
-        var scene = viewport.Bounds; tools.IsVisible = true; ui.Update(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(layout, new Drawing());
+        var scene = viewport.Bounds; tools.IsVisible = true; ui.Update();
+        using var presenters = UiPresenters.Create(p => p.Register<Box>((box, _) => painted.Add(box.Label)));
+        UiTreeRenderer.Draw(layout, new Drawing(), presenters);
         Assert.Equal(new[] { "viewport", "hierarchy", "inspector", "status", "tools" }, painted);
         Assert.Equal(scene, viewport.Bounds); Assert.Equal(new Rect(80, 44, 640, 120), tools.Bounds);
         Click(ui, 100, 60); Click(ui, 30, 200); Click(ui, 400, 300); Click(ui, 400, 490);
@@ -110,17 +112,11 @@ public sealed class EditorOverlayLayoutTests
     private static void Arrange(Element root, Rect bounds) { root.Measure(new(bounds.Width, bounds.Height), new TextLayout()); root.Arrange(bounds); }
     private static void Click(UiSession ui, float x, float y)
     { ui.HandleInput(new(InputKind.PointerDown, x, y)); ui.HandleInput(new(InputKind.PointerUp, x, y)); }
-    private sealed class Box(float width, float height, string? name = null, List<string>? painted = null) : Element
+    private sealed class Box(float width, float height, string label = "") : Element
     {
         public int Clicks { get; private set; }
         protected override Size MeasureCore(Size available, ITextLayoutService text) => new(Math.Min(width, available.Width), Math.Min(height, available.Height));
-        private readonly string? _name = name;
-        private readonly List<string>? _painted = painted;
-        private static readonly ElementPresentation BoxPresentation = ElementPresentation.Create<Box>(static (box, _) =>
-        {
-            if (box._name != null) box._painted!.Add(box._name);
-        });
-        public override ElementPresentation Presentation => BoxPresentation;
+        internal string Label { get; } = label;
         public override bool HandleInput(UiInput input, IInputContext context)
         { if (input.Kind != InputKind.PointerDown) return false; Clicks++; return true; }
     }

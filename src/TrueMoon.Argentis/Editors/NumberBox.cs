@@ -81,17 +81,6 @@ public sealed class NumberBox : ElementList
         Prefix.Arrange(new(area.X, area.Y, Math.Max(0, prefix - 5), area.Height));
         Editor.Arrange(new(area.X + prefix, area.Y, Math.Max(0, area.Width - prefix), area.Height));
     }
-    private static readonly ElementPresentation NumberBoxPresentation = ElementPresentation.Create<NumberBox>(static (box, context) =>
-    {
-        var dragBounds = box.DragBounds;
-        if (!box.AdjustmentEnabled || box.Prefix.Value.Length != 0 || dragBounds.Width <= 0) return;
-        var color = box.Editor.IsEffectivelyEnabled && !box.Editor.IsReadOnly ? box.Theme.EditorColor(box.ColorRole) : box.Theme.Disabled;
-        var size = Math.Min(12, Math.Min(dragBounds.Width, dragBounds.Height));
-        UiSymbols.Draw(context, UiSymbol.AdjustHorizontal,
-            new(dragBounds.X + (dragBounds.Width - size) / 2, dragBounds.Y + (dragBounds.Height - size) / 2, size, size), color);
-    });
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => NumberBoxPresentation;
     private bool Allowed => AdjustmentEnabled && IsEffectivelyEnabled && Editor.IsEffectivelyEnabled && !Editor.IsReadOnly && (CanAdjust?.Invoke() ?? true);
     private double EffectiveStep(bool shift, bool control) =>
         (NumericKind == NumericValueKind.Integer ? Math.Max(1, Math.Round(Step, MidpointRounding.AwayFromZero)) : Step) * ((shift ? 10 : 1) * (control ? .1 : 1));

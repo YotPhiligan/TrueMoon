@@ -4,7 +4,9 @@ using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis.Windows;
 using System.Globalization;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -93,7 +95,8 @@ public sealed class EditorOverlayHeaderTests
         var hint = Assert.Single(DocumentUiFixture.Tree(popup).OfType<Text>());
         Assert.Equal(fullText, hint.Value); Assert.InRange(popup.Bounds.Width, 1f, 574f);
         Assert.True(popup.Bounds.Height > hint.FontSize + 14);
-        var drawing = new HintDrawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(popup, drawing);
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+        var drawing = new HintDrawing(); UiTreeRenderer.Draw(popup, drawing, presenters);
         Assert.True(drawing.Lines.Count > 2);
         var expected = fullText.Replace("\r", "").Replace("\n", "");
         Assert.Equal(expected, string.Concat(drawing.Lines.Select(line => line.Text)));

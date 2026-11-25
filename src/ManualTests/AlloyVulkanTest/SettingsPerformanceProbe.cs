@@ -97,7 +97,7 @@ internal static class SettingsPerformanceProbe
         for (var i = 0; i < options.Rows; i++) model.Rows.Add(new SettingsRow($"Строка K9 {i:D3}"));
         var originalRows = model.Rows.ToArray(); var view = new View1(model) { Width = 720, Height = 1000 };
         var root = new ProfiledRoot(view); var profiler = new ProfiledBackend(backend);
-        using var ui = UiSession.Create(root, profiler, target, Viewport);
+        using var ui = UiSession.Create(root, profiler, target, Viewport, null, new UiDispatchOptions(), configurePresenters: DemoPresenters.Configure);
         var surface = profiler.Surface!; Require(ui.Update(), "Initial baseline frame was not drawn."); var initialOutput = host(surface.Inner);
         var originalNodes = Descendants(root).ToArray(); var originalRowNodes = view.RowList.Items.ToArray();
         var initialCount = originalNodes.Length; var warmup = Stopwatch.StartNew(); var warmupFrames = 0; var addedElements = 0;

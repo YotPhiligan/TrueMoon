@@ -1,7 +1,7 @@
+using TrueMoon.Argentis;
 using TrueMoon.Argentis.Painting;
-using TrueMoon.Argentis.Styling;
 
-namespace TrueMoon.Argentis.Painting;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Stock drawing operations shared by progress indicators.</summary>
 public static class ProgressBarPresenter

@@ -55,11 +55,13 @@ if (args.Contains("--typography-textbox-performance") || args.Contains("--typogr
         inspector: args.Contains("--typography-inspector-performance"));
     return;
 }
-if (args.Contains("--typography-textbox-renderer-positioning"))
+if (args.Contains("--typography-editable-fields") || args.Contains("--typography-textbox-renderer-positioning"))
 {
     var index = Array.IndexOf(args, "--font-output");
     if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
-    FontTypographyProbe.RunRendererTextBoxPositioning(args[index + 1], args.Contains("--validation"));
+    if (args.Contains("--typography-editable-fields"))
+        FontTypographyProbe.RunEditableFieldPositioning(args[index + 1], args.Contains("--validation"));
+    else FontTypographyProbe.RunRendererTextBoxPositioning(args[index + 1], args.Contains("--validation"));
     return;
 }
 if (args.Contains("--typography-textbox-positioning"))

@@ -90,7 +90,7 @@ internal static class Verification
     {
         var root=app.Services.Resolve<IFactory<VisualView>>()!.Create()!;var controls=app.Services.Resolve<Controls>()!;
         var fonts=SkiaFontCatalog.Load("Noto Sans",new Dictionary<string,string>{{"Noto Sans",Path.Combine(AppContext.BaseDirectory,"Assets/Fonts/NotoSans-Regular.ttf")}});
-        using var ui=UiSession.Create(root,new SkiaRasterRenderBackend(fonts),new RasterUiTarget(),new UiViewport(1000,690,1));
+        using var ui=UiSession.Create(root,new SkiaRasterRenderBackend(fonts),new RasterUiTarget(),new UiViewport(1000,690,1), null, new UiDispatchOptions(), configurePresenters: VisualPresenters.Configure);
         ui.Update();var bounds=root.Canvas.Bounds;
         ui.HandleInput(new UiInput(InputKind.PointerDown,bounds.X+10,bounds.Y+10));
         ui.HandleInput(new UiInput(InputKind.PointerUp,bounds.X+10,bounds.Y+10));

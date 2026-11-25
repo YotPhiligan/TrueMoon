@@ -41,7 +41,4 @@ internal sealed class CustomTitleBar : Panel
         _maximize.Arrange(new Rect(area.X + captionWidth + 40, area.Y, 40, area.Height));
         _close.Arrange(new Rect(area.X + captionWidth + 80, area.Y, 40, area.Height));
     }
-    private static readonly ElementPresentation Painter = ElementPresentation.Create<CustomTitleBar>(
-        static (bar, context) => context.Fill(bar.Bounds, bar.Theme.Control));
-    public override ElementPresentation Presentation => Painter;
 }

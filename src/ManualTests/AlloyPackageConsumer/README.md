@@ -64,9 +64,9 @@ pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -Pres
 ```
 
 Пример миграции с `DrawCore` — [PresenterScreen.cs](PresenterScreen.cs).
-Закрытый `SignalButton` сохраняет ввод `Button`, объявляет
-`Presentation => ElementPresentation.Required`, а рисование реализует `Signal`.
-В `UiSession.Create(..., configurePresenters: ...)` регистрация связывает точный
+Закрытый `SignalButton` сохраняет ввод `Button` и не ссылается на `Signal`,
+который его рисует. В `UiSession.Create(..., configurePresenters: ...)`
+регистрация связывает точный
 тип контрола, захват `Bounds` и фабрику презентера; `RegisterIconButton` в той же
 сессии заменяет только штатный рисунок `IconButton`. Код сверяет конкретные пиксели
 обоих элементов и по нажатию/отпусканию проверяет захват, фокус и одну активацию

@@ -28,7 +28,7 @@ public class ControlFactoryTests
         yield return [typeof(VStack)];
         yield return [typeof(HStack)];
         yield return [typeof(Line)];
-        yield return [typeof(Rectagle)];
+        yield return [typeof(Rectangle)];
     }
 
     [Theory]

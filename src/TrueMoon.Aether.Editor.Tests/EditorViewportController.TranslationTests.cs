@@ -23,7 +23,7 @@ public sealed class EditorViewportTranslationTests
         t.View.Canvas.Upload(TrueMoon.Alloy.Rendering.Skia.SkiaImageSource.CopyBgraPixels(surface.Width, surface.Height,
             new byte[surface.Width * surface.Height * 4]), next, () => true);
         var drawing = new Drawing { FailOutline = true };
-        Assert.Throws<IOException>(() => UiTreeRenderer.Draw(t.View.Canvas, drawing));
+        Assert.Throws<IOException>(() => UiTreeRenderer.Draw(t.View.Canvas, drawing, t.Presenters));
         Assert.Equal(1, drawing.Images); Assert.Null(t.View.Canvas.CurrentDraw);
         Assert.Null(t.View.Canvas.DrawnFrame); Assert.Same(presented, t.Preview.PresentedView);
     }
@@ -86,7 +86,7 @@ public sealed class EditorViewportTranslationTests
         Assert.Equal(0, t.Content.UndoCount); Assert.False(t.Owner.Document.Read().IsDirty);
         var position = t.Controller.TranslationCandidate!.Value;
         Assert.True(position.X > -1.2); Assert.Equal(1, position.Y); Assert.Equal(0, position.Z);
-        var drawing = new Drawing(); TrueMoon.Alloy.Runtime.UiTreeRenderer.Draw(t.View.Canvas, drawing);
+        var drawing = new Drawing(); UiTreeRenderer.Draw(t.View.Canvas, drawing, t.Presenters);
         Assert.Contains(drawing.Outlines, item => item.Color == Theme.Dark.Modified);
         Assert.Contains(drawing.Labels, text => text.Contains("Перемещение"));
         Assert.Same(surface, t.Frames.Presentation); Assert.Same(camera, t.State.Camera); Assert.Single(t.Runtime.Leases);

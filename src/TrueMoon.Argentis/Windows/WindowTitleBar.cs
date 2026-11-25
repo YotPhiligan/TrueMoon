@@ -138,26 +138,6 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
         for (var i = 0; i < actions.Length; i++) actions[i].Arrange(new(start + size * i, top, size, size));
         _header?.Arrange(new(area.X + 6, area.Y, Math.Max(0, start - area.X - 12), area.Height));
     }
-    private static readonly ElementPresentation WindowTitleBarPresentation = ElementPresentation.Create<WindowTitleBar>(static (bar, context) =>
-    {
-        var bounds = bar.Bounds;
-        var theme = bar.Theme;
-        var right = bar.MinimizeButton.Bounds.X; var caption = new Rect(bounds.X + 12, bounds.Y, Math.Max(0, right - bounds.X - 24), bounds.Height);
-        context.Save();
-        try
-        {
-            context.Clip(caption); var x = caption.X;
-            if (bar._header == null)
-            {
-                if (bar._icon != null) { context.Image(bar._icon, new(x, bounds.Y + (bounds.Height - 16) / 2, 16, 16)); x += 24; }
-                context.Text(bar._title, x, bounds.Y + (bounds.Height - bar.FontSize) / 2, bar._state.Active ? bar.Foreground : theme.Disabled, bar.FontSize, bar.FontFamily, bar.FontWeight, bar.FontItalic);
-            }
-        }
-        finally { context.Restore(); }
-        context.Fill(new(bounds.X, bounds.Y + bounds.Height - 1, bounds.Width, 1), bar.OverlayContent ? theme.Border with { A = (byte)MathF.Round(40 + 100 * bar.OverlayReveal) } : bar._state.Active ? theme.Accent : theme.Border);
-    });
-    /// <inheritdoc />
-    public override ElementPresentation Presentation => WindowTitleBarPresentation;
     /// <inheritdoc />
     public override void Dispose()
     {

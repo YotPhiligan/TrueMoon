@@ -555,8 +555,6 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Size MeasureCore(Size available, ITextLayoutService text) => default;
     /// <summary>Arranges custom content inside the padded bounds.</summary>
     protected virtual void ArrangeCore(Rect contentBounds) { }
-    /// <summary>Default presenter descriptor; null denotes a structural node with only shared decoration.</summary>
-    public virtual ElementPresentation? Presentation => null;
 
     internal bool HasEditorOutline => SupportsValidationIcon;
     internal bool HasSharedValidation => SharesValidationWithEditors;

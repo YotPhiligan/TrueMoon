@@ -75,7 +75,7 @@ public sealed class UiControlFactories : IUiControlFactories
         factories.Register<IconButton, (UiSymbol Symbol, string Name)>(new Factory<IconButton, (UiSymbol Symbol, string Name)>(
             args => new(args.Symbol, args.Name)));
         factories.Register(new Factory<Line>(() => new Line()));
-        factories.Register(new Factory<Rectagle>(() => new Rectagle()));
+        factories.Register(new Factory<Rectangle>(() => new Rectangle()));
         factories.Register(new Factory<NumberBox>(() => new NumberBox()));
         factories.Register(new Factory<Vector3Editor>(() => new Vector3Editor()));
 

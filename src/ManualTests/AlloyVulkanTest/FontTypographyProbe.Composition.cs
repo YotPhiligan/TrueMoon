@@ -161,7 +161,7 @@ internal static partial class FontTypographyProbe
             root = new TextCompositionBackdrop();
             root.Add(panel);
         }
-        using var ui = UiSession.Create(root, backend, target, viewport);
+        using var ui = UiSession.Create(root, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: ConfigureTypographyPresenters);
         ui.SetTheme(theme);
         Require(ui.Update() && !ui.Update(), "Text composition must draw exactly one retained frame.");
 
@@ -284,16 +284,5 @@ internal static partial class FontTypographyProbe
         finally { lease.Return(layout); }
     }
 
-    private sealed class TextCompositionBackdrop : Panel
-    {
-        private static readonly ElementPresentation Painter = ElementPresentation.Create<TextCompositionBackdrop>(static (panel, context) =>
-        {
-            var bounds = panel.Bounds;
-            var half = bounds.Width / 2;
-            var (left, right) = CompositionColors;
-            context.Fill(new(bounds.X, bounds.Y, half, bounds.Height), new(left.Red, left.Green, left.Blue));
-            context.Fill(new(bounds.X + half, bounds.Y, half, bounds.Height), new(right.Red, right.Green, right.Blue));
-        });
-        public override ElementPresentation Presentation => Painter;
-    }
+    private sealed class TextCompositionBackdrop : Panel;
 }
