@@ -730,7 +730,7 @@ model, снимает собственные subscriptions и освобожда
 Selection меняет inspector rows адресно; runtime snapshots обновляют bindings без
 rebuild. Смена темы/стиля сохраняет input/focus/selection/viewport instances.
 
-Application использует `UseAether` и `UsePresentationFactory<EditorView>` из `App.Build`. UI не
+Application использует `UseAether` и `UsePresentation<EditorView>` с `IFactory<EditorView>` из `App.Build`. UI не
 ссылается на test/probe executables и не загружает Game.Logic в свой CLR.
 `GameBuildLoader`, RuntimeProtocol, producer, supervisor, Mithril process ownership
 и Enerit IPC находятся в Aether. Здесь находятся composition и UI adapters.

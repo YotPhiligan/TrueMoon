@@ -1,0 +1,10 @@
+<Project>
+  <!-- Use one analyzer matching the package, even if the consumer still has a manual reference. -->
+  <Target Name="SelectArgentisPackageAnalyzer" AfterTargets="ResolveReferences" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)%(Analyzer.Extension)' == 'TrueMoon.Argentis.Generator.dll'" />
+      <Analyzer Include="$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'analyzers', 'dotnet', 'cs', 'TrueMoon.Argentis.Generator.dll'))"
+                Condition="'$(EnableArgentisGenerator)' != 'false'" />
+    </ItemGroup>
+  </Target>
+</Project>

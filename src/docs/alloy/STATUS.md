@@ -59,13 +59,68 @@ TextBox и NumberBox. Физический DPI, ввод, K7/K8 и матриц�
 
 ## Датированные результаты и исходные проверки
 
+25.11.2026 — `1.2611.25.17-alpha`: [прямая инъекция дочерних View](PLAN.md#uia1-view-registration)
+через сгенерированный вызов `IFactory<TChild>`. В Debug прошёл 61 тест активации
+и интеграции Hosting, включая 12 новых случаев, и 90 тестов дерева, `Content`,
+стилей и фабрик контролов. Проверены Cobalt и Microsoft DI, передача владения
+при присоединении, cleanup до присоединения и диагностика циклов.
+`AlloyTest --smoke` на OpenGL/Silk прошёл за 40 кадров. Пакеты не пересобирались.
+
+25.11.2026 — `1.2611.25.16-alpha`: `TrueMoon.Argentis` включает анализатор
+и подключает его напрямую и транзитивно. Из свежих локальных пакетов в Debug
+собрались обе конфигурации `AlloyPackageConsumer` без ручного `Analyzer`.
+Адресное окно OpenGL проверило генерацию части, роли и фабрики на Cobalt
+и Microsoft DI. Прямая зависимость оставила один анализатор при ручном дубликате;
+`EnableArgentisGenerator=false` убрал его и дал ожидаемую ошибку на сгенерированной
+роли. Полная пакетная матрица не запускалась.
+
+25.11.2026 — `1.2611.25.15-alpha`: [регистрация View через фабрику](PLAN.md#uia1-view-registration)
+и [вывод ролей из inline `Content`](PLAN.md#uia1f4g-generated-roles). В Debug прошли
+49 тестов регистрации/интеграции Hosting, 32 `ViewStyleTests` и 51 тест активации
+и генерации Cobalt. `AlloyTest --smoke` открыл OpenGL/Silk через `.View<View1>()`
+и проверил взаимодействия и освобождение окна за 40 кадров. `AlloyFactoryConsumer`
+прошёл по шесть OpenGL-сценариев на Cobalt и Microsoft DI без регистрации View как
+сервиса. Затронутые проекты собраны; `AlloyPackageConsumer` собран отдельно из
+девяти локальных пакетов. Пакетный запуск и Vulkan runtime не проверялись.
+
+25.11.2026 — `1.2611.25.14-alpha`: [генерация ролей View](PLAN.md#uia1f4g-generated-roles).
+Объявление токена перенесено в стиль панели Editor; правила и область стиля
+сохранены. В Debug прошли 31 тест `ViewStyleTests` и 27 тестов
+`EditorHeaderViewTests`. Пакетные и нативные прогоны не выполнялись.
+
+25.11.2026 — `1.2611.25.13-alpha`: [Hosting.Compatibility удалён](PLAN.md#uia1j-remove-hosting-compatibility).
+Это breaking change для legacy-потребителей; явное подключение окна или внешнего
+хоста не изменилось. [Миграция](../../TrueMoon.Alloy.Hosting/README.md#миграция-с-hostingcompatibility).
+Debug: 60 адресных тестов Hosting прошли. В Release независимый
+`AlloyFactoryConsumer` восстановил девять свежих пакетов без ProjectReference
+и открыл/закрыл окно OpenGL на Cobalt и Microsoft DI; реестр сессий пуст.
+В `Hosting.nuspec` нет прямых зависимостей от Core и RichTextKit.
+Отдельные проверки остаются красными: `CoreBoundaryTests` (1/2) требует
+assembly reference Argentis на `TrueMoon.Contracts`, а `AlloyPackageConsumer`
+на raster ждёт нулевой радиус TextBox вместо текущего значения темы 5.
+Эти контракты не менялись. Полная пакетная матрица и Vulkan не проверялись.
+
+25.11.2026 — `1.2611.25.12-alpha`: оба `WithChildren` используют один пакетный
+путь. Ошибка валидации не передаёт контейнеру ни одного ребёнка из группы;
+обработчики подключения видят уже принятую группу в порядке отрисовки.
+Ошибка обработчика не откатывает добавление. Проверка: адресные Debug-тесты
+`ControlFactoryTests` и `EditorHierarchyViewTests`; пакетный и нативный прогоны
+не входят в этот срез.
+
+25.11.2026 — [внутренняя чистка UIA1j](PLAN.md#uia1j-unused-ui-code-audit),
+`1.2611.25.11-alpha`: удалён незапускаемый прототип AlloyTest; Hosting и пробы
+используют `GraphicsApi` без внутреннего bool-алиаса. Убраны недостижимая
+проверка в Win32 и лишний массив в генераторе частей. Публичный API и выбор
+backend не менялись.
+Проверка ограничена Debug-сборкой AlloyTest, AlloyVulkanTest и TrueMoon.Alloy.Tests;
+тесты, пакетные и нативные прогоны не входят в этот срез.
+
 24.11.2026 — [UIA1f.11](PLAN.md#uia1f11-contextual-content) повторно прошёл
 локальную регрессию на `1.2611.24.11-alpha`. Проверены первый attach и reattach,
 смена модели и стиля, удержание фокуса и именованные части. Fluent-стеки
 проверяют всех детей до принятия во владение. В Debug и Release прошли
 по 1 242 теста Alloy, 171 Hosting и 1 548 Editor. Пример `truemoon-ui`
-собран на актуальном `Content(...)`. Для генерации в приложении, использующем
-NuGet-пакет Argentis, анализатор нужно подключить отдельно.
+собран на актуальном `Content(...)`. На той версии пакет Argentis ещё не включал анализатор.
 [Повторная проверка](HISTORY.md#uia1f11-recheck-2026-11-24).
 
 25.11.2026 — для [UIA1h](PLAN.md#uia1h-control-presenters) согласованы одно дерево,

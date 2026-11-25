@@ -79,7 +79,9 @@ internal static partial class WindowCallbackProbe
     private static async Task<Result> HostedAsync(bool openGL, WindowTransparencyMode mode, string fault, bool validation)
     {
         var messages = new List<string>();
-        var options = new SilkUiWindowOptions { OpenGL = openGL, Width = 400, Height = 240,
+        var options = new SilkUiWindowOptions
+        {
+            GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, Width = 400, Height = 240,
             Title = "Owned hosted callback fault", Appearance = new WindowAppearance { Decorated = false,
                 Transparency = mode, Opacity = mode == WindowTransparencyMode.Opacity ? .6f : 1 },
             Chrome = new WindowChromeOptions(), ValidationMessage = validation ? messages.Add : null };

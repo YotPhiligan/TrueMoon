@@ -70,12 +70,12 @@ public static class EditorViewportProbe
                 if (gpuBinding != null) o.ViewportTransport = gpuBinding.CreateTransport;
                 o.ReplacementDeadlines = new() { Total = TimeSpan.FromSeconds(12), Forward = TimeSpan.FromSeconds(4), Cleanup = TimeSpan.FromSeconds(3) };
             });
-            c.UsePresentation<ViewportView>(o =>
+            c.UsePresentation(static resolver => new ViewportView(resolver.Resolve<Action<string>>()), o =>
             {
                 o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
                 { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG3d Editor proof"; w.EnableDiagnostics = true; w.FrameMode = UiFrameMode.Continuous; });
             });
-            c.Services(r => r.Singleton<Action<string>>(_ => Dispatch).Transient<ViewportView>());
+            c.Services(r => r.Singleton<Action<string>>(_ => Dispatch));
         });
         host = app.Services.Resolve<AetherHost>()!;
         var window = app.Services.Resolve<HostedUiWindow>()!; var windows = app.Services.Resolve<HostedUiSessionFactory>()!;

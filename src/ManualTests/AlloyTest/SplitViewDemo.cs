@@ -25,7 +25,7 @@ internal static class SplitViewDemo
                 .Singleton<IViewStyle<SplitViewDemoView>>(_ => new SplitViewDemoStyle())
                 .Singleton<IFactory<SplitViewDemoView>>(resolver => new Factory<SplitViewDemoView>(() =>
                     new(resolver.Resolve<SplitViewDemoData>(), resolver.Resolve<IViewStyle<SplitViewDemoView>>()))));
-            context.UsePresentationFactory<SplitViewDemoView>(options =>
+            context.UsePresentation<SplitViewDemoView>(options =>
             {
                 if (vulkan) options.UseSkiaVulkan(); else options.UseSkiaOpenGL();
                 options.UseSilkWindow(window =>

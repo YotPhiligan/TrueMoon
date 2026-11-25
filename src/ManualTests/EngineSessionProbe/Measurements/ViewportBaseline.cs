@@ -64,12 +64,12 @@ internal static class ViewportBaseline
                 o.ReportDirectory = directory; o.RuntimeFactory = _ => factory;
                 if (binding != null) o.ViewportTransport = binding.CreateTransport;
             });
-            c.UsePresentation<ViewportView>(o =>
+            c.UsePresentation(static resolver => new ViewportView(resolver.Resolve<Action<string>>()), o =>
             {
                 o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
                 { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG4e viewport baseline"; w.FrameMode = UiFrameMode.Continuous; w.FramesPerSecond = 60; });
             });
-            c.Services(r => r.Singleton<Action<string>>(_ => _ => { }).Transient<ViewportView>());
+            c.Services(r => r.Singleton<Action<string>>(_ => static command => { }));
         });
         host = app.Services.Resolve<AetherHost>()!;
         var window = app.Services.Resolve<HostedUiWindow>()!;

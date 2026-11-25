@@ -68,7 +68,7 @@ internal static class RuntimeProbe
     {
         var messages = new List<string>();
         var builder = App.Builder(b => b.UseDI());
-        builder.Setup(app => app.UsePresentation<ProbeView>(options => (openGL ? options.UseSkiaOpenGL() : options.UseSkiaVulkan()).UseSilkWindow(w =>
+        builder.Setup(app => app.UsePresentation(static _ => new ProbeView(), options => (openGL ? options.UseSkiaOpenGL() : options.UseSkiaVulkan()).UseSilkWindow(w =>
         { w.Width = 320; w.Height = 180; w.ValidationMessage = validation ? m => { messages.Add(m); Console.Error.WriteLine(m); } : null; })));
         await using var app = builder.Build();
         var window = (HostedUiWindow)app.Services.GetService(typeof(HostedUiWindow))!;

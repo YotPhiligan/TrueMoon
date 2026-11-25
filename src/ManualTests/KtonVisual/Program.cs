@@ -68,7 +68,7 @@ internal static class Program
     internal static void ConfigureWindow(IAppConfigurationContext context)
     {
         var fonts=SkiaFontCatalog.Load("Noto Sans",new Dictionary<string,string>{{"Noto Sans",Path.Combine(AppContext.BaseDirectory,"Assets/Fonts/NotoSans-Regular.ttf")}});
-        context.UsePresentationFactory<VisualView>(options=>
+        context.UsePresentation<VisualView>(options=>
         {
             options.ConfigurePresenters(VisualPresenters.Configure).UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=1000;window.Height=690;window.Title="Kton visual acceptance";});
         });

@@ -16,7 +16,11 @@ navigation/workspace/timeline, retained draft, Tab/стрелки/Shift/Home/End
 
 Для расследования нерегулярного smoke failure добавьте `--smoke-trace <path.json>` к `--smoke` (или clipboard smoke). После завершения либо отказа сохраняются последние128 snapshots: frame/stage, модель и редактор, enabled/focus/caret/selection, native input после Hosting routing. Это наблюдение нормализованного ввода, не raw Win32 messages; маршрутизация не меняется. Name failure сообщает expected/model/editor и различает `unexpected-value` от `binding-out-of-sync`. Ошибка сохранения trace не маскирует уже возникший smoke failure. [Результаты расследования](../../docs/alloy/HISTORY.md#textbox-control-text-и-name-smoke--2026-10-10).
 
-Оконный пример для Windows x64 / .NET 10. [View1](View1.cs) создаёт постоянное дерево формы, динамический список, условную область и controls/theme демонстрацию, а [SettingsModel](SettingsModel.cs) хранит значения отдельно от контролов. Explicit Hosting/Silk с OpenGL по умолчанию или Vulkan через `--vulkan`, одна модель из DI. Функциональный standalone набор и OS clipboard проверены; та же сцена используется в [backend comparison и Vulkan HUD](../AlloyVulkanTest/README.md#общая-форма-rasteropenglvulkan-и-hud).
+Оконный пример для Windows x64 / .NET 11. [View1](View1.cs) создаёт дерево формы,
+динамический список, условную область и демонстрацию темы. [SettingsModel](SettingsModel.cs)
+хранит значения отдельно от контролов. Hosting/Silk использует OpenGL по
+умолчанию; `--vulkan` переключает backend. Та же сцена используется в
+[сравнении backend и Vulkan HUD](../AlloyVulkanTest/README.md#общая-форма-rasteropenglvulkan-и-hud).
 
 Параметры окна: `--transparent` включает per-pixel alpha, `--opacity 0.5` задаёт общую opacity, `--borderless` убирает системную рамку независимо от alpha. OpenGL — default; для Vulkan добавьте `--vulkan --validation`. `--transparent` и `--opacity` вместе запрещены. В smoke проверяются capabilities и очередь смены opacity0.5→0.75. Непрозрачный фон View1 сохраняет свой цвет даже в transparent режиме; прозрачность самого окна не меняет alpha UI автоматически. [API и ограничения](../../TrueMoon.Alloy.Hosting/README.md#прозрачность-standalone-окна).
 
@@ -31,10 +35,14 @@ using TrueMoon.Extensions.DependencyInjection;
 await App.Builder(builder => builder.UseDI()).RunAsync(context => context
     .UsePresentation<View1>(options => options.UseSkiaOpenGL().UseSilkWindow(window =>
     { window.Width = 900; window.Height = 960; window.Title = "TrueMoon Alloy — настройки"; }))
-    .Services(services => services.Singleton<SettingsModel>()));
+    .Services(services => services.Singleton<SettingsModel>().View<View1>()));
 ```
 
-`View1 : View<SettingsModel>` редактирует Name, Enabled и Volume через TextBox/CheckBox/Slider BindTwoWay. Односторонний BindText показывает Summary модели. «Загрузить пример» и «Сбросить» изменяют модель, а существующие контролы получают значения при следующем Update. Форма смешивает Text.Plain/Button.Simple/TextBox.Create/CheckBox.Create и обычные new Text/new Slider/new Button. View2 остаётся прежним прототипом и в запуске не участвует.
+Проект собирается из исходников, поэтому [AlloyTest.csproj](AlloyTest.csproj)
+явно подключает анализатор Argentis как `ProjectReference`. В NuGet-приложении
+тот же анализатор поставляется транзитивно через `TrueMoon.Alloy.Hosting`.
+
+`View1 : View<SettingsModel>` редактирует Name, Enabled и Volume через TextBox/CheckBox/Slider BindTwoWay. Односторонний BindText показывает Summary модели. «Загрузить пример» и «Сбросить» изменяют модель, а существующие контролы получают значения при следующем Update.
 
 Попробуйте изменить имя, включая кириллицу и emoji, переключить уведомления и перетащить ползунок. Сводка показывает модель после изменения. Tab/Shift+Tab перемещает фокус; TextBox поддерживает выделение и Ctrl+A/C/X/V, CheckBox — Space/Enter, Slider — стрелки. Кнопки позволяют увидеть обратное обновление model → UI. Полные OS clipboard/font/input проверки остаются отдельным alpha проходом.
 
@@ -128,9 +136,9 @@ dotnet publish ManualTests/AlloyTest/AlloyTest.csproj -c Release --no-restore -o
 
 ## Alpha migration и границы
 
-31 legacy-файл из Alloy root/Presenters перенесён в сборку Hosting, namespaces `TrueMoon.Alloy.Hosting.Compatibility` и `.Compatibility.Presenters`. Это **breaking assembly/namespace migration без type forwarders**: consumers старых типов должны обновить ссылки/imports/callers и пересобраться. No-options `UsePresentation<TView>()` доступен только с opt-in Compatibility и не рекомендуется для нового UI; старые `Visual.GetEnumerator` и lifetime bugs не исправлены, закомментированные прототипы не являются рендерерами. Этот пример использует неизменённый новый explicit Hosting API, а не legacy путь.
-
-Alloy теперь содержит только Runtime/csproj и ProjectReference на Argentis, без пакетов и Core/Contracts. Hosting явно подключает Silk.NET/SkiaSharp/Topten.RichTextKit и Core/Contracts вместе с UI adapters. Direct renderer не требует Hosting/Platform.Silk или транзитивных Core/Contracts/Windowing через Alloy; Platform.Silk остаётся без Skia. Native ABI, lease/ownership и retirement не менялись. [Hosting](../../TrueMoon.Alloy.Hosting/README.md), [Compatibility](../../TrueMoon.Alloy.Hosting/Compatibility/README.md), [native Skia](../../TrueMoon.Alloy.Rendering.Skia/README.md).
+Пример использует явный Hosting API с OpenGL/Silk. Для старых приложений см.
+[миграцию с Hosting.Compatibility](../../TrueMoon.Alloy.Hosting/README.md#миграция-с-hostingcompatibility).
+[Документация Skia](../../TrueMoon.Alloy.Rendering.Skia/README.md).
 
 Последняя проверка2026-10-07, после подготовки пользователем fixture: native `--smoke-clipboard` прошёл Debug40/published Release41 frames, включая Unicode whole-grapheme copy/cut/paste и binding; `--window-lifetime` прошёл по6 OpenGL/Vulkan сценариев в обеих сборках. Независимое чтение подтвердило точное восстановление fixture; metadata sequence103/formats4/open window0. Build/xUnit/publish в этом запуске не повторялись. Предыдущий запуск: focused44/44, UI386/386, solution build0errors/1339warnings, Release publish exit0, controlled recovery Debug41/Release40, factory failure обе сборки; детали и прежние failed attempts — в [STATUS](../../docs/alloy/STATUS.md). Реальный OS отказ записи/recovery отдельно не индуцировался. Debug heap/native crash capture сейчас не запускались; полный backend/HUD/font/DPI/soak/alpha проход ещё предстоит.
 

@@ -65,8 +65,7 @@ public static class GpuViewportProbe
         await using var app = App.Build(c =>
         {
             c.UseAether(o => { o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory; o.RuntimeFactory = _ => factory; });
-            c.UsePresentation<GpuViewportView>(o => { o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 640; w.Height = 280; w.Title = "TrueMoon ENG4d GPU viewport"; w.EnableDiagnostics = true; }); });
-            c.Services(r => r.Transient<GpuViewportView>());
+            c.UsePresentation(static _ => new GpuViewportView(), o => { o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 640; w.Height = 280; w.Title = "TrueMoon ENG4d GPU viewport"; w.EnableDiagnostics = true; }); });
         });
         var host = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!; var sessions = app.Services.Resolve<HostedUiSessionFactory>()!;
         var shown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); UiSession ui = null!; GpuViewportView view = null!;

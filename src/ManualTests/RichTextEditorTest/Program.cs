@@ -18,12 +18,11 @@ try
     var builder = App.Builder(_ => { }).Setup(app =>
     {
         if (backend == "raster") app.UseAlloy(options => options.UseSkiaRaster().UseExternalHost());
-        else app.UsePresentation<EditorView>(options =>
+        else app.UsePresentation(static _ => new EditorView(), options =>
         {
             if (backend == "vulkan") options.UseSkiaVulkan(); else options.UseSkiaOpenGL();
             options.UseSilkWindow(window => { window.Width = 900; window.Height = 560; window.Title = "TrueMoon RichTextEditor"; });
         });
-        app.Services(services => services.Transient<EditorView>());
     });
     await using (var app = builder.Build())
     {

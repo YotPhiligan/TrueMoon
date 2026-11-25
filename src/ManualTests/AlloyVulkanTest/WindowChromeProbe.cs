@@ -135,7 +135,9 @@ internal static partial class WindowChromeProbe
             using var sessions = new HostedUiSessionFactory(openGL ? new SkiaOpenGLRenderBackend() : new SkiaVulkanRenderBackend());
             Element? root = null, title = null;
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            var options = new SilkUiWindowOptions { Width = 600, Height = 300, OpenGL = openGL,
+            var options = new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, Width = 600, Height = 300,
                 Appearance = new WindowAppearance { Decorated = false }, Chrome = new WindowChromeOptions { NativeDrag = true },
                 ValidationMessage = validation ? message => { Interlocked.Increment(ref warnings); Console.Error.WriteLine(message); } : null,
                 TitleBarFactory = commands => title = new HStack { Height = 40, WindowRegion = WindowRegionRole.Caption }.WithChildren(
@@ -195,7 +197,9 @@ internal static partial class WindowChromeProbe
             var messages = 0;
             using var sessions = new HostedUiSessionFactory(openGL ? new SkiaOpenGLRenderBackend() : new SkiaVulkanRenderBackend());
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30)); var token = timeout.Token;
-            var options = new SilkUiWindowOptions { Width = 980, Height = 780, OpenGL = openGL, Title = "TrueMoon default style",
+            var options = new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, Width = 980, Height = 780, Title = "TrueMoon default style",
                 Appearance = new WindowAppearance { Decorated = false },
                 Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = resizable, Resizable = resizable },
                 ValidationMessage = validation ? message => { Interlocked.Increment(ref messages); Console.Error.WriteLine(message); } : null };

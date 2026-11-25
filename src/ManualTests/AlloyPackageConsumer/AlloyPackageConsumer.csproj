@@ -9,7 +9,7 @@
     <DefineConstants Condition="'$(RequireCobaltGeneration)' == 'true'">$(DefineConstants);COBALT_GENERATION</DefineConstants>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated/$(Configuration)</CompilerGeneratedFilesOutputPath>
-    <TrueMoonPackageVersion Condition="'$(TrueMoonPackageVersion)' == ''">0.2.2.7-alpha</TrueMoonPackageVersion>
+    <TrueMoonPackageVersion Condition="'$(TrueMoonPackageVersion)' == ''">1.2611.25.16-alpha</TrueMoonPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="TrueMoon.Alloy.Hosting" Version="$(TrueMoonPackageVersion)" />

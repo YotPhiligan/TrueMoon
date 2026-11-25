@@ -69,11 +69,13 @@ internal static class SceneInputProbe
         await using var app = App.Build(c =>
         {
             c.UseAether(o => { o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory; o.RuntimeFactory = _ => factory; o.ViewportTransport = binding.CreateTransport; });
-            c.UsePresentation<ViewportView>(o =>
+            c.UsePresentation(_ =>
+            {
+                var result = new ViewportView(Dispatch); result.Canvas.PreserveAspectRatio = true; return result;
+            }, o =>
             {
                 o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 1000; w.Height = 760; w.Title = room ? "TrueMoon ENG5c — Room, WASD/mouse, Escape" : "TrueMoon ENG5b — Play, click viewport, WASD/mouse/E, Escape"; w.FrameMode = UiFrameMode.Continuous; });
             });
-            c.Services(r => r.Transient<ViewportView>(_ => { var result = new ViewportView(Dispatch); result.Canvas.PreserveAspectRatio = true; return result; }));
         });
         host = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!;
         var sessions = app.Services.Resolve<HostedUiSessionFactory>()!; var windowId = window.Id;

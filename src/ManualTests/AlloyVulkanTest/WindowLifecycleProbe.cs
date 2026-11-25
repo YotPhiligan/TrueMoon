@@ -114,7 +114,9 @@ internal sealed partial class WindowLifecycleProbe
         WindowTransparencyMode mode, bool custom, bool validation, CancellationToken token)
     {
         var messages = new List<string>();
-        var options = new SilkUiWindowOptions { OpenGL = openGL, Width = 400, Height = 240,
+        var options = new SilkUiWindowOptions
+        {
+            GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, Width = 400, Height = 240,
             Title = $"Owned lifecycle {cycle}", Appearance = new WindowAppearance { Decorated = !custom,
                 Transparency = mode, Opacity = mode == WindowTransparencyMode.Opacity ? .6f : 1 },
             Chrome = custom ? new WindowChromeOptions() : null, ValidationMessage = validation ? messages.Add : null,

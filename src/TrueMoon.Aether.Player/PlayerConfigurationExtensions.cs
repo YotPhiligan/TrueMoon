@@ -29,7 +29,7 @@ public static class PlayerConfigurationExtensions
                 return new Factory<PlayerView>(()=>new(data,input,style));
             });
         });
-        context.UsePresentationFactory<PlayerView>(options=>
+        context.UsePresentation<PlayerView>(options=>
         {options.ConfigurePresenters(PlayerPresenters.Register).UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=settings.Width;window.Height=settings.Height;window.Title=settings.Title;});});
         context.Services(services=>
         {

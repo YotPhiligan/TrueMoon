@@ -126,7 +126,7 @@ function Get-ProbeSources([string] $Workspace, [string[]] $Projects, [string[]] 
             $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in @('.cs', '.csproj', '.props', '.targets', '.json', '.ps1', '.template', '.png', '.ttf', '.spv', '.dll')
         }) { [void] $paths.Add($file.FullName) }
     }
-    foreach ($name in @('Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'global.json', 'NuGet.Config')) {
+    foreach ($name in @('Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'global.json', 'NuGet.Config', 'CodeGeneration/ConstructorActivation.cs')) {
         $path = Join-Path $Workspace $name
         if (Test-Path -LiteralPath $path) { [void] $paths.Add($path) }
     }
@@ -149,12 +149,12 @@ function Assert-ProbeConsumer([string] $Path, [string] $Provider, [string] $Grap
     if (!$report.Completed -or $report.Failure -or $report.Provider -ne $Provider -or $report.Graphics -ne $Graphics -or $report.Registry -ne 0 -or $report.ValidationMessages -ne 0) {
         throw "Consumer failed: $Path"
     }
-    $expected = if ($Package) { @('factory') } else { @('disposed', 'factory', 'legacy', 'null', 'parented', 'throw') }
+    $expected = if ($Package) { @('factory') } else { @('disposed', 'factory', 'null', 'parented', 'throw', 'typed') }
     if ((@($report.Cases.Scenario | Sort-Object) -join ',') -ne ($expected -join ',')) { throw "Consumer scenarios missing: $Path" }
     foreach ($case in $report.Cases) {
         if (!$case.Passed -or $case.Calls -ne 1 -or $case.Owner -le 0 -or $case.Registry -ne 0 -or $case.DependencyDisposals -ne 1 -or
-            $case.NoViewRegistration -ne ($case.Scenario -ne 'legacy')) { throw "Consumer ownership/registration failed: $Path" }
-        if ($case.Scenario -in @('factory', 'legacy', 'disposed') -and $case.Owner -ne $case.CleanupOwner) { throw "Consumer cleanup affinity failed: $Path" }
+            !$case.NoViewRegistration) { throw "Consumer ownership/registration failed: $Path" }
+        if ($case.Scenario -in @('factory', 'typed', 'disposed') -and $case.Owner -ne $case.CleanupOwner) { throw "Consumer cleanup affinity failed: $Path" }
     }
     if (@($report.Assemblies).Count -ne 5) { throw "Missing assembly provenance: $Path" }
     return $report

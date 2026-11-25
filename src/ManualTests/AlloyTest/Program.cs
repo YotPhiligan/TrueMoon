@@ -26,7 +26,7 @@ if (args.Contains("--window-lifetime"))
 
 if (args.Contains("--style-gallery"))
 {
-    await App.Builder(t => t.UseDI()).RunAsync(context => context.UsePresentation<DefaultStyleGallery>(options =>
+    await App.Builder(t => t.UseDI()).RunAsync(context => context.UsePresentation(static _ => new DefaultStyleGallery(), options =>
     {
         if (args.Contains("--vulkan")) options.UseSkiaVulkan(); else options.UseSkiaOpenGL();
         options.UseSilkWindow(window =>
@@ -88,7 +88,7 @@ Action<IAppConfigurationContext> configure = context => context
         })
         .Services(services =>
         {
-            services.Singleton<SettingsModel>();
+            services.Singleton<SettingsModel>().View<View1>();
             if (clipboardFailures != null)
                 services.Singleton<IUiSessionFactory>(resolver => new ClipboardFailureSmoke.Sessions(resolver.Resolve<HostedUiSessionFactory>(), clipboardFailures));
         });

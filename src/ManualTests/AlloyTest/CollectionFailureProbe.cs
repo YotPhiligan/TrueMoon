@@ -17,7 +17,8 @@ internal static class CollectionFailureProbe
         foreach (var initial in new[] { true, false })
         {
             var builder = App.Builder(context => context.UseDI());
-            builder.Setup(context => context.UsePresentation<CollectionFailureView>(options => options.UseSkiaOpenGL().UseSilkWindow())
+            builder.Setup(context => context.UsePresentation(static resolver => new CollectionFailureView(resolver.Resolve<CollectionFailureState>()),
+                    options => options.UseSkiaOpenGL().UseSilkWindow())
                 .Services(services => services.Singleton<CollectionFailureState>()));
             var app = builder.Build();
             var state = (CollectionFailureState)app.Services.GetService(typeof(CollectionFailureState))!;

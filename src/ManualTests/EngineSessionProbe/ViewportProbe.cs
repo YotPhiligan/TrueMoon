@@ -175,12 +175,12 @@ public static class ViewportProbe
                 o.ReportDirectory = directory; o.RuntimeFactory = _ => factory;
                 if (gpuBinding != null) o.ViewportTransport = gpuBinding.CreateTransport;
             });
-            c.UsePresentation<ViewportView>(o =>
+            c.UsePresentation(static resolver => new ViewportView(resolver.Resolve<Action<string>>()), o =>
             {
                 o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts);
                 o.UseSilkWindow(w => { w.Width = 900; w.Height = 740; w.Title = "TrueMoon Editor viewport"; w.EnableDiagnostics = true; w.FrameMode = UiFrameMode.Continuous; });
             });
-            c.Services(r => r.Singleton<Action<string>>(_ => Dispatch).Transient<ViewportView>());
+            c.Services(r => r.Singleton<Action<string>>(_ => Dispatch));
         }).Build();
         var engine = app.Services.Resolve<AetherHost>()!;
         supervisor = engine.Supervisor; session = engine.Frames; editor = engine.Editor; RefreshContext();

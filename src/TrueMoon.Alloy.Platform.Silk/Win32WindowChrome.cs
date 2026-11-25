@@ -197,7 +197,7 @@ internal sealed partial class Win32WindowChrome : IDisposable
         }
         if (!_options.NativeSnapLayouts)
         {
-            if (message == 0x2A2 && !_maxPressed) _input.Enqueue(new UiInput(InputKind.PointerMove, -1, -1));
+            if (message == 0x2A2) _input.Enqueue(new UiInput(InputKind.PointerMove, -1, -1));
             return false;
         }
         // DWM needs non-client hover/leave to show and dismiss its own Snap UI.

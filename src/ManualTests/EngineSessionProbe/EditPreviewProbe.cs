@@ -46,7 +46,7 @@ internal static class EditPreviewProbe
                 options.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
                 options.ViewportTransportFactory = resolver => new Factory<IGameViewportTransport, GpuResourceHost>(resolver.Resolve<EditorGpuViewportBinding>().CreateTransport);
             });
-            context.UsePresentationFactory<ViewportView>(options =>
+            context.UsePresentation<ViewportView>(options =>
             {
                 options.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
                 { window.Width = 1000; window.Height = 760; window.Title = "TrueMoon Edit preview proof"; window.FrameMode = UiFrameMode.Continuous; });

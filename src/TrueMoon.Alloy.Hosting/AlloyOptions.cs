@@ -132,8 +132,6 @@ namespace TrueMoon.Alloy.Hosting
         /// <summary>Explicit target/presenter. Null infers the selected renderer in UsePresentation;
         /// direct HostedUiWindow construction defaults to Vulkan.</summary>
         public UiWindowGraphicsApi? GraphicsApi { get; set; }
-        // Retained source compatibility for existing in-repository probes; no independent boolean selection.
-        internal bool OpenGL { get => GraphicsApi == UiWindowGraphicsApi.OpenGL; set => GraphicsApi = value ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan; }
         /// <summary>Initial logical width.</summary>
         public int Width { get; set; } = 960;
         /// <summary>Initial logical height.</summary>

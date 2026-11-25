@@ -311,6 +311,9 @@ public sealed class EditorHeaderViewTests
         Assert.Equal(600, test.Header.Caption.FontWeight);
         Assert.Equal(tree, DocumentUiFixture.Tree(test.Header)); Assert.True(test.Header.Menu.MoreButton.IsFocused);
         Assert.Equal(ControlTone.Positive, test.Header.RunButton.Tone); Assert.Equal(ControlTone.Danger, test.Header.StopButton.Tone);
+        Assert.Equal(16, test.Header.RunButton.IconSize);
+        Assert.True(test.Header.RunButton.RevealOnInteraction);
+        Assert.True(test.Header.SaveButton.RevealOnInteraction);
         Assert.Equal(WindowRegionRole.Caption, test.Header.WindowRegion); Assert.Equal(WindowRegionRole.Client, test.Header.Menu.WindowRegion);
         Assert.False(ui.Update());
     }

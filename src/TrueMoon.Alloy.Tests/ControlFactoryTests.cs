@@ -150,6 +150,66 @@ public class ControlFactoryTests
         Assert.True(Assert.IsType<Border>(children[0]).Child!.IsDisposed);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WithChildren_RejectsOwnedLaterChildWithoutAdoptingEarlierChild(bool contextual)
+    {
+        using var candidate = new Text("Candidate");
+        using var other = new Panel();
+        var owned = new Text("Owned");
+        other.Add(owned);
+        UiControl<Panel, object> control = default;
+        using var view = new FactoryView(ui => (control = ui.Create<Panel>()).Element);
+        using var session = new UiSession(view, new HeadlessSurface(), new UiViewport(300, 400));
+        var panel = control.Element;
+        var existing = new Text("Existing");
+        panel.Add(existing);
+
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            if (contextual) control.WithChildren(candidate, owned);
+            else panel.WithChildren(candidate, owned);
+        });
+
+        Assert.Same(existing, Assert.Single(panel.Children));
+        Assert.Null(candidate.Parent);
+        Assert.False(candidate.IsAttached);
+        Assert.Same(other, owned.Parent);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WithChildren_ReportsObserverFailureAfterAdoptingEveryChild(bool contextual)
+    {
+        using var first = new Text("First");
+        using var second = new Text("Second");
+        UiControl<Panel, object> control = default;
+        using var view = new FactoryView(ui => (control = ui.Create<Panel>()).Element);
+        using var session = new UiSession(view, new HeadlessSurface(), new UiViewport(300, 400));
+        var panel = control.Element;
+        var failure = new InvalidOperationException("First child observer failed.");
+        var secondNotified = false;
+        first.AttachmentChanged += () =>
+        {
+            if (!first.IsAttached) return;
+            Assert.Equal([first, second], panel.Children);
+            Assert.True(second.IsAttached);
+            throw failure;
+        };
+        second.AttachmentChanged += () => secondNotified = second.IsAttached;
+
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
+        {
+            if (contextual) control.WithChildren(first, second);
+            else panel.WithChildren(first, second);
+        }));
+
+        Assert.Same(panel, second.Parent);
+        Assert.True(secondNotified);
+    }
+
     [Fact]
     public void FailedDirectAttach_LeavesSuppliedSurfaceAndRootWithCaller()
     {

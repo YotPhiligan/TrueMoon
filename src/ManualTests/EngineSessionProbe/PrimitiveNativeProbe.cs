@@ -68,7 +68,7 @@ public static class PrimitiveNativeProbe
                 options.RuntimeLaunch = runtime; options.RuntimeFactory = _ => factory; options.ReportDirectory = reportDirectory;
                 options.Deadlines = new() { Startup = TimeSpan.FromSeconds(30), Command = TimeSpan.FromSeconds(10) };
             });
-            context.UsePresentationFactory<PrimitiveNativeView>(options =>
+            context.UsePresentation<PrimitiveNativeView>(options =>
             {
                 options.UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
                 { window.Width = 760; window.Height = 180; window.Title = "TrueMoon ECS primitive Vulkan proof"; window.EnableDiagnostics = true; });

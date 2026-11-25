@@ -99,7 +99,8 @@ internal static class OpenGLProbe
     internal static async Task RunFailureAsync()
     {
         var builder = App.Builder(b => b.UseDI());
-        builder.Setup(app => app.UsePresentation<OpenGLFailingView>(options => options.ConfigurePresenters(ConfigurePresenters).UseSkiaOpenGL().UseSilkWindow()));
+        builder.Setup(app => app.UsePresentation(static _ => new OpenGLFailingView(),
+            options => options.ConfigurePresenters(ConfigurePresenters).UseSkiaOpenGL().UseSilkWindow()));
         await using var app = builder.Build();
         var window = (HostedUiWindow)app.Services.GetService(typeof(HostedUiWindow))!;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));

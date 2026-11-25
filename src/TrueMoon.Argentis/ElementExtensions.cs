@@ -156,8 +156,14 @@ public static partial class ElementExtensions
     public static T FontItalic<T>(this T element, bool italic = true) where T : Element { element.FontItalic = italic; return element; }
     /// <summary>Applies a background color.</summary>
     public static T Background<T>(this T element, Color color) where T : Element { element.Background = color; return element; }
-    /// <summary>Adds child elements in paint order.</summary>
-    public static T WithChildren<T>(this T element, params Element[] children) where T : ElementList { foreach (var child in children) element.Items.Add(child); return element; }
+    /// <summary>Adds a batch of child elements in paint order.</summary>
+    /// <remarks>Validates every child before adopting any. Attachment notifications run after the entire batch is adopted.</remarks>
+    public static T WithChildren<T>(this T element, params Element[] children) where T : ElementList
+    {
+        ArgumentNullException.ThrowIfNull(children);
+        element.Items.AddRange(children);
+        return element;
+    }
     /// <summary>Lets the child share a stack's remaining space equally with its other visible fill children.</summary>
     /// <remarks>During measurement an unbounded axis uses natural sizes. The arranged slot observes the child's own size and alignment rules.</remarks>
     public static T Fill<T>(this T element, bool enabled = true) where T : Element =>

@@ -80,13 +80,13 @@ dotnet build ManualTests/AlloyFactoryConsumer/AlloyFactoryConsumer.csproj --conf
 ```
 
 Аргументы: `cobalt|di`, `opengl|vulkan`, `factory|all`, report path. `all` выполняет
-шесть App lifetimes: factory, прежний generic overload, throw/null/disposed/parented
-root. Factory success также проверяет rejection already-attached root вторым окном
-без повреждения первого. `factory` оставляет только новый overload без view service
-registration; для проверки package API он запускается без Cobalt analyzer.
+шесть App lifetimes: callback, typed factory, throw/null/disposed/parented root.
+Factory success также проверяет rejection already-attached root вторым окном
+без повреждения первого. `factory` оставляет только callback; для проверки
+package API он запускается без Cobalt analyzer.
 
-Source `legacy` намеренно сохраняет explicit view graph и analyzer; это отдельная
-проверка совместимости generic overload, а не условие для нового factory overload.
+Сценарий `typed` регистрирует `IFactory<FactoryRoot>` и использует
+`UsePresentation<FactoryRoot>`. Ни один сценарий не регистрирует View как сервис.
 Program проверяет root owner thread, dependency lifetime/disposal, options snapshot,
 native target, Registry0 и наблюдаемость ошибок. Только returned detached root
 переходит во владение окна. Borrowed/invalid roots сохраняют прежнего владельца.

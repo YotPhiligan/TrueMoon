@@ -392,6 +392,57 @@ public sealed class ViewStyleTests
     }
 
     [Fact]
+    public void GeneratedRoles_StyleLaterAdoptedControlsWithoutMatchingAnotherStylesSameName()
+    {
+        var view = ViewCreation.Prepare(new GeneratedRoleView(), new GeneratedRoleStyle());
+        using var ui = Create(view);
+        ui.Update();
+        var panel = Assert.IsType<Panel>(view.Child);
+        var tagged = new Text("Late").WithRole(GeneratedRoleStyle.AccentText);
+        var foreignRole = new Text("Other").WithRole(OtherGeneratedRoleStyle.AccentText);
+        panel.WithChildren(tagged, foreignRole);
+        ui.Update();
+
+        Assert.Equal(28, Assert.IsType<Text>(panel.Children[0]).FontSize);
+        Assert.Equal(600, Assert.IsType<Text>(panel.Children[1]).FontWeight);
+        Assert.Equal(28, tagged.FontSize);
+        Assert.Equal(ui.Root.Theme.FontSize, foreignRole.FontSize);
+
+        view.WithViewStyle(new OtherGeneratedRoleStyle());
+        Assert.Equal(ui.Root.Theme.FontSize, tagged.FontSize);
+        Assert.Equal(32, foreignRole.FontSize);
+    }
+
+    [Fact]
+    public void InferredRoles_StyleRepeatedAndLaterAdoptedControlsWithoutMatchingAnotherViewsToken()
+    {
+        var model = new InferredRoleCaption();
+        var style = new Declaration<InferredRoleView>(styles => styles.Role(InferredRoleViewRoles.Accent).FontSize(28));
+        var view = ViewCreation.Prepare(new InferredRoleView(model), style);
+        using var ui = Create(view);
+        ui.Update();
+
+        var panel = Assert.IsType<Panel>(view.Child);
+        var bound = Assert.IsType<Text>(panel.Children[0]);
+        Assert.Same(bound, view.BoundLabel);
+        Assert.Same(panel.Children[1], view.SecondLabel);
+        Assert.Equal("Initial", bound.Value);
+        Assert.Equal(28, bound.FontSize);
+        Assert.Equal(28, view.SecondLabel.FontSize);
+
+        ViewStyleRole<Text> accent = InferredRoleViewRoles.Accent;
+        var later = new Text("Late").WithRole(accent);
+        var foreign = new Text("Other").WithRole(OtherInferredRoleViewRoles.Accent);
+        panel.WithChildren(later, foreign);
+        model.Caption = "Updated";
+        ui.Update();
+
+        Assert.Equal("Updated", bound.Value);
+        Assert.Equal(28, later.FontSize);
+        Assert.Equal(ui.Root.Theme.FontSize, foreign.FontSize);
+    }
+
+    [Fact]
     public void ThemeChange_RecomputesWithoutRebuildingOrLosingFocusSelectionAndScroll()
     {
         var view = new SampleView(); var content = view.Child; var editor = view.Editor; var scrollContent = view.Scroll.Child;
@@ -632,4 +683,60 @@ public sealed class ViewStyleTests
         public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
     }
+}
+
+internal sealed class GeneratedRoleView : View
+{
+    public GeneratedRoleView() => Content(ui => ui.Panel(
+        ui.Text("Accent").WithRole(GeneratedRoleStyle.AccentText),
+        ui.Text("Label").WithRole(GeneratedRoleStyle.Label)));
+}
+
+[ViewRole<Text>("AccentText")]
+internal sealed partial class GeneratedRoleStyle : IViewStyle<GeneratedRoleView>
+{
+    public void Configure(IViewStyleBuilder<GeneratedRoleView> styles)
+    {
+        styles.Role(AccentText).FontSize(28);
+        styles.Role(Label).FontWeight(600);
+    }
+}
+
+[ViewRole<Text>("Label")]
+internal sealed partial class GeneratedRoleStyle { }
+
+[ViewRole<Text>("AccentText")]
+internal sealed partial class OtherGeneratedRoleStyle : IViewStyle<GeneratedRoleView>
+{
+    public void Configure(IViewStyleBuilder<GeneratedRoleView> styles) =>
+        styles.Role(AccentText).FontSize(32);
+}
+
+internal sealed class InferredRoleView : View<InferredRoleCaption>
+{
+    public InferredRoleView(InferredRoleCaption model) => Content(model, static ui => ui.Panel(
+        ui.Text().BindText(data => data.Caption).WithRole(InferredRoleViewRoles.Accent).Named("BoundLabel"),
+        ui.Text("Second").Named("SecondLabel").WithRole(InferredRoleViewRoles.Accent)));
+}
+
+internal sealed class OtherInferredRoleView : View
+{
+    public OtherInferredRoleView() => Content(static ui => ui.Text().WithRole(OtherInferredRoleViewRoles.Accent));
+}
+
+internal sealed class InferredRoleCaption : INotifyPropertyChanged
+{
+    private string _caption = "Initial";
+    public string Caption
+    {
+        get => _caption;
+        set
+        {
+            if (_caption == value) return;
+            _caption = value;
+            PropertyChanged?.Invoke(this, new(nameof(Caption)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

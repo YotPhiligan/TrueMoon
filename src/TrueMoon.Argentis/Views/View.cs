@@ -8,6 +8,7 @@ namespace TrueMoon.Argentis.Views;
 public abstract class View : ContentControl, IView
 {
     internal sealed override ElementScope OwnedScope { get; }
+    internal ViewDependencyOwnership? DependencyOwnership { get; set; }
     private Func<IUiControlFactories, Element>? _deferredContent;
     private Action? _deferredStyle;
     private bool _contentPreparationStarted;
@@ -106,6 +107,7 @@ public abstract class View : ContentControl, IView
         {
             if (IsDisposed)
             {
+                DependencyOwnership?.Release(this);
                 _deferredContent = null;
                 _deferredStyle = null;
             }

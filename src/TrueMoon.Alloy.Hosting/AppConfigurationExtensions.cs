@@ -18,16 +18,17 @@ public static class AppConfigurationExtensions
         Register(app, options);
         return app;
     }
-    /// <summary>Registers a standalone UI window with explicit platform and renderer selection.</summary>
-    public static IAppConfigurationContext UsePresentation<TView>(this IAppConfigurationContext app, Action<AlloyOptions> configure) where TView : Element
-    {
-        ArgumentNullException.ThrowIfNull(app);
-        var options = Configure(configure, true);
-        Register(app, options);
-        app.Services(services => services.Transient<TView>());
-        RegisterWindow(app, options, resolver => resolver.Resolve<TView>());
-        return app;
-    }
+    /// <summary>Registers a standalone window whose root is created on the UI owner thread by a registered factory.</summary>
+    /// <typeparam name="TView">Root element.</typeparam>
+    /// <param name="app">Application configuration.</param>
+    /// <param name="configure">Selects the window and renderer; settings are snapshotted during registration.</param>
+    /// <returns>The application configuration for chaining.</returns>
+    /// <remarks>Register an <see cref="IFactory{TView}"/> explicitly or with View registration.
+    /// The window owns the fresh root returned by the factory.</remarks>
+    public static IAppConfigurationContext UsePresentation<TView>(this IAppConfigurationContext app,
+        Action<AlloyOptions> configure) where TView : Element
+        => UsePresentation(app, static resolver => resolver.Resolve<IFactory<TView>>().Create()!, configure);
+
     /// <summary>Registers a standalone window with an explicit owner-thread root factory and renderer selection.</summary>
     /// <param name="app">Application configuration.</param>
     /// <param name="rootFactory">Creates a fresh, detached root on the UI owner thread from application services.
@@ -45,14 +46,6 @@ public static class AppConfigurationExtensions
         RegisterWindow(app, options, rootFactory);
         return app;
     }
-    /// <summary>Registers a window whose owner-thread root is created by an injected factory.</summary>
-    /// <typeparam name="TView">Root element.</typeparam>
-    /// <param name="app">Application configuration.</param><param name="configure">Window and renderer settings.</param>
-    /// <returns>The application configuration.</returns>
-    public static IAppConfigurationContext UsePresentationFactory<TView>(this IAppConfigurationContext app,
-        Action<AlloyOptions> configure) where TView : Element
-        => UsePresentation(app, resolver => resolver.Resolve<IFactory<TView>>().Create()
-            ?? throw new InvalidOperationException("Root factory returned null."), configure);
     private static void RegisterWindow(IAppConfigurationContext app, AlloyOptions options, Func<IServiceResolver, Element> rootFactory)
     {
         app.Services(services => services.Singleton<HostedUiDispatcher>(_ => new HostedUiDispatcher())

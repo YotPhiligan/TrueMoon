@@ -6,9 +6,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace TrueMoon.Argentis.Generator;
 
-/// <summary>Generates typed access to named controls through a view's existing part registry.</summary>
+/// <summary>Generates typed named parts and inferred style roles from inline view content.</summary>
 [Generator(LanguageNames.CSharp)]
-public sealed class ViewPartsGenerator : IIncrementalGenerator
+public sealed partial class ViewPartsGenerator : IIncrementalGenerator
 {
     private const string ViewName = "TrueMoon.Argentis.Views.View";
     private static readonly DiagnosticDescriptor InvalidPart = new(
@@ -34,7 +34,8 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         {
             if (view is null) return;
             foreach (var diagnostic in view.Diagnostics) output.ReportDiagnostic(diagnostic);
-            if (view.Source is { } source) output.AddSource(view.HintName, source);
+            if (view.PartsSource is { } parts) output.AddSource($"{view.HintPrefix}.ViewParts.g.cs", parts);
+            if (view.RolesSource is { } roles) output.AddSource($"{view.HintPrefix}.InferredViewRoles.g.cs", roles);
         });
     }
 
@@ -67,9 +68,9 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         var first = declarations.First(IsCandidate);
         if (first.SyntaxTree != declaration.SyntaxTree || first.SpanStart != declaration.SpanStart)
             return null;
-        var constructors = declarations.SelectMany(type => type.Members.OfType<ConstructorDeclarationSyntax>()).ToArray();
+        var constructors = declarations.SelectMany(type => type.Members.OfType<ConstructorDeclarationSyntax>());
         var factories = ReadContentFactories(compilation, view, constructors, cancellation).ToArray();
-        return factories.Length > 0 ? ReadParts(owner, view, compilation, factories, declaration.GetLocation(), cancellation) : null;
+        return factories.Length > 0 ? ReadContent(owner, view, compilation, factories, declaration.GetLocation(), cancellation) : null;
     }
 
     private static IEnumerable<SyntaxNode> ReadContentFactories(Compilation compilation, INamedTypeSymbol view,
@@ -83,7 +84,7 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
             var model = compilation.GetSemanticModel(constructor.SyntaxTree);
             foreach (var call in Calls(constructor).Where(IsContentCall))
             {
-                // A callback in the factory can reference a part that this generator has yet to emit.
+                // The body can already reference generated parts and roles that do not exist yet.
                 var symbol = model.GetSymbolInfo(call, cancellation);
                 var arguments = call.ArgumentList.Arguments;
                 if (symbol.Symbol is IMethodSymbol method)
@@ -123,28 +124,42 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         DeclaredAccessibility: Accessibility.Public or Accessibility.Internal
     };
 
-    private static GeneratedView ReadParts(INamedTypeSymbol owner, INamedTypeSymbol view, Compilation compilation,
+    private static GeneratedView ReadContent(INamedTypeSymbol owner, INamedTypeSymbol view, Compilation compilation,
         IEnumerable<SyntaxNode> declarations, Location location, CancellationToken cancellation)
     {
         var elementExtensions = compilation.GetTypeByMetadataName("TrueMoon.Argentis.ElementExtensions");
-        if (elementExtensions is null) return new("", null, []);
         var buildExtensions = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.UiBuildExtensions");
         var wrapped = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.UiControl`2");
         var extensionType = owner.Name + "Parts";
-        if (owner.ContainingNamespace.GetTypeMembers(extensionType).Any(type => type.Arity == 0))
-        {
-            return new("", null, [Diagnostic.Create(NameConflict, location, owner.Name, extensionType)]);
-        }
-
-        var parts = new Dictionary<string, string>(StringComparer.Ordinal);
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+        var parts = new Dictionary<string, string>(StringComparer.Ordinal);
+        var canGenerateParts = elementExtensions is not null;
+        if (canGenerateParts && owner.ContainingNamespace.GetTypeMembers(extensionType).Any(type => type.Arity == 0))
+        {
+            diagnostics.Add(Diagnostic.Create(NameConflict, location, owner.Name, extensionType));
+            canGenerateParts = false;
+        }
+        var roleInference = new InferredRoles(compilation, owner, buildExtensions, wrapped);
         foreach (var declaration in declarations)
         {
             var model = compilation.GetSemanticModel(declaration.SyntaxTree);
             foreach (var call in Calls(declaration))
             {
-                if (call.Expression is not MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Named" } ||
-                    model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol { ReturnType: INamedTypeSymbol returnType } method)
+                if (call.Expression is not MemberAccessExpressionSyntax member) continue;
+                switch (member.Name.Identifier.ValueText)
+                {
+                    case "WithRole":
+                        roleInference.Read(model, call, member, diagnostics, cancellation);
+                        continue;
+                    case "Named" when canGenerateParts:
+                        break;
+                    default:
+                        continue;
+                }
+
+                var symbol = model.GetSymbolInfo(call, cancellation).Symbol ??
+                    roleInference.BindAfterRole(model, call, member, cancellation);
+                if (symbol is not IMethodSymbol { ReturnType: INamedTypeSymbol returnType } method)
                     continue;
 
                 INamedTypeSymbol? partType;
@@ -176,7 +191,7 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         }
 
         var source = parts.Count == 0 ? null : Render(owner, extensionType, parts);
-        return new($"{owner.ToDisplayString()}.ViewParts.g.cs", source, diagnostics.ToImmutable());
+        return new(owner.ToDisplayString(), source, roleInference.Render(), diagnostics.ToImmutable());
     }
 
     private static bool DerivesFrom(INamedTypeSymbol type, INamedTypeSymbol baseType)
@@ -214,5 +229,5 @@ public sealed class ViewPartsGenerator : IIncrementalGenerator
         return source.AppendLine("    }").AppendLine("}").ToString();
     }
 
-    private sealed record GeneratedView(string HintName, string? Source, ImmutableArray<Diagnostic> Diagnostics);
+    private sealed record GeneratedView(string HintPrefix, string? PartsSource, string? RolesSource, ImmutableArray<Diagnostic> Diagnostics);
 }

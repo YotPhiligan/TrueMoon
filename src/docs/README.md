@@ -101,7 +101,7 @@ Contracts и Core — разные независимые сборки. DI provi
 - **Bounded own-process pipes:** [Enerit probe](../ManualTests/EneritPipesProbe/README.md): generated payloads,32concurrent, local cancellation, errors/disconnect/reconnect и cleanup.
 - **Independent IPC/units packages:** [UnitsPackageConsumer](../ManualTests/UnitsPackageConsumer/README.md):108cases Cobalt/DI Debug/Release build/publish, actual analyzer provenance, DI без Cobalt analyzer и omitted Enerit analyzer negative control.
 - **App/generated IPC/restart:** [AppUnitsPipesProbe](../ManualTests/AppUnitsPipesProbe/README.md):36Debug/published Release cases на Cobalt/DI, pending crash без replay, limit exhaustion, rollback и child cleanup при parent exit. Старый [MithrilTest](../ManualTests/MithrilTest/Program.cs) остаётся примером.
-- **Старый UI API:** [Compatibility guide](../TrueMoon.Alloy.Hosting/Compatibility/README.md); наличие legacy реализации не означает исправление её старых defects.
+- **Миграция UI:** [Переход с Hosting.Compatibility на явный Hosting API](../TrueMoon.Alloy.Hosting/README.md#миграция-с-hostingcompatibility).
 
 ## Как читать готовность
 

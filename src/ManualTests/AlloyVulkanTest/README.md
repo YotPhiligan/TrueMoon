@@ -100,13 +100,11 @@ Manual Silk callers используют `SilkVulkanHost` из сборки/name
 
 Прямой renderer для raw Vulkan/raster/OpenGL через `UiSession.Create` не требует Platform.Silk/Hosting; после 2.1b нет и транзитивных TrueMoon.Core/Contracts/Windowing зависимостей через Alloy. Этот многоцелевой manual host использует оба модуля для Silk device/window и App-интеграции. Явные Vulkan bindings в renderer не равнозначны зависимости от Platform.Silk. [Контракты и примеры](../../TrueMoon.Alloy.Hosting/README.md#миграция-alpha-api-plan-21a).
 
-## Миграция alpha API: PLAN 2.1b
+## Переход со старого окна
 
-31 legacy-файл из корня Alloy/Presenters перенесён в `TrueMoon.Alloy.Hosting/Compatibility`, namespace `TrueMoon.Alloy.Hosting.Compatibility` и `.Compatibility.Presenters`. Это breaking assembly/namespace migration **без type forwarders**: legacy consumers должны обновить ссылки/imports/callers и пересобраться. No-options `UsePresentation<TView>()` доступен только с явным импортом Compatibility; для нового UI он не рекомендуется. `Visual.GetEnumerator` и legacy lifetime bugs не исправлены; закомментированные прототипы не являются рабочими рендерерами. [Compatibility](../../TrueMoon.Alloy.Hosting/Compatibility/README.md).
-
-Alloy содержит только Runtime/csproj, единственный ProjectReference — Argentis; PackageReference и Core/Contracts удалены. Hosting явно подключает Silk.NET/SkiaSharp/Topten.RichTextKit, Core/Contracts и UI adapters. Platform.Silk остаётся без Skia. Новый explicit Hosting API, native ABI, lease/ownership и retirement не менялись. [AlloyTest](../AlloyTest/README.md) использует Hosting и `UsePresentation<View1>(options => options.UseSkiaOpenGL().UseSilkWindow())`; его `--smoke` закрывает окно после >=30 кадров с 30-секундным cancellation bound, обычный запуск остаётся оконным, retained View1/View2 не изменены.
-
-Все результаты ниже — **исторические**; фактические повторные build/tests/GPU/publish запуски после переноса 2.1b и оставшиеся ограничения записаны отдельно в [STATUS](../../docs/alloy/STATUS.md).
+Этот пример и [AlloyTest](../AlloyTest/README.md) используют явный выбор backend и
+хоста. Старый `VisualTree` не нужен. [Миграция с Hosting.Compatibility](../../TrueMoon.Alloy.Hosting/README.md#миграция-с-hostingcompatibility).
+Приведённые ниже результаты — исторические; границы проверок указаны в [STATUS](../../docs/alloy/STATUS.md).
 
 ## Общая форма raster/OpenGL/Vulkan и HUD
 
@@ -348,7 +346,7 @@ Argentis Window<TData> через HostedUiWindow на OpenGL и Vulkan. Initial 
 Title/ClientSize имеют приоритет над host defaults; проверяются одна рамка,
 native/painted caption, resize/state commands, retained focused draft/theme,
 component close veto → async drain → actual cleanup и session/native hooks0.
-App profiles дополнительно проверяют UsePresentationFactory, borrowed VM/style,
+App profiles дополнительно проверяют UsePresentation с типизированной фабрикой, borrowed VM/style,
 Cobalt/MS DI, lazy Build и единственное создание/disposal продукта и модели.
 OpenGL PNG снимается после presentation. `--validation` требует установленного
 VK_LAYER_KHRONOS_validation и корректного VK_LAYER_PATH; plain run без него не

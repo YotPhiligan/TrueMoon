@@ -137,7 +137,9 @@ internal static partial class AsyncCloseProbe
         {
             Root = new Panel { Background = new Color(70, 80, 90) };
             Root.Own(new Cleanup(() => { CleanupOwner = Environment.CurrentManagedThreadId; if (cleanupFailure != null) throw cleanupFailure; }));
-            Window = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL, FrameMode = UiFrameMode.OnDemand, EnableDiagnostics = true,
+            Window = new HostedUiWindow(new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, FrameMode = UiFrameMode.OnDemand, EnableDiagnostics = true,
                 Width = 260, Height = 160, Title = "INF4 async close", ValidationMessage = validation }, factory,
                 () => { Owner = Environment.CurrentManagedThreadId; return Root; }, null, scope);
             Window.PostWindow(host => Handle = host.NativeWindow.Native!.Win32!.Value.Hwnd);

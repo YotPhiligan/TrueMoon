@@ -105,7 +105,9 @@ internal static partial class FrameSchedulingProbe
         private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal Live(HostedUiSessionFactory factory, bool openGL, HostedUiDispatcher scope, int x, Action<string>? validation)
         {
-            Window = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL, FrameMode = UiFrameMode.OnDemand, EnableDiagnostics = true,
+            Window = new HostedUiWindow(new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, FrameMode = UiFrameMode.OnDemand, EnableDiagnostics = true,
                 Width = 260, Height = 160, Title = "INF3 scheduling", ValidationMessage = validation }, factory,
                 () => new Panel { Background = new Color(70, 80, 90) }, null, scope);
             Window.PostWindow(host => { host.NativeWindow.Position = new(x, 40); Handle = host.NativeWindow.Native!.Win32!.Value.Hwnd; });

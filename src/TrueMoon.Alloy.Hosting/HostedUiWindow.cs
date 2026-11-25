@@ -226,7 +226,8 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
         _startupRoot = root;
         WindowComponentBinding.ValidateRoot(root);
         if (root is Window component) WindowComponentBinding.Configure(component, _options);
-        _window = new SilkWindowHost(_options.Width, _options.Height, _options.Title, _options.OpenGL, _options.Appearance, _options.Chrome);
+        var openGL = _options.GraphicsApi == UiWindowGraphicsApi.OpenGL;
+        _window = new SilkWindowHost(_options.Width, _options.Height, _options.Title, openGL, _options.Appearance, _options.Chrome);
         if (root is Window view)
             _component = new WindowComponentBinding(view, this, title =>
                 {
@@ -236,7 +237,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
                 size => { _options.Chrome?.ValidateSize(size); _window.Resize((int)size.Width, (int)size.Height); });
         AppearanceCapabilities = _window.AppearanceCapabilities;
         ChromeCapabilities = _window.ChromeCapabilities;
-        if (_options.OpenGL)
+        if (openGL)
         {
             var gl = _window.NativeWindow.GLContext ?? throw new NotSupportedException("Silk did not create an OpenGL context.");
             gl.MakeCurrent();
@@ -314,7 +315,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     }
     private void MakeCurrent()
     {
-        if (_options.OpenGL) _window?.NativeWindow.GLContext?.MakeCurrent();
+        if (_options.GraphicsApi == UiWindowGraphicsApi.OpenGL) _window?.NativeWindow.GLContext?.MakeCurrent();
     }
     private void SynchronizeComponent()
     {
@@ -498,7 +499,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     private bool PresentOutput()
     {
         var window = _window!; var session = _session!;
-        if (_options.OpenGL)
+        if (_options.GraphicsApi == UiWindowGraphicsApi.OpenGL)
         {
             session.PresentOpenGL();
             window.NativeWindow.GLContext!.SwapBuffers();

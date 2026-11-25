@@ -37,15 +37,14 @@ internal static class SceneViewportProbe
                 o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory;
                 o.RuntimeFactory = _ => factory; o.ViewportTransport = binding.CreateTransport;
             });
-            c.UsePresentation<ViewportView>(o =>
+            c.UsePresentation(static _ =>
+            {
+                var result = new ViewportView(static command => { }); result.Canvas.PreserveAspectRatio = true; return result;
+            }, o =>
             {
                 o.ConfigurePresenters(ProbePresenters.Configure).UseSkiaOpenGL(fonts); o.UseSilkWindow(w =>
                 { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG5a Vulkan 3D"; w.FrameMode = UiFrameMode.Continuous; });
             });
-            c.Services(r => r.Transient<ViewportView>(_ =>
-            {
-                var result = new ViewportView(command => { }); result.Canvas.PreserveAspectRatio = true; return result;
-            }));
         });
         var host = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!;
         var sessions = app.Services.Resolve<HostedUiSessionFactory>()!; var windowId = window.Id;

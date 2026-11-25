@@ -18,7 +18,7 @@ var messages = new ConcurrentQueue<string>(); var cases = new List<object>(); Ex
 using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 try
 {
-    foreach (var scenario in mode == "factory" ? new[] { "factory" } : new[] { "factory", "legacy", "throw", "null", "disposed", "parented" })
+    foreach (var scenario in mode == "factory" ? new[] { "factory" } : new[] { "factory", "typed", "throw", "null", "disposed", "parented" })
         cases.Add(await Run(scenario));
     Check(messages.IsEmpty, "Vulkan validation messages remained.");
 }
@@ -62,14 +62,18 @@ async Task<object> Run(string scenario)
                 if (args.Contains("--validation")) w.ValidationMessage = messages.Enqueue;
             });
         }
-        if (scenario == "legacy")
+        if (scenario == "typed")
         {
+            context.Services(s => s.Singleton<IFactory<FactoryRoot>>(resolver => new Factory<FactoryRoot>(() => (FactoryRoot)CreateRoot(resolver))));
             context.UsePresentation<FactoryRoot>(Configure);
-            // Preserve the legacy consumer-visible graph; the new overload requires neither registration.
-            context.Services(s => s.Transient<FactoryRoot>().Transient<FactoryRoot>(resolver => (FactoryRoot)CreateRoot(resolver)));
         }
         else context.UsePresentation(CreateRoot, Configure);
-        context.Services(s => Check(s.Exist<FactoryRoot>() == (scenario == "legacy"), "Unexpected inferred generic view registration."));
+        context.Services(s =>
+        {
+            Check(!s.Exist<FactoryRoot>(), "A window-owned view was registered as a service.");
+            Check(s.Exist<IFactory<FactoryRoot>>() == (scenario == "typed"), "Unexpected typed factory registration.");
+        });
+
         // Mutate before Build/service resolution: constructor-only copying would not pass this regression.
         leaked!.UseSkiaRaster(); leakedWindow!.Width = -1; leakedWindow.Title = "mutated";
         leakedWindow.GraphicsApi = graphics == "opengl" ? UiWindowGraphicsApi.Vulkan : UiWindowGraphicsApi.OpenGL;
@@ -133,7 +137,7 @@ async Task<object> Run(string scenario)
     }
     Check(marker.Disposals == 1 && factory!.ActiveSessionCount == 0, "App dependency cleanup failed.");
     return new { Scenario = scenario, Calls = calls, Owner = owner, CleanupOwner = cleanupOwner, Registry = factory.ActiveSessionCount,
-        DependencyDisposals = marker.Disposals, NoViewRegistration = scenario != "legacy", Passed = true };
+        DependencyDisposals = marker.Disposals, NoViewRegistration = true, Passed = true };
 }
 static async Task<Exception?> Observe(Func<Task> action) { try { await action(); return null; } catch (Exception error) { return error; } }
 static IEnumerable<Exception> Flatten(Exception error) => error is AggregateException aggregate ? aggregate.InnerExceptions.SelectMany(Flatten) : [error];

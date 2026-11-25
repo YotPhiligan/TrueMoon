@@ -35,8 +35,7 @@ public static class GpuCapabilityProbe
         await using var app = App.Build(c =>
         {
             c.UseAether(o => { o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory; o.RuntimeFactory = _ => factory; });
-            c.UsePresentation<GpuCapabilityView>(o => { o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 800; w.Height = 260; w.Title = "TrueMoon ENG4a"; w.EnableDiagnostics = true; }); });
-            c.Services(r => r.Transient<GpuCapabilityView>());
+            c.UsePresentation(static _ => new GpuCapabilityView(), o => { o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 800; w.Height = 260; w.Title = "TrueMoon ENG4a"; w.EnableDiagnostics = true; }); });
         });
         var host = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!; var sessions = app.Services.Resolve<HostedUiSessionFactory>()!;
         GpuProbeDecision? decision = null; GpuProducerCapabilities? producer = null; GpuConsumerCapabilities? consumer = null; object? glRaw = null;

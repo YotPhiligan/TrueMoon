@@ -170,8 +170,8 @@ public sealed class SkiaFontCatalogTests
         }
         options.Validate(renderer != "raster");
         var backend = options.BackendFactory!();
-        if (renderer == "opengl") { Assert.IsType<SkiaOpenGLRenderBackend>(backend); Assert.True(options.Window!.OpenGL); }
-        else if (renderer == "vulkan") { Assert.IsType<SkiaVulkanRenderBackend>(backend); Assert.False(options.Window!.OpenGL); }
+        if (renderer == "opengl") { Assert.IsType<SkiaOpenGLRenderBackend>(backend); Assert.Equal(UiWindowGraphicsApi.OpenGL, options.Window!.GraphicsApi); }
+        else if (renderer == "vulkan") { Assert.IsType<SkiaVulkanRenderBackend>(backend); Assert.Equal(UiWindowGraphicsApi.Vulkan, options.Window!.GraphicsApi); }
         else
         {
             Assert.IsType<SkiaRasterRenderBackend>(backend); Assert.True(options.ExternalHost); Assert.Null(options.Window);

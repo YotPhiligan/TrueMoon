@@ -74,7 +74,9 @@ internal static partial class HostedDispatcherProbe
             await sibling.WaitFrames(beforeClose + 3, timeout.Token);
 
             var startupFault = new ArgumentException("owned startup fault");
-            var badStartup = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = firstGL,
+            var badStartup = new HostedUiWindow(new SilkUiWindowOptions
+            {
+                GraphicsApi = firstGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan,
                 Width = 320, Height = 200, ValidationMessage = validation ? messages.Add : null }, firstFactory, () => throw startupFault, closed: null, dispatcher: scope);
             Require(ReferenceEquals(await Observe(() => badStartup.StartAsync(timeout.Token)), startupFault), "Startup fault identity changed.");
             Require(ReferenceEquals(await Observe(() => badStartup.Completion.WaitAsync(timeout.Token)), startupFault), "Startup Completion lost cause.");
@@ -160,7 +162,9 @@ internal static partial class HostedDispatcherProbe
             var editedFrame = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var owner = 0;
             var requestedAfter = -1;
-            await using var sibling = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL,
+            await using var sibling = new HostedUiWindow(new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan,
                 Width = 320, Height = 200, FrameMode = UiFrameMode.OnDemand, ValidationMessage = validation ? messages.Add : null },
                 sessions, () => new TextBox(), null, scope);
             sibling.FramePresented += ui =>
@@ -177,7 +181,9 @@ internal static partial class HostedDispatcherProbe
             Text? title = null;
             FaultingContent? root = null;
             var closed = 0;
-            var failed = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL, Width = 320, Height = 200,
+            var failed = new HostedUiWindow(new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, Width = 320, Height = 200,
                 Appearance = new WindowAppearance { Decorated = false }, Chrome = new WindowChromeOptions(),
                 ValidationMessage = validation ? messages.Add : null, TitleBarFactory = commands =>
                 {
@@ -225,7 +231,7 @@ internal static partial class HostedDispatcherProbe
     private static async Task Cancellation(HostedUiSessionFactory factory, CancellationToken timeout)
     {
         await using var scope = new HostedUiDispatcher();
-        var neverStarted = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = true }, factory,
+        var neverStarted = new HostedUiWindow(new SilkUiWindowOptions { GraphicsApi = UiWindowGraphicsApi.OpenGL }, factory,
             () => throw new Exception("Closed-before-start root must not run"), closed: null, dispatcher: scope);
         neverStarted.Close();
         Require(neverStarted.Completion.IsCompletedSuccessfully
@@ -234,7 +240,7 @@ internal static partial class HostedDispatcherProbe
         using var entered = new ManualResetEventSlim(); using var release = new ManualResetEventSlim();
         using var cancellation = new CancellationTokenSource();
         var roots = 0;
-        var window = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = true, Width = 320, Height = 200 }, factory, () =>
+        var window = new HostedUiWindow(new SilkUiWindowOptions { GraphicsApi = UiWindowGraphicsApi.OpenGL, Width = 320, Height = 200 }, factory, () =>
         {
             entered.Set(); Require(release.Wait(TimeSpan.FromSeconds(10)), "Startup release timed out.");
             roots++; return new Text("Startup cancellation keeps accepted window");
@@ -253,7 +259,7 @@ internal static partial class HostedDispatcherProbe
             Require(await Observe(() => scope.StopAsync(cancellation.Token)) is OperationCanceledException, "Canceled shutdown wait was not canceled.");
             Require(!window.Completion.IsCompleted, "Shutdown returned before blocked command finished.");
             release.Set(); await scope.StopAsync(timeout); await window.Completion.WaitAsync(timeout);
-            var rejected = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = true }, factory, () => throw new Exception("Rejected root must not run"), closed: null, dispatcher: scope);
+            var rejected = new HostedUiWindow(new SilkUiWindowOptions { GraphicsApi = UiWindowGraphicsApi.OpenGL }, factory, () => throw new Exception("Rejected root must not run"), closed: null, dispatcher: scope);
             Require(await Observe(() => rejected.StartAsync(timeout)) is ObjectDisposedException, "Stopped scope accepted a new window.");
             Require(await Observe(() => rejected.Completion) is ObjectDisposedException, "Rejected Completion did not report startup rejection.");
             Require(await Observe(() => window.PostAsTask()) is ObjectDisposedException, "Closed window accepted a command.");
@@ -287,7 +293,9 @@ internal static partial class HostedDispatcherProbe
         internal UiSession? Session;
         internal Live(HostedUiSessionFactory factory, bool openGL, HostedUiDispatcher scope, string title, Action<string>? validation)
         {
-            Window = new HostedUiWindow(new SilkUiWindowOptions { OpenGL = openGL, Width = 400, Height = 240,
+            Window = new HostedUiWindow(new SilkUiWindowOptions
+            {
+                GraphicsApi = openGL ? UiWindowGraphicsApi.OpenGL : UiWindowGraphicsApi.Vulkan, Width = 400, Height = 240,
                 Title = "Owned dispatcher " + title, ValidationMessage = validation }, factory,
                 () => new Panel().WithChildren(_editor = new TextBox { Value = title + " 🧑‍💻", Width = 240, Height = 40 }), closed: null, dispatcher: scope);
             Window.PostWindow(host => { Owner = Environment.CurrentManagedThreadId; Handle = host.NativeWindow.Native!.Win32!.Value.Hwnd; Context = openGL ? CurrentGLContext() : 0; });

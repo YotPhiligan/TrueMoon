@@ -71,13 +71,12 @@ dotnet ManualTests/AlloyVulkanTest/bin/Debug/net11.0/AlloyVulkanTest.dll --inter
 
 Factories возвращают соответственно `VulkanHostContext`, `VulkanUiTarget` и `VulkanInteropSurface`; параметры surface — `SkiaSharp.GRContext` и `SkiaSharp.SKSizeI`. Silk consumers добавляют ссылку/import `TrueMoon.Alloy.Hosting` и сохраняют свой device отдельно; `target.Host` предоставляет borrowed descriptor. Raw constructors `VulkanHostContext`, `new VulkanUiTarget(host)` и `new VulkanInteropSurface(host, context, size)` остаются в Rendering.Skia и не требуют этого adapter. Это alpha API assembly/namespace migration: существующие consumers обновляют и пересобирают, совместимость уже собранных приложений не гарантируется. [Примеры подключения](../TrueMoon.Alloy.Hosting/README.md#миграция-alpha-api-plan-21a).
 
-## Границы после PLAN 2.1b
+## Границы сборок
 
-`TrueMoon.Alloy` теперь содержит только `Runtime` и csproj: единственный ProjectReference — Argentis, PackageReference и ссылок на Core/Contracts нет. Rendering.Skia явно зависит от Alloy и пакетов SkiaSharp/Silk.NET.Vulkan; Platform.Silk остаётся без Skia. Silk.NET, SkiaSharp, Topten.RichTextKit и Core/Contracts для legacy presentation явно подключены в опциональном Hosting, а не в общем runtime.
-
-31 legacy-файл из Alloy root/Presenters перенесён в сборку Hosting, namespace `TrueMoon.Alloy.Hosting.Compatibility` и `.Compatibility.Presenters`. No-options `UsePresentation<TView>()` теперь требует opt-in Compatibility; explicit Hosting API не изменён. Это breaking alpha assembly/namespace migration **без type forwarders**: обновите ссылки/imports/callers и пересоберите consumers. Compatibility не рекомендуется для нового UI; старые `Visual.GetEnumerator` и lifetime bugs не исправлены, закомментированные прототипы не являются рендерерами. [Подробности](../TrueMoon.Alloy.Hosting/Compatibility/README.md), [explicit AlloyTest](../ManualTests/AlloyTest/README.md).
-
-Native asset/ABI, lease/ownership и retirement в 2.1b не изменялись. Фактические build/tests/GPU/publish проверки переноса и их ограничения — в [STATUS](../docs/alloy/STATUS.md); исторические результаты ниже сохранены отдельно.
+`TrueMoon.Alloy` содержит runtime и зависит от Argentis и Contracts, не от Skia или Silk.
+Rendering.Skia владеет адаптерами рисования и зависимостью Topten.RichTextKit.
+Platform.Silk не зависит от Skia. Опциональный Hosting связывает Alloy, рендерер, App
+и оконную платформу. Старый оконный стек удалён; см. [миграцию](../TrueMoon.Alloy.Hosting/README.md#миграция-с-hostingcompatibility).
 
 ## OpenGL backend
 

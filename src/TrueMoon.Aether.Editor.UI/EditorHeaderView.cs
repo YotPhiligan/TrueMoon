@@ -18,7 +18,6 @@ public sealed record EditorHeaderArguments(OverlayHost Overlays, string Title, A
 /// <summary>Retained compact title content, borrowing presentation models and owning controls/subscriptions.</summary>
 public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipant, IUiInputObserver, IWindowHeaderActivity
 {
-    internal static readonly ViewStyleRole<IconButton> ToolbarButtonRole = new("EditorHeaderAction");
     private readonly OverlayHost _overlays;
     private readonly IEditorDocumentViewModel _documentModel;
     private readonly IEditorInspectorViewModel _transformModel;
@@ -189,7 +188,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
     }
 
     private IconButton Action(UiSymbol symbol, string name, IUiCommand command)
-        => Bind(new IconButton(symbol, name) { Height = float.NaN }.WithRole(ToolbarButtonRole), command);
+        => Bind(new IconButton(symbol, name) { Height = float.NaN }.WithRole(EditorHeaderViewStyle.EditorHeaderAction), command);
 
     private IconButton Bind(IconButton button, IUiCommand command)
     {

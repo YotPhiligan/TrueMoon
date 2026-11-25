@@ -9,7 +9,7 @@ WindowFrame с minimize/maximize/restore/close и resize grip. `TitleBarFactory`
 App close coordinator, включая asynchronous save/drain.
 
 `TrueMoon.Argentis.Windows.Window` / `Window<TData>` можно передавать корнем через
-`UsePresentationFactory<TWindow>`. Компонент задаёт Title/ClientSize, содержимое,
+`UsePresentation<TWindow>` с зарегистрированной `IFactory<TWindow>`. Компонент задаёт Title/ClientSize, содержимое,
 bindings и scoped style; native/GPU ресурсы остаются у Hosting. Корневая фабрика
 вызывается на UI owner **до** native/graphics allocation и не должна требовать
 current graphics context. Effective Title/ClientSize компонента имеют приоритет
@@ -28,20 +28,20 @@ coordinator. Подробный контракт и ownership — в [package RE
 
 Для доставляемых шрифтов доступны `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` и `UseSkiaVulkan(fonts)`, где `fonts` — immutable `SkiaFontCatalog`. Каталог хранит snapshots; surface владеет native fonts. App доставляет font files и лицензии, Load выполняет native font validation до запуска UI. [Пример и правила fallback](../docs/alloy/GOLDEN_TESTS.md#шрифты-и-владение).
 
-Для прежнего generic `UsePresentation<MyView>` с default Cobalt регистрируйте concrete view и его зависимости в consumer через
-`app.Services(services => services.Singleton<MyModel>().Transient<MyView>())`:
-bundled analyzer видит этот constructor graph в исходниках приложения. Одного
-`UsePresentation<MyView>(...)` для генерации resolver пользовательского view
-недостаточно. Hosting создаёт свой dispatcher через явную factory и не требует
-собственного Cobalt analyzer. Полный пример обоих providers и explicit fonts —
-[package consumer](../ManualTests/AlloyPackageConsumer/README.md).
+Для обычного View регистрируйте `app.Services(s => s.Singleton<IMyModel, MyModel>().View<MyView>())`
+и подключайте `app.UsePresentation<MyView>(o => o.UseSkiaOpenGL().UseSilkWindow())`.
+`View<MyView>()` регистрирует `IFactory<MyView>`, не сам View. Анализатор Argentis
+генерирует вызов конструктора. Обычные зависимости разрешаются по объявленным
+типам параметров; [вложенные View](#вложенные-view-из-di) — через свои фабрики.
+Это одинаково работает на Cobalt и Microsoft DI. В NuGet-проектах анализатор
+подключается автоматически через Hosting; см. [пакетный пример](PACKAGE.md).
 
 RichTextEditor: multiline input, immutable rich-document binding, formatting,
 undo/redo, read-only/word wrap и отдельная toolbar composition поверх
 Topten.RichTextKit. [API и ограничения](../docs/alloy/RICH_TEXT_EDITOR.md),
 [запускаемый пример](../ManualTests/RichTextEditorTest/README.md).
 
-## Явная фабрика root и совместимость
+## Явная фабрика root
 
 ```csharp
 context.Services(s => s.Singleton<MyModel>(_ => new MyModel()));
@@ -57,9 +57,10 @@ context.UsePresentation(
 Этот overload не регистрирует и не resolve-ит MyView как сервис. Root factory
 вызывается на shared UI owner thread при startup, после готовности target. Cobalt
 и Microsoft DI сохраняются; для полностью factory-based dependency graph не нужен
-generated resolver view. Старый generic overload сохранён с прежним требованием
-явного consumer graph для Cobalt. Root/dependency factories не вызываются при
-регистрации UI. Снимок renderer и window settings фиксируется при UsePresentation;
+генератор View. Generic `UsePresentation<TView>` всегда получает корень через
+`IFactory<TView>`; её можно зарегистрировать вручную вместо `.View<TView>()`.
+Root/dependency factories не вызываются при регистрации UI. Снимок renderer
+и window settings фиксируется при UsePresentation;
 мутация переданных options после регистрации не меняет выбранную интеграцию.
 Immutable appearance/chrome сохраняются, callback delegates и их captures не клонируются.
 
@@ -269,16 +270,16 @@ notifications в одно чтение последнего значения н�
 
 Raw `VulkanHostContext` constructors, `new VulkanUiTarget(host)` и `new VulkanInteropSurface(host, context, size)` остаются в Rendering.Skia. Прямые raw Vulkan/raster/OpenGL сессии через `UiSession.Create` не требуют Platform.Silk или Hosting; App/DI и оконные adapters опциональны. После 2.1b через Alloy также больше не приходят транзитивные TrueMoon.Core/Contracts, Silk.NET.Windowing или legacy Skia/Silk/Topten зависимости. `Silk.NET.Vulkan` остаётся backend-specific зависимостью renderer, а не оконным API.
 
-## Миграция alpha API: PLAN 2.1b
+## Миграция с Hosting.Compatibility
 
-31 legacy-файл из корня Alloy и `Presenters` перенесён в `TrueMoon.Alloy.Hosting/Compatibility`: сборка теперь `TrueMoon.Alloy.Hosting`, namespace — `TrueMoon.Alloy.Hosting.Compatibility` и `TrueMoon.Alloy.Hosting.Compatibility.Presenters`. Перенесены Visual/VisualTree, IGraphicsPlatform, ViewHandle/ViewManager, legacy presenters и регистрация presentation. Это **breaking assembly/namespace migration без type forwarders**: одной замены DLL недостаточно, consumers должны обновить project references/imports/callers и пересобраться.
+В `1.2611.25.13-alpha` удалены `TrueMoon.Alloy.Hosting.Compatibility`, старый
+`VisualTree` и `UsePresentation<TView>()` без настроек. Это breaking change без
+type forwarders. Уберите импорт Compatibility и пересоберите приложение на одной
+версии пакетов Argentis/Alloy.
 
-- `TrueMoon.Alloy` содержит только исходники `Runtime` и csproj; единственный ProjectReference — Argentis, PackageReference и ссылок на Core/Contracts нет. Обычный `UiSession` не требует App, Skia или Silk.
-- Hosting явно ссылается на Alloy, Rendering.Skia, Platform.Silk, Core/Contracts и пакеты Silk.NET, SkiaSharp, Topten.RichTextKit. Platform.Silk не зависит от Skia.
-- No-options `UsePresentation<TView>()` доступен только при явном opt-in `using TrueMoon.Alloy.Hosting.Compatibility;`. Для нового UI этот путь не рекомендуется: `Visual.GetEnumerator` и legacy lifetime bugs переносом **не исправлены**. Закомментированные прототипы не являются рабочими рендерерами. [Границы compatibility и миграция](Compatibility/README.md).
-- Новый explicit API в `TrueMoon.Alloy.Hosting` не изменён: `UseAlloy(...)` или `UsePresentation<TView>(options => options.UseSkiaOpenGL().UseSilkWindow())`. [AlloyTest](../ManualTests/AlloyTest/README.md) уже использует explicit OpenGL/Silk; retained View1/View2 не изменены.
-
-Native ABI, GPU lease/ownership и алгоритм retirement в 2.1b не менялись. Фактические build/tests/GPU/publish проверки переноса и оставшиеся ограничения записаны в [STATUS](../docs/alloy/STATUS.md). Завершение 2.1 не означает завершения 2.3/alpha.
+- Оконный корень должен наследовать Argentis `Element`. Для View используйте `.View<TView>()`; с явно зарегистрированной `IFactory<TView>` доступен тот же `UsePresentation<TView>(o => o.UseSkiaOpenGL().UseSilkWindow())`. Для явной фабрики без DI-регистрации используйте `UsePresentation(resolver => …, options => …)`. Настройте корень в фабрике, а параметры окна — через `UseSilkWindow`.
+- Вместо `IViewManager`/`ViewHandle` используйте `HostedUiWindow` для окна, принадлежащего App. Если окном и кадрами владеет приложение, используйте `UseAlloy(...)` и `IUiSessionFactory`.
+- Вместо `VisualTree` используйте дерево `Element`. Перенесите собственное рисование из `IContentPresenter` в `ConfigurePresenters` или DI-регистрацию `UsePresenterFactory<TControl, TState>` ([пример](../ManualTests/AlloyPackageConsumer/README.md#адресная-проверка-презентеров-uia1h)).
 
 ## Прозрачность standalone-окна
 
@@ -365,13 +366,11 @@ public sealed record ProfileData(string Caption);
 
 public sealed class ProfileView : View<ProfileData>
 {
-    public static ViewStyleRole<Button> ActionRole { get; } = new("Action");
-    public Text Header => GetRequiredPart<Text>("CaptionLabel");
-
+    // Анализатор выводит ProfileViewRoles.Action (Button) из Content.
     public ProfileView(ProfileData data) =>
         Content(data, ui => ui.VStack(
             ui.Text(data.Caption).Named("CaptionLabel"),
-            ui.Button("Действие").WithRole(ActionRole)));
+            ui.Button("Действие").WithRole(ProfileViewRoles.Action)));
 }
 
 public sealed class ProfileViewStyle : IViewStyle<ProfileView>
@@ -379,18 +378,47 @@ public sealed class ProfileViewStyle : IViewStyle<ProfileView>
     public void Configure(IViewStyleBuilder<ProfileView> styles)
     {
         styles.Root().Padding(12).Background(theme => theme.Surface);
-        styles.Part(view => view.Header).FontSize(18);
-        styles.Role(ProfileView.ActionRole).Tone(ControlTone.Accent);
+        styles.Part(view => view.CaptionLabel).FontSize(18);
+        styles.Role(ProfileViewRoles.Action).Tone(ControlTone.Accent);
     }
 }
 ```
 
-Регистрируйте model/style и IFactory<ProfileView> через App DI; вызывайте
-`UsePresentationFactory<ProfileView>`. Фабрика возвращает
-`ViewCreation.Prepare(new ProfileView(data), style)` на owner thread. Окно
-владеет успешно созданным View; model/style заимствуются. При failed construction
-фабрика/constructor освобождает созданные элементы и подписки, сохраняя original
-failure и отдельно cleanup errors. Сложный пример — TrueMoon.Aether.Editor.
+Регистрируйте `app.Services(s => s.Singleton<ProfileData>(_ => new("Профиль")).View<ProfileView, ProfileViewStyle>())`
+и вызывайте `UsePresentation<ProfileView>`. Фабрика сначала получает
+`IViewStyle<ProfileView>`, затем создаёт новый View и вызывает `ViewCreation.Prepare`
+на owner thread. `.View<ProfileView>()` тоже применяет стиль, если тот отдельно
+зарегистрирован; без стиля работает штатно. Вторая перегрузка добавляет singleton
+стиля, только если регистрация ещё отсутствует. Ошибка зарегистрированного стиля
+не игнорируется. Окно владеет созданным View, модель и стиль заимствуются.
+
+#### Вложенные View из DI
+
+Регистрируйте и родителя, и детей через `.View<…>()`. В сгенерированной
+фабрике параметр конкретного типа `View` получает свежий экземпляр из
+`IFactory<TChild>`. Так же работает явно зарегистрированная фабрика ребёнка.
+
+```csharp
+app.Services(s => s.View<SummaryView>().View<ActionsView>().View<DashboardView>());
+app.UsePresentation<DashboardView>(o => o.UseSkiaOpenGL().UseSilkWindow());
+
+internal sealed class DashboardView : View
+{
+    public DashboardView(SummaryView summary, ActionsView actions) =>
+        Content(ui => ui.VStack(summary, actions));
+}
+```
+
+Дети создаются на UI-потоке до конструктора родителя; их отложенный `Content`
+по-прежнему строится при первом attach. При сбое освобождаются уже созданные
+дети, ещё не принятые деревом. При успешной активации их держит родитель до
+принятия деревом; после присоединения действуют обычные правила дерева. У
+nullable-параметра отсутствие фабрики даёт `null`, но `Create()`, вернувший
+`null`, и ошибка зарегистрированной фабрики — ошибки активации. Интерфейсы
+и прочие зависимости разрешаются из DI как раньше. Для ленивого, повторного
+или параметризованного создания внедряйте фабрику явно.
+
+#### Приоритет стилей
 
 WithViewStyle заменяет/снимает слой, не пересоздавая дерево. Приоритет:
 local/binding → direct Style → view style → Theme → default. Последнее совпавшее
@@ -608,7 +636,7 @@ destination.Items.Add(subtree); // Между Remove и Add владеет вы�
 
 Структурные изменения и закрытие сессии внутри tree notifications запрещены. Используйте `ui.Post(...)` для следующего Update. `element.Dispatch(...)` пропускает ранее queued action после конца attachment, даже при повторном добавлении в ту же сессию. На detached element Dispatch выполняется сразу; из detach notification откладывайте работу через `ui.Post`, не через Dispatch. При неуспешном создании UiSession все узлы и attachment subscriptions отсоединяются, владение корнем остаётся вызывающему коду.
 
-[Правила и проверки](../docs/alloy/STATUS.md). Legacy Hosting.Compatibility использует отдельное старое дерево и этим изменением не исправлен.
+[Правила и проверки](../docs/alloy/STATUS.md).
 
 ## Отказ графики и явное пересоздание 2.4/K8
 
@@ -749,7 +777,7 @@ using var ui = factory.Create(hudRoot, new VulkanUiTarget(host), viewport);
 using TrueMoon;
 using TrueMoon.Alloy.Hosting;
 
-builder.Setup(app => app.UsePresentation<MyView>(options => options
+builder.Setup(app => app.UsePresentation(_ => new MyView(), options => options
     .UseSkiaVulkan()
     .UseSilkWindow(window =>
     {
@@ -782,8 +810,6 @@ OpenGL context выбирается перед input/render/commands/cleanup, в
 Общий loop функционально проверен; **K7 остаётся открытым**: full mixed soak сохраняет USER, но показывает GDI/native рост в Vulkan WSI-пути. Сведения и точный scope — [STATUS](../docs/alloy/STATUS.md), воспроизводимые controls — [manual README](../ManualTests/AlloyVulkanTest/README.md).
 
 Vulkan presenter переносит UI-текстуру в swapchain через GPU blit и обрабатывает resize/out-of-date/suboptimal. OpenGL композитит GPU frame в default framebuffer и swaps buffers. Это самостоятельное окно UI; композиция игровой сцены остаётся задачей игрового хоста. `UseRenderer(factory)` предназначен для пользовательского backend в режиме внешнего хоста.
-
-Перегрузка без настроек находится только в `TrueMoon.Alloy.Hosting.Compatibility` и сохраняет старый OpenGL/Visual путь с его известными ограничениями. Для нового UI используйте показанную перегрузку с `Action<AlloyOptions>` и импортируйте только `TrueMoon.Alloy.Hosting`, без Compatibility. Этот explicit путь не изменён переносом 2.1b.
 
 ## Пересборка native и проверки
 

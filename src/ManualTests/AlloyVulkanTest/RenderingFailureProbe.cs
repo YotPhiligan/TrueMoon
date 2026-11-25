@@ -139,7 +139,7 @@ internal static class RenderingFailureProbe
     private static SilkUiWindowOptions Options(bool openGL, bool validation, List<string> messages)
     {
         SilkUiWindowOptions? options = null; var builder = App.Builder(b => b.UseDI());
-        builder.Setup(app => app.UsePresentation<View1>(alloy =>
+        builder.Setup(app => app.UsePresentation(static resolver => new View1(resolver.Resolve<SettingsModel>()), alloy =>
         {
             if (openGL) alloy.UseSkiaOpenGL(); else alloy.UseSkiaVulkan();
             alloy.UseSilkWindow(settings =>

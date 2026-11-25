@@ -28,16 +28,4 @@ public sealed class CoreBoundaryTests
         Assert.All(references, reference => Assert.True(reference.Name == "TrueMoon.Contracts" || reference.Name?.StartsWith("System.", StringComparison.Ordinal) == true,
             $"Unexpected Argentis dependency: {reference.Name}"));
     }
-
-    [Fact]
-    public void Alloy_PublicApi_ExcludesLegacyPresentationTypes()
-    {
-        var assembly = typeof(UiSession).Assembly;
-        var legacyNames = new[] { "Visual", "VisualTree", "VisualTreeBuilder", "IGraphicsPlatform", "IGlGraphicsPlatform",
-            "ViewHandle", "ViewManager", "IViewPresenter", "PresentationInitializer", "PresentationConfiguration",
-            "AppCreationContextExtensions", "SkiaGlViewPresenter" };
-
-        Assert.DoesNotContain(assembly.GetExportedTypes(), type => legacyNames.Contains(type.Name));
-        Assert.Null(assembly.GetType("TrueMoon.Alloy.Hosting.Compatibility.Visual"));
-    }
 }

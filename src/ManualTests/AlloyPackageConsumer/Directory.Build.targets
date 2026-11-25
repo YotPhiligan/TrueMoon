@@ -1,5 +1,5 @@
 <Project>
-  <Target Name="VerifyIndependentAlloyConsumer" BeforeTargets="CoreCompile" DependsOnTargets="SelectCobaltPackageAnalyzer">
+  <Target Name="VerifyIndependentAlloyConsumer" BeforeTargets="CoreCompile" DependsOnTargets="SelectCobaltPackageAnalyzer;SelectArgentisPackageAnalyzer">
     <Error Condition="'@(ProjectReference)' != ''" Text="Only PackageReference is allowed in this consumer." />
     <WriteLinesToFile File="$(IntermediateOutputPath)resolved-analyzers.txt" Lines="@(Analyzer)" Overwrite="true" />
     <ItemGroup>

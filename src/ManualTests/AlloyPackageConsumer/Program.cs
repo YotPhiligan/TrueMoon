@@ -31,8 +31,7 @@ try
 #if COBALT_GENERATION
     var registration = typeof(RAlloyPackageConsumer.Cobalt.Generated.CobaltResolversRegistration);
     if (registration.Assembly != typeof(ConsumerView).Assembly
-        || !ServiceResolvers.Shared.GetResolvers().ContainsKey(typeof(ConsumerModel))
-        || !ServiceResolvers.Shared.GetResolvers().ContainsKey(typeof(ConsumerView)))
+        || !ServiceResolvers.Shared.GetResolvers().ContainsKey(typeof(ConsumerModel)))
         throw new InvalidOperationException("Consumer generated graph was not published by its module initializer.");
     generation = true;
 #else
@@ -47,6 +46,7 @@ try
     var builder = App.Builder(options => { if (provider == "di") options.UseDI(); });
     builder.Setup(context =>
     {
+        context.Services(services => services.Singleton<ConsumerModel>().View<ConsumerView, ConsumerStyle>());
         if (backend == "raster")
             context.UseAlloy(options => options.UseSkiaRaster(fonts).UseExternalHost());
         else
@@ -62,8 +62,6 @@ try
                     window.Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = true };
                 });
             });
-        // Concrete registration gives the package analyzer the consumer's view constructor graph.
-        context.Services(services => services.Singleton<ConsumerModel>().Transient<ConsumerView>());
     });
     await using (var app = builder.Build())
     {
@@ -77,7 +75,7 @@ try
         if (backend == "raster")
         {
             await app.StartAsync(timeout.Token);
-            var view = new ConsumerView(model);
+            var view = ((IFactory<ConsumerView>)app.Services.GetService(typeof(IFactory<ConsumerView>))!).Create()!;
             // All session calls stay on this thread, with no await inside the ownership scope.
             using (var ui = factory.Create(view, new RasterUiTarget(), new UiViewport(480, 260, 1)))
             {

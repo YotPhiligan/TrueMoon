@@ -383,6 +383,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     internal void Adopt(Element child, TreeChange change)
     {
         child.Parent = this;
+        if (child is View view) view.DependencyOwnership?.Release(view);
         FindScope()?.CommitPartChange(child, added: true);
         child.ApplyThemeCore(Theme, change);
         if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, _controlFactories, change);
@@ -415,6 +416,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         PrepareAttachmentSubtree(controlFactories);
         using var change = new TreeChange(this);
         AttachCore(verifyAccess, post, detaching, controlFactories, change);
+        if (this is View view) view.DependencyOwnership?.Release(view);
         change.Complete();
     }
 

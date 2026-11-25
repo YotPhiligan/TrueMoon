@@ -27,7 +27,7 @@ internal static class WindowComponentAppProbe
                         Interlocked.Increment(ref created);
                         return new AppWindow(resolver.Resolve<Model>(), resolver.Resolve<IViewStyle<AppWindow>>());
                     })));
-                context.UsePresentationFactory<AppWindow>(options => options.UseSkiaOpenGL().UseSilkWindow(window =>
+                context.UsePresentation<AppWindow>(options => options.UseSkiaOpenGL().UseSilkWindow(window =>
                 {
                     window.Appearance = new WindowAppearance { Decorated = false };
                     window.Chrome = new WindowChromeOptions { NativeDrag = true };

@@ -7,7 +7,7 @@ repository build/CPM settings; ProjectReference запрещены провер�
 
 ## Воспроизведение
 
-Из `src`, PowerShell7, Windows x64, .NET SDK10:
+Из `src`, PowerShell 7, Windows x64, .NET SDK 11:
 
 ```powershell
 pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1
@@ -18,18 +18,20 @@ Runner создаёт новый `TestResults/AlloyPackages/run-*`, уникал
 Общая версия репозитория и machine-wide настройки не меняются; пакеты не публикуются.
 
 1. Обходит producer ProjectReference graph, пропускает IsPackable=false generator
-   и создаёт10runtime nupkgs. Cobalt содержит собственный matching analyzer;
+   и создаёт девять runtime nupkgs. Cobalt и Argentis содержат собственные анализаторы;
    producer/package SHA и package README/license/dependency versions проверяются.
 2. Копирует только consumer source/configuration и лицензированные Noto Sans,
    Noto Sans Symbols/OFL из `AlloyTest/Assets/Fonts`. Это assets приложения,
    renderer NuGet package не доставляет demo fonts.
 3. Восстанавливает только packages: source mapping TrueMoon/TrueMoon.* → local
    feed, отдельный cache; existing cache служит read-only fallback для сторонних
-   зависимостей. Проверяет source metadata и точные версии всех10TrueMoon packages.
+   зависимостей. Проверяет точный набор из девяти TrueMoon-пакетов, их версии и источники. `TrueMoon.Core` не требуется.
 4. Собирает два независимых consumer:
    - `generated`: bundled analyzer включён, один binary запускается на Cobalt и DI;
    - `di-only`: EnableCobaltGenerator=false/RequireCobaltGeneration=false,
      компиляция и DI работают без Cobalt analyzer/generated graph.
+   Оба варианта получают Argentis транзитивно от Hosting; проверяются один
+   анализатор из пакета и генерация именованных частей, ролей и фабрики View.
 5. Для каждого варианта выполняет Debug/Release × build/framework-dependent publish
    без RID. Raster/OpenGL/Vulkan ×3provider/compilation combinations дают
    **36 App процессов**. Проверяются constructor graph/module initializer,
@@ -91,21 +93,19 @@ command, negative-control diagnostics. Summary сохраняется и при 
 
 ## Подключение и использование
 
-Для default Cobalt consumer явно регистрирует concrete constructor graph:
+Потребитель использует сгенерированную фабрику View без ручного подключения анализатора:
 
 ```csharp
 var builder = App.Builder(_ => { });
 builder.Setup(app =>
 {
-    app.UsePresentation<ConsumerView>(options =>
-        options.UseSkiaOpenGL(fonts).UseSilkWindow());
-    app.Services(services => services.Singleton<ConsumerModel>().Transient<ConsumerView>());
+    app.Services(services => services.Singleton<ConsumerModel>().View<ConsumerView, ConsumerStyle>());
+    app.UsePresentation<ConsumerView>(options => options.UseSkiaOpenGL(fonts).UseSilkWindow());
 });
 ```
 
-Одного generic вызова UsePresentation недостаточно, чтобы analyzer увидел constructor
-пользовательского view. DI выбирается через `App.Builder(options => options.UseDI())`;
-регистрации остаются собственным TrueMoon API. Microsoft adapter сохраняется.
+DI выбирается через `App.Builder(options => options.UseDI())`;
+регистрации и создание корня не меняются.
 Singleton model не имеет aliases: его1disposal не утверждает равенство disposal counts
 оконных aliases у обоих providers.
 
@@ -119,9 +119,9 @@ Font files/license доставляются собственным Content consu
 
 ```powershell
 dotnet build AlloyPackageConsumer.csproj -p:TrueMoonPackageVersion=VERSION_FROM_SUMMARY
-dotnet bin/Debug/net10.0/AlloyPackageConsumer.dll raster raster.json cobalt
-dotnet bin/Debug/net10.0/AlloyPackageConsumer.dll opengl opengl.json di
-dotnet bin/Debug/net10.0/AlloyPackageConsumer.dll vulkan vulkan.json cobalt
+dotnet bin/Debug/net11.0/AlloyPackageConsumer.dll raster raster.json cobalt
+dotnet bin/Debug/net11.0/AlloyPackageConsumer.dll opengl opengl.json di
+dotnet bin/Debug/net11.0/AlloyPackageConsumer.dll vulkan vulkan.json cobalt
 ```
 
 В standalone callback FramePresented работает на UI owner thread; из других потоков

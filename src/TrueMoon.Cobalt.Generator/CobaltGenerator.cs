@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using System.Globalization;
+using TrueMoon.CodeGeneration;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -171,15 +171,12 @@ public static class CobaltResolversRegistration
             return null;
         }
         var definition = open ? implementation.OriginalDefinition : implementation;
-        var constructors = definition.InstanceConstructors.Where(c => c.DeclaredAccessibility == Accessibility.Public)
-            .OrderByDescending(c => c.Parameters.Length).ToArray();
-        if (constructors.Length == 0)
+        var constructor = ConstructorActivation.LongestPublicConstructor(definition, out var longestCount);
+        if (constructor is null)
         {
             context.ReportDiagnostic(Diagnostic.Create(MissingConstructor, location, TypeName(implementation)));
             return null;
         }
-        var constructor = constructors[0];
-        var longestCount = constructors.Count(c => c.Parameters.Length == constructor.Parameters.Length);
         if (longestCount != 1)
         {
             context.ReportDiagnostic(Diagnostic.Create(AmbiguousConstructor, location, TypeName(implementation), longestCount, constructor.Parameters.Length));
@@ -193,8 +190,7 @@ public static class CobaltResolversRegistration
             context.ReportDiagnostic(Diagnostic.Create(UnsupportedParameter, location, parameter.Name, TypeName(implementation), reason));
             return null;
         }
-        if (HasRequiredMembers(definition) && !constructor.GetAttributes().Any(a =>
-                a.AttributeClass?.ToDisplayString() == "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute"))
+        if (!ConstructorActivation.SetsRequiredMembers(constructor))
         {
             context.ReportDiagnostic(Diagnostic.Create(RequiredMembers, location, TypeName(implementation)));
             return null;
@@ -218,10 +214,6 @@ public static class CobaltResolversRegistration
         (type is not ITypeParameterSymbol parameter || !parameter.AllowsRefLikeType) &&
         (type.TypeKind == TypeKind.TypeParameter || Accessible(compilation, type)) &&
         (type is not IArrayTypeSymbol array || Injectable(compilation, array.ElementType));
-
-    private static bool HasRequiredMembers(INamedTypeSymbol type) =>
-        type.GetMembers().Any(m => m is IPropertySymbol { IsRequired: true } or IFieldSymbol { IsRequired: true }) ||
-        type.BaseType != null && HasRequiredMembers(type.BaseType);
 
     private static string? OpenMappingError(INamedTypeSymbol service, INamedTypeSymbol implementation)
     {
@@ -248,36 +240,9 @@ public static class CobaltResolversRegistration
         return false;
     }
 
-    private static string Argument(IParameterSymbol parameter, int index)
-    {
-        var type = TypeName(parameter.Type);
-        if (!parameter.HasExplicitDefaultValue && parameter.NullableAnnotation != NullableAnnotation.Annotated)
-            return $"context.Resolve<{type}>()";
-        var fallback = parameter.HasExplicitDefaultValue ? DefaultValue(parameter) : $"default({type})";
-        return $"(context.GetService(typeof({type})) is object dependency{index} ? ({type})dependency{index} : {fallback})";
-    }
-
-    private static string DefaultValue(IParameterSymbol parameter)
-    {
-        var value = parameter.ExplicitDefaultValue;
-        if (value == null) return $"default({TypeName(parameter.Type)})";
-        var literal = value switch
-        {
-            double number when double.IsNaN(number) => "global::System.Double.NaN",
-            double number when double.IsPositiveInfinity(number) => "global::System.Double.PositiveInfinity",
-            double number when double.IsNegativeInfinity(number) => "global::System.Double.NegativeInfinity",
-            float number when float.IsNaN(number) => "global::System.Single.NaN",
-            float number when float.IsPositiveInfinity(number) => "global::System.Single.PositiveInfinity",
-            float number when float.IsNegativeInfinity(number) => "global::System.Single.NegativeInfinity",
-            decimal number => number.ToString(CultureInfo.InvariantCulture) + "M",
-            _ => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false)
-        };
-        return $"({TypeName(parameter.Type)})({literal})";
-    }
-
     private static string Source(Compilation compilation, string name, INamedTypeSymbol service, INamedTypeSymbol implementation, string lifetime, string? alias, IMethodSymbol constructor)
     {
-        var arguments = string.Join(", ", constructor.Parameters.Select(Argument));
+        var arguments = string.Join(", ", constructor.Parameters.Select(ConstructorActivation.Argument));
         var create = alias ?? $"new {TypeName(implementation)}({arguments})";
         var singleton = lifetime == "Singleton";
         return $@"
@@ -354,7 +319,7 @@ internal class {name} : global::TrueMoon.Cobalt.IGenericResolver
     }
 
     private static string Namespace(Compilation compilation) => Identifier(compilation.AssemblyName ?? "Assembly") + ".Cobalt.Generated";
-    private static string TypeName(ITypeSymbol type) => type.TypeKind == TypeKind.Dynamic ? "global::System.Object" : type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+    private static string TypeName(ITypeSymbol type) => ConstructorActivation.TypeName(type);
     private static string Identifier(string value)
     {
         // Encode punctuation as well as underscores, so namespace/type/lifetime combinations never collide.

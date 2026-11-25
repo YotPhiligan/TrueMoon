@@ -9,14 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Silk.NET" />
     <PackageReference Include="SkiaSharp" />
-    <PackageReference Include="Topten.RichTextKit" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />
     <ProjectReference Include="../TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />
     <ProjectReference Include="../TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
     <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
-    <ProjectReference Include="../TrueMoon.Core/TrueMoon.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />

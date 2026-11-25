@@ -64,10 +64,10 @@ public sealed class ConsumerView : View<ConsumerModel>
         ArgumentNullException.ThrowIfNull(model);
         _model = model;
         Content(model, ui => ui.VStack(
-            ui.Text("TrueMoon from NuGet"),
+            ui.Text("TrueMoon from NuGet").Named("Heading"),
             _editor = ui.TextBox().BindValueTwoWay(state => state.Name),
             _richEditor = ui.RichTextEditor().Height(80).Configure(editor => editor.Text = "Rich text from NuGet"),
-            ui.Button("Rename").Configure(button => button.Tone = ControlTone.Accent)
+            ui.Button("Rename").WithRole(ConsumerViewRoles.PrimaryAction).Named("RenameButton")
                 .OnClick(() => model.Name = "Button update"))
             .Padding(16));
     }
@@ -82,6 +82,7 @@ public sealed class ConsumerView : View<ConsumerModel>
                 Require(_editor.Value == "Package consumer", "Initial binding failed.");
                 Require(_editor.Bounds.Width > 0 && _editor.Bounds.Height > 0, "Editor was not laid out.");
                 Require(_model.SubscriptionCount > 0, "Binding did not subscribe to the model.");
+                Require(this.Heading.FontSize == 18 && this.RenameButton.Tone == ControlTone.Accent, "Generated parts or role styles were not applied.");
                 Require(_editor.CornerRadius == 0 && _editor.BorderWidth == 1 && _richEditor.Background == Theme.Dark.Input, "Packaged default appearance missing.");
                 using (var frame = WindowFrame.CreateDefault("Package frame", new Panel()))
                 {
@@ -127,5 +128,14 @@ public sealed class ConsumerView : View<ConsumerModel>
     private static void Require(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+}
+
+internal sealed class ConsumerStyle : IViewStyle<ConsumerView>
+{
+    public void Configure(IViewStyleBuilder<ConsumerView> styles)
+    {
+        styles.Part(view => view.Heading).FontSize(18);
+        styles.Role(ConsumerViewRoles.PrimaryAction).Tone(ControlTone.Accent);
     }
 }

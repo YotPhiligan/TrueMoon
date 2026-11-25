@@ -59,6 +59,14 @@ contracts for TrueMoon Alloy. Requires .NET 11. Alpha API.
 <PackageReference Include="TrueMoon.Argentis" Version="YOUR_VERSION" />
 ```
 
+The package attaches the matching Argentis source generator at compile time for
+both direct and transitive package references. It generates named parts, style
+roles and Hosting view factories. Remove any manual `Analyzer` reference; the
+package already selects one matching copy. The analyzer is not a runtime dependency.
+Set `<EnableArgentisGenerator>false</EnableArgentisGenerator>` to opt out in
+projects that do not use generated APIs. Source projects using `ProjectReference`
+instead of NuGet still attach the generator as a project analyzer.
+
 Argentis defines element trees and controls, including the rich-text document/
 editing model. Controls own their input and layout, not their painters. Argentis
 does not depend on a DI provider, renderer, native window or App bootstrap.
@@ -120,7 +128,7 @@ does not overwrite the requested size. `HostStateChanged` runs on the UI owner.
 `Closing` callbacks may veto Application/Native close; Shutdown drains all callbacks
 and ignores vetoes. Cancellation cancels a caller's wait, not an accepted close.
 
-Use Hosting's `UsePresentationFactory<SettingsWindow>` with an injected
+Use Hosting's `UsePresentation<SettingsWindow>` with an injected
 `IFactory<SettingsWindow>`. The window owns the returned component/content, while
 data/style/controller remain borrowed. A Window must be the presentation root.
 Custom hosts use `AttachHost(IWindowController)` and its exclusive
@@ -168,6 +176,18 @@ Rules expose typed `Set(UiProperty<T>, value)` and theme-dependent values, along
 with helpers for spacing, text and colors. `element.WithRole(role)` preserves its
 concrete type and styles later-added controls within the same view boundary.
 
+In an inline `Content(...)` tree, use `ui.Text("0").WithRole(CounterViewRoles.Count)`
+in `CounterView` and `styles.Role(CounterViewRoles.Count)` in its style. The
+experimental inference generates an internal `ViewStyleRole<Text>` token from the
+receiver type, without an attribute or string lookup. Repeat uses must infer the
+same control type.
+
+For roles used only outside inline content, declare `[ViewRole<Text>("Count")]`
+on a top-level, non-generic `partial` class implementing `IViewStyle<TView>`.
+Use the generated token (`CounterStyle.Count`) in the tree and `styles.Role(Count)`
+inside the style. Dynamic controls can reuse either token, and matching is always
+by token identity. Manual `ViewStyleRole<TElement>` tokens need no analyzer.
+
 Precedence is local/binding, direct element Style, view style, Theme, default.
 Later matching rules override earlier ones. Nested views have their own boundary,
 including their root. Part selectors require live controls already in the owning
@@ -182,6 +202,11 @@ to the host; a view borrows its injected model/style and owns its controls/bindi
 Tree mutation and resource ownership follow the UI owner thread. Rich-text
 shaping/painting is provided by the rendering adapter; the control model alone
 does not supply IME, accessibility or complete Unicode/emoji platform support.
+
+Both `WithChildren(...)` overloads, on an element or a contextual control, add children
+as one batch in paint order. If validation rejects a child, none of the batch is adopted.
+Attachment observers run after all children are adopted. If an observer throws,
+the error propagates after notification without undoing the adoption.
 
 Source, supported scope and ownership documentation:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).

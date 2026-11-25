@@ -17,20 +17,30 @@ keep system decorations. `TitleBarFactory` overrides this composition;
 `UseDefaultWindowFrame=false` leaves a caller-composed root untouched. Default close
 uses the existing cancellable asynchronous close coordinator.
 
-Explicit root factory: `context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`
-creates the root on the UI owner before native/graphics allocation. Register dependencies
-explicitly; the view is not registered/resolved as a service and a factory-based
-Cobalt graph needs no generated view resolver. The generic overload remains.
-For an injected factory, register `IFactory<MyView>` and call
-`UsePresentationFactory<MyView>(configure)`. It creates each root on the UI owner
-thread and transfers ownership to the window. Session/lifecycle interface facades
-borrow their target, avoiding multiple provider-owned disposable aliases.
+For an ordinary view, register `.View<MyView>()` or `.View<MyView, MyStyle>()` and
+call `UsePresentation<MyView>(configure)`. This resolves `IFactory<MyView>` on the
+UI owner thread, not `MyView` as a service. The Argentis analyzer generates the
+constructor calls. Ordinary dependencies, including interfaces, resolve by their
+declared parameter type. A concrete `View` constructor parameter is created by
+the registered `IFactory<TChild>` before the parent constructor runs; register
+the child with `.View<TChild>()` or supply its factory explicitly. Unadopted
+children are disposed if construction fails or the parent is disposed first.
+Use an explicit factory parameter for lazy or repeated creation.
+
+Both overloads apply a DI-registered `IViewStyle<MyView>`
+if present; the second registers a default singleton style if not already registered.
+An error resolving the style fails creation before the view constructor runs.
+
+Without the analyzer, register `IFactory<MyView>` explicitly or use
+`context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`.
+The window owns the returned root. Session/lifecycle facades borrow their target,
+avoiding multiple provider-owned disposable aliases.
 Renderer/window settings are snapshotted during registration. Return a fresh,
 detached root; null/disposed/parented/attached roots fault startup without disposing
 another owner's tree. Factory exceptions remain observable through Completion.
 
 The root may be an Argentis `Window` / `Window<TData>`. Use the same
-`UsePresentationFactory<TWindow>` registration and borrowed model/style lifetimes.
+`UsePresentation<TWindow>` with an explicit `IFactory<TWindow>`.
 Effective component Title/ClientSize take precedence over SilkUiWindowOptions
 Title/Width/Height, including their component defaults. Other native/backend
 settings remain host configuration. Root construction is now before native
@@ -104,9 +114,12 @@ using TrueMoon.Argentis.Views;
 using TrueMoon.Extensions.DependencyInjection;
 
 await App.Builder(options => options.UseDI()).RunAsync(app =>
+{
+    app.Services(services => services.View<MainView>());
     app.UsePresentation<MainView>(options => options
         .UseSkiaOpenGL()
-        .UseSilkWindow(window => window.Title = "My Alloy application")));
+        .UseSilkWindow(window => window.Title = "My Alloy application"));
+});
 
 public sealed class MainView : View
 {
@@ -118,17 +131,11 @@ public sealed class MainView : View
 
 Select `UseSkiaVulkan()` instead of `UseSkiaOpenGL()` before building the App to use Vulkan. Raster sessions use `UseAlloy(options => options.UseSkiaRaster().UseExternalHost())`, a `RasterUiTarget` and an application-owned frame loop.
 
-Cobalt is the default provider. To use it, keep the Hosting/App references, omit `UseDI()` and register the concrete consumer view with the TrueMoon registration API so the bundled Cobalt analyzer sees its constructor graph:
-
-```csharp
-await App.Builder(_ => { }).RunAsync(app =>
-{
-    app.UsePresentation<MainView>(options => options.UseSkiaOpenGL().UseSilkWindow());
-    app.Services(services => services.Transient<MainView>());
-});
-```
-
-Register the view's model/dependencies in the same `Services` configuration. The analyzer comes transitively from `TrueMoon.Cobalt`; no standalone generator package is needed. The Microsoft DI path also works with `EnableCobaltGenerator=false`.
+Cobalt is the default provider; omit `UseDI()` to use it with the same `.View<…>()`
+registration. Both providers get the Argentis analyzer automatically through the
+transitive `TrueMoon.Argentis` package. No separate assembly or package reference
+is needed. To opt out, set `<EnableArgentisGenerator>false</EnableArgentisGenerator>`
+and use an explicit `IFactory<TView>` or root callback instead of `.View<…>()`.
 
 For reproducible font selection, load your licensed font files with `SkiaFontCatalog.Load(defaultFamily, files)` from `TrueMoon.Alloy.Rendering.Skia` and pass the catalog to `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` or `UseSkiaVulkan(fonts)`. Deliver those files and their license as application content with `CopyToOutputDirectory` and `CopyToPublishDirectory`. Loading validates fonts through native Skia before App startup; the renderer package does not bundle demo fonts. Unregistered font families use the catalog's default face without system font lookup.
 
@@ -155,7 +162,18 @@ App configuration/Build do not create windows or graphics contexts. Standalone w
 
 External-host sessions remain on the caller's owner/render thread. Dispose them there before stopping App from another thread. Sessions own their tree and rendering resources; external GPU devices and the host frame loop remain application-owned. Dispose raster snapshots explicitly. Vulkan texture leases must be returned with their actual final image layout before resize/disposal; GPU queue access is sequential.
 
-Migration: Alloy runtime types remain in `TrueMoon.Alloy`; Silk convenience adapters and standalone presentation live in `TrueMoon.Alloy.Hosting`. The old UI prototype moved to `TrueMoon.Alloy.Hosting.Compatibility` without type forwarders. Rebuild consumers after updating references/imports; binary compatibility across alpha changes is not promised.
+**Breaking change in `1.2611.25.15-alpha`:** rename `UsePresentationFactory<TView>`
+to `UsePresentation<TView>`. The generic overload no longer resolves the view as
+a service. Register `.View<TView>()` or `IFactory<TView>`, or use the explicit root callback.
+
+**Breaking change in `1.2611.25.13-alpha`:** `TrueMoon.Alloy.Hosting.Compatibility`
+and its no-options `UsePresentation<TView>()` are removed without type forwarders.
+Remove the Compatibility import. Register `.View<TView>()` or `IFactory<TView>`
+and call `UsePresentation<TView>(o => o.UseSkiaOpenGL().UseSilkWindow())`. The root
+must be an Argentis `Element`. Use `HostedUiWindow` for the App-owned window and
+register custom drawing through `ConfigurePresenters` or `UsePresenterFactory`, not `VisualTree`
+or `IContentPresenter`. Use `UseAlloy` for an external host. Rebuild consumers with
+matching Argentis and Alloy packages.
 
 Known limit: the current tested NVIDIA ICD retains GDI resources across repeated Vulkan window creation. A successful package smoke does not close K7, prove physical DPI/device-loss behavior, or establish full alpha acceptance. Linux/macOS, ARM64, single-file, trimming, NativeAOT and self-contained deployment are not covered by this package smoke.
 

@@ -30,7 +30,7 @@ $summary = [ordered]@{
     Architecture = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
     Failure = $null; Commands = @(); Cases = @(); DirectCases = @()
     Packages = @(); Libraries = @(); Generation = @(); SourceFiles = @(); Evidence = @()
-    NegativeControl = $null; AnalyzerSha256 = $null
+    NegativeControl = $null; AnalyzerSha256 = $null; ArgentisAnalyzerSha256 = $null
 }
 $versionProperty = "-p:TrueMoonPackageVersion=$PackageVersion"
 $evidencePaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -142,10 +142,11 @@ function Verify-Assets([string] $Consumer, [bool] $Direct = $false) {
     if (@($assets.libraries.Keys | Where-Object { $_ -match '^(Microsoft.CodeAnalysis|TrueMoon.Cobalt.Generator/)' }).Count) { throw 'Build-only Roslyn or standalone generator dependency.' }
     $local = @($assets.libraries.Keys | Where-Object { $_ -match '^TrueMoon(?:\.|/)' })
     $directPackages = @('TrueMoon.Alloy', 'TrueMoon.Alloy.Rendering.Skia', 'TrueMoon.Argentis', 'TrueMoon.Contracts')
-    $expected = if ($Direct) { $directPackages.Count } else { 10 }
-    if ($local.Count -ne $expected) { throw "Expected $expected local packages, got $($local.Count)." }
-    if ($Direct -and @(Compare-Object $directPackages @($local | ForEach-Object { ($_ -split '/')[0] })).Count) {
-        throw 'Direct renderer package graph differs from the explicit Alloy/Argentis/Skia/IFactory-contract graph.'
+    $expected = if ($Direct) { $directPackages } else {
+        $directPackages + @('TrueMoon', 'TrueMoon.Cobalt', 'TrueMoon.Extensions.DependencyInjection', 'TrueMoon.Alloy.Hosting', 'TrueMoon.Alloy.Platform.Silk')
+    }
+    if (@(Compare-Object $expected @($local | ForEach-Object { ($_ -split '/')[0] })).Count) {
+        throw "Expected local package graph: $($expected -join ', '); got $($local -join ', ')."
     }
     foreach ($library in $local) {
         if (!$library.EndsWith('/' + $PackageVersion)) { throw "Unexpected TrueMoon version: $library" }
@@ -153,9 +154,6 @@ function Verify-Assets([string] $Consumer, [bool] $Direct = $false) {
         $metadata = Get-Content -LiteralPath (Join-Path $packageRoot '.nupkg.metadata') -Raw | ConvertFrom-Json
         if ($metadata.source.TrimEnd('\', '/') -ne $feed.TrimEnd('\', '/')) { throw "Wrong source: $library" }
         Remember (Join-Path $packageRoot '.nupkg.metadata')
-    }
-    if ($Direct -and @($local | Where-Object { $_ -match '^TrueMoon(?:\.Alloy\.Hosting|\.Alloy\.Platform|\.Core|\.Cobalt|/)' }).Count) {
-        throw 'Direct renderer depends on App/Hosting/platform.'
     }
     $summary.Libraries += @{ Consumer = [IO.Path]::GetRelativePath($run, $Consumer); Packages = $local }
     Remember $assetsPath
@@ -165,21 +163,28 @@ function Verify-Generation([string] $Consumer, [string] $Configuration, [bool] $
     $analyzers = @(Get-Content -LiteralPath $list)
     $matching = @($analyzers | Where-Object { $_ -like '*TrueMoon.Cobalt.Generator.dll' })
     $files = @(Get-ChildItem -LiteralPath (Join-Path $Consumer "obj/generated/$Configuration") -Recurse -File -Filter '*.g.cs' -ErrorAction SilentlyContinue)
+    $argentis = @($analyzers | Where-Object { $_ -like '*TrueMoon.Argentis.Generator.dll' })
+    $expectedArgentis = Join-Path $cache ("truemoon.argentis/$PackageVersion/analyzers/dotnet/cs/TrueMoon.Argentis.Generator.dll".ToLowerInvariant())
+    if ($argentis.Count -ne 1 -or !$argentis[0].Equals($expectedArgentis, [StringComparison]::OrdinalIgnoreCase) -or
+        (Get-FileHash -LiteralPath $expectedArgentis).Hash -ne $summary.ArgentisAnalyzerSha256) {
+        throw 'Compiler did not use exactly one matching bundled Argentis analyzer.'
+    }
+    foreach ($hint in @('AlloyPackageConsumer.ConsumerView.ViewParts.g.cs', 'AlloyPackageConsumer.ConsumerView.InferredViewRoles.g.cs', 'ViewRegistrations.g.cs')) {
+        if (@($files | Where-Object Name -eq $hint).Count -ne 1) { throw "Missing or duplicated Argentis source: $hint." }
+    }
+    Remember $expectedArgentis
     if ($Cobalt) {
         $expected = Join-Path $cache ("truemoon.cobalt/$PackageVersion/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll".ToLowerInvariant())
         if ($matching.Count -ne 1 -or !$matching[0].Equals($expected, [StringComparison]::OrdinalIgnoreCase)) { throw 'Compiler did not use the bundled package analyzer.' }
         if ((Get-FileHash -LiteralPath $expected).Hash -ne $summary.AnalyzerSha256) { throw 'Compiler analyzer hash differs from package.' }
         if (@($files | Where-Object Name -eq 'CobaltResolversRegistration.g.cs').Count -ne 1) { throw 'Missing or duplicated consumer registration source.' }
-        foreach ($required in @(@{ Type = 'ConsumerModel'; Lifetime = 'Singleton' }, @{ Type = 'ConsumerView'; Lifetime = 'Transient' })) {
-            $name = "Cobalt_$($required.Type)_*_Resolver.g.cs"
-            $generated = @($files | Where-Object Name -like $name)
-            if ($generated.Count -ne 1) { throw "Missing or duplicated consumer generated source $name." }
-            $content = [IO.File]::ReadAllText($generated[0].FullName)
-            $type = 'global::AlloyPackageConsumer.' + $required.Type
-            if (!$content.Contains("global::TrueMoon.Cobalt.IResolver<$type, $type>") -or
-                !$content.Contains("ServiceLifetime => global::TrueMoon.Cobalt.ServiceLifetime.$($required.Lifetime);")) {
-                throw "Wrong consumer generated type or lifetime: $name."
-            }
+        $generated = @($files | Where-Object Name -like 'Cobalt_ConsumerModel_*_Resolver.g.cs')
+        if ($generated.Count -ne 1) { throw 'Missing or duplicated ConsumerModel resolver.' }
+        $content = [IO.File]::ReadAllText($generated[0].FullName)
+        $type = 'global::AlloyPackageConsumer.ConsumerModel'
+        if (!$content.Contains("global::TrueMoon.Cobalt.IResolver<$type, $type>") -or
+            !$content.Contains('ServiceLifetime => global::TrueMoon.Cobalt.ServiceLifetime.Singleton;')) {
+            throw 'Wrong ConsumerModel generated type or lifetime.'
         }
         Remember $expected
     } elseif ($matching.Count -or @($files | Where-Object { $_.FullName -like '*TrueMoon.Cobalt*' }).Count) { throw 'DI-only consumer still contains generated Cobalt code/analyzer.' }
@@ -216,7 +221,7 @@ try {
     }
     Get-ChildItem -LiteralPath $PSScriptRoot -Recurse -File | ForEach-Object { [void] $inputs.Add($_.FullName) }
     foreach ($name in $fontNames) { [void] $inputs.Add((Join-Path $fontSource $name)) }
-    foreach ($path in @('Directory.Build.props', 'Directory.Packages.props', 'NuGet.Config', 'global.json', '../README.md', '../LICENSE', '../materials/icon.png')) {
+    foreach ($path in @('Directory.Build.props', 'Directory.Packages.props', 'NuGet.Config', 'global.json', 'CodeGeneration/ConstructorActivation.cs', '../README.md', '../LICENSE', '../materials/icon.png')) {
         [void] $inputs.Add([IO.Path]::GetFullPath((Join-Path $workspace $path)))
     }
     $summary.SourceFiles = @($inputs | Sort-Object | ForEach-Object { @{ Path = [IO.Path]::GetRelativePath($workspace, $_); Sha256 = (Get-FileHash -LiteralPath $_).Hash } })
@@ -226,7 +231,7 @@ try {
         Invoke-DotNet ('pack-' + [IO.Path]::GetFileNameWithoutExtension($project)) @('pack', $project, '--configuration', 'Release', "-p:Version=$PackageVersion", '--output', $feed, '--verbosity', 'quiet') | Out-Null
     }
     $packages = @(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg')
-    $expectedCount = if ($PresentersOnly) { 4 } else { 10 }
+    $expectedCount = if ($PresentersOnly) { 4 } else { 9 }
     if ($packages.Count -ne $expectedCount) { throw "Expected $expectedCount packages, got $($packages.Count)." }
     foreach ($package in $packages) {
         $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
@@ -252,6 +257,14 @@ try {
                 try { $summary.AnalyzerSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
                 $producer = Join-Path $workspace "TrueMoon.Cobalt.Generator/bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Cobalt.Generator.dll"
                 if ((Get-FileHash -LiteralPath $producer).Hash -ne $summary.AnalyzerSha256) { throw 'Producer/package analyzer mismatch.' }
+            }
+            if ($metadata.id -eq 'TrueMoon.Argentis') {
+                $analyzer = $archive.GetEntry('analyzers/dotnet/cs/TrueMoon.Argentis.Generator.dll')
+                if (!$analyzer -or !$archive.GetEntry('buildTransitive/TrueMoon.Argentis.targets')) { throw 'Bundled Argentis analyzer delivery missing.' }
+                $stream = $analyzer.Open()
+                try { $summary.ArgentisAnalyzerSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
+                $producer = Join-Path $workspace "TrueMoon.Argentis.Generator/bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Argentis.Generator.dll"
+                if ((Get-FileHash -LiteralPath $producer).Hash -ne $summary.ArgentisAnalyzerSha256) { throw 'Argentis producer/package analyzer mismatch.' }
             }
             if ($metadata.id -eq 'TrueMoon.Alloy.Rendering.Skia') {
                 foreach ($name in @('build/TrueMoon.Alloy.Rendering.Skia.targets', 'buildTransitive/TrueMoon.Alloy.Rendering.Skia.targets', 'nativeAssets/win-x64/libSkiaSharp.dll')) {

@@ -113,7 +113,7 @@ public static partial class MeshSurfaceProbe
                 options.BuildDirectory = Path.Combine(reportDirectory, "artifacts");
                 options.Deadlines = new() { Startup = TimeSpan.FromSeconds(30), Command = TimeSpan.FromSeconds(10) };
             });
-            context.UsePresentationFactory<MeshSurfaceView>(options =>
+            context.UsePresentation<MeshSurfaceView>(options =>
             {
                 options.ConfigurePresenters(ConfigurePresenters).UseSkiaOpenGL(fonts); options.UseSilkWindow(window =>
                 { window.Width = 720; window.Height = 460; window.Title = "Aether mesh surface and Playing fence"; window.EnableDiagnostics = true; });

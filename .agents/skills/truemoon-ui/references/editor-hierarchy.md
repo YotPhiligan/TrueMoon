@@ -123,9 +123,9 @@ public static class HierarchyPanelExampleParts
 Потребителям сгенерированных свойств нужен импорт пространства имён
 прикладного View (в примере `Examples`), а не только `TrueMoon.Argentis.Views`.
 Тип поля `TextBox` в иллюстрации относится к `TrueMoon.Argentis.Editors`.
-При подключении Argentis только как NuGet-пакета для генерации нужен
-отдельно подключённый анализатор. Для поиска по имени в таком приложении
-доступны `GetRequiredPart<T>()` и `TryGetPart<T>()`.
+NuGet-пакет Argentis подключает анализатор автоматически, в том числе
+транзитивно через Hosting. Без генератора доступны `GetRequiredPart<T>()`
+и `TryGetPart<T>()`.
 При миграции существующего CLR-свойства пересобери потребителей.
 [Подключение анализатора](../../../../src/TrueMoon.Aether.Editor.UI/TrueMoon.Aether.Editor.UI.csproj).
 

@@ -775,6 +775,19 @@ retained Argentis. Контролы объявляются там, где они
    генератор повторно имеет смысл при сценарии, где декларации должен
    выпускать внешний инструмент. [Сравнение и проверки](HISTORY.md#uia1f4f-style-generation-study-2026-11-23).
 
+   <a id="uia1f4g-generated-roles"></a>
+   **UIA1f.4g — генерация токенов ролей.** `[ViewRole<TElement>("Name")]`
+   на верхнеуровневом необобщённом `partial`-классе `IViewStyle<TView>`
+   объявляет типизированный токен; View применяет `.WithRole(Style.Name)`.
+   Правила остаются C#, токены сопоставляются по экземпляру, вложенные View
+   сохраняют свою область. Анализатор диагностирует неверные и конфликтующие
+   имена. Первая миграция — кнопки панели Editor.
+
+   В `1.2611.25.15-alpha` эксперимент `.WithRole(ViewNameRoles.Name)` выводит
+   токен из типа контрола в inline `Content(...)`. Одно имя с разными типами
+   диагностируется. Динамика вне inline-дерева может повторно использовать
+   такой токен или объявить его через атрибут.
+
    <a id="uia1f5-ui-skill"></a>
 5. **UIA1f.5 — инструкции и скилл. Выполнено 23.11.2026.** Раздел UI в
    [AGENTS.md](../../AGENTS.md) описывает Fluent-композицию и именованные части.
@@ -953,8 +966,8 @@ attach/reattach, смена модели и стиля, фокус, диагно
    Включены контекстные перегрузки и opt-in генерация из `UiProperty<T>`.
    Генератор частей распознаёт фабрику штатного `Content(...)` по символу
    и выводит тип части из `TControl`. Сгенерированные свойства-расширения
-   доступны без `partial` и ручной аннотации View. Для генерации в
-   приложении с NuGet-зависимостью Argentis анализатор подключается отдельно.
+   доступны без `partial` и ручной аннотации View. Начиная с `1.2611.25.16-alpha`
+   пакет Argentis подключает анализатор автоматически, в том числе транзитивно.
 4. **Синхронизация дерева и именованных частей.** `ContentControl` владеет
    слотом `Child` и предоставляет его через `Children`. `_namedParts` —
    производный индекс области ближайшего View. Проверка имён и обновление
@@ -1074,8 +1087,8 @@ layout, ввода, команд, фокуса и семантических ID.
   Форму передачи данных проверить на `IconButton` и `TextBox`.
   Рабочий вариант типизированного контракта — `IElementPresenter<TState>`.
   Выбор для отдельного экземпляра рассмотреть при появлении потребителя.
-  [`IContentPresenter`](../../TrueMoon.Argentis/IContentPresenter.cs)
-  относится к старому маршруту `Hosting.Compatibility` и `VisualTree`.
+  Прежний `IContentPresenter` относился к отдельному пути `VisualTree`, который
+  [удалён](#uia1j-remove-hosting-compatibility).
 - Backend управляет поверхностью, `IDrawingContext` и ресурсами Skia/GPU.
   Stateless-презентер можно использовать для нескольких экземпляров.
   Пул типизированных презентеров и переиспользование ресурсов backend
@@ -1342,10 +1355,10 @@ Hosting с `Compatibility`, Rendering.Skia и Platform.Silk. Тесты,
 
 | Кандидат | Фактическая точка входа или основание | Решение до переноса |
 | --- | --- | --- |
-| `IContentPresenter` и `IContentPresenter<T>`, `IVisual`, `VisualTree` | [Opt-in `UsePresentation<TView>()`](../../TrueMoon.Alloy.Hosting/Compatibility/AppCreationContextExtensions.cs) регистрирует `PresentationInitializer`, `IVisualTreeBuilder` и обе фабрики презентеров. Инициализатор получает `StartupViewType` через `IServiceProvider.GetService(Type)`. `ViewHandle.RunCore` строит дерево; [builder](../../TrueMoon.Alloy.Hosting/Compatibility/VisualTreeBuilder.cs) обходит `IContent.Child` и коллекции; [GL presenter](../../TrueMoon.Alloy.Hosting/Compatibility/SkiaGlViewPresenter.cs) вызывает `visual.Presenter.Present` для каждого узла. | Сохранить отдельный путь совместимости. `IElementPresenter<TState>` — не замена его интерфейса в старом окне. Для новых окон использовать явный `UsePresentation(...AlloyOptions...)`. |
-| `Rectagle`, `Line` | `UiControlFactories.CreateBuiltIns` регистрирует оба типа для `ui.Create<T>()`; дополнительно [старая фабрика](../../TrueMoon.Alloy.Hosting/Compatibility/SkiaContentPresenterFactory.cs) выбирает `RectangleContentPresenter` по `data is Rectagle`. | Сохранить имя и контракты. Опечатка или отсутствие собственной графики не доказывают отсутствия потребителя. |
+| `IContentPresenter` и `IContentPresenter<T>`, `IVisual`, `VisualTree` | Opt-in `UsePresentation<TView>()` регистрировал `PresentationInitializer`, `IVisualTreeBuilder` и обе фабрики презентеров. Инициализатор получал `StartupViewType` через `IServiceProvider.GetService(Type)`. `ViewHandle.RunCore` строил дерево; builder обходил `IContent.Child` и коллекции; GL presenter вызывал `visual.Presenter.Present` для каждого узла. | Сохранить отдельный путь совместимости на дату первичной сверки. Для новых окон использовать явный `UsePresentation(...AlloyOptions...)`. |
+| `Rectagle`, `Line` | `UiControlFactories.CreateBuiltIns` регистрировал оба типа для `ui.Create<T>()`; старая фабрика также выбирала `RectangleContentPresenter` по `data is Rectagle`. | Сохранить контракты на дату первичной сверки. |
 | `ITrigger`, `ITriggerSubscription`, `ElementMarginExtensions`, `ElementForegroundExtensions` (Argentis); `HelloWorldSample`, `SkiaViewPresenter` (Hosting.Compatibility) | У первых пяти не найдены внешние для объявления ссылки в исходниках этой копии. У двух классов расширений закомментированы методы, но сами классы компилируются. В `SkiaGlViewPresenterFactory.Create()` вызов `new SkiaViewPresenter()` — **комментарий**; фактически создаётся `SkiaGlViewPresenter`. Регистрация этих кандидатов по имени не обнаружена. | **Требуют сверки с внешними потребителями.** Все типы публичны в поставляемых сборках. Не удалять и не объявлять устаревшими на основании одного поиска. |
-| `Compatibility/{RenderObject,SkiaVulkanViewPresenter,TextureData,ViewRenderContext}.cs` | В каждом файле все строки — комментарии либо пробелы. В проверенных `.csproj`, `.props`, `.targets`, `.sln*`, `.ps1` явного использования файлов нет. Это не условный код и не экспортируемые CLR-типы. `ViewRenderContext` тоже целиком закомментирован, хотя старый [список прототипов](../../TrueMoon.Alloy.Hosting/Compatibility/README.md) называет лишь три файла. | **Можно удалить отдельной порцией** с правкой списка в README; путь миграции API не нужен. Не путать архивный `SkiaVulkanViewPresenter` с действующим `SkiaVulkanRenderBackend`. |
+| `Compatibility/{RenderObject,SkiaVulkanViewPresenter,TextureData,ViewRenderContext}.cs` | Только комментарии и пробелы; явных ссылок из проектов или скриптов нет. Это не условный код и не экспортируемые CLR-типы. | **Можно удалить отдельной порцией**; путь миграции API не нужен. Не путать архивный `SkiaVulkanViewPresenter` с действующим `SkiaVulkanRenderBackend`. |
 | Четыре атрибута `Fluent*Attribute`, генераторы Fluent и именованных частей, `PropertyBinding` | `ForAttributeWithMetadataName` находит внутренние атрибуты; вывод дополняет `ElementExtensions` и `ViewStyleExtensions`. [ViewPartsGenerator](../../TrueMoon.Argentis.Generator/ViewPartsGenerator.cs) сравнивает символы `View`, `Content`, `Named` и обёртки. [Обозреватель Editor](../../TrueMoon.Aether.Editor.UI/Hierarchy/EditorHierarchyView.cs) использует `BindValueTwoWay` и `Named("Tree")`, стиль — `TypedPart(view => view.Tree)`. `PropertyBinding` берёт `PropertyInfo` из выражения-селектора и проверяет setter, а не ищет UI-типы сканированием сборки. | Сохранить, при переносе обновить metadata names и шаблоны partial вместе с ручными объявлениями. [Проект Argentis](../../TrueMoon.Argentis/TrueMoon.Argentis.csproj) подключает анализатор с `PrivateAssets="all"`; это не доставка анализатора приложению. Сгенерированные методы самой библиотеки уже входят в её DLL. |
 | `IUiSessionFactory.Create` и `IFactory<UiSession, UiSessionCreation>`; фабрика презентера `IconButton` | [Регистрация Hosting](../../TrueMoon.Alloy.Hosting/AppConfigurationExtensions.cs) предоставляет интерфейс сессии и типизированную фабрику; [HostedUiSessionFactoryTests](../../TrueMoon.Alloy.Hosting.Tests/HostedUiSessionFactoryTests.cs) используют типизированный вход. `HostedIconButtonPresenterTests` регистрируют подмену из приложения. [Пакетный пример](../../ManualTests/AlloyPackageConsumer/Program.cs) выбирает внешний raster или окно GL/Vulkan, различает Cobalt с `COBALT_GENERATION` и Microsoft DI. | Сохранить обе формы создания сессии, регистрацию и время жизни. Результат только одного DI-профиля не покрывает второй. |
 | Три `Skia*RenderBackend`, необязательные интерфейсы рисования, нативная DLL | Фабрики `AlloyOptions.UseSkiaRaster/OpenGL/Vulkan` выбирают разные поверхности; все три вызывают `UiTreeRenderer.Draw`. `SkiaDrawingContext` реализует, в частности, контракты тени, групповой opacity и rich text. [SkiaNativeLibrary](../../TrueMoon.Alloy.Rendering.Skia/SkiaNativeLibrary.cs) назначает одну DLL двум сборкам; `VulkanInteropNative` вызывает экспорты `tm_skia_vk_*` через `LibraryImport`. [Правила пакета](../../TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj) поставляют win-x64 DLL и `build`/`buildTransitive` targets. | Сохранить. Общий обход не дублирует backend, а успешный CPU raster не проверяет нативную доставку, вызов ABI или GPU present. |
@@ -1364,13 +1377,38 @@ C#-примерах PowerShell. Результаты новой сборки, п
 [`UiTreeRenderer`](../../TrueMoon.Alloy/Runtime/UiTreeRenderer.cs).
 [Приёмка пакета и backend](STATUS.md#uia1-architecture).
 
+<a id="uia1j-remove-hosting-compatibility"></a>
+**Вывод Compatibility, `1.2611.25.13-alpha`.** Удалены отдельный оконный стек
+и контракты Argentis `IViewManager`, `IVisual`, `IContentPresenter` обеих
+арностей и `IContentPresenterContext`. `View`/`IView`, `IContent` и текущие
+презентеры сохранены. Убраны прямые зависимости Hosting от Core и RichTextKit
+(RichTextKit по-прежнему поставляется через Rendering.Skia). В текущих исходниках
+TrueMoon, включая пакетные и ручные примеры, нет вызовов удалённой регистрации.
+[Миграция](../../TrueMoon.Alloy.Hosting/README.md#миграция-с-hostingcompatibility).
+
 Решение2026-10-22: [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory)
 добавляет Alloy→Contracts для IUiSessionFactory : IFactory<UiSession,UiSessionCreation>.
 Существующий четырёхаргументный Create сохранён через default interface bridge.
-Hosting предоставляет UsePresentationFactory<TView>: injected root factory вызывается
-на UI owner thread, окно владеет root. Borrowed session factory/lifecycle facades
+<a id="uia1-view-registration"></a>
+В `1.2611.25.15-alpha` `UsePresentation<TView>` заменяет
+`UsePresentationFactory<TView>`: injected root factory вызывается
+на UI owner thread, окно владеет root. `.View<TView>()` и `.View<TView,TViewStyle>()`
+регистрируют `IFactory<TView>` через сгенерированные вызовы конструкторов, без
+регистрации самого View. В обеих формах стиль `IViewStyle<TView>` опционален.
+Явный callback и явная типизированная фабрика остаются. Borrowed session factory/lifecycle facades
 не дублируют provider disposal owned window/dispatcher/session registry. Renderer,
 targets и UI thread affinity прежние; конкретного DI provider в Alloy нет.
+
+С `1.2611.25.16-alpha` генератор поставляется в NuGet-пакете `TrueMoon.Argentis`.
+`buildTransitive` выбирает ровно один анализатор той же версии для прямой зависимости
+и для Hosting. `EnableArgentisGenerator=false` отключает пакетный анализатор;
+при сборке из исходников остаётся analyzer `ProjectReference`.
+
+В `1.2611.25.17-alpha` сгенерированная фабрика родителя получает конкретные
+View-параметры из `IFactory<TChild>`. Контейнер не хранит экземпляры. До
+принятия в дерево продукты фабрик принадлежат активации или родительскому
+View; сбой освобождает только неприсоединённых детей. Интерфейсные зависимости
+не меняются. Явные `IFactory<T>` остаются для динамической композиции.
 
 По запросу пользователя результаты [аудита2026-10-17](HISTORY.md#аудит-инфраструктуры-alloy--2026-10-17)
 включены в модульный roadmap как **INF0–INF7**. Первичное добавление было
@@ -1561,8 +1599,9 @@ INF6 — решение2026-10-19: новый non-generic
 `UsePresentation(Func<IServiceResolver, Element>, Action<AlloyOptions>)` получает
 root на owner thread после готовности target, не регистрирует/не resolve-ит view.
 Cobalt и Microsoft DI сохраняются. Полностью factory-based dependency graph не
-требует generated view resolver; generic overload сохраняется с explicit consumer
-graph/analyzer для Cobalt. Factory возвращает fresh detached root без Parent.
+требует generated view resolver. Исторический generic overload с concrete
+consumer graph заменён [в `1.2611.25.15-alpha`](#uia1-view-registration).
+Factory возвращает fresh detached root без Parent.
 Null/disposed/parented/attached root отвергается; чужое дерево не disposing/detaching.
 Допустимый returned root принадлежит окну, в том числе при subsequent startup failure;
 partial objects, которые factory не вернула, остаются ответственностью factory.
@@ -1692,9 +1731,9 @@ Runner не объявляет новый full-solution/golden/RTE/engine/perfor
 вводить как неявное ускорение. Dirty-subtree layout/virtualization — после baseline
 large-tree сценария и проверки measure/arrange invalidation.
 
-Для старых PropertiesBase/IView/Hosting.Compatibility описать поддерживаемую границу
-и путь миграции. Пометка legacy/obsolete, перенос либо удаление требуют отдельного
-compatibility решения и consumer checks; этот план сам по себе их не удаляет.
+Для `PropertiesBase` и `IView` граница и путь миграции требуют отдельного
+решения и consumer checks. Старый оконный стек удалён в
+[UIA1j](#uia1j-remove-hosting-compatibility).
 
 INF0–INF4/INF6/INF7 и минимальный INF5 выполнены в указанном scope. Bounded
 инфраструктурная последовательность завершена; следующий общий шаг — **ENG3**.
@@ -1971,7 +2010,7 @@ Vulkan lease обычно возвращается после завершённ
 2. Перевести найденный consumer `ManualTests/AlloyTest` на Hosting.UsePresentation с явным backend/host; View1/View2 уже наследуют Argentis.View/Element. Проверить оставшиеся callers, imports и сборочную принадлежность типов. Сохранение namespace само по себе не обеспечивает совместимость уже собранных приложений; миграция alpha API допускается планом и документируется с обновлением примеров.
 3. Удалить из Alloy PackageReference Silk.NET/SkiaSharp/Topten.RichTextKit и ProjectReference Core/Contracts после переноса использующего их кода; проверить фактическую assembly dependency. Выделение compatibility области не означает исправление старого Visual.GetEnumerator: его проверка/вывод из использования учитывается отдельно в 2.3.
 
-Готовность 2.1b: Alloy содержит runtime/независимые контракты и зависит только от Argentis среди проектов; обычное создание UiSession не требует TrueMoon App, Skia или Silk. Hosting остаётся опциональным. Примеры и проверки 2.1a повторяются для изменённых границ; путь миграции legacy callers описан. Реализация 2026-10-05 использует namespace `TrueMoon.Alloy.Hosting.Compatibility` (presenters — `.Compatibility.Presenters`), без type forwarders: consumers обновляют references/imports и пересобираются. Проверки assembly references и отдельные core-only/renderer-only consumers подтверждают новые границы; compatibility consumer проверяет регистрацию, не старый window/lifetime путь. [Миграция и ограничения](../../TrueMoon.Alloy.Hosting/Compatibility/README.md). Завершение 2.1 не объявляет завершёнными 2.3/2.4 или alpha.
+Готовность 2.1b: Alloy содержит runtime/независимые контракты; обычный UiSession не требует App, Skia или Silk. 05.10.2026 legacy API перенесён в `TrueMoon.Alloy.Hosting.Compatibility` без type forwarders. Проверки assembly references и отдельные core-only/renderer-only consumers подтверждали границы; compatibility consumer тогда проверял только регистрацию. С `1.2611.25.13-alpha` legacy API [удалён](#uia1j-remove-hosting-compatibility). Завершение 2.1 не означает завершения 2.3/2.4 или alpha.
 
 После разделения: ownership Remove/SetContent/transfer (3.4/2.3) уточнён и проверен 2026-10-05; one-way3.5a и BindTwoWay3.5b реализованы и проверены 2026-10-06 в своих контрактных границах. Фабрики4.8, первая форма AlloyTest5.1a, коллекции3.5c и условные области3.5d/демонстрация5.1b реализованы и проверены 2026-10-07; window lifetime defect исправлен и повторно проверен в ограниченном Debug/published Release наборе. Следующий шаг — полные взаимодействия5.1c в той же сцене. Итоговые K1–K9 идут по согласованному порядку; реализация отдельных подэтапов не завершает весь3.6 или alpha. Дополнительные GPU/EXT-only/VRAM исследования вести по выявленным рискам; async frames-in-flight остаются за пределами текущего последовательного режима.
 

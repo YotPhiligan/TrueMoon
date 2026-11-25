@@ -208,11 +208,14 @@ public static class UiBuildExtensions
 
     extension<TControl, TData>(UiControl<TControl, TData> control) where TControl : ElementList
     {
-        /// <summary>Adopts the supplied children in order.</summary>
+        /// <summary>Adds a batch of child elements in paint order.</summary>
+        /// <remarks>Validates every child before adopting any. Attachment notifications run after the entire batch is adopted.</remarks>
+        /// <param name="children">The unowned children to add.</param>
+        /// <returns>The same control with its data context.</returns>
+        /// <seealso cref="ElementExtensions.WithChildren{T}(T, Element[])"/>
         public UiControl<TControl, TData> WithChildren(params Element[] children)
         {
-            ArgumentNullException.ThrowIfNull(children);
-            control.Element.Items.AddRange(children);
+            control.Element.WithChildren(children);
             return control;
         }
 
