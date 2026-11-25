@@ -25,3 +25,11 @@ actual render-view fence; stale tickets are not acknowledged.
 For full project/document/build/drafts/history/preview capabilities, add the optional
 `TrueMoon.Aether.Editor.Tooling` package. Previous `TrueMoon.Aether.Editor` imports/package
 require migration and a coherent rebuild; no binary forwarding facade is provided.
+
+In `1.2611.25.9-alpha` the hierarchy panel exposes its layout, overlay host,
+action buttons, hint, diagnostic and scroll viewer as generated C# extension
+properties. Rebuild consumers and import `TrueMoon.Aether.Editor.UI.Hierarchy`.
+The property names are unchanged in source; they are no longer instance getters
+for reflection or previously compiled binaries. Read parts after the first
+attachment and before disposal; retain a control reference before disposing the
+view if you need to inspect its disposal.

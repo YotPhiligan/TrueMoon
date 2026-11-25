@@ -1,5 +1,10 @@
 # TrueMoon: общий статус
 
+**Alloy / Argentis, 25.11.2026.** В `main` на `c595660` (`1.2611.25.17-alpha`)
+удалён `Hosting.Compatibility`, генератор поставляется с Argentis, а конкретные
+дочерние View внедряются через их фабрики. Адресная проверка исходников прошла.
+[Результаты и границы](alloy/HISTORY.md#uia1-view-main-2026-11-25).
+
 **UIA1f.11, 24.11.2026.** Editor и демонстрационные View переведены на
 [новый контракт UI](alloy/PLAN.md#uia1f11-contextual-content). Локальная
 регрессия `1.2611.24.11-alpha` повторно прошла в Debug и Release. В каждой
@@ -48,7 +53,7 @@ headless Player совпали по вводу и игровым наблюде�
 | [Kton](physics/STATUS.md) | PHYS0–6 и PHYS8.1–3 проверены. В PHYS8.4 прошла автоматическая приёмка визуального consumer | [10 000 тел и воркеры](physics/PLAN.md#phys8). Ручной Win32 input/close открыт |
 | [Kul](audio/STATUS.md) | AUD1 и ARCH1h.2a проверены на Windows x64. Принятый аудио backend и ECS bridge покрыты своими профилями | [AUD2–3](audio/PLAN.md#current-audio-queue) |
 | [Nom](nom/STATUS.md) | NOM6.1 в `main`. Прошли чистая сборка, по 874 теста Nom в Debug/Release, backup/restore и пакетные проверки | [Приёмка NOM6.1](nom/PLAN.md#nom6-1-clean-checkout). VM-приёмка отложена |
-| [Alloy / Argentis](alloy/STATUS.md#uia1-architecture) | UIA1g–j проверены локально на `1.2611.25.6-alpha`, включая независимый NuGet-потребитель и окна OpenGL/Vulkan. Пакеты не опубликованы | [PA8c.1a и независимые треки](alloy/PLAN.md#current-ui-queue). Физический ввод, DPI, K7/K8 и матрица выпуска остаются открыты |
+| [Alloy / Argentis](alloy/STATUS.md#current-ui-baseline) | Hosting использует фабрики View; проверены Cobalt и Microsoft DI. Отдельная настройка Skia для текста полей проверена локально; штатный режим прежний. | [Очередь UI](alloy/PLAN.md#current-ui-queue): независимый пакетный профиль, замена модели редактора по тому же адресу и UIQA.3. Для PA8c.1a нужны два монитора с разным DPI; K7/K8 и итоговая приёмка остаются открыты. |
 | [Core](core/STATUS.md), [Cobalt](cobalt/STATUS.md), [Enerit](enerit/STATUS.md), [Mithril](mithril/STATUS.md) | CORE7 и CORE8 завершены в своих профилях. Последняя общая launch-регрессия — ENG7b.3 от 16.11.2026. ENE6e прошёл отдельную приёмку для consumer со строгими XML docs | [Core](core/PLAN.md), [Cobalt](cobalt/PLAN.md), [Enerit](enerit/PLAN.md), [Mithril](mithril/PLAN.md) |
 
 <a id="общие-проверки--датированные-сведения"></a>

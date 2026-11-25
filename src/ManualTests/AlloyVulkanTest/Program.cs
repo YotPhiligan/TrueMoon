@@ -52,7 +52,8 @@ if (args.Contains("--typography-textbox-performance") || args.Contains("--typogr
     var index = Array.IndexOf(args, "--font-output");
     if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
     FontTypographyProbe.RunTextBoxPerformance(args[index + 1], args.Contains("--validation"), args.Contains("--subpixel-on-first"),
-        inspector: args.Contains("--typography-inspector-performance"));
+        inspector: args.Contains("--typography-inspector-performance"), shortTiming: args.Contains("--short-timing"),
+        editorFieldsOnly: args.Contains("--editor-fields-only"));
     return;
 }
 if (args.Contains("--typography-editable-fields") || args.Contains("--typography-textbox-renderer-positioning"))

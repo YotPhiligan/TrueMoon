@@ -360,8 +360,9 @@ public sealed class EditorHierarchyViewTests
     {
         using var test = new HierarchyFixture();
         var view = new EditorHierarchyView(test.Model, new EditorHierarchyViewStyle()); var ui = DocumentUiFixture.Ui(view); ui.Update();
-        var tree = view.Tree; var initial = tree.Items.ToArray(); ui.Dispose();
-        Assert.True(view.IsDisposed); Assert.True(tree.IsDisposed); Assert.True(view.Scroll.IsDisposed);
+        var tree = view.Tree; var scroll = view.Scroll; var initial = tree.Items.ToArray(); ui.Dispose();
+        Assert.True(view.IsDisposed); Assert.True(tree.IsDisposed); Assert.True(scroll.IsDisposed);
+        Assert.Throws<ObjectDisposedException>(() => { _ = view.Scroll; });
         Assert.Throws<ObjectDisposedException>(() => { _ = view.Tree; });
         Assert.True(test.Model.Move(HierarchyFixture.Child, null));
         Assert.Equal(initial, tree.Items); Assert.Null(test.Model.Items.Single(item => item.Id == HierarchyFixture.Child).ParentId);

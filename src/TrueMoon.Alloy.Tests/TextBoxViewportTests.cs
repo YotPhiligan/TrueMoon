@@ -36,12 +36,13 @@ public sealed class TextBoxViewportTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void ResizeBeforeClick_UsesNewScrolledLineWithoutPainting(bool shaped)
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, true)]
+    public void ResizeBeforeClick_UsesNewScrolledLineWithoutPainting(bool shaped, bool? editorSubpixel)
     {
         var field = new TextBox { Value = new string('M', 32), UseShapedText = shaped, SemanticId = "field", Height = 32 };
-        using var ui = UiSession.Create(field, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(800, 32));
+        using var ui = UiSession.Create(field, new SkiaRasterRenderBackend { EditorSubpixelPositioning = editorSubpixel }, new RasterUiTarget(), new(800, 32));
         ui.Update(); ui.Focus(field);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.End)); ui.Update();
         Assert.Equal(0, field.HorizontalOffset);

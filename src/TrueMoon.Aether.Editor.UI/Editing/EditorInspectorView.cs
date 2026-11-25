@@ -590,7 +590,10 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private void RemoveProperty((ComponentId, string) address, VStack body)
     { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); _renderLists.Remove(address); }
     private static void Reorder(VStack parent, Element child, int index)
-    { if (ReferenceEquals(parent.Children[index], child)) return; parent.Items.Remove(child); parent.Items.Insert(index, child); }
+    {
+        var items = parent.Items;
+        if (!ReferenceEquals(items[index], child)) items.Move(items.IndexOf(child), index);
+    }
 
     /// <summary>Routes shared actions while leaving text-edit undo to the focused scalar editor.</summary>
     /// <param name="input">Normalized input.</param><returns>Whether consumed.</returns>

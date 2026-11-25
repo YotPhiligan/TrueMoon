@@ -34,8 +34,9 @@ internal static partial class FontTypographyProbe
     private readonly record struct TextBoxPerformanceFrame(int Phase, PerformanceMeasurement Update, PerformanceMeasurement Render,
         PerformanceMeasurement Completion, PerformanceMeasurement Return);
 
-    internal static void RunTextBoxPerformance(string output, bool validation, bool subpixelOnFirst, bool inspector)
+    internal static void RunTextBoxPerformance(string output, bool validation, bool subpixelOnFirst, bool inspector, bool shortTiming, bool editorFieldsOnly)
     {
+        if (shortTiming && validation) throw new ArgumentException("--short-timing measures without --validation.");
         output = Path.GetFullPath(output);
         if (Directory.Exists(output) && Directory.EnumerateFileSystemEntries(output).Any())
             throw new ArgumentException("Use a fresh font output directory.");
@@ -48,22 +49,22 @@ internal static partial class FontTypographyProbe
         Require(!inspector || inspectorFactory != null && sceneBefore != null, "The inspector fixture is missing its factory or open document.");
         var width = inspector ? InspectorPerformanceWidth : PerformanceLogicalWidth;
         var height = inspector ? InspectorPerformanceHeight : PerformanceLogicalHeight;
-        var warmup = validation ? 16 : 192;
-        var minimumWarmupMilliseconds = validation ? 0 : 200;
-        var samples = validation ? 32 : 512;
+        var warmup = validation || shortTiming ? 16 : 192;
+        var minimumWarmupMilliseconds = validation ? 0 : shortTiming ? 50 : 200;
+        var samples = validation || shortTiming ? 32 : 512;
         bool[] order = [subpixelOnFirst, !subpixelOnFirst, !subpixelOnFirst, subpixelOnFirst];
         var cases = new List<object>();
         var hardware = new Dictionary<string, object>();
         var validationReports = new List<object>();
         var calibration = PerformanceReport.Summarize(PerformanceClock.Calibrate(samples));
 
-        Exercise("raster", new SkiaRasterRenderBackend(), new RasterUiTarget(), _ => default,
+        Exercise("raster", static mode => new SkiaRasterRenderBackend { EditorSubpixelPositioning = mode }, new RasterUiTarget(), _ => default,
             surface => { using var image = ((SkiaRasterSurface)surface).Snapshot(); return RasterProbe.ReadSnapshot(image); });
         using (var window = new SilkWindowHost(320, 240, "TextBox performance OpenGL", true))
         using (var gl = GL.GetApi(window.NativeWindow))
         {
             hardware["OpenGL"] = new { Renderer = gl.GetStringS(StringName.Renderer), Version = gl.GetStringS(StringName.Version) };
-            Exercise("opengl", new SkiaOpenGLRenderBackend(), OpenGLProbe.Target(window),
+            Exercise("opengl", static mode => new SkiaOpenGLRenderBackend { EditorSubpixelPositioning = mode }, OpenGLProbe.Target(window),
                 _ => new HostSample(PerformanceClock.Measure(gl.Finish), default, default, default),
                 surface => { using var image = ((SkiaOpenGLSurface)surface).ReadbackImage(); return RasterProbe.ReadSnapshot(image); });
             Require(gl.GetError() == GLEnum.NoError, "TextBox performance generated an OpenGL error.");
@@ -72,7 +73,7 @@ internal static partial class FontTypographyProbe
         using (device)
         {
             hardware["Vulkan"] = VulkanHardware(device);
-            Exercise("vulkan", new SkiaVulkanRenderBackend(), SilkVulkanHost.CreateTarget(device),
+            Exercise("vulkan", static mode => new SkiaVulkanRenderBackend { EditorSubpixelPositioning = mode }, SilkVulkanHost.CreateTarget(device),
                 surface => SettingsPerformanceProbe.Handoff((SkiaVulkanSurface)surface, null, null, 0),
                 surface =>
                 {
@@ -91,6 +92,8 @@ internal static partial class FontTypographyProbe
         File.WriteAllText(Path.Combine(output, "report.json"), JsonSerializer.Serialize(new
         {
             Completed = true, Passed = passed, ValidationEnabled = validation, PhysicalDpi = false, CreatedUtc = DateTime.UtcNow,
+            Profile = validation ? "validation" : shortTiming ? "short-timing" : "timing",
+            PositioningScope = editorFieldsOnly ? "plain editor text" : inspector ? "all plain text" : "all plain and shaped text",
             Version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
             Configuration = assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration,
             Runtime = Environment.Version.ToString(), OS = Environment.OSVersion.VersionString, SkiaSharp = typeof(SKFont).Assembly.FullName,
@@ -109,7 +112,7 @@ internal static partial class FontTypographyProbe
         Console.WriteLine($"{(inspector ? "Editor inspector" : "TextBox")} performance: {cases.Count} batches, {cases.Count * samples} measured frames. Report in {output}.");
         if (!passed) Environment.ExitCode = 1;
 
-        void Exercise(string backend, IRenderBackend renderer, UiRenderTarget target,
+        void Exercise(string backend, Func<bool?, IRenderBackend> createBackend, UiRenderTarget target,
             Func<IUiRenderSurface, HostSample> complete, Func<IUiRenderSurface, byte[]> read)
         {
             foreach (var scale in new[] { 1.25f, 1.75f })
@@ -123,17 +126,27 @@ internal static partial class FontTypographyProbe
                     var subpixel = order[batch];
                     SKGraphics.PurgeFontCache();
                     var startCache = ObserveFontCache();
-                    (Element root, TextBox[] fields) = inspectorFactory != null ? CreateInspectorPerformanceRoot(inspectorFactory) : CreatePerformanceTextBoxes(scale);
-                    var profiler = new SettingsPerformanceProbe.ProfiledBackend(renderer);
+                    var inspectorView = inspectorFactory is null ? null : inspectorFactory.Create()
+                        ?? throw new InvalidOperationException("The inspector factory did not return a view.");
+                    Element root;
+                    TextBox[] fields = [];
+                    if (inspectorView is null) (root, fields) = CreatePerformanceTextBoxes(scale);
+                    else root = inspectorView;
+                    var profiler = new SettingsPerformanceProbe.ProfiledBackend(createBackend(editorFieldsOnly ? subpixel : null));
                     using var ui = UiSession.Create(root, profiler, target, viewport, null, new UiDispatchOptions(), configurePresenters: inspector ? EditorPresenters.Register : null);
                     var surface = profiler.Surface!;
                     var layout = (SkiaDrawingContext)surface.TextLayout;
-                    if (inspector) layout.SetPlainSubpixelPositioningForProbe(subpixel);
-                    else layout.SetSubpixelPositioningForProbe(subpixel);
+                    if (!editorFieldsOnly)
+                    {
+                        if (inspector) layout.SetPlainSubpixelPositioningForProbe(subpixel);
+                        else layout.SetSubpixelPositioningForProbe(subpixel);
+                    }
                     var gpuAfterCreate = inspector ? ObserveGpuCache(surface.Inner) : null;
                     ui.SetTheme(Theme.Dark);
                     Require(ui.Update(), "Expected the performance fixture to lay out.");
                     complete(surface.Inner);
+                    // The inspector builds and synchronizes its property editors on attachment.
+                    if (inspectorView != null) fields = [GetInspectorPerformanceField(inspectorView)];
                     PositionCarets(atEnd: true);
                     Require(ui.Update(), "Expected the anchored text to render.");
                     var initialHost = complete(surface.Inner);
@@ -143,7 +156,7 @@ internal static partial class FontTypographyProbe
                     for (var field = 0; field < fields.Length; field++)
                     {
                         var editor = fields[field];
-                        var textWidth = layout.Measure(editor.Value, editor.FontSize, editor.FontFamily, editor.FontWeight, editor.FontItalic).Width;
+                        var textWidth = layout.MeasureEditorText(editor.Value, editor.FontSize, editor.FontFamily, editor.FontWeight, editor.FontItalic).Width;
                         Require(editor.Bounds.Height > 0 && textWidth > fieldWidths[field] - editor.Padding.Horizontal,
                             "The measured editor must show a horizontally clipped value.");
                     }

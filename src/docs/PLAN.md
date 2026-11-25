@@ -4,17 +4,21 @@
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
 <a id="текущая-очередь--актуализация-2026-11-19"></a>
 <a id="текущая-очередь--актуализация-2026-11-20"></a>
-## Текущая очередь — актуализация 2026-11-21
+<a id="текущая-очередь--актуализация-2026-11-21"></a>
+## Текущая очередь — актуализация 2026-11-25
 
-Основание — `main` на `8a4e22c`, версия `1.2611.21.9-alpha`.
-Ортографический срез проверен локально на `1.2611.21.10-alpha`.
-Текущая готовность и границы проверок собраны в [STATUS](STATUS.md).
+Основание опубликованного UI-среза — `main`, `c595660` (`1.2611.25.17-alpha`).
+Это публикация исходников, не приёмка пакетов. Текущая готовность и границы
+проверок собраны в [STATUS](STATUS.md); даты независимых профилей сохранены.
+Ортографический маршрут игры проверен отдельно на `1.2611.21.10-alpha`.
 
 | Очередь | Ближайший результат | План владельца |
 | --- | --- | --- |
 | Editor / свойства рендера | Видимость и слои проверены с Undo/Redo, перезапуском Editor и кадрами Vulkan. Открыто поведение при смене ресурсов, в Play и нативном Edit Preview | [Проверенный срез](engine/EDITOR_PLAN.md#ed4i-mesh-visibility), [очередь ED4i](engine/EDITOR_PLAN.md#ed4i-next) |
-| Alloy / качество текста | Ближайшая работа — сравнить дробную прокрутку `TextBox` и `NumberBox` на целевой версии. Решение о включении принять после проверки геометрии ввода и стоимости рендера | [Очередь UI](alloy/PLAN.md#current-ui-queue), [PA8c.1a](alloy/PLAN.md#pa8c1a-positioning-rollout) |
-| Alloy / композиция View | Независимо от типографики: проверить удержание динамических редакторов инспектора по ключу. Архитектурный блок UIA1g–j уже проверен локально и не входит в очередь реализации | [Исследование и критерии](alloy/PLAN.md#ui-reuse-study), [приёмка архитектуры](alloy/STATUS.md#uia1-architecture) |
+| Alloy / качество текста | Отдельная настройка Skia для `TextBox` и `NumberBox` проверена локально, штатный режим прежний. До решения о включении проверить ввод и отсечение при реальном переходе между DPI. | [Очередь UI](alloy/PLAN.md#current-ui-queue), [PA8c.1a](alloy/PLAN.md#pa8c1a-positioning-rollout) |
+| Alloy / композиция View | На ветке с локально проверенной перестановкой секций инспектора проверить замену модели свойства по тому же адресу: ввод должен идти только в текущий источник. | [Исследование и критерии](alloy/PLAN.md#ui-reuse-study), [проверка перестановки](alloy/HISTORY.md#inspector-section-move) |
+| Alloy / приёмка пакетов UI | На исходниках проверены прямые дочерние View из DI и обновлённый Hosting. На одном актуальном наборе пакетов проверить их совместную работу в независимом потребителе, без ручного подключения анализатора. | [Пакетный профиль UI](alloy/PLAN.md#uia1-view-package-acceptance) |
+| Aether / миграция View | Перевести все прикладные View Player и Editor на актуальную композицию Argentis и регистрацию Hosting; начать с Player. | [План миграции Aether](engine/PLAN.md#aether-view-authoring-migration) |
 | Aether / доставка в игру | Пакетный Player показал изометрический маршрут TrueMoon.Tales до и после resize. Далее проход персонажа через ступени и скосы и открытие обзора. Смена сцены или сборки остаётся в очереди standalone Player | [ARCH1f.7](engine/PLAN.md#arch1f7-orthographic-camera), [ENG7b.4](engine/PLAN.md#eng7b4-tales-consumer) |
 | Сценарные проверки для агентов | Editor записывает и воспроизводит ввод по ID и сравнивает состояние, геометрию и кадры. Оконный и headless Player сверяют игровые наблюдения на одинаковых входах и тиках | [ENG9b](engine/PLAN.md#eng9b-scenario-testing), [Alloy UIQA](alloy/PLAN.md#uiqa-agent-checks) |
 | Kton / независимый performance-срез | Расширить матрицу PHYS8 до 10 000 тел, сравнить воркеров, callbacks и stalls. Ручной Win32 input/close — отдельная проверка PHYS8.4 | [PHYS8](physics/PLAN.md#phys8), [PHYS8.4](physics/PLAN.md#phys84) |
@@ -319,12 +323,17 @@ ED1a project/session и ED2a/b documents/save/reopen/UI commands/Save-Discard-Ca
 реализованы следующими шагами; далее Transform/Undo/preview integration.
 Полный ARCH1b/ED1–ED8 этими engine API срезами не закрыты.
 
-Фактические ProjectReference, сверенные2026-10-09:
+Исторический снимок ProjectReference, сверенный 2026-10-09 (с последующим уточнением Alloy от 22.10):
 
 - Contracts и Core не имеют ProjectReference на другие модули. Общие app/service contracts находятся в Contracts, utilities — в Core.
 - TrueMoon использует Contracts, Cobalt и Cobalt.Generator. Cobalt использует Contracts и собственный generator; Extensions.DependencyInjection использует Contracts.
 - Enerit использует Contracts, Core и свой generator. Mithril использует Contracts/Core; прямой ProjectReference Mithril→Enerit отсутствует. Их взаимодействие проверяется как composition приложения.
 - Argentis не имеет ProjectReference; Alloy использует Argentis и (с2026-10-22) provider-neutral Contracts для общего IFactory UI sessions. Rendering.Skia и Platform.Silk используют Alloy. Alloy.Hosting связывает эти интеграции и общие Contracts/Core.
+
+Текущая граница UI (25.11.2026): Argentis поставляет анализатор вместе со своим
+пакетом; Hosting использует общие Contracts и UI-адаптеры без прямых зависимостей
+от Core и RichTextKit. См. [границы Alloy](alloy/PLAN.md#архитектура-и-публичные-границы)
+и [поставку генератора](alloy/PLAN.md#uia1-view-registration).
 
 Уточнение2026-10-19 по запросу пользователя: engine implementation/contracts
 вынесены в одну assembly **TrueMoon.Aether**, с dependencies на Contracts/Enerit/
@@ -502,7 +511,7 @@ Physical DPI/OS acceptance остаётся открытым. Engine очере�
 | G1. Исходное состояние | Сверенная карта проектов, scope модулей, перечень поддерживаемых конфигураций и отдельные baseline результаты build/tests | Документы созданы; проверки всех модулей ещё нужны. Каждый failure закреплён за модулем, skipped и пустая discovery не считаются passing coverage |
 | G2. Bootstrap и DI | Проверенные startup/stop/cancellation/error/disposal contracts приложения и обоих выбранных DI путей | [CORE1–CORE3](core/PLAN.md), [COB1–COB3](cobalt/PLAN.md). Ошибка интеграции разбирается на app/resolver границе |
 | G3. IPC и units | Рабочий ограниченный сценарий собственного child process с invocation и управляемым завершением/restart | [ENE1–ENE3](enerit/PLAN.md), [MIT1–MIT3](mithril/PLAN.md), затем совместный integration proof |
-| G4. UI alpha | Закрытые UI критерии K1–K9 и consumer/native delivery на заявленной конфигурации | [UI маршрут](alloy/PLAN.md#актуальная-точка-продолжения--реализация-dpi-2026-10-09). Работать независимо от G3; общие Core/DI ошибки остаются integration блокерами там, где влияют на UI |
+| G4. UI alpha | Закрытые UI критерии K1–K9 и consumer/native delivery на заявленной конфигурации | [Текущая очередь UI](alloy/PLAN.md#current-ui-queue), [итоговая приёмка](alloy/PLAN.md#воспроизводимый-итоговый-проход-alpha). Работать независимо от G3; общие Core/DI ошибки остаются integration блокерами там, где влияют на UI |
 | G5. Сквозные приложения | Небольшие воспроизводимые examples для headless, units/IPC и UI; failures/cancellation/cleanup подтверждены вне отдельных component tests | G2 и нужные локальные этапы. UI не обязателен для headless/units сценария, IPC не обязателен для UI |
 | G6. Поставка и общий выпуск | Package consumers, CI/configuration matrix, compatibility notes и воспроизводимые release artifacts | Проверенные критерии выпуска ниже; version suffix и solution build не заменяют их |
 

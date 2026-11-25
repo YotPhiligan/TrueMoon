@@ -6,42 +6,6 @@ using TrueMoon.Argentis.Styling;
 
 namespace TrueMoon.Argentis;
 
-/// <summary>Immutable display data; IDs and parent links are independent of labels and icons.</summary>
-/// <param name="Id">Stable nonblank key.</param><param name="ParentId">Parent key, or null for a root.</param>
-/// <param name="Text">Single-line display label.</param><param name="Icon">Geometric row icon.</param>
-public sealed record TreeItem(string Id, string? ParentId, string Text, UiSymbol Icon = UiSymbol.Objects);
-
-/// <summary>Requested parent change; the consumer validates and commits its own data.</summary>
-/// <param name="Id">Dragged/keyboard-selected key.</param><param name="ParentId">New parent, or null for root.</param>
-public readonly record struct TreeMove(string Id, string? ParentId);
-
-/// <summary>Drop position relative to the row under the pointer.</summary>
-public enum TreeDropPosition { Into, Before, After }
-/// <summary>Consumer-owned sibling placement request; the control never changes data.</summary>
-/// <param name="Id">Source key.</param><param name="ParentId">Destination parent.</param>
-/// <param name="AnchorId">Sibling anchor.</param><param name="Position">Before/After the anchor.</param>
-public readonly record struct TreePlacement(string Id, string? ParentId, string AnchorId, TreeDropPosition Position);
-
-/// <summary>Selection, expansion and parent-move capability of a single-selection tree.</summary>
-public interface ITreeView
-{
-    /// <summary>Gets the selected stable key.</summary>
-    string? SelectedId { get; }
-    /// <summary>Snapshots and validates a complete ordered forest before publication.</summary>
-    /// <param name="items">At most 4096 distinct items with valid acyclic parent links.</param>
-    void SetItems(IEnumerable<TreeItem> items);
-    /// <summary>Selects an item and reveals its ancestors, or clears selection.</summary>
-    /// <param name="id">Existing key, or null.</param>
-    void Select(string? id);
-    /// <summary>Sets branch expansion; collapsing the selected descendant selects this parent.</summary>
-    /// <param name="id">Existing key.</param><param name="expanded">Desired expansion.</param>
-    void SetExpanded(string id, bool expanded);
-    /// <summary>Raised when the selected key changes.</summary>
-    event Action<string?>? SelectionChanged;
-    /// <summary>Raised for an admitted parent-move request; never mutates the source data.</summary>
-    event Action<TreeMove>? MoveRequested;
-}
-
 /// <summary>Retained single-selection tree with clipped row drawing, keyboard navigation and parent drag/drop.
 /// Use a ScrollViewer for scrolling. Consumers own edits; this control owns only expansion and input state.</summary>
 public sealed class TreeView : Element, ITreeView

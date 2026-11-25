@@ -73,11 +73,11 @@ public sealed class TextBox : Element
     {
         _text = text;
         ClampSelection();
-        _lineHeight = GetShapedLine()?.Size.Height ?? text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height;
+        _lineHeight = GetShapedLine()?.Size.Height ?? text.MeasureEditorText("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height;
         return new Size(160, _lineHeight);
     }
     private float MeasurePrefix(int position) => _shapedLine?.GetCaretBounds(position).X ??
-        (position == 0 ? 0 : _text?.Measure(Value[..position], FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0);
+        (position == 0 ? 0 : _text?.MeasureEditorText(Value[..position], FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0);
 
     private IRichTextLayout? GetShapedLine()
     {

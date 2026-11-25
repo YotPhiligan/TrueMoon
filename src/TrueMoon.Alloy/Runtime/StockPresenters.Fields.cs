@@ -41,7 +41,7 @@ internal static partial class StockPresenters
                 if (selection > 0)
                     context.Fill(new(x + Math.Min(field.CaretX, field.AnchorX), y,
                         Math.Abs(field.CaretX - field.AnchorX), field.LineHeight), highlight);
-                context.Text(field.Value, x, y, field.IsEffectivelyEnabled ? field.Foreground : field.Theme.Disabled,
+                context.EditorText(field.Value, x, y, field.IsEffectivelyEnabled ? field.Foreground : field.Theme.Disabled,
                     field.FontSize, field.FontFamily, field.FontWeight, field.FontItalic);
             }
             if (field.IsFocused) context.Fill(new(x + field.CaretX, y, 1, field.LineHeight), field.Foreground);

@@ -20,10 +20,3 @@ public sealed record WindowGradient
     /// <summary>Color at the lower right.</summary>
     public Color End { get; }
 }
-
-/// <summary>Optional rendering support for the themed window underlay.</summary>
-public interface IWindowGradientDrawingContext
-{
-    /// <summary>Fills the rounded bounds with the gradient, or returns false without painting.</summary>
-    bool TryDrawWindowGradient(Rect bounds, WindowGradient gradient, float cornerRadius);
-}

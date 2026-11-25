@@ -1,0 +1,69 @@
+﻿using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Windows;
+
+namespace TrueMoon.Argentis;
+
+/// <summary>Properties shared by the standard widgets.</summary>
+public static class UiProperties
+{
+    /// <summary>Opacity of the whole rendered subtree; does not change layout or input admission.</summary>
+    public static readonly UiProperty<float> Opacity = new("Opacity", 1f, Invalidation.Render, v => float.IsFinite(v) && v >= 0 && v <= 1);
+    /// <summary>Semantic control color.</summary>
+    public static readonly UiProperty<ControlTone> Tone = new("Tone", ControlTone.Neutral, validate: Enum.IsDefined);
+    /// <summary>Visual error state, including an outline and a structural marker.</summary>
+    public static readonly UiProperty<bool> HasError = new("HasError", false, Invalidation.Layout);
+    /// <summary>Exact validator explanation; display-only, never parses or commits the editor value.</summary>
+    public static readonly UiProperty<string> ErrorMessage = new("ErrorMessage", "", validate: value => value != null);
+    /// <summary>A pending edit, distinct from a validation error.</summary>
+    public static readonly UiProperty<bool> IsModified = new("IsModified", false);
+    /// <summary>Semantic editor accent, inherited by composite parts and resolved through the current theme.</summary>
+    public static readonly UiProperty<EditorColorRole> ColorRole = new("ColorRole", EditorColorRole.Neutral, validate: Enum.IsDefined);
+    /// <summary>Accessible semantic name; no operating-system accessibility bridge is implied.</summary>
+    public static readonly UiProperty<string> AccessibleName = new("AccessibleName", "", validate: value => value != null);
+    /// <summary>Optional session-unique semantic target ID. Use a stable key without display text or user data.</summary>
+    public static readonly UiProperty<string?> SemanticId = new("SemanticId", null, Invalidation.Tree,
+        value => value == null || value.Length is > 0 and <= 128 &&
+            value.All(character => char.IsAsciiLetterOrDigit(character) || character is '.' or '-' or '_'));
+    /// <summary>Explicit corner radius; local/style values override the theme.</summary>
+    public static readonly UiProperty<float> CornerRadius = new("CornerRadius", 0, validate: value => float.IsFinite(value) && value >= 0 && value <= 64);
+    /// <summary>Explicit inside outline width; zero hides the normal outline.</summary>
+    public static readonly UiProperty<float> BorderWidth = new("BorderWidth", 0, Invalidation.Layout, value => float.IsFinite(value) && value >= 0 && value <= 16);
+    /// <summary>Explicit outline color.</summary>
+    public static readonly UiProperty<Color> BorderColor = new("BorderColor", Color.Transparent);
+    /// <summary>Custom title-bar role; independent of any native window API.</summary>
+    public static readonly UiProperty<WindowRegionRole> WindowRegion = new("WindowRegion", WindowRegionRole.Inherit,
+        Invalidation.Tree, value => Enum.IsDefined(value));
+    /// <summary>Explicit width, or NaN for automatic sizing.</summary>
+    public static readonly UiProperty<float> Width = new("Width", float.NaN, Invalidation.Layout, Dimension);
+    /// <summary>Explicit height, or NaN for automatic sizing.</summary>
+    public static readonly UiProperty<float> Height = new("Height", float.NaN, Invalidation.Layout, Dimension);
+    /// <summary>Internal spacing in logical pixels; local and style values override the control's theme padding.</summary>
+    public static readonly UiProperty<Thickness> Padding = new("Padding", default, Invalidation.Layout, ThicknessValue);
+    /// <summary>Distance between visible stack children in logical pixels.</summary>
+    public static readonly UiProperty<float> Spacing = new("Spacing", 0, Invalidation.Layout, v => float.IsFinite(v) && v >= 0);
+    /// <summary>Background fill.</summary>
+    public static readonly UiProperty<Color> Background = new("Background", Color.Transparent);
+    /// <summary>Optional frosted material drawn before background, foreground and children.</summary>
+    public static readonly UiProperty<BackdropMaterial?> Backdrop = new("Backdrop", null);
+    /// <summary>Optional outer shadow. Does not enlarge layout or pointer hit bounds.</summary>
+    public static readonly UiProperty<BoxShadow?> Shadow = new("Shadow", null);
+    /// <summary>Text and foreground color.</summary>
+    public static readonly UiProperty<Color> Foreground = new("Foreground", new Color(235, 237, 242));
+    /// <summary>Font size in logical pixels.</summary>
+    public static readonly UiProperty<float> FontSize = new("FontSize", 16, Invalidation.Layout, v => float.IsFinite(v) && v > 0);
+    /// <summary>Font family name.</summary>
+    public static readonly UiProperty<string> FontFamily = new("FontFamily", FontDefaults.Family, Invalidation.Layout, v => !string.IsNullOrWhiteSpace(v));
+    /// <summary>Font weight100..900;400 is regular and600 semibold.</summary>
+    public static readonly UiProperty<int> FontWeight = new("FontWeight", 400, Invalidation.Layout, v => v is >= 100 and <= 900);
+    /// <summary>Whether to select an italic face.</summary>
+    public static readonly UiProperty<bool> FontItalic = new("FontItalic", false, Invalidation.Layout);
+    /// <summary>Whether the element participates in layout and rendering.</summary>
+    public static readonly UiProperty<bool> Visible = new("Visible", true, Invalidation.Layout | Invalidation.Tree);
+    /// <summary>Whether the element accepts input.</summary>
+    public static readonly UiProperty<bool> Enabled = new("Enabled", true, Invalidation.Render | Invalidation.Tree);
+    internal static bool Dimension(float v) => float.IsNaN(v) || float.IsFinite(v) && v >= 0;
+    internal static bool ThicknessValue(Thickness value) => float.IsFinite(value.Left) && value.Left >= 0
+        && float.IsFinite(value.Top) && value.Top >= 0 && float.IsFinite(value.Right) && value.Right >= 0
+        && float.IsFinite(value.Bottom) && value.Bottom >= 0;
+}

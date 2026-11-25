@@ -27,6 +27,8 @@ public sealed class OpenGLUiTarget : UiRenderTarget
 public sealed class SkiaOpenGLRenderBackend : IRenderBackend
 {
     private readonly SkiaFontCatalog? _fonts;
+    /// <summary>Overrides subpixel glyph positioning for single-line plain editor text. Null inherits plain text positioning.</summary>
+    public bool? EditorSubpixelPositioning { get; init; }
     /// <summary>Uses the platform's system font lookup.</summary>
     public SkiaOpenGLRenderBackend() { }
     /// <summary>Uses explicit font snapshots for measurement and drawing.</summary>
@@ -37,7 +39,7 @@ public sealed class SkiaOpenGLRenderBackend : IRenderBackend
     {
         if (target is not OpenGLUiTarget gl) throw new ArgumentException("OpenGLUiTarget is required.", nameof(target));
         viewport.Validate(); gl.VerifyCurrent(); SkiaNativeLibrary.Initialize();
-        return new SkiaOpenGLSurface(gl, viewport, _fonts);
+        return new SkiaOpenGLSurface(gl, viewport, _fonts, EditorSubpixelPositioning);
     }
 }
 
@@ -58,7 +60,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface, IUiRenderDiagnostics
     /// <inheritdoc />
     public UiRenderDeviceInfo? DeviceInfo => _host.DeviceInfo;
 
-    internal SkiaOpenGLSurface(OpenGLUiTarget host, UiViewport viewport, SkiaFontCatalog? fonts = null)
+    internal SkiaOpenGLSurface(OpenGLUiTarget host, UiViewport viewport, SkiaFontCatalog? fonts, bool? editorSubpixelPositioning)
     {
         _host = host;
         foreach (var name in new[] { "glGetString", "glGetIntegerv" })
@@ -82,7 +84,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface, IUiRenderDiagnostics
                 _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
                 try
                 {
-                    _drawingResources = new SkiaDrawingResources(fonts, _context);
+                    _drawingResources = new SkiaDrawingResources(fonts, _context, editorSubpixelPositioning);
                     TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
                     Resize(viewport);
                 }

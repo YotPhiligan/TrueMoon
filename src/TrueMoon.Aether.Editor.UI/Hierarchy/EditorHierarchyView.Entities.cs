@@ -17,20 +17,6 @@ public sealed partial class EditorHierarchyView
     public static ViewStyleRole<IconButton> ActionRole { get; } = new("HierarchyAction");
     /// <summary>Shared commands used by action icons, shortcuts and context-menu adapters.</summary>
     public IReadOnlyDictionary<string, DelegateUiCommand> EntityCommands => _entityCommands;
-    /// <summary>Owned fallback popup host; a surrounding editor overlay is preferred when available.</summary>
-    public OverlayHost Overlays { get; private set; } = null!;
-    /// <summary>Object creation, also available with Insert.</summary>
-    public IconButton CreateButton { get; private set; } = null!;
-    /// <summary>Visible cube creation.</summary>
-    public IconButton CubeButton { get; private set; } = null!;
-    /// <summary>Subtree duplication, also available with Ctrl+D.</summary>
-    public IconButton DuplicateButton { get; private set; } = null!;
-    /// <summary>Explicit subtree deletion, also available with Delete.</summary>
-    public IconButton DeleteButton { get; private set; } = null!;
-    /// <summary>Keyboard-accessible context actions.</summary>
-    public IconButton ContextButton { get; private set; } = null!;
-    /// <summary>Next-match action.</summary>
-    public Button FindButton { get; private set; } = null!;
     /// <inheritdoc />
     public bool NeedsFrame => _pendingContext || _pendingRenameFocus;
     private void InitializeEntityCommands()
@@ -94,7 +80,7 @@ public sealed partial class EditorHierarchyView
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        if (_pendingContext) { _pendingContext = false; OpenContext(context, ContextButton.Bounds); }
+        if (_pendingContext) { _pendingContext = false; OpenContext(context, this.ContextButton.Bounds); }
         SynchronizeRenameFocus(context);
     }
     private void SynchronizeRenameFocus(IInputContext context)
@@ -110,7 +96,7 @@ public sealed partial class EditorHierarchyView
     {
         if (DataContext is not { } model) return false;
         var tree = this.Tree;
-        if (input.Kind == InputKind.PointerDown && input.Button == 1 && Scroll.ChildClipBounds.Contains(input.X, input.Y) && tree.Bounds.Contains(input.X, input.Y))
+        if (input.Kind == InputKind.PointerDown && input.Button == 1 && this.Scroll.ChildClipBounds.Contains(input.X, input.Y) && tree.Bounds.Contains(input.X, input.Y))
         {
             var item = tree.VisibleItems.FirstOrDefault(item => tree.GetItemBounds(item.Id)?.Contains(input.X, input.Y) == true);
             context.Focus(tree); model.Select(item?.Id); tree.Select(model.SelectedId);
@@ -135,7 +121,7 @@ public sealed partial class EditorHierarchyView
     {
         CloseContext();
         if (DataContext is not { } model) return;
-        var host = Overlays;
+        var host = this.Overlays;
         for (var parent = Parent; parent != null; parent = parent.Parent) if (parent is OverlayHost outer) host = outer;
         var contextVersion = _contextVersion;
         var version = model.SnapshotVersion; var selection = model.SelectedId; var canMove = model.CanMove;

@@ -6,8 +6,3 @@ public interface ITrigger
     void Subscribe(object o, Action action);
     void Unsubscribe(object o);
 }
-
-public interface ITriggerSubscription
-{
-    void Invoke();
-}

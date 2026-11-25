@@ -12,6 +12,8 @@ public sealed class RasterUiTarget : UiRenderTarget;
 public sealed class SkiaRasterRenderBackend : IRenderBackend
 {
     private readonly SkiaFontCatalog? _fonts;
+    /// <summary>Overrides subpixel glyph positioning for single-line plain editor text. Null inherits plain text positioning.</summary>
+    public bool? EditorSubpixelPositioning { get; init; }
     /// <summary>Uses the platform's system font lookup.</summary>
     public SkiaRasterRenderBackend() { }
     /// <summary>Uses explicit font snapshots for measurement and drawing.</summary>
@@ -23,7 +25,7 @@ public sealed class SkiaRasterRenderBackend : IRenderBackend
         if (target is not RasterUiTarget) throw new ArgumentException("RasterUiTarget is required.", nameof(target));
         viewport.Validate();
         SkiaNativeLibrary.Initialize();
-        return new SkiaRasterSurface(viewport, _fonts);
+        return new SkiaRasterSurface(viewport, _fonts, EditorSubpixelPositioning);
     }
 }
 
@@ -40,13 +42,13 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
     /// <inheritdoc />
     public ITextLayoutService TextLayout { get; }
 
-    internal SkiaRasterSurface(UiViewport viewport, SkiaFontCatalog? fonts = null)
+    internal SkiaRasterSurface(UiViewport viewport, SkiaFontCatalog? fonts, bool? editorSubpixelPositioning)
     {
         _measurement = SKSurface.Create(new SKImageInfo(1, 1))
             ?? throw new InvalidOperationException("Could not create text service surface.");
         try
         {
-            _drawingResources = new SkiaDrawingResources(fonts);
+            _drawingResources = new SkiaDrawingResources(fonts, editorSubpixelPositioning: editorSubpixelPositioning);
             TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
             Resize(viewport);
         }

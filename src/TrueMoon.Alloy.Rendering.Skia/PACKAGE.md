@@ -38,6 +38,14 @@ Pass the same catalog to `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` or
 constructors accept it for direct sessions. Catalogs contain managed data;
 each session owns/disposes its native font cache. Fallback family lists are copied.
 
+For plain editable text only, set `EditorSubpixelPositioning` when creating the
+backend, e.g. `new SkiaRasterRenderBackend(fonts) { EditorSubpixelPositioning = true }`.
+OpenGL and Vulkan expose the same option. `null` (default) inherits the surface's
+plain-text positioning; `false` and `true` select the mode for `TextBox`, including
+the editor inside `NumberBox`. Measurement, caret placement and drawing use the
+same mode across focus and surface resize. Labels, prefixes and RichTextKit keep
+their own positioning.
+
 Selection tries the requested family, then each configured system family, then
 the explicit file catalog. With no file catalog it uses the system default.
 Use names exposed by the system font manager: on Windows, `Segoe UI Variable Text`

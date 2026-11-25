@@ -78,12 +78,10 @@ internal static partial class FontTypographyProbe
             [new(entity, definition, null, null, "Станция наблюдения", null)], [source], [.. BuiltInComponents.Schemas, custom]), entity);
     }
 
-    private static (Element Root, TextBox[] Fields) CreateInspectorPerformanceRoot(IFactory<EditorInspectorView> factory)
+    private static TextBox GetInspectorPerformanceField(EditorInspectorView view)
     {
-        var view = factory.Create() ?? throw new InvalidOperationException("The inspector factory did not return a view.");
         if (view.Properties.TryGetValue((InspectorTransform, "x"), out var property) && property.Input is TextBox input)
-            return (view, [input]);
-        view.Dispose();
+            return input;
         throw new InvalidOperationException("The inspector did not expose the Transform X editor.");
     }
 }

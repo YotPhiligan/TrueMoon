@@ -22,6 +22,8 @@ public sealed class VulkanUiTarget : UiRenderTarget
 public sealed class SkiaVulkanRenderBackend : IRenderBackend
 {
     private readonly SkiaFontCatalog? _fonts;
+    /// <summary>Overrides subpixel glyph positioning for single-line plain editor text. Null inherits plain text positioning.</summary>
+    public bool? EditorSubpixelPositioning { get; init; }
     /// <summary>Uses the platform's system font lookup.</summary>
     public SkiaVulkanRenderBackend() { }
     /// <summary>Uses explicit font snapshots for measurement and drawing.</summary>
@@ -33,7 +35,7 @@ public sealed class SkiaVulkanRenderBackend : IRenderBackend
         if (target is not VulkanUiTarget vulkan) throw new ArgumentException("VulkanUiTarget is required.", nameof(target));
         viewport.Validate();
         SkiaNativeLibrary.VerifyVulkanInterop();
-        return new SkiaVulkanSurface(vulkan.Host, viewport, _fonts);
+        return new SkiaVulkanSurface(vulkan.Host, viewport, _fonts, EditorSubpixelPositioning);
     }
 }
 /// <summary>Session-owned context/surface on a borrowed device, with explicit host texture leases.</summary>
@@ -52,7 +54,7 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface, IUiRenderDiagnostics
     public ITextLayoutService TextLayout { get; }
     /// <inheritdoc />
     public UiRenderDeviceInfo? DeviceInfo => _device.DeviceInfo;
-    internal SkiaVulkanSurface(VulkanHostContext device, UiViewport viewport, SkiaFontCatalog? fonts = null)
+    internal SkiaVulkanSurface(VulkanHostContext device, UiViewport viewport, SkiaFontCatalog? fonts, bool? editorSubpixelPositioning)
     {
         _device = device;
         device.WaitIdle();
@@ -73,7 +75,7 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface, IUiRenderDiagnostics
             device.ThrowIfResolutionFailed();
             if (_context == null) throw new NotSupportedException("Skia Vulkan context creation failed.");
             _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
-            _drawingResources = new SkiaDrawingResources(fonts);
+            _drawingResources = new SkiaDrawingResources(fonts, editorSubpixelPositioning: editorSubpixelPositioning);
             TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
             Resize(viewport);
         }

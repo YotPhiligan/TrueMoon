@@ -567,7 +567,9 @@ record measured pixel differences. Each run also saves 864 field crops at 4×.
 compares a standalone `TextBox` and a `NumberBox` with its own prefix and editor.
 It resizes the **outer** control, focuses the editor and scrolls the same numeric
 draft to End. Spaces isolate the last digit for measuring its ink; this is
-not a test of number parsing. Only plain text positioning is overridden.
+not a test of number parsing. The backend option applies only to the plain
+editor. A fractional-position label with the same face and size must keep its
+pixels under default/off/on; a surface-wide override is the positive control.
 Each `Light|Dark` / `TextBox|NumberBox` subdirectory contains a `report.json`
 and captures for all three backends at logical 100%, 125% and 175%.
 To measure tracking error, take `abs(GlyphMotionPx - ScrollMotionPx)` for
@@ -589,6 +591,9 @@ backend, scale and scenario is off–on–on–off. Run a second process with
 `--subpixel-on-first` to reverse it. Each batch has at least 192 warmup
 frames and 200 ms of warmup, then 512 measured frames. A separate
 `--validation` run uses 16 warmup and 32 measured frames per batch.
+`--short-timing` runs the same cases without validation, warming each batch
+for at least 16 frames and 50 ms, then measuring 32 frames. Use both orderings
+for a quick estimate; do not pool these results with the 512-frame protocol.
 
 The report records CPU wall time and managed allocations for `UiSession.Update`
 and its nested `Render` call. GPU completion and Vulkan texture return have
@@ -607,9 +612,15 @@ Transform, Appearance, Interaction and a schema-defined section with numeric,
 boolean and multiline fields. The scrolling case anchors the caret at the
 end of a long Transform X value and narrows that field by 0.25 device pixels
 per phase. The render surface and document are retained throughout each batch.
+The probe resolves `Transform.x` after the first `UiSession.Update`: its
+property row is created when the inspector is attached, not when the view
+factory returns. This initial layout and field lookup are outside the samples.
 
-The toggle applies to the plain text path of the surface. RichTextKit keeps
-its default positioning, including for the note with colored emoji. OpenGL and
+By default the inspector probe toggles plain text for the whole surface. Pass
+`--editor-fields-only` to configure the backend instead: only plain `TextBox`
+content (including the editor in `NumberBox`) changes. Combine with
+`--short-timing` and repeat with `--subpixel-on-first` to compare both orders.
+RichTextKit keeps its default, including for the note with colored emoji. OpenGL and
 Vulkan report the Skia context's cached resource count and bytes before drawing,
 after the first anchored frame, after warmup, after measurement, and at each
 phase of an untimed verification pass. The counters cover Skia's context cache.

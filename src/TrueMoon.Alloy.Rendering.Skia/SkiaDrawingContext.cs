@@ -110,15 +110,20 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily)
         => Text(text, x, y, color, fontSize, fontFamily, 400, false);
     public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
+        => DrawText(text, x, y, color, resources.Font(fontFamily, fontSize, fontWeight, fontItalic));
+    public void EditorText(string text, float x, float y, Color color, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
+        => DrawText(text, x, y, color, resources.EditorFont(fontFamily, fontSize, fontWeight, fontItalic));
+    private void DrawText(string text, float x, float y, Color color, in SkiaDrawingResources.FontEntry entry)
     {
-        var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic);
         var paint = resources.Paint(Color(color), SKPaintStyle.Fill);
         canvas.DrawText(text, x, y - entry.Metrics.Ascent, SKTextAlign.Left, entry.Font, paint);
     }
     public Size Measure(string text, float fontSize, string fontFamily)
         => Measure(text, fontSize, fontFamily, 400, false);
     public Size Measure(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
-    { var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic); return new Size(entry.Font.MeasureText(text), entry.Metrics.Descent - entry.Metrics.Ascent); }
+        => resources.Font(fontFamily, fontSize, fontWeight, fontItalic).Measure(text);
+    public Size MeasureEditorText(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
+        => resources.EditorFont(fontFamily, fontSize, fontWeight, fontItalic).Measure(text);
     public Rect MeasureInkBounds(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
     {
         var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic);
@@ -193,7 +198,7 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
 }
 
 // One owner thread and surface lifetime; no global cache or borrowed canvas/context ownership.
-internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object? gpuOwner = null) : IDisposable
+internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object? gpuOwner = null, bool? editorSubpixelPositioning = null) : IDisposable
 {
     internal object? GpuOwner => gpuOwner;
     private const int FontCapacity = 16;
@@ -210,8 +215,11 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
     internal bool? ShapedSubpixelPositioning { get; private set; }
     internal SkiaRichTextFontMapper RichFonts { get { VerifyAvailable(); return _richFonts ??= new(fonts); } }
     internal void VerifyRichTextAccess() => VerifyAvailable();
-    private readonly record struct FontKey(string Family, float Size, int Weight, bool Italic);
-    internal readonly record struct FontEntry(SKFont Font, SKFontMetrics Metrics);
+    private readonly record struct FontKey(string Family, float Size, int Weight, bool Italic, bool Subpixel);
+    internal readonly record struct FontEntry(SKFont Font, SKFontMetrics Metrics)
+    {
+        internal Size Measure(string text) => new(Font.MeasureText(text), Metrics.Descent - Metrics.Ascent);
+    }
 
     internal void SetSubpixelPositioningForProbe(bool enabled)
     {
@@ -260,17 +268,24 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
     }
 
     internal FontEntry Font(string family, float size, int weight = 400, bool italic = false)
+        => GetFont(family, size, weight, italic, SubpixelPositioning);
+
+    internal FontEntry EditorFont(string family, float size, int weight, bool italic)
+        => GetFont(family, size, weight, italic, editorSubpixelPositioning ?? SubpixelPositioning);
+
+    private FontEntry GetFont(string family, float size, int weight, bool italic, bool? subpixel)
     {
         VerifyAvailable();
         if (weight is < 100 or > 900) throw new ArgumentOutOfRangeException(nameof(weight));
-        var key = new FontKey(family, size, weight, italic);
+        // Native SKFont defaults to Subpixel=false; explicit off shares the stock entry.
+        var key = new FontKey(family, size, weight, italic, subpixel.GetValueOrDefault());
         if (_fonts.TryGetValue(key, out var entry)) return entry;
         // SKFont retains its native typeface reference. Do not retain shared managed typeface wrappers.
         using var typeface = (fonts ?? SkiaFontCatalog.SystemDefault).CreateTypeface(family, weight, italic);
         var font = new SKFont(typeface, size);
         try
         {
-            if (SubpixelPositioning is bool enabled) font.Subpixel = enabled;
+            if (subpixel is bool enabled) font.Subpixel = enabled;
             entry = new FontEntry(font, font.Metrics);
             if (_fonts.Count == FontCapacity)
             {

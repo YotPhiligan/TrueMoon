@@ -17,18 +17,8 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
     private bool _synchronizingItems;
     private bool _treeSyncPending;
     private IReadOnlyList<HierarchyItem>? _observedItems;
-    /// <summary>Viewport retaining scroll position across theme and data refresh.</summary>
-    public ScrollViewer Scroll { get; private set; } = null!;
     /// <summary>Current scene caption.</summary>
     public Text Caption => this.CaptionPart;
-    /// <summary>Keyboard-accessible explicit move to scene root.</summary>
-    public Button RootButton { get; private set; } = null!;
-    /// <summary>Gesture/admission guidance.</summary>
-    public Text Hint { get; private set; } = null!;
-    /// <summary>Selectable complete mutation diagnostic.</summary>
-    public RichTextEditor Error { get; private set; } = null!;
-    /// <summary>Panel geometry.</summary>
-    public Element Layout { get; private set; } = null!;
     /// <summary>Declares the hierarchy for its first attachment. Model and style remain App-owned.</summary>
     public EditorHierarchyView(IEditorHierarchyViewModel model, IViewStyle<EditorHierarchyView> style)
         : this(model)
@@ -48,20 +38,19 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
         Content(model, ui =>
         {
             var layout = new HierarchyLayout();
-            var overlays = ui.OverlayHost(layout);
-            Overlays = overlays;
-            Layout = layout.WithChildren(
+            var overlays = ui.OverlayHost(layout.Named<Element>("Layout")).Named("Overlays");
+            layout.WithChildren(
                 ui.HStack(
                     ui.Text("ОБОЗРЕВАТЕЛЬ").Named("Title").Fill(),
-                    RootButton = ui.Button("В корень").SemanticId("editor.hierarchy.move-to-root").WithCommand(_entityCommands["root"]))
+                    ui.Button("В корень").Named("RootButton").SemanticId("editor.hierarchy.move-to-root").WithCommand(_entityCommands["root"]))
                     .Configure(header => header.Spacing = 4),
                 ui.Text().Named("CaptionPart").BindText(data => data.Caption),
                 ui.HStack(
-                    CreateButton = ui.IconButton(UiSymbol.Add, "Создать объект · Insert").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create").WithCommand(_entityCommands["create.empty"]),
-                    CubeButton = ui.IconButton(UiSymbol.Cube, "Создать куб").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create-cube").WithCommand(_entityCommands["create.cube"]),
-                    DuplicateButton = ui.IconButton(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.duplicate").WithCommand(_entityCommands["duplicate"]),
-                    DeleteButton = ui.IconButton(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.delete").WithCommand(_entityCommands["delete"]),
-                    ContextButton = ui.IconButton(UiSymbol.More, "Действия объекта · Shift+F10").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.context").OnClick(RequestContext))
+                    ui.IconButton(UiSymbol.Add, "Создать объект · Insert").Named("CreateButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create").WithCommand(_entityCommands["create.empty"]),
+                    ui.IconButton(UiSymbol.Cube, "Создать куб").Named("CubeButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create-cube").WithCommand(_entityCommands["create.cube"]),
+                    ui.IconButton(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").Named("DuplicateButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.duplicate").WithCommand(_entityCommands["duplicate"]),
+                    ui.IconButton(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").Named("DeleteButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.delete").WithCommand(_entityCommands["delete"]),
+                    ui.IconButton(UiSymbol.More, "Действия объекта · Shift+F10").Named("ContextButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.context").OnClick(RequestContext))
                     .Named("Actions"),
                 ui.HStack(
                     ui.TextBox()
@@ -70,13 +59,13 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
                         .SemanticId("editor.hierarchy.search")
                         .AccessibleName("Поиск по имени или ID · Enter следующее совпадение")
                         .MinWidth(0),
-                    FindButton = ui.Button("Найти").SemanticId("editor.hierarchy.find").WithCommand(_entityCommands["find"]))
+                    ui.Button("Найти").Named("FindButton").SemanticId("editor.hierarchy.find").WithCommand(_entityCommands["find"]))
                     .Named("SearchRow"),
-                Hint = ui.Text().BindText(data => data.Hint),
-                Error = ui.RichTextEditor(new() { IsReadOnly = true, WordWrap = true })
+                ui.Text().Named("Hint").BindText(data => data.Hint),
+                ui.RichTextEditor(new() { IsReadOnly = true, WordWrap = true }).Named("Error")
                     .Bind(RichTextEditor.TextProperty, data => data.ErrorText)
                     .Bind(UiProperties.Visible, data => data.HasError),
-                Scroll = ui.ScrollViewer().Fill().Content(new RenameLayer(
+                ui.ScrollViewer().Named("Scroll").Fill().Content(new RenameLayer(
                     ui.TreeView()
                         .Named("Tree")
                         .SemanticId("editor.hierarchy.tree")
@@ -128,7 +117,7 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
         RefreshEntityCommands(null);
         if (DataContext == null)
         {
-            this.NameEditor.IsVisible = Error.IsVisible = false;
+            this.NameEditor.IsVisible = this.Error.IsVisible = false;
             this.Tree.Set(TreeView.MoveEnabledProperty, false);
         }
     }
