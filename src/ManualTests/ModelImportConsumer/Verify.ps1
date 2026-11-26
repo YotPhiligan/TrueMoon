@@ -46,7 +46,7 @@ function Proof([string]$name,[string]$output,[string]$cache,[bool]$fresh,[string
   $tag="$name-$provider";$directory="$evidence/$tag";Run $tag @("$output/ModelImportProbe.dll",$provider,$worker,"$run/fake",$dotnet,$directory) $cache
   $path="$directory/report.json";$proof=Get-Content $path -Raw|ConvertFrom-Json -AsHashtable
   if(!$proof.Completed -or $proof.Groups.Count -ne 5 -or $proof.ReapedWorkers -ne 21 -or $proof.Assertions -lt 87){throw 'Import proof mismatch'}
-  if($proof.WorkerFiles['assimp.dll'] -ne '90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386'){throw 'Native drift'}
+  if($proof.WorkerFiles['assimp.dll'] -ne '4EC73281A4FDDB735A0A59180EBFCEAB122EC8A8EF136814B2FCCCFB7B78E944'){throw 'Native drift'}
   $report.Profiles+=@{Name=$tag;Path=$path;Sha256=(Hash $path);Provider=$provider;Assertions=$proof.Assertions;ReapedWorkers=$proof.ReapedWorkers;Revision=$proof.Revision;Worker=$worker}
   if($fresh){foreach($assembly in $proof.LoadedFramework.GetEnumerator()){
    $matches=@(Get-ChildItem $cache -Recurse -Filter ($assembly.Key+'.dll')|Where-Object {(Hash $_.FullName) -eq $assembly.Value});if(!$matches.Count){throw "Loaded DLL outside fresh cache: $($assembly.Key)"}
@@ -67,8 +67,8 @@ try{
    if(!$cached){throw "Missing cached archive: $($library.Key)"};Copy-Item -LiteralPath $cached -Destination $feed;$external[$library.Key]=$cached;$report.ExternalPackages+=@{Id=$library.Key;Sha256=(Hash $cached)}
   }
  }
- if($external.Keys -notcontains 'AssimpNetter/6.0.5'){throw 'Pinned Assimp archive missing'}
- if((Hash $external['AssimpNetter/6.0.5']) -ne '805526348F7D868BC2BA1B56538C5AB1409E5E99E9BB653AF895DC3E5BD2919E'){throw 'Assimp archive changed'}
+ if($external.Keys -notcontains 'AssimpNetter/6.0.6'){throw 'Pinned Assimp archive missing'}
+ if((Hash $external['AssimpNetter/6.0.6']) -ne 'AAE39E82146260CF191B0C50F76A60E39DD9F33326C0CB7174646356A79B31ED'){throw 'Assimp archive changed'}
  $workerProject="$workspace/TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj";$workerArtifacts="$run/worker-artifacts"
  # SDK downloadDependencies are not ordinary libraries in project.assets.json. Resolve their exact SDK-selected versions without downloading.
  Run 'worker-graph' @('msbuild',$workerProject,'-target:GenerateRestoreGraphFile',"-p:RestoreGraphOutputPath=$run/worker.restoregraph.json",'-p:RuntimeIdentifier=win-x64','-p:SelfContained=false','-p:UseAppHost=false',"-p:ArtifactsPath=$workerArtifacts",'-v:quiet')

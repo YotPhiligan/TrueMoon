@@ -74,7 +74,7 @@ public sealed class ModelImportCandidate
         Revision = Convert.ToHexString(SHA256.HashData(ModelImportProtocol.Encode(this)));
     }
 
-    /// <summary>Versioned interpretation, including coordinates, material conversion and native parser.</summary>
+    /// <summary>Stable wire recipe for the default static glTF projection. The worker verifies its native parser version separately.</summary>
     public const string Recipe = "aether.assimp605.gltf2-static-opaque-unlit/2";
     /// <summary>Caller-supplied persistent source identity.</summary>
     public Guid SourceId { get; }

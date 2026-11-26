@@ -4,8 +4,8 @@
 в [ARCH1g.1c](MODEL_SUBASSET_LEDGER.md). Ниже — общий worker contract с уточнениями v2;
 [первоначальная приёмка g.1b](MODEL_IMPORT_WORKER_RESULTS.json) сохранена отдельно.
 
-Windows x64, opt-in Tooling API. AssimpNetter **6.0.5** and its single-precision
-Assimp **6.0.5** run in `TrueMoon.Aether.Importing.Assimp`, a separately published
+Windows x64, opt-in Tooling API. AssimpNetter **6.0.6** and its single-precision
+Assimp **6.0.6** run in `TrueMoon.Aether.Importing.Assimp`, a separately published
 executable. Tooling/Runtime packages have no Assimp dependency. The worker is not
 a NuGet package and is not started by registration or an empty App.
 
@@ -51,6 +51,8 @@ using the [captured source](MODEL_SOURCE_CAPTURE.md), including external BIN byt
 The native FileIO callbacks have no disk fallback, basename search or write mode.
 Source paths may disappear after capture. OBJ/MTL capture is available, but decoding
 OBJ, FBX, embedded data URIs and other formats is outside this recipe.
+The `assimp605` wire recipe IDs remain fixed for existing worker packets and
+ledger sidecars. The deployed worker checks the native version independently.
 
 - Coordinates: right-handed, +Y up, meters. No winding, handedness or unit conversion.
   Assimp column matrices are transposed to System.Numerics row matrices; world = local × parent.
@@ -122,7 +124,7 @@ input identities, truncation and trailing bytes. Each diagnostic pipe retains at
 The parent attaches a Windows Job **before GO/native activation**, then queries installed
 limits: 512MiB committed process memory, one process, kill on Job close. Native import
 errors/crashes remain in the child. The worker verifies the output-local native DLL hash
-`90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386`, version 6.0.5 and
+`4EC73281A4FDDB735A0A59180EBFCEAB122EC8A8EF136814B2FCCCFB7B78E944`, version 6.0.6 and
 single-precision compile flag before touching native structures. The deployment descriptor
 pins reviewed files and ancestors using readonly Windows handles; closure limits are
 128 files, 64MiB/file, 128MiB total and 64 directories/depth8.
@@ -150,6 +152,6 @@ and [delivery manifest](MODEL_IMPORT_WORKER_RESULTS.json). Current v2 verificati
 [g.1c](MODEL_SUBASSET_LEDGER.md). These do not establish GPU,
 Editor preview, Nom publication, other OS/AOT or complete g.1/g.2 acceptance.
 
-Primary ABI/policy sources: [Assimp 6.0.5 FileIO](https://github.com/assimp/assimp/blob/v6.0.5/include/assimp/cfileio.h),
-[material keys](https://github.com/assimp/assimp/blob/v6.0.5/include/assimp/material.h),
+Primary ABI/policy sources: [Assimp 6.0.6 FileIO](https://github.com/assimp/assimp/blob/v6.0.6/include/assimp/cfileio.h),
+[material keys](https://github.com/assimp/assimp/blob/v6.0.6/include/assimp/material.h),
 [glTF coordinates/units](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units).

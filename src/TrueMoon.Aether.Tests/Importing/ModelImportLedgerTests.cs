@@ -101,6 +101,68 @@ public sealed class ModelImportLedgerTests
     }
 
     [Fact]
+    public async Task Publish_ReaderHoldingOldHeadKeepsItsSnapshotWhileNewReaderSeesCommit()
+    {
+        using var fixture = new Fixture();
+        var directory = Path.Combine(fixture.Root, new string('а', 160), new string('b', 160));
+        var path = Path.Combine(directory, "модель.tml");
+        var store = new FileModelImportLedgerStore();
+        var original = await store.PublishAsync(path, SourceId, 0, Candidate());
+        using var retained = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+        var changed = Candidate(hullWidth: 3);
+        await store.PublishAsync(path, SourceId, 1, changed);
+
+        var current = Assert.IsType<PublishedModelImport>(await store.ReadAsync(path, SourceId));
+        Assert.Equal(2, current.Generation);
+        AssertCompleteProjection(current, changed);
+        Assert.Equal(original.Ledger.Entries, current.Ledger.Entries);
+        var retainedBytes = new byte[checked((int)retained.Length)];
+        await retained.ReadExactlyAsync(retainedBytes);
+        Assert.Equal(ModelImportLedgerCodec.Encode(original), retainedBytes);
+        Assert.Equal(new[] { path, path + ".write-lock" }, Directory.GetFiles(directory).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Publish_ConcurrentReadersNeverSeeAnAbsentOrMixedHead()
+    {
+        const int replacements = 80;
+        using var fixture = new Fixture();
+        var store = new FileModelImportLedgerStore();
+        var candidates = new[] { Candidate(), Candidate(hullWidth: 3) };
+        var initial = await store.PublishAsync(fixture.Path, SourceId, 0, candidates[0]);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var stop = new CancellationTokenSource();
+        var reader = Task.Run(async () =>
+        {
+            long last = 1;
+            do
+            {
+                var snapshot = await store.ReadAsync(fixture.Path, SourceId);
+                started.TrySetResult();
+                Assert.NotNull(snapshot);
+                Assert.InRange(snapshot.Generation, last, replacements + 1L);
+                Assert.Equal(initial.Ledger.Entries, snapshot.Ledger.Entries);
+                Assert.Equal(candidates[(snapshot.Generation - 1) % 2].Revision, snapshot.Candidate.Revision);
+                last = snapshot.Generation;
+            } while (!stop.IsCancellationRequested);
+        });
+
+        try
+        {
+            await Task.WhenAny(started.Task, reader);
+            for (var generation = 1; generation <= replacements && !reader.IsCompleted; generation++)
+                await store.PublishAsync(fixture.Path, SourceId, generation, candidates[generation % 2]);
+        }
+        finally { stop.Cancel(); await reader; }
+
+        var final = Assert.IsType<PublishedModelImport>(await store.ReadAsync(fixture.Path, SourceId));
+        Assert.Equal(replacements + 1, final.Generation);
+        Assert.Equal(candidates[0].Revision, final.Candidate.Revision);
+        fixture.AssertOnlyRecordAndPermanentLock();
+    }
+
+    [Fact]
     public async Task Reimport_ReorderAndGeometryChangePreserveSemanticIdsAndCorrectReferences()
     {
         using var fixture = new Fixture(); var store = new FileModelImportLedgerStore();

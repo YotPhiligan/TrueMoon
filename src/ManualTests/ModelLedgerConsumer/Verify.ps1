@@ -52,7 +52,7 @@ function Proof([string]$name,[string]$output,[string]$cache,[bool]$fresh,[string
   if(!$proof.Completed -or $proof.Groups.Count -ne 5 -or $proof.LegacyWorkers -ne 21 -or $proof.LegacyAssertions -ne 87 -or
      $proof.NativeWorkers -ne 15 -or $proof.Readers -ne 3 -or $proof.Publishers -ne 1 -or $proof.Assertions -lt 53 -or $proof.ConcurrentReads -lt 1){throw 'Ledger proof mismatch'}
   if($fresh -and $proof.HandoffFingerprint -ne $handoff.HeadFingerprint){throw 'Source-to-fresh ledger identity drift'}
-  if($proof.WorkerFiles['assimp.dll'] -ne '90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386'){throw 'Native drift'}
+  if($proof.WorkerFiles['assimp.dll'] -ne '4EC73281A4FDDB735A0A59180EBFCEAB122EC8A8EF136814B2FCCCFB7B78E944'){throw 'Native drift'}
   $report.Profiles+=@{Name=$tag;Path=$path;Sha256=(Hash $path);Provider=$provider;Assertions=($proof.Assertions+$proof.LegacyAssertions);ReapedWorkers=($proof.NativeWorkers+$proof.LegacyWorkers);
     Readers=$proof.Readers;Publishers=$proof.Publishers;ConcurrentReads=$proof.ConcurrentReads;Revision=$proof.CpuRevision;Worker=$worker;HeadPath=$proof.HeadPath;HeadFingerprint=$proof.HeadFingerprint;HandoffFingerprint=$proof.HandoffFingerprint}
   if($fresh){foreach($assembly in $proof.LoadedFramework.GetEnumerator()){
@@ -74,8 +74,8 @@ try{
    if(!$cached){throw "Missing cached archive: $($library.Key)"};Copy-Item -LiteralPath $cached -Destination $feed;$external[$library.Key]=$cached;$report.ExternalPackages+=@{Id=$library.Key;Sha256=(Hash $cached)}
   }
  }
- if($external.Keys -notcontains 'AssimpNetter/6.0.5'){throw 'Pinned Assimp archive missing'}
- if((Hash $external['AssimpNetter/6.0.5']) -ne '805526348F7D868BC2BA1B56538C5AB1409E5E99E9BB653AF895DC3E5BD2919E'){throw 'Assimp archive changed'}
+ if($external.Keys -notcontains 'AssimpNetter/6.0.6'){throw 'Pinned Assimp archive missing'}
+ if((Hash $external['AssimpNetter/6.0.6']) -ne 'AAE39E82146260CF191B0C50F76A60E39DD9F33326C0CB7174646356A79B31ED'){throw 'Assimp archive changed'}
  $workerProject="$workspace/TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj";$workerArtifacts="$run/worker-artifacts"
  # SDK downloadDependencies are not ordinary libraries in project.assets.json. Resolve their exact SDK-selected versions without downloading.
  Run 'worker-graph' @('msbuild',$workerProject,'-target:GenerateRestoreGraphFile',"-p:RestoreGraphOutputPath=$run/worker.restoregraph.json",'-p:RuntimeIdentifier=win-x64','-p:SelfContained=false','-p:UseAppHost=false',"-p:ArtifactsPath=$workerArtifacts",'-v:quiet')

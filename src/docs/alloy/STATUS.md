@@ -3,6 +3,10 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+В `1.2611.26.19-alpha` Topten.RichTextKit 0.6.175, SkiaSharp 4.157.0
+и прежняя расширенная DLL. 44 теста RichText прошли в Release.
+[Проверка зависимостей](../engine/HISTORY.md#model-ledger-atomic-replace-2026-11-26).
+
 В `1.2611.26.17-alpha` `ScrollViewer.ScrollToEnd()` учитывает padding при
 arrange, а `UiSession.ViewportChanged` сообщает принятый resize до layout.
 26.11.2026: 66 адресных тестов в Debug.

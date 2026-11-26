@@ -1,5 +1,33 @@
 # Core: история проверок и ревью
 
+<a id="dependency-refresh-2026-11-26"></a>
+## 2026-11-26 — обновление зависимостей решения
+
+`1.2611.26.18-alpha`, Windows x64, SDK 11. По опубликованным версиям
+NuGet обновлены [AssimpNetter 6.0.6](https://www.nuget.org/packages/AssimpNetter/6.0.6)
+(точный pin вместо 6.0.5) и [Topten.RichTextKit 0.6.175](https://www.nuget.org/packages/Topten.RichTextKit/0.6.175)
+(вместо 0.6.174). SkiaSharp 4.157.0, расширенная Skia DLL, BEPU beta.33 и
+локальный патч MiniAudioEx не менялись. Сверены SHA-256 архива и Windows x64
+Assimp DLL, обновлены проверки хеша и версии worker. Wire-рецепты и формат
+ledger не менялись.
+
+- `dotnet restore TrueMoon.slnx -p:NuGetAuditMode=all` в отдельном checkout
+  прошёл; оба графа разрешили ожидаемые версии без NuGet-предупреждений.
+- Release, `TrueMoon.Alloy.Tests`, фильтр `FullyQualifiedName~RichText`:
+  44 прошли, 0 упали и 0 пропущены. [TRX](../../TestResults/PackageRefresh-26-18/richtext/richtext.trx).
+- `ManualTests/ModelLedgerConsumer/Verify.ps1`: 7 профилей прошли целиком,
+  включая оба DI-провайдера из исходников и свежий Debug на Cobalt. CPU-ревизия
+  совпала с [приёмкой Assimp 6.0.5](../engine/MODEL_SUBASSET_LEDGER_RESULTS.json).
+  Свежий Debug на Microsoft DI прошёл импорт, но остановился на конкурентном
+  чтении ledger (`Torn/missing head during replacement`); свежий Release не
+  запускался. Код хранения ledger не менялся.
+  [Манифест](../../TestResults/PackageRefresh-26-18/model-ledger/verification.json) ·
+  [отчёт успешного импорта в этом кейсе](../../TestResults/PackageRefresh-26-18/model-ledger/fresh-Debug-microsoft/legacy/report.json).
+
+Полная alpha-приёмка и публикация NuGet не выполнялись.
+
+Итоговая версия `1.2611.26.19-alpha`: [повторная проверка после исправления ledger](../engine/HISTORY.md#model-ledger-atomic-replace-2026-11-26).
+
 <a id="arch2e4b-2026-11-12"></a>
 ## Output progress и baseline ARCH2e.4b — 2026-11-12
 

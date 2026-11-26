@@ -1,9 +1,14 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+
 namespace TrueMoon.Aether.Tooling.Importing;
 
 /// <summary>Bounded checksummed sidecar with same-volume atomic replacement and generation CAS.</summary>
-/// <remarks>Trusted local Windows filesystem; cooperating writers honor the permanent .write-lock sidecar.
-/// File bytes are flushed before replacement. This is process-crash consistency, not a hostile-filesystem or power-loss guarantee.</remarks>
-public sealed class FileModelImportLedgerStore : IModelImportLedgerStore
+/// <remarks>Trusted local Windows filesystem supporting FileRenameInfoEx with POSIX semantics.
+/// Cooperating writers honor the permanent .write-lock sidecar. File bytes are flushed
+/// before replacement. This is process-crash consistency, not a hostile-filesystem or power-loss guarantee.</remarks>
+public sealed partial class FileModelImportLedgerStore : IModelImportLedgerStore
 {
     /// <inheritdoc />
     public async Task<PublishedModelImport?> ReadAsync(string path,Guid sourceId,CancellationToken cancellationToken=default)
@@ -24,7 +29,7 @@ public sealed class FileModelImportLedgerStore : IModelImportLedgerStore
             token.ThrowIfCancellationRequested();
             try { return new(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete,65536,FileOptions.Asynchronous); }
             catch(Exception error) when(error is FileNotFoundException or DirectoryNotFoundException) { token.ThrowIfCancellationRequested(); return null; }
-            // ReplaceFileW briefly holds metadata handles. Retry only sharing/lock violations, never corrupt contents or access denial.
+            // Retry external sharing/lock violations only, not a genuinely absent head or corrupt data.
             catch(IOException error) when(attempt<19 && (error.HResult&0xffff) is 32 or 33) { await Task.Delay(5,token).ConfigureAwait(false); }
         }
     }
@@ -52,7 +57,7 @@ public sealed class FileModelImportLedgerStore : IModelImportLedgerStore
             }
             cancellationToken.ThrowIfCancellationRequested();
             if (previous==null) File.Move(temporary,path,overwrite:false);
-            else File.Replace(temporary,path,destinationBackupFileName:null);
+            else ReplaceHead(temporary, path);
             committed=true; return published; // No cancellation check or fallible application callback after the commit point.
         }
         catch (Exception error) { failure=error; throw; }
@@ -65,6 +70,54 @@ public sealed class FileModelImportLedgerStore : IModelImportLedgerStore
             }
         }
     }
+
+    private static unsafe void ReplaceHead(string staging, string head)
+    {
+        const uint deleteAccess = 0x00010000, shareAll = 7, openExisting = 3;
+        const uint replaceIfExists = 1, posixSemantics = 2;
+        const int fileRenameInfoEx = 22;
+        const string extendedPathPrefix = @"\\?\";
+
+        using var file = CreateFileW(extendedPathPrefix + staging, deleteAccess, shareAll, 0, openExisting, 0, 0);
+        if (file.IsInvalid) throw WindowsError("Cannot open the staged model ledger for rename", Marshal.GetLastPInvokeError());
+
+        // Replace the directory entry once. New readers see the new file; open readers keep the old one.
+        var prefix = head.Length >= 260 ? extendedPathPrefix.AsSpan() : ReadOnlySpan<char>.Empty;
+        var nameLength = prefix.Length + head.Length;
+        var capacity = sizeof(RenameInfo) + nameLength * sizeof(char);
+        Span<byte> buffer = capacity <= 1024 ? stackalloc byte[capacity] : new byte[capacity];
+        buffer.Clear();
+        fixed (byte* pointer = buffer)
+        {
+            var info = (RenameInfo*)pointer;
+            info->Flags = replaceIfExists | posixSemantics;
+            info->FileNameLength = (uint)(nameLength * sizeof(char));
+            var destination = new Span<char>(&info->FileName, nameLength);
+            prefix.CopyTo(destination);
+            head.AsSpan().CopyTo(destination[prefix.Length..]);
+            if (SetFileInformationByHandle(file, fileRenameInfoEx, info, (uint)capacity) == 0)
+                throw WindowsError("Cannot replace the model ledger head", Marshal.GetLastPInvokeError());
+        }
+    }
+
+    private static IOException WindowsError(string operation, int error)
+        => new(operation + ": " + new Win32Exception(error).Message, unchecked((int)(0x80070000u | (uint)error)));
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RenameInfo
+    {
+        public uint Flags;
+        public nint RootDirectory;
+        public uint FileNameLength;
+        public char FileName;
+    }
+
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    private static partial SafeFileHandle CreateFileW(string name, uint access, uint share, nint security, uint disposition, uint flags, nint template);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static unsafe partial int SetFileInformationByHandle(SafeFileHandle file, int informationClass, RenameInfo* information, uint size);
+
     internal static string Validate(string path,Guid sourceId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

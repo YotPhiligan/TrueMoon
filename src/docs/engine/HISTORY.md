@@ -1,3 +1,38 @@
+<a id="model-ledger-atomic-replace-2026-11-26"></a>
+## 2026-11-26 — атомарная замена head модельного ledger
+
+При [обновлении зависимостей](../core/HISTORY.md#dependency-refresh-2026-11-26)
+свежий Debug на Microsoft DI завершил импорт, но конкурентное открытие head
+иногда получало `FileNotFoundException` во время успешного `File.Replace`.
+Микропроверка Windows x64 на 350 заменах зафиксировала 1 715 таких открытий;
+`File.Move(overwrite: true)` не скрывал имя, но отказал 70 заменам при открытых
+читателях. `FileRenameInfoEx` с replace + POSIX не дал ни исчезновений имени,
+ни отказов writer; открытый дескриптор сохранил старое содержимое.
+
+В `1.2611.26.19-alpha` ledger публикуется одним POSIX-совместимым
+переименованием подготовленного файла в том же каталоге. Первый commit остаётся
+без overwrite. Generation CAS, checksum, `Flush(true)`, постоянный writer lease
+и wire-рецепты сохранены. Отсутствующий head не маскируется ретраями.
+[Контракт и границы](MODEL_SUBASSET_LEDGER.md#один-commit-для-candidate-и-ledger).
+
+Проверено в отдельном checkout на Windows x64, SDK 11:
+
+- Restore решения с `NuGetAuditMode=all` прошёл. Release-тесты
+  `ModelImportLedgerTests` и `ModelImportTests` — 54/54. Новые проверки
+  удерживают открытый старый head на длинном Unicode-пути и читают head
+  параллельно 80 заменам. [TRX](../../TestResults/LedgerAtomic-26-19/tests/ledger.trx).
+- `ManualTests/ModelLedgerConsumer/Verify.ps1` — 10/10 профилей, включая
+  независимые Debug и published Release на Cobalt и Microsoft DI из 11 свежих
+  пакетов. Пройдены конкурентное чтение, остановка publisher, повторное
+  открытие и освобождение writer lease. CPU-ревизия контрольной модели
+  совпала с [предыдущим манифестом](MODEL_SUBASSET_LEDGER_RESULTS.json).
+  [Манифест](../../TestResults/LedgerAtomic-26-19/acceptance/verification.json).
+- С включённым в поставку RichTextKit 0.6.175 прошли 44/44 Release-тестов
+  RichText. [TRX](../../TestResults/LedgerAtomic-26-19/tests/richtext.trx).
+
+Гарантия относится к локальной Windows FS с поддержкой POSIX rename.
+Power loss, сетевые каталоги и общая alpha-матрица не проверялись.
+
 <a id="player-package-view-acceptance-2026-11-26"></a>
 ## 2026-11-26 — пакетная приёмка миграции PlayerView
 

@@ -8,7 +8,7 @@ namespace TrueMoon.Aether.Importing.Assimp;
 
 internal static class Program
 {
-    internal const string NativeSha256 = "90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386";
+    internal const string NativeSha256 = "4EC73281A4FDDB735A0A59180EBFCEAB122EC8A8EF136814B2FCCCFB7B78E944";
     private static int Main(string[] args)
     {
         if (args.Length != 2 || !OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64) return 2;
@@ -54,7 +54,7 @@ internal static class Program
         try
         {
             uint Call(string name) => ((delegate* unmanaged[Cdecl]<uint>)NativeLibrary.GetExport(library, name))();
-            ModelImportProtocol.Require(Call("aiGetVersionMajor") == 6 && Call("aiGetVersionMinor") == 0 && Call("aiGetVersionPatch") == 5 &&
+            ModelImportProtocol.Require(Call("aiGetVersionMajor") == 6 && Call("aiGetVersionMinor") == 0 && Call("aiGetVersionPatch") == 6 &&
                 (Call("aiGetCompileFlags") & 0x20) == 0, "Assimp version or single-precision ABI mismatch.");
         }
         finally { NativeLibrary.Free(library); }

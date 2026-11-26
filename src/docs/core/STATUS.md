@@ -1,5 +1,10 @@
 # Core: состояние и точка продолжения
 
+На `1.2611.26.19-alpha` с обновлёнными AssimpNetter и RichTextKit прошли
+restore решения и 44 теста RichText. После исправления атомарной замены
+head прошли все 10 профилей ledger.
+[Отчёты](../engine/HISTORY.md#model-ledger-atomic-replace-2026-11-26).
+
 **2026-11-21 — CORE6a: изоляция событий App.** В `1.2611.21.11-alpha`
 настройка `AppLocalSourcesOnly` привязывает штатные источники DI и фабрики
 к pipeline своего App. По умолчанию действует подписка на весь процесс.

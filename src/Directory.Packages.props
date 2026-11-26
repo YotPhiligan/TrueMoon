@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Optional isolated importer only; Tooling and Runtime do not reference native Assimp. -->
-    <PackageVersion Include="AssimpNetter" Version="[6.0.5]" />
+    <PackageVersion Include="AssimpNetter" Version="[6.0.6]" />
     <PackageVersion Include="TrueMoon.MiniAudioEx" Version="4.0.1-truemoon.1" />
     <!-- Local patched Windows x64 dependency; see eng/native/MiniAudioEx. -->
     <PackageVersion Include="BepuPhysics" Version="[2.5.0-beta.33]" />
@@ -16,7 +16,7 @@
     <PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Windowing.Extensions.Veldrid" Version="2.23.0" />
     <PackageVersion Include="SkiaSharp" Version="4.157.0" />
-    <PackageVersion Include="Topten.RichTextKit" Version="0.6.174" />
+    <PackageVersion Include="Topten.RichTextKit" Version="0.6.175" />
     <PackageVersion Include="Veldrid.SPIRV" Version="1.0.15" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0" PrivateAssets="all" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" PrivateAssets="all" />

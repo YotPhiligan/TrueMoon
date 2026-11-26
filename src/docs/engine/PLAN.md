@@ -2160,6 +2160,11 @@ source→fresh package durable handoff, оба DI, D/R worker/consumer и Aether
 Limits1024active/4096total ledger, locator256UTF8bytes, candidate8MiB/record12MiB;
 native/CPU limits прежние. Failed/stale/cancelled precommit сохраняет exact old head.
 
+В `1.2611.26.19-alpha` замена head переведена на `FileRenameInfoEx` с POSIX.
+Конкурентное открытие и удержание старого поколения проверены; 10/10
+профилей исходниковой и пакетной приёмки.
+[Повторная проверка](HISTORY.md#model-ledger-atomic-replace-2026-11-26).
+
 **Ограниченный CPU g.1 завершён. Далее g.2 — Nom/build/runtime captured assets и
 activation; actual GPU/Editor asset consumer проверяется отдельно.** Прочие форматы,
 OS/AOT и release gates не закрываются этим срезом.

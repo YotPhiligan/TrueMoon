@@ -104,7 +104,7 @@ tags адресуют source objects только на время вызова: 
 persistent locator/Guid. Исходный InputRevision относится к **оригинальным captured
 bytes**, recipe фиксирует metadata-only преобразование; disk fallback отсутствует.
 
-Это учитывает lazy material/mesh tables и primitive-name suffix pinned Assimp6.0.5.
+Это учитывает lazy material/mesh tables и primitive-name suffix закреплённого Assimp.
 
 Для внешней PNG worker вычисляет locator `texture/<sha256>` по нормализованному
 имени зависимости относительно каталога исходников. Изменение содержимого
@@ -112,7 +112,7 @@ PNG сохраняет locator и ID. Изменение пути создаёт
 явное переименование через same-kind mapping. Ревизия render-ресурса вычисляется
 по каноническим декодированным texels. Material получает точный ключ текстуры
 при проекции в render-ресурсы проекта. [ARCH1f.5](RENDER_SURFACE.md#imported-base-color-texture)
-Основание: [source importer](https://github.com/assimp/assimp/blob/v6.0.5/code/AssetLib/glTF2/glTF2Importer.cpp).
+Основание: [source importer](https://github.com/assimp/assimp/blob/v6.0.6/code/AssetLib/glTF2/glTF2Importer.cpp).
 Native версии/SHA/precision, Job/callback quotas, finite deadline/kill/reap остаются
 из g.1b. Native input после tagging тоже ограничен16MiB/file/32MiB closure.
 
@@ -128,10 +128,12 @@ InputRevision/Revision не подменяет RenderAssetKey.Revision. Runtime 
 
 Publish берёт эксклюзивный OS FileStream `.write-lock`, читает целый current head,
 проверяет SourceId и **expectedGeneration**, строит/валидирует полный next record,
-пишет уникальный same-directory `.pending`, FlushAsync + Flush(true), проверяет
-cancellation и выполняет File.Replace (existing) либо File.Move(overwrite:false)
-(first generation). Это единственная точка публикации; все данные меняются вместе.
-Generation начинается с1 и увеличивается при каждом commit, даже identical reimport.
+пишет уникальный same-directory `.pending`, выполняет FlushAsync + Flush(true),
+проверяет cancellation и публикует одной операцией: первая версия через
+`File.Move(overwrite: false)`, последующие — через `FileRenameInfoEx` с флагами
+замены и [POSIX-семантики](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_rename_information).
+Новые читатели видят целое новое поколение, уже открытые дескрипторы читают
+старое. Generation начинается с 1 и увеличивается при каждом commit.
 
 До commit exception/cancel/stale сохраняет точные прежние head bytes и Current.
 После commit token не проверяется и публикация не откатывается. `.write-lock`
@@ -145,9 +147,10 @@ violations (5ms между ними); corrupt data/access denial не ретра
 неопубликованные данные. Старые orphan files можно удалить отдельно при отсутствии
 writer; модуль не удаляет неизвестные файлы по маске. Обычная ошибка до rename очищает
 свой staging file; cleanup failure сообщается вместе с исходной ошибкой. Все handles
-при этом освобождаются, orphan не является head. Scope — cooperating writers на local
-Windows filesystem, process-crash consistency после content flush; не ACL/hostile-FS
-sandbox и не гарантии power-loss/сетевых volumes. Open не мигрирует неизвестные schemas.
+при этом освобождаются, orphan не является head. Scope — cooperating writers
+на локальной Windows FS с поддержкой POSIX rename, process-crash consistency после
+content flush. Head получает метаданные staging-файла; каталог должен быть
+доверенным. Это не гарантии power-loss/сетевых volumes. Open не мигрирует неизвестные schemas.
 
 Budgets:1024active/4096total ledger entries, включая slots/bindings/instances;
 1024labels/renames, locator256UTF8bytes; candidate8MiB, sidecar12MiB. Existing CPU mesh
