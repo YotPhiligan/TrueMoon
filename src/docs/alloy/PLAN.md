@@ -477,11 +477,15 @@ ownership остаются прежними; вложенный Window не со
   host policy. Component close callbacks перед host callbacks, snapshot на attempt;
   Application/Native veto/error оставляют окно, Shutdown drains all/ignores vetoes.
   Caller cancellation отменяет wait, а не accepted attempt/actual drain.
-- HostedUiWindow создаёт root до native/graphics allocation: component initial
-  settings и root validation выполняются до HWND. Это явное уточнение прежнего
-  root-factory timing; фабрика не должна требовать current graphics context.
-  Component Title/ClientSize, включая defaults, имеют приоритет над host settings.
+- HostedUiWindow создаёт root до native/graphics allocation. Доступные до attach
+  Title/ClientSize, включая defaults, имеют приоритет над host settings; chrome
+  limits проверяются до HWND. Стартовые значения задавайте в конструкторе или
+  фабрике, не через отложенный стиль, `Content(...)` или attach-привязки.
+  Фабрика не должна требовать current graphics context.
   Native/platform/backend настройки остаются в Hosting options.
+  Запрет вложенных `Window` проверяется и до HWND, и после подготовки отложенного
+  дерева перед attach. `Window` в content-слоте рамки хоста допустим только
+  как исходный корень презентации; в заголовке он недопустим.
 - Полная fresh root ownership при failed startup; foreign trees не освобождаются.
   Disconnect предшествует tree/native dispose. Host добавляет одну existing frame,
   синхронизирует native/default painted title и effective style/binding properties

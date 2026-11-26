@@ -2,6 +2,7 @@ using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Views;
+using TrueMoon.Argentis.Windows;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Extensions.DependencyInjection;
@@ -57,6 +58,57 @@ public sealed class HostedUiSessionFactoryTests
         Assert.False(root.IsAttached); Assert.False(root.IsDisposed); Assert.Empty(backend.Surfaces); Assert.Equal(0, factory.ActiveSessionCount);
         using var session = typed.Create(new(root, new Target(), new(100, 100)));
         Assert.Same(root, session.Root); Assert.True(root.IsAttached); Assert.Equal(1, factory.ActiveSessionCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CreateValidatedSession_RejectsDeferredNestedWindowBeforeAttach(bool inTitleBar)
+    {
+        var backend = new Backend();
+        using var factory = new HostedUiSessionFactory(backend);
+        using var embedded = new Window();
+        var disposals = 0;
+        embedded.Own(new Cleanup(() => disposals++));
+        var deferred = new PresentationView();
+        deferred.Content(ui => ui.Adopt(embedded).Element);
+        var presentation = inTitleBar ? new Window() : (Element)deferred;
+        using var root = inTitleBar ? new WindowFrame(deferred, presentation) : presentation;
+        var attachments = 0;
+        deferred.AttachmentChanged += () => attachments++;
+
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            HostedUiWindow.CreateValidatedSession(factory, new(root, new Target(), new(100, 100)), presentation));
+
+        Assert.Contains("presentation root", error.Message);
+        Assert.Same(deferred, embedded.Parent);
+        Assert.Equal(0, attachments);
+        Assert.False(root.IsAttached);
+        Assert.Equal(0, factory.ActiveSessionCount);
+        Assert.Equal(1, Assert.Single(backend.Surfaces).Disposals);
+        root.Dispose();
+        Assert.Equal(1, disposals);
+    }
+
+    [Fact]
+    public void CreateValidatedSession_AllowsThePresentationWindowInsideTheHostFrame()
+    {
+        var backend = new Backend();
+        using var factory = new HostedUiSessionFactory(backend);
+        var presentation = new Window();
+        presentation.Content(ui => ui.Text("window content"));
+        using var frame = WindowFrame.CreateDefault("caption", presentation);
+
+        using var session = HostedUiWindow.CreateValidatedSession(factory,
+            new(frame, new Target(), new(100, 100)), presentation);
+
+        Assert.Same(frame, session.Root);
+        Assert.Same(presentation, frame.Content);
+        var text = Assert.IsType<Text>(presentation.Child);
+        Assert.True(text.IsAttached);
+        session.Dispose();
+        Assert.True(text.IsDisposed);
+        Assert.Equal(1, Assert.Single(backend.Surfaces).Disposals);
     }
 
     [Fact]
@@ -445,6 +497,8 @@ public sealed class HostedUiSessionFactoryTests
     });
 
     private static T Required<T>(IApp app) => Assert.IsAssignableFrom<T>(app.Services.GetService(typeof(T)));
+
+    private sealed class PresentationView : View;
 
     private sealed class DeferredRow : View
     {

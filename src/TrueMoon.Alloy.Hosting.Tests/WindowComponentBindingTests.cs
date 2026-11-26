@@ -31,8 +31,13 @@ public sealed class WindowComponentBindingTests
         using var window = new Window();
         window.WithViewStyle(new Declaration<Window>(style => style.Root()
             .Set(Window.TitleProperty, "styled caption").Set(Window.ClientSizeProperty, new Size(800, 600))));
-        var options = new SilkUiWindowOptions { Title = "legacy", Width = 320, Height = 240 };
-        WindowComponentBinding.ValidateRoot(window); WindowComponentBinding.Configure(window, options);
+        var options = new SilkUiWindowOptions
+        {
+            Title = "legacy", Width = 320, Height = 240,
+            Appearance = new WindowAppearance { Decorated = false },
+            Chrome = new WindowChromeOptions { MinimumSize = new(800, 600) }
+        };
+        WindowComponentBinding.Configure(window, options);
         Assert.Equal("styled caption", options.Title); Assert.Equal(800, options.Width); Assert.Equal(600, options.Height);
         Assert.False(window.IsHosted); Assert.Null(window.Parent); Assert.False(window.IsAttached);
         options.Chrome = new WindowChromeOptions { MinimumSize = new(900, 700) };
@@ -41,22 +46,43 @@ public sealed class WindowComponentBindingTests
     }
 
     [Fact]
-    public void ValidateRoot_RejectsForeignOwnershipAndNestedOrAlreadyHostedWindowWithoutChangingIt()
+    public void Configure_SnapshotsCaptionAndSizeBeforeDeferredStyleRuns()
+    {
+        using var window = new Window();
+        window.Content(ui => ui.Text("content"));
+        ViewCreation.Prepare(window, new Declaration<Window>(style => style.Root()
+            .Set(Window.TitleProperty, "after attach").Set(Window.ClientSizeProperty, new Size(1200, 900))));
+        var options = new SilkUiWindowOptions
+        {
+            Appearance = new WindowAppearance { Decorated = false },
+            Chrome = new WindowChromeOptions { MinimumSize = new(960, 540) }
+        };
+        WindowComponentBinding.Configure(window, options);
+        Assert.Equal("TrueMoon UI", options.Title);
+        Assert.Equal(960, options.Width);
+        Assert.Equal(540, options.Height);
+
+        using var ui = Create(window);
+        Assert.Equal("after attach", window.Title);
+        Assert.Equal(new Size(1200, 900), window.ClientSize);
+    }
+
+    [Fact]
+    public void ValidateFreshRoot_RejectsForeignOwnershipWithoutChangingIt()
     {
         using var component = new Window(); using var owner = new Panel(); owner.Add(component);
-        Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateRoot(component));
-        Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateRoot(owner));
+        Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateFreshRoot(component));
         Assert.Same(owner, component.Parent); Assert.False(component.IsDisposed); Assert.False(owner.IsDisposed);
-        owner.Items.Remove(component); WindowComponentBinding.ValidateRoot(component);
+        owner.Items.Remove(component); WindowComponentBinding.ValidateFreshRoot(component);
         using (var connection = component.AttachHost(new Controller()))
         {
-            Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateRoot(component));
+            Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateFreshRoot(component));
             Assert.True(component.IsHosted);
         }
         using var ui = Create(component);
-        Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateRoot(component)); Assert.True(component.IsAttached);
-        ui.Dispose(); Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateRoot(component));
-        using var ordinary = new Panel(); WindowComponentBinding.ValidateRoot(ordinary); Assert.False(ordinary.IsDisposed);
+        Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateFreshRoot(component)); Assert.True(component.IsAttached);
+        ui.Dispose(); Assert.Throws<InvalidOperationException>(() => WindowComponentBinding.ValidateFreshRoot(component));
+        using var ordinary = new Panel(); WindowComponentBinding.ValidateFreshRoot(ordinary); Assert.False(ordinary.IsDisposed);
     }
 
     [Theory]
@@ -66,6 +92,7 @@ public sealed class WindowComponentBindingTests
     [InlineData("hosted", false)]
     [InlineData("nested", true)]
     [InlineData("chrome-size", true)]
+    [InlineData("deferred-style-size", true)]
     public async Task StartupValidation_RejectsBeforeSessionOrNativeAndDisposesOnlyAdoptedFreshRoot(string kind, bool adopted)
     {
         var component = new Window { ClientSize = new(400, 300) }; var owned = new Counter(); component.Own(owned);
@@ -78,12 +105,20 @@ public sealed class WindowComponentBindingTests
         else if (kind == "nested") root = new Panel().WithChildren(component);
         var options = new SilkUiWindowOptions { Width = 1000, Height = 800, Appearance = new WindowAppearance { Decorated = false } };
         if (kind == "chrome-size") options.Chrome = new WindowChromeOptions { MinimumSize = new(800, 600) };
+        if (kind == "deferred-style-size")
+        {
+            component.Clear(Window.ClientSizeProperty);
+            component.Content(ui => ui.Text("content"));
+            ViewCreation.Prepare(component, new Declaration<Window>(style =>
+                style.Root().Set(Window.ClientSizeProperty, new Size(1200, 900))));
+            options.Chrome = new WindowChromeOptions { MinimumSize = new(1000, 800) };
+        }
         var sessions = new NoSessions(); var roots = 0;
         await using var dispatcher = new HostedUiDispatcher();
         var hosted = new HostedUiWindow(options, sessions, () => { roots++; return root!; }, null, dispatcher);
         var failure = await Record.ExceptionAsync(() => hosted.StartAsync());
         Assert.NotNull(failure);
-        if (kind == "chrome-size") Assert.IsType<ArgumentOutOfRangeException>(failure);
+        if (kind is "chrome-size" or "deferred-style-size") Assert.IsType<ArgumentOutOfRangeException>(failure);
         else Assert.IsType<InvalidOperationException>(failure);
         Assert.Same(failure, await Record.ExceptionAsync(() => hosted.Completion));
         Assert.False(hosted.IsClosed); Assert.Equal(1, roots); Assert.Equal(0, sessions.Creates);

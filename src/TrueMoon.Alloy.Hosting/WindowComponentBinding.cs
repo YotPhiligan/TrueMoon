@@ -19,16 +19,10 @@ internal sealed class WindowComponentBinding : IDisposable
         _lastTitle = component.Title; _lastSize = component.ClientSize;
         _connection = component.AttachHost(controller);
     }
-    internal static void ValidateRoot(Element root)
+    internal static void ValidateFreshRoot(Element root)
     {
         if (root.IsDisposed || root.IsAttached || root.Parent != null || root is Window { IsHosted: true })
             throw new InvalidOperationException("The root factory must return a fresh, detached root.");
-        Visit(root, true);
-        static void Visit(Element element, bool root)
-        {
-            if (!root && element is Window) throw new InvalidOperationException("A Window must be the presentation root, not an embedded child.");
-            foreach (var child in element.Children) Visit(child, false);
-        }
     }
     internal static void Configure(Window component, SilkUiWindowOptions options)
     {

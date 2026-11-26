@@ -55,12 +55,16 @@ another owner's tree. Factory exceptions remain observable through Completion.
 
 The root may be an Argentis `Window` / `Window<TData>`. Use the same
 `UsePresentation<TWindow>` with an explicit `IFactory<TWindow>`.
-Effective component Title/ClientSize take precedence over SilkUiWindowOptions
-Title/Width/Height, including their component defaults. Other native/backend
-settings remain host configuration. Root construction is now before native
-allocation, allowing initial component settings and root validation to run first;
-root factories must not depend on a current graphics context. Fresh roots are
-disposed on failed startup; foreign parented/attached/hosted roots remain untouched.
+The effective `Title` and `ClientSize` available before attachment take precedence
+over `SilkUiWindowOptions.Title`/`Width`/`Height`, including the component defaults.
+Set required startup values in the constructor or through factory arguments.
+Hosting validates this initial size against `Chrome.MinimumSize`/`MaximumSize`
+before native allocation. Deferred `Content(...)`, attach-time bindings, and
+deferred view styles cannot supply or correct these initial values. Values already
+effective before attach, including eager styles, still participate. Other native
+and backend settings remain host configuration. Root factories must not depend
+on a current graphics context. Fresh roots are disposed on failed startup;
+foreign parented/attached/hosted roots remain untouched.
 
 The host adds the existing frame once, connects component actions to its own
 coordinator, and polls effective properties on the owner, including style/theme
@@ -69,8 +73,11 @@ does not rewrite requested properties or rebuild the tree. Component Closing
 callbacks precede host Closing callbacks in each attempt; a component veto stops
 the user attempt before host handlers run. Shutdown still drains every callback.
 The host disconnects the component before disposing the UI tree and native resources.
-Nested Window roots are rejected; ordinary View roots retain their existing frame
-configuration and close handlers. Reusing a disposed component requires a new factory product.
+Only the original presentation root may be a `Window`, including when the host
+wraps it in its own `WindowFrame`. Hosting rejects nested windows in the initial
+tree and again after deferred contents (including title bar contents) are prepared,
+before attachment and session publication. Ordinary View roots retain their
+existing frame configuration and close handlers. Reopening requires a new root.
 
 `UiRendererKind` exposes the selected built-in integration. Raster accepts RasterUiTarget
 for external sessions; OpenGL/OpenGLUiTarget and Vulkan/VulkanUiTarget use matching

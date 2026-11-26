@@ -21,6 +21,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private int _attachmentVersion;
     private bool _disposing;
     internal bool ChangingTree { get; set; }
+    internal Element? PresentationRootForAttach { private get; set; }
     private Style? _style;
     private Style? _viewStyle;
     private HashSet<object>? _viewStyleRoles;
@@ -419,6 +420,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (DependencyOwnership?.DraftOwner != null)
             throw new InvalidOperationException("A view-owned draft must be transferred by its owner.");
         PrepareAttachmentSubtree(controlFactories);
+        if (PresentationRootForAttach is { } presentationRoot)
+            Window.ValidatePresentationTree(this, presentationRoot);
         using var change = new TreeChange(this);
         AttachCore(verifyAccess, post, detaching, controlFactories, change);
         DependencyOwnership?.Release(this);

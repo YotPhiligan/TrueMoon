@@ -221,10 +221,9 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     private void Initialize()
     {
         var root = _root() ?? throw new InvalidOperationException("The root factory returned null.");
-        if (root.IsDisposed || root.IsAttached || root.Parent != null || root is Window { IsHosted: true })
-            throw new InvalidOperationException("The root factory must return a fresh, detached root.");
+        WindowComponentBinding.ValidateFreshRoot(root);
         _startupRoot = root;
-        WindowComponentBinding.ValidateRoot(root);
+        Window.ValidatePresentationTree(root, root);
         if (root is Window component) WindowComponentBinding.Configure(component, _options);
         var openGL = _options.GraphicsApi == UiWindowGraphicsApi.OpenGL;
         _window = new SilkWindowHost(_options.Width, _options.Height, _options.Title, openGL, _options.Appearance, _options.Chrome);
@@ -237,6 +236,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
                 size => { _options.Chrome?.ValidateSize(size); _window.Resize((int)size.Width, (int)size.Height); });
         AppearanceCapabilities = _window.AppearanceCapabilities;
         ChromeCapabilities = _window.ChromeCapabilities;
+        UiSession session;
         if (openGL)
         {
             var gl = _window.NativeWindow.GLContext ?? throw new NotSupportedException("Silk did not create an OpenGL context.");
@@ -245,7 +245,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
             using var api = Silk.NET.OpenGL.GL.GetApi(name => gl.TryGetProcAddress(name, out var address) ? address : 0);
             var deviceInfo = new UiRenderDeviceInfo("OpenGL", api.GetStringS(Silk.NET.OpenGL.StringName.Renderer),
                 api.GetStringS(Silk.NET.OpenGL.StringName.Vendor), api.GetStringS(Silk.NET.OpenGL.StringName.Version));
-            _session = CreateSession(root, new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent)
+            session = CreateSession(root, new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent)
                 { DeviceInfo = deviceInfo }, _window);
         }
         else
@@ -253,11 +253,10 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
             _device = new VulkanDevice(_window.NativeWindow, _options.ValidationMessage);
             _presenter = new VulkanWindowPresenter(_device, _options.Appearance.Transparency);
             SupportsPerPixelTransparency = _window.AppearanceCapabilities.TransparentFramebuffer && _presenter.SupportsPerPixelTransparency;
-            _session = CreateSession(root, SilkVulkanHost.CreateTarget(_device), _window);
+            session = CreateSession(root, SilkVulkanHost.CreateTarget(_device), _window);
         }
-        _startupRoot = null;
         _window.Input += Input;
-        _frames.Attach(_session);
+        _frames.Attach(session);
         _window.RenderRequested += Render;
         _window.NativeWindow.Closing += NativeClosing;
     }
@@ -410,29 +409,47 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, I
     }
     private UiSession CreateSession(Element root, UiRenderTarget target, SilkWindowHost window)
     {
+        var presentationRoot = root;
         Element? title = null;
         try
         {
             if (_options.TitleBarFactory != null)
             {
                 title = _options.TitleBarFactory(window) ?? throw new InvalidOperationException("TitleBarFactory returned null.");
-                root = _windowFrame = new WindowFrame(title, root);
+                _startupRoot = root = _windowFrame = new WindowFrame(title, root);
             }
             else if (_options.Chrome != null && _options.UseDefaultWindowFrame)
             {
-                var frame = WindowFrame.CreateDefault(_options.Title, root); root = _windowFrame = frame;
+                var frame = WindowFrame.CreateDefault(_options.Title, root);
+                _startupRoot = root = _windowFrame = frame;
                 frame.TitleBarOverContent = _options.TitleBarOverContent;
                 frame.UseSystemAccentBorder = _options.UseSystemAccentBorder;
                 _options.ConfigureDefaultTitleBar?.Invoke(frame.DefaultTitleBar!, frame.Content, () => { _ = RequestCloseAsync(); });
                 _defaultFrame = new(frame, window, () => { _ = RequestCloseAsync(); });
                 _defaultFrame.Synchronize(window.IsFocused);
             }
-            var session = ((IFactory<UiSession, UiSessionCreation>)_sessions).Create(new(root, target, window.Viewport, window));
+            var session = CreateValidatedSession(_sessions, new(root, target, window.Viewport, window), presentationRoot);
+            _session = session;
+            _startupRoot = null;
             if (_options.EnableDiagnostics) _diagnostics = session.EnableDiagnostics(Id);
             return session;
         }
-        catch (Exception error) { UiCleanup.Complete(error, root.Dispose,
-            () => { if (title is { Parent: null, IsAttached: false, IsDisposed: false }) title.Dispose(); }); throw; }
+        catch (Exception error)
+        {
+            // Cleanup owns the root or frame, and disconnects the component before disposing the tree.
+            if (title is { Parent: null, IsAttached: false, IsDisposed: false })
+                UiCleanup.Complete(error, title.Dispose);
+            throw;
+        }
+    }
+
+    internal static UiSession CreateValidatedSession(IUiSessionFactory sessions, UiSessionCreation creation, Element presentationRoot)
+    {
+        var root = creation.Root;
+        // Validate after Content has run with the session's factories, before any attach notifications.
+        root.PresentationRootForAttach = presentationRoot;
+        try { return ((IFactory<UiSession, UiSessionCreation>)sessions).Create(creation); }
+        finally { root.PresentationRootForAttach = null; }
     }
     private void Execute(Action operation)
     {

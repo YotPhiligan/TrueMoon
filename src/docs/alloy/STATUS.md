@@ -3,6 +3,11 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+Hosting проверяет запрет вложенных `Window` до native-окна и после подготовки
+отложенного дерева перед attach. Стартовые `Title`/`ClientSize` берутся до attach;
+chrome limits не зависят от отложенного стиля.
+[Контракт UIA2](PLAN.md#uia2-window).
+
 В `1.2611.26.13-alpha` наблюдатели могут обновлять дочернее дерево через
 `UiSynchronization.AfterTreeChange`. `OwnDraft` удерживает ранние контролы
 до передачи, `NamedOptional` генерирует nullable-части.

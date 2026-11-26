@@ -12,9 +12,14 @@ App close coordinator, включая asynchronous save/drain.
 `UsePresentation<TWindow>` с зарегистрированной `IFactory<TWindow>`. Компонент задаёт Title/ClientSize, содержимое,
 bindings и scoped style; native/GPU ресурсы остаются у Hosting. Корневая фабрика
 вызывается на UI owner **до** native/graphics allocation и не должна требовать
-current graphics context. Effective Title/ClientSize компонента имеют приоритет
-над Title/Width/Height host options. Native state возвращается отдельно через
-State/IsActive/ActualClientSize, сохраняя запрошенный размер и существующее дерево.
+current graphics context. Задавайте стартовые `Title` и `ClientSize` в
+конструкторе или аргументах фабрики: значения, доступные до attach, имеют
+приоритет над параметрами хоста и определяют проверку `Chrome.MinimumSize` /
+`MaximumSize`. Отложенные Content, привязки и стили не могут исправить стартовый
+размер. Hosting проверяет дерево и после выполнения `Content(...)`, в том числе
+в заголовке: `Window` допустим только как корень презентации, даже если хост
+оборачивает его в `WindowFrame`. Native state возвращается отдельно через
+`State`/`IsActive`/`ActualClientSize`, сохраняя запрошенный размер и дерево.
 Closing компонента исполняется перед host callbacks через прежний async close
 coordinator. Подробный контракт и ownership — в [package README](PACKAGE.md).
 

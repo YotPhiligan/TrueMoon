@@ -5,7 +5,8 @@ namespace TrueMoon.Argentis.Windows;
 
 /// <summary>A root view describing one standalone window without allocating platform or graphics resources.</summary>
 /// <remarks>The host creates this view on its UI owner thread and owns the returned tree. Data, styles and
-/// the controller are borrowed. ClientSize configures the native client area; inherited Width/Height only affect layout.</remarks>
+/// the controller are borrowed. Set startup Title and ClientSize before attachment; deferred styles
+/// apply later. ClientSize configures the native client area; inherited Width/Height only affect layout.</remarks>
 public class Window : View
 {
     /// <summary>The window caption, including the native taskbar caption when hosted.</summary>
@@ -20,6 +21,15 @@ public class Window : View
     public string Title { get => Get(TitleProperty); set => Set(TitleProperty, value); }
     /// <summary>Gets or requests the client area. Native resize observations do not overwrite this request.</summary>
     public Size ClientSize { get => Get(ClientSizeProperty); set => Set(ClientSizeProperty, value); }
+
+    internal static void ValidatePresentationTree(Element element, Element presentationRoot)
+    {
+        if (element is Window && !ReferenceEquals(element, presentationRoot))
+            throw new InvalidOperationException("A Window must be the presentation root, not an embedded child.");
+        var children = element.Children;
+        for (var i = 0; i < children.Count; i++) ValidatePresentationTree(children[i], presentationRoot);
+    }
+
     /// <summary>Whether one host currently borrows this component's window actions.</summary>
     public bool IsHosted => _connection != null;
     /// <summary>Last observed native presentation state; Normal before hosting.</summary>
