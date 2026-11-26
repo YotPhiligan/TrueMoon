@@ -1,3 +1,20 @@
+<a id="editor-panel-factories-2026-11-26"></a>
+## 2026-11-26 — ревизия DI-фабрик иерархии и инспектора
+
+`1.2611.26.17-alpha`. `UseAetherEditorHierarchy` и `UseAetherEditorEditing`
+оставляют явные `IFactory<TView>`. Они передают конкретные App-owned модели
+в UI через интерфейсы конструктора, не регистрируя второй disposable
+DI-алиас. `EditorView` создаёт панели при подготовке `Content(...)`; каждое
+дерево принадлежит своему UI-родителю. Разметка и production API не менялись.
+
+Debug, .NET 11: `dotnet test` для `EditorHierarchyCompositionTests` и
+`EditorInspectorCompositionTests` — 26/26 (13 Cobalt, 13 Microsoft DI).
+Проверены применение пользовательского стиля при attach, независимые
+деревья с общей моделью, её жизнь после закрытия одной панели, отказ без
+обязательных зависимостей и при повторной или заранее заданной фабрике.
+[TRX](../../TestResults/EditorPanelFactories-26-17/editor-panel-factories.trx).
+Нативная и пакетная проверка в этот прогон не входила.
+
 <a id="editor-diagnostics-interaction-2026-11-26"></a>
 ## 2026-11-26 — resize, автопрокрутка и экспорт в консоли Editor
 

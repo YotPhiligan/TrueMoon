@@ -45,7 +45,8 @@ Editor и агентов.
 
 [Миграция всех View Aether](#aether-view-authoring-migration): `PlayerView`,
 оболочка Editor и консоль диагностики проверены в своих профилях из исходников.
-Далее — фабрики инспектора и иерархии, затем пакетная приёмка Editor.
+Фабрики инспектора и иерархии проверены на обоих DI-провайдерах.
+Для Editor остаётся пакетная приёмка.
 
 [Два независимых переопределения ED4i](EDITOR_PLAN.md#ed4i-independent-slot-overrides)
 проверены в версии `1.2611.20.3-alpha` с Undo и перезапуском Editor.
@@ -134,10 +135,11 @@ ARCH3.1–9, ARCH1j и ENG7b.3 остаются завершёнными в св
   Снимок viewport обновляется независимо от автопрокрутки. Хвост журнала
   прокручивается в текущем layout, экспорт доступен при узкой ширине.
   [Проверки](HISTORY.md#editor-diagnostics-interaction-2026-11-26).
-- [ ] **Оставшиеся Fluent-панели.** Проверить фабрики `EditorHierarchyView`
-  и `EditorInspectorView` на Cobalt и Microsoft DI: пользовательский стиль,
-  отказ при повторной регистрации, независимые деревья и одна App-owned модель.
-  Не переписывать разметку и не добавлять второй владеющий DI-алиас ради `.View<…>()`.
+- [x] **Оставшиеся Fluent-панели.** Фабрики `EditorHierarchyView` и
+  `EditorInspectorView` проверены на Cobalt и Microsoft DI: стиль применяется
+  при attach, конфликтующие регистрации отклоняются, независимые деревья
+  заимствуют одну App-owned модель на панель. Явные фабрики и разметка
+  сохранены. [Проверки](HISTORY.md#editor-panel-factories-2026-11-26).
 - [ ] **Итоговая пакетная приёмка Editor.** Взять свежие пакеты по
   [инструкции независимого потребителя](../../ManualTests/AetherPackageConsumer/README.md#native-editor-acceptance-arch2e3).
   Проверить стандартное окно на Cobalt и встраиваемый Editor на Microsoft DI.

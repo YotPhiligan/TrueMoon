@@ -183,8 +183,10 @@ Replace работают из интерфейса Editor во время Playin
 прокручивает хвост за один layout и принимает мышь и клавиатуру для экспорта
 при ширине 720. 26.11.2026: 91 тест диагностики (Debug, CPU Skia в профиле
 экспорта). [Результаты](HISTORY.md#editor-diagnostics-interaction-2026-11-26).
-Далее — ревизия фабрик `EditorHierarchyView` и `EditorInspectorView`,
-затем приёмка стандартного и встраиваемого Editor на свежих пакетах.
+Ревизия фабрик `EditorHierarchyView` и `EditorInspectorView` завершена:
+26/26 адресных тестов на Cobalt и Microsoft DI.
+[Результаты](HISTORY.md#editor-panel-factories-2026-11-26).
+Далее — приёмка стандартного и встраиваемого Editor на свежих пакетах.
 Пакет Player собран; отдельный restore потребителя миграции остаётся открытым.
 
 Для TrueMoon.Tales — провести персонажа Kton через ступени и скосы и

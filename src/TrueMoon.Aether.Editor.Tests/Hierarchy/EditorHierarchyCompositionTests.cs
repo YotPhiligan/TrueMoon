@@ -31,13 +31,17 @@ public sealed class EditorHierarchyCompositionTests
         }).Build();
         var model = app.Services.Resolve<EditorHierarchyViewModel>()!; model.Refresh();
         var factory = app.Services.Resolve<IFactory<EditorHierarchyView>>()!;
-        var first = Assert.IsType<EditorHierarchyView>(factory.Create()); var second = Assert.IsType<EditorHierarchyView>(factory.Create());
+        using var first = Assert.IsType<EditorHierarchyView>(factory.Create());
+        using var second = Assert.IsType<EditorHierarchyView>(factory.Create());
+        Assert.Equal(0, style.Configurations);
         using var ui1 = DocumentUiFixture.Ui(first); using var ui2 = DocumentUiFixture.Ui(second); ui1.Update(); ui2.Update();
         Assert.Same(model, app.Services.Resolve<EditorHierarchyViewModel>()); Assert.Same(factory, app.Services.Resolve<IFactory<EditorHierarchyView>>());
         Assert.Same(test.Workspace, app.Services.Resolve<EditorWorkspace>()); Assert.Same(test.Transform, app.Services.Resolve<EditorInspectorViewModel>());
         Assert.Same(test.Owner.Commands, app.Services.Resolve<EditorDocumentCommands>()); Assert.Same(style, app.Services.Resolve<IViewStyle<EditorHierarchyView>>());
         Assert.Same(model, first.DataContext); Assert.Same(model, second.DataContext); Assert.NotSame(first, second); Assert.NotSame(first.Tree, second.Tree);
         Assert.Equal(2, style.Configurations);
+        Assert.Equal(new Thickness(17), first.Padding);
+        Assert.Equal(new Thickness(17), second.Padding);
         first.Tree.Select(HierarchyFixture.Parent); ui1.Update(); ui2.Update();
         Assert.Equal(HierarchyFixture.Parent, second.Tree.SelectedId); Assert.Equal("2", test.Transform.Fields[0].Value);
         ui1.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed); Assert.False(test.Owner.Commands.Read().Closed);
@@ -72,23 +76,30 @@ public sealed class EditorHierarchyCompositionTests
     }
 
     [Theory]
-    [InlineData("workspace")]
-    [InlineData("commands")]
-    [InlineData("transform")]
-    [InlineData("duplicate")]
-    public void Registration_RejectsEachMissingBoundaryAndDuplicateComposition(string missing)
+    [InlineData("workspace", false)]
+    [InlineData("workspace", true)]
+    [InlineData("commands", false)]
+    [InlineData("commands", true)]
+    [InlineData("transform", false)]
+    [InlineData("transform", true)]
+    [InlineData("factory", false)]
+    [InlineData("factory", true)]
+    [InlineData("duplicate", false)]
+    [InlineData("duplicate", true)]
+    public void BothProviders_RejectMissingDependenciesAndDuplicateHierarchy(string kind, bool microsoft)
     {
         using var test = new HierarchyFixture();
-        Assert.Throws<InvalidOperationException>(() => App.Builder(_ => { }).Setup(context =>
+        Assert.Throws<InvalidOperationException>(() => App.Builder(configuration => { if (microsoft) configuration.UseDI(); }).Setup(context =>
         {
             context.Services(services =>
             {
-                if (missing != "workspace") services.Singleton<EditorWorkspace>(_ => test.Workspace);
-                if (missing != "commands") services.Singleton<EditorDocumentCommands>(_ => test.Owner.Commands);
-                if (missing != "transform") services.Singleton<EditorInspectorViewModel>(_ => test.Transform);
+                if (kind != "workspace") services.Singleton<EditorWorkspace>(_ => test.Workspace);
+                if (kind != "commands") services.Singleton<EditorDocumentCommands>(_ => test.Owner.Commands);
+                if (kind != "transform") services.Singleton<EditorInspectorViewModel>(_ => test.Transform);
+                if (kind == "factory") services.Singleton<IFactory<EditorHierarchyView>>(_ => throw new NotSupportedException());
             });
             context.UseAetherEditorHierarchy();
-            if (missing == "duplicate") context.UseAetherEditorHierarchy();
+            if (kind == "duplicate") context.UseAetherEditorHierarchy();
         }).Build());
         Assert.False(test.Owner.Commands.Read().Closed); Assert.True(test.Transform.CanEdit);
     }
@@ -96,6 +107,10 @@ public sealed class EditorHierarchyCompositionTests
     private sealed class CountingStyle : IViewStyle<EditorHierarchyView>
     {
         public int Configurations;
-        public void Configure(IViewStyleBuilder<EditorHierarchyView> styles) { Configurations++; new EditorHierarchyViewStyle().Configure(styles); }
+        public void Configure(IViewStyleBuilder<EditorHierarchyView> styles)
+        {
+            Configurations++;
+            styles.Root().Padding(17);
+        }
     }
 }

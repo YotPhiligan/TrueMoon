@@ -30,10 +30,14 @@ public sealed class EditorInspectorCompositionTests
         }).Build();
         var model = app.Services.Resolve<EditorInspectorViewModel>()!; model.Refresh(InspectorFixture.Child);
         var factory = app.Services.Resolve<IFactory<EditorInspectorView>>()!;
-        var first = Assert.IsType<EditorInspectorView>(factory.Create()); var second = Assert.IsType<EditorInspectorView>(factory.Create());
+        using var first = Assert.IsType<EditorInspectorView>(factory.Create());
+        using var second = Assert.IsType<EditorInspectorView>(factory.Create());
+        Assert.Equal(0, style.Configurations);
         using var ui1 = InspectorFixture.Ui(first); using var ui2 = InspectorFixture.Ui(second); ui1.Update(); ui2.Update();
         Assert.Same(model, app.Services.Resolve<EditorInspectorViewModel>()); Assert.Same(factory, app.Services.Resolve<IFactory<EditorInspectorView>>());
         Assert.Same(style, app.Services.Resolve<IViewStyle<EditorInspectorView>>()); Assert.Equal(2, style.Configurations);
+        Assert.Equal(new Thickness(19), first.Padding);
+        Assert.Equal(new Thickness(19), second.Padding);
         Assert.Same(model, first.DataContext); Assert.Same(model, second.DataContext); Assert.NotSame(first, second);
         var address = (DocumentData.Custom, "text");
         Assert.NotSame(first.Properties[address].Input, second.Properties[address].Input);
@@ -76,21 +80,27 @@ public sealed class EditorInspectorCompositionTests
     }
 
     [Theory]
-    [InlineData("commands")]
-    [InlineData("preview")]
-    [InlineData("duplicate")]
-    public void Registration_RejectsMissingRuntimeBoundaryOrDuplicateWithoutOwningUnbuiltDependencies(string missing)
+    [InlineData("commands", false)]
+    [InlineData("commands", true)]
+    [InlineData("preview", false)]
+    [InlineData("preview", true)]
+    [InlineData("factory", false)]
+    [InlineData("factory", true)]
+    [InlineData("duplicate", false)]
+    [InlineData("duplicate", true)]
+    public void BothProviders_RejectMissingDependenciesAndDuplicateInspector(string kind, bool microsoft)
     {
         using var test = new InspectorFixture();
-        Assert.Throws<InvalidOperationException>(() => App.Builder(_ => { }).Setup(context =>
+        Assert.Throws<InvalidOperationException>(() => App.Builder(configuration => { if (microsoft) configuration.UseDI(); }).Setup(context =>
         {
             context.Services(services =>
             {
-                if (missing != "commands") services.Singleton<EditorDocumentCommands>(_ => test.Owner.Commands);
-                if (missing != "preview") services.Singleton<EditorPreview>(_ => test.Preview);
+                if (kind != "commands") services.Singleton<EditorDocumentCommands>(_ => test.Owner.Commands);
+                if (kind != "preview") services.Singleton<EditorPreview>(_ => test.Preview);
+                if (kind == "factory") services.Singleton<IFactory<EditorInspectorView>>(_ => throw new NotSupportedException());
             });
             context.UseAetherEditorEditing();
-            if (missing == "duplicate") context.UseAetherEditorEditing();
+            if (kind == "duplicate") context.UseAetherEditorEditing();
         }).Build());
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Equal(0, test.Owner.Authoring.Products[0].Disposals);
         test.Property(DocumentData.Custom, "text").Value = "still alive"; test.Model.Apply();
@@ -100,6 +110,10 @@ public sealed class EditorInspectorCompositionTests
     private sealed class CountingStyle : IViewStyle<EditorInspectorView>
     {
         public int Configurations;
-        public void Configure(IViewStyleBuilder<EditorInspectorView> styles) { Configurations++; new EditorInspectorViewStyle().Configure(styles); }
+        public void Configure(IViewStyleBuilder<EditorInspectorView> styles)
+        {
+            Configurations++;
+            styles.Root().Padding(19);
+        }
     }
 }
