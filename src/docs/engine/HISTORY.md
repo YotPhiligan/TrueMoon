@@ -1,3 +1,32 @@
+<a id="editor-main-window-fluent-2026-11-26"></a>
+## 2026-11-26 — EditorMainWindow на Fluent Content
+
+`1.2611.26.14-alpha`. Оконная фабрика проверяет скопированные `Title` и
+`ClientSize` до создания `EditorView`. Хосту до attach доступны начальная
+подпись и тот же `EditorView.Overlays`; `OwnDraft` удерживает редактор до
+`Content(..., ui => ui.Adopt(EditorView))`. Оконный стиль применяется при
+attach, а стиль вложенного редактора остаётся в его собственной области.
+
+`ObserveState` обновляет подпись и `AccessibleName` в очереди текущего
+подключения. Отсоединённое окно не следит за документом; при повторном
+attach оно читает актуальное состояние, не используя старую очередь.
+Политика Save/Discard/Cancel и типизированные фабрики окна и заголовка
+не менялись. Встраиваемый хост по-прежнему получает `EditorView` напрямую.
+
+- Debug: 124/124 адресных теста Editor. Проверены
+  `FactoryReturningAnotherUnshownWindowsEditor_CannotStealTheDraft`,
+  `AttachStyleFailure_DisposesAdoptedEditorAndPreservesBorrowedModelsAndBothErrors`,
+  `CaptionDetachReattach_DiscardsOldQueuedWorkAndCoalescesLatestStateWithoutRebuilding`
+  и действующий chained callback заголовка.
+- `AetherEditorHost --smoke-documents`: родное окно OpenGL прошло сохранение,
+  запросы закрытия, отмену и выход. После закрытия — ноль UI-сессий,
+  GPU-ресурсов, handle и дочерних процессов. Из 17 кадров 14 побайтно
+  равны `.26.13-alpha`; в остальных отличия ограничены текстовыми строками
+  с путём тестовой копии и новым GUID сцены.
+
+Отчёты: `TestResults/EditorMainWindowFluent-26-14/`. Это проверка из
+исходников; итоговый профиль на свежих пакетах остаётся в плане.
+
 <a id="editor-view-contracts-2026-11-26"></a>
 ## 2026-11-26 — контракты EditorView и удаление скрытого Toolbar
 

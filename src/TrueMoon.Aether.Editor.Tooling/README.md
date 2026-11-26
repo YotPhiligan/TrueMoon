@@ -40,13 +40,15 @@ Pitch/Yaw/Roll в радианах и Scale с общими NumberBox/Vector3Edi
 `UseAetherEditor(configureEngine, configureEditor)`; optional стандартное окно —
 `UseAetherEditorWindow(fonts, configureWindow)`. [API, ownership и quickstart](PACKAGE.md).
 
-Стандартный host создаёт `EditorMainWindow : Window<EditorViewModel>` через
-`IFactory<EditorMainWindow, EditorMainWindowArguments>`. Он владеет одним EditorView;
-модели/style заимствуются. Title/Width/Height копируются после configureWindow,
-native и compact caption используют одну функцию модели документа. Public
-ConfigureDefaultTitleBar по-прежнему получает EditorView, включая chained callbacks.
-Root создаётся до native/GPU, viewport initialization остаётся после первого frame.
-EditorWindow сохраняет единственную Save/Discard/Cancel policy. Custom/embedded
+Стандартный host создаёт `EditorMainWindow : Window<IEditorViewModel>` через
+`IFactory<EditorMainWindow, EditorMainWindowArguments>`. Окно проверяет
+Title/Width/Height после configureWindow и создаёт один `EditorView`, чтобы
+заголовок мог заранее получить его `OverlayHost`. `ConfigureDefaultTitleBar`
+по-прежнему получает `EditorView`, включая chained callbacks. Свойство
+`EditorView` доступно до attach, а `Child` и стиль окна готовятся при attach.
+Native и compact caption используют общее представление документа.
+Корень создаётся до native/GPU, viewport initialization — после первого кадра.
+`EditorWindow` сохраняет единственную Save/Discard/Cancel policy. Custom/embedded
 hosts продолжают получать EditorView напрямую; для standard root используйте
 `EditorMainWindow.FromRoot(ui.Root).EditorView`. [Подробный контракт](PACKAGE.md).
 Main/CLI/App composition находятся в тонком

@@ -99,3 +99,10 @@ toolbar. `Toolbar` is nullable and `Commands` lists standalone buttons only.
 Use `EditorHeaderView.RuntimeCommands` for availability in compact mode and
 the visible heading/menu actions for input. Mode-specific `EditorView` parts
 such as `EntityList` and `PropertiesPanel` now return null when absent.
+
+In `1.2611.26.14-alpha`, `EditorMainWindow.EditorView`, the initial caption,
+and the requested client size still exist before native hosting. The window
+owns the early editor draft and adopts it into `Child` on first attachment.
+The wrapper style is applied at that point, not when the window factory
+returns. Caption updates observe the borrowed document model only while
+attached and are coalesced on the current UI session.

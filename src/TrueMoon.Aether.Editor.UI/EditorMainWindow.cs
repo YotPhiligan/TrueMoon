@@ -1,6 +1,7 @@
+using TrueMoon.Argentis.Bindings;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis.Windows;
-using System.ComponentModel;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI;
@@ -12,12 +13,11 @@ public sealed class EditorMainWindow : Window<IEditorViewModel>
 {
     private readonly IEditorDocumentViewModel _documents;
     private readonly string _baseTitle;
-    private bool _captionPending;
-    /// <summary>The single owned editor content instance, also passed to the standard header and presentation adapter.</summary>
+    /// <summary>The window-owned editor. The title-bar callback can borrow it before the window attaches.</summary>
     public EditorView EditorView { get; }
     /// <summary>Creates the caller-owned standalone root from borrowed App services and copied initial settings.</summary>
     /// <param name="model">App-owned main presentation model.</param><param name="documents">App-owned caption/document presentation.</param>
-    /// <param name="views">Creates a fresh EditorView belonging to the same model.</param>
+    /// <param name="views">Creates the early editor after the window settings are validated.</param>
     /// <param name="style">Borrowed scoped wrapper appearance; nested EditorView retains its own style.</param>
     /// <param name="arguments">Initial caption/client area copied after host overrides.</param>
     public EditorMainWindow(IEditorViewModel model, IEditorDocumentViewModel documents, IFactory<EditorView> views,
@@ -26,33 +26,23 @@ public sealed class EditorMainWindow : Window<IEditorViewModel>
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(documents);
         ArgumentNullException.ThrowIfNull(views); ArgumentNullException.ThrowIfNull(style); ArgumentNullException.ThrowIfNull(arguments);
         _documents = documents; _baseTitle = arguments.Title;
-        EditorView? accepted = null;
         try
         {
             Title = arguments.Title; ClientSize = arguments.ClientSize;
             var view = views.Create() ?? throw new InvalidOperationException("Editor view factory returned null.");
             if (view.IsDisposed || view.IsAttached || view.Parent != null)
                 throw new InvalidOperationException("Editor view factory must return a fresh, detached view.");
-            accepted = view;
+            EditorView = OwnDraft(view);
             if (!ReferenceEquals(view.DataContext, model))
                 throw new ArgumentException("Editor view belongs to another presentation model.", nameof(views));
-            EditorView = view;
-            DataContext = model;
-            SetContent(view);
+            Content(model, ui => ui.Adopt(EditorView));
             this.WithViewStyle(style);
-            _documents.PropertyChanged += DocumentChanged;
-            Own(new Subscription(() => _documents.PropertyChanged -= DocumentChanged));
-            AttachmentChanged += Attachment;
-            Own(new Subscription(() => AttachmentChanged -= Attachment));
             UpdateCaption();
         }
         catch (Exception error)
         {
-            var errors = new List<Exception> { error };
-            try { Dispose(); } catch (Exception cleanup) { errors.Add(cleanup); }
-            if (accepted is { Parent: null, IsAttached: false, IsDisposed: false })
-                try { accepted.Dispose(); } catch (Exception cleanup) { errors.Add(cleanup); }
-            if (errors.Count > 1) throw new AggregateException(errors);
+            try { Dispose(); }
+            catch (Exception cleanup) { throw new AggregateException(error, cleanup); }
             throw;
         }
     }
@@ -69,23 +59,12 @@ public sealed class EditorMainWindow : Window<IEditorViewModel>
             _ => throw new ArgumentException("Expected an EditorMainWindow presentation root.", nameof(root))
         };
     }
-    private void DocumentChanged(object? sender, PropertyChangedEventArgs args) => QueueCaption();
-    private void QueueCaption()
-    {
-        if (_captionPending) return;
-        _captionPending = true;
-        try { Dispatch(() => { _captionPending = false; UpdateCaption(); }); }
-        catch { _captionPending = false; throw; }
-    }
-    private void Attachment()
-    {
-        _captionPending = false;
-        if (IsAttached) QueueCaption();
-    }
+    /// <inheritdoc />
+    protected override void OnContentPrepared() =>
+        this.ObserveState(UpdateCaption, UiSynchronization.AfterTreeChange, _documents);
     private void UpdateCaption()
     {
         Title = _documents.GetWindowCaption(_baseTitle);
         AccessibleName = _documents.GetWindowCaptionDescription(_baseTitle);
     }
-    private sealed class Subscription(Action release) : IDisposable { public void Dispose() => release(); }
 }

@@ -10,6 +10,12 @@ window uses `UseAetherEditorWindow` / `UseConfiguredAetherEditorWindow`.
 Existing typed options, exact schema instances/keys, factory overrides and
 open/edit/save/build/play/stop/Save-Discard-Cancel behavior are retained.
 
+The standard `IFactory<EditorMainWindow, EditorMainWindowArguments>` and the
+header callback still receive their existing arguments. Before attachment, use
+`EditorMainWindow.EditorView`, not `Window.Child`, to reach the editor and
+its overlay host. The window adopts that same editor at attachment; wrapper
+style failures now surface during attachment instead of factory creation.
+
 Concrete project/document/inspector/hierarchy/status/diagnostic ViewModels implement
 UI-owned presentation ports without exposing Tooling types to Views. App owns models
 and command/session services once; Views borrow them and own their subscriptions,

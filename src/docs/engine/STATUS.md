@@ -200,7 +200,9 @@ OpenGL прошёл через команды меню; служебные ск�
 `OverlayHost` доступны хосту заранее. [Проверки](HISTORY.md#editor-root-fluent-2026-11-26).
 В компактном `EditorView` больше нет скрытого `Toolbar`; оконные действия
 используют команды заголовка и меню. [Проверки](HISTORY.md#editor-view-contracts-2026-11-26).
-Следующий срез — `EditorMainWindow`.
+`EditorMainWindow` принимает ранний `EditorView` при attach, а подпись
+синхронизирует на срок подключения. [Проверки](HISTORY.md#editor-main-window-fluent-2026-11-26).
+Далее — итоговая приёмка свежих пакетов.
 Упаковка Player прошла, отдельного restore потребителя не было.
 
 Для TrueMoon.Tales — провести персонажа Kton через ступени и скосы и

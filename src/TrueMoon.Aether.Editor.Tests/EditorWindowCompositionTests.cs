@@ -41,7 +41,7 @@ public sealed class EditorWindowCompositionTests
         var first = factory.Create(new("First", new(1280, 800)))!;
         var second = factory.Create(new("Second", new(1500, 900)))!;
         Assert.Same(h.Model, first.DataContext); Assert.Same(h.Model, second.EditorView.DataContext);
-        Assert.NotSame(first.EditorView, second.EditorView); Assert.Equal(2, h.ViewCreations); Assert.Equal(2, h.RootStyle.Configurations);
+        Assert.NotSame(first.EditorView, second.EditorView); Assert.Equal(2, h.ViewCreations); Assert.Equal(0, h.RootStyle.Configurations);
         Assert.Equal(0, h.ViewStyle.Configurations);
         var engine = app.Services.Resolve<AetherHost>()!;
         Assert.Equal(0, engine.Gpu.ResourceCount); Assert.Equal(0, engine.Gpu.OpenHandleCount); Assert.Equal(0, runtime.Launches);
@@ -136,8 +136,11 @@ public sealed class EditorWindowCompositionTests
             var root = new EditorMainWindow(app.Services.Resolve<EditorViewModel>()!, documents, app.Services.Resolve<IFactory<EditorView>>()!,
                 app.Services.Resolve<IViewStyle<EditorMainWindow>>()!, new("Custom Editor", new(1280, 800)));
             var close = 0; var frame = WindowFrame.CreateDefault(root.Title, root);
+            Assert.Null(root.Child); Assert.Null(root.EditorView.Parent);
+            var overlays = root.EditorView.Overlays;
             configured.ConfigureDefaultTitleBar!(frame.DefaultTitleBar!, root, () => close++);
             using var ui = InspectorFixture.Ui(frame); ui.Update();
+            Assert.Same(root.EditorView, root.Child); Assert.Same(overlays, root.EditorView.Child);
             var expected = "Custom Editor · " + files.Resolved.Description.Name + " · Новая сцена *";
             Assert.Equal(expected, root.Title); Assert.Equal(expected, root.EditorView.Header!.Caption.Value);
             Assert.Equal(root.AccessibleName, root.EditorView.Header.Caption.AccessibleName);

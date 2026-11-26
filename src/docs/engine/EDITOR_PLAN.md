@@ -46,7 +46,8 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 `EditorStatusBarView` переведён. [Проверки](HISTORY.md#editor-status-bar-migration-2026-11-26).
 `EditorHeaderView` переведён. [Проверки](HISTORY.md#editor-header-fluent-2026-11-26).
 Корневой `EditorView` переведён. [Проверки окна и встраиваемого хоста](HISTORY.md#editor-root-fluent-2026-11-26).
-Далее — `EditorMainWindow` и итоговая пакетная проверка.
+`EditorMainWindow` переведён. [Проверки оконного контракта](HISTORY.md#editor-main-window-fluent-2026-11-26).
+Далее — итоговая пакетная проверка.
 
 В `main` на `a1764fb` проверены первичный импорт из пустого каталога,
 размещение модели и восстановление сцены после перезапуска.

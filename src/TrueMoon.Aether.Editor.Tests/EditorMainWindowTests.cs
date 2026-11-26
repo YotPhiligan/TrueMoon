@@ -22,15 +22,16 @@ namespace TrueMoon.Aether.Editor.Tests;
 public sealed class EditorMainWindowTests
 {
     [Fact]
-    public void Factory_CreatesOneTypedEditorPerRootAndOnlyRootOwnsItsIndependentProduct()
+    public void Factory_OwnsOneEarlyEditorPerWindowEvenWhenNeverAttached()
     {
         using var h = new EditorMainWindowFixture();
         var first = h.Create(); var second = h.Create("Second", new(1400, 900));
         var firstOwned = new EditorWindowResource(); var secondOwned = new EditorWindowResource();
         first.EditorView.Own(firstOwned); second.EditorView.Own(secondOwned);
-        Assert.Equal(2, h.ViewCreations); Assert.Equal(2, h.RootStyle.Configurations); Assert.Equal(0, h.ViewStyle.Configurations);
+        Assert.Equal(2, h.ViewCreations); Assert.Equal(0, h.RootStyle.Configurations); Assert.Equal(0, h.ViewStyle.Configurations);
         Assert.Same(h.Model, first.DataContext); Assert.Same(h.Model, first.EditorView.DataContext);
-        Assert.Same(first.EditorView, first.Child); Assert.Same(first, first.EditorView.Parent);
+        Assert.Null(first.Child); Assert.Null(first.EditorView.Parent);
+        Assert.Null(second.Child); Assert.Null(second.EditorView.Parent);
         Assert.NotSame(first.EditorView, second.EditorView); Assert.NotSame(first.EditorView.Canvas, second.EditorView.Canvas);
         Assert.Null(first.EditorView.Child); Assert.Null(second.EditorView.Child);
         Assert.Equal(new Size(1280, 800), first.ClientSize); Assert.Equal(new Size(1400, 900), second.ClientSize);
@@ -118,19 +119,36 @@ public sealed class EditorMainWindowTests
         finally { ui?.Dispose(); if (product?.Parent == null) product?.Dispose(); }
     }
 
+    [Fact]
+    public void FactoryReturningAnotherUnshownWindowsEditor_CannotStealTheDraft()
+    {
+        using var h = new EditorMainWindowFixture();
+        using var owner = h.Create();
+        var editor = owner.EditorView;
+        h.ViewFactory = () => editor;
+
+        Assert.Throws<InvalidOperationException>(() => h.Create("Other"));
+        Assert.False(editor.IsDisposed); Assert.False(editor.Overlays.IsDisposed);
+
+        using var ui = DocumentUiFixture.Ui(owner); ui.Update();
+        Assert.Same(editor, owner.Child); Assert.True(editor.Overlays.IsAttached);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void RootStyleFailure_DisposesAcceptedTreeAndPreservesBorrowedModelsAndBothErrors(bool cleanupFails)
+    public void AttachStyleFailure_DisposesAdoptedEditorAndPreservesBorrowedModelsAndBothErrors(bool cleanupFails)
     {
         using var h = new EditorMainWindowFixture(); var failure = new IOException("root style"); var cleanup = new IOException("view cleanup");
         EditorView product = null!; var resource = new EditorWindowResource(cleanupFails ? cleanup : null);
         h.ViewFactory = () => { product = new(h.Model, new EditorViewStyle()); product.Own(resource); return product; };
         h.RootStyle.ConfigureAction = _ => throw failure;
-        var error = Record.Exception(() => h.Create());
+        using var root = h.Create();
+        var error = Record.Exception(() => DocumentUiFixture.Ui(root));
         if (cleanupFails) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions,
             item => Assert.Same(failure, item), item => Assert.Same(cleanup, item));
         else Assert.Same(failure, error);
+        Assert.Null(root.Child); Assert.False(root.IsAttached); Assert.False(root.IsDisposed);
         Assert.True(product.IsDisposed); Assert.True(product.Canvas.IsDisposed); Assert.True(product.Overlays.IsDisposed);
         Assert.Equal(1, resource.Disposals); Assert.Equal(1, h.ViewCreations); Assert.Equal(1, h.RootStyle.Configurations);
         h.Model.Select("green-cube"); h.Documents.PathDraft = "still borrowed";
@@ -160,7 +178,8 @@ public sealed class EditorMainWindowTests
     private static WeakReference CreateDisposedRoot(EditorMainWindowFixture fixture)
     {
         var root = fixture.Create("Released"); var reference = new WeakReference(root);
-        root.Dispose(); return reference;
+        using var ui = DocumentUiFixture.Ui(root); ui.Update();
+        ui.Dispose(); return reference;
     }
 
     [Fact]
@@ -206,9 +225,10 @@ public sealed class EditorMainWindowTests
         using var h = new EditorMainWindowFixture();
         h.RootStyle.ConfigureAction = styles => styles.Root().Padding(17).FontSize(41).Background(Theme.Dark.Error);
         var root = h.Create("Custom"); var editor = root.EditorView; var canvas = editor.Canvas;
-        Assert.Equal(1, h.RootStyle.Configurations); Assert.Equal(0, h.ViewStyle.Configurations);
+        Assert.Equal(0, h.RootStyle.Configurations); Assert.Equal(0, h.ViewStyle.Configurations);
         using var ui = DocumentUiFixture.Ui(root); ui.Update();
         var body = editor.Child; Assert.NotNull(body);
+        Assert.Same(editor, root.Child); Assert.Same(root, editor.Parent);
         Assert.Equal(new Thickness(17), root.Padding); Assert.Equal(41, root.FontSize);
         Assert.NotEqual(41, editor.FontSize); Assert.NotEqual(41, editor.SceneTitle.FontSize);
         var editorColor = editor.Background; var changes = 0; root.PropertyChanged += (_, property) => { if (ReferenceEquals(property, Window.TitleProperty)) changes++; };
@@ -235,8 +255,11 @@ public sealed class EditorMainWindowTests
         h.Owner.Run(DocumentCommand.New); h.Documents.Refresh();
         Assert.Equal("Transfer", root.Title);
         first.SetContent(null); Assert.False(root.IsAttached); Assert.False(root.IsDisposed);
+        h.Owner.Run(DocumentCommand.SaveAs, "detached.aetherscene"); h.Documents.Refresh();
+        Assert.Equal("Transfer", root.Title); Assert.Equal(0, changes);
         var second = new ContentControl(); second.SetContent(root);
         using var secondUi = DocumentUiFixture.Ui(second);
+        h.Owner.Run(DocumentCommand.New); h.Documents.Refresh();
         h.Owner.Run(DocumentCommand.SaveAs, "latest.aetherscene"); h.Documents.Refresh();
         firstUi.Update(); Assert.Equal("Transfer", root.Title); Assert.Equal(0, changes);
         secondUi.Update();
