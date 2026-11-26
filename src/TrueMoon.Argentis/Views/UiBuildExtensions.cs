@@ -67,6 +67,13 @@ public static class UiBuildExtensions
             return control;
         }
 
+        /// <summary>Names a part that may be absent from some compositions of the view.</summary>
+        public UiControl<TControl, TData> NamedOptional(string name)
+        {
+            control.Element.NamedOptional(name);
+            return control;
+        }
+
         /// <summary>Configures the underlying control and continues its typed chain.</summary>
         public UiControl<TControl, TData> Configure(Action<TControl> configure)
         {
@@ -184,6 +191,14 @@ public static class UiBuildExtensions
         public UiControl<TControl, TData> ObservePropertyChanged(PropertyChangedEventHandler handler, Action? synchronize = null)
         {
             control.Element.ObservePropertyChanged(control.Context, handler, synchronize);
+            return control;
+        }
+
+        /// <summary>Observes the current context with an explicit initial synchronization timing.</summary>
+        public UiControl<TControl, TData> ObservePropertyChanged(PropertyChangedEventHandler handler, Action? synchronize,
+            UiSynchronization timing)
+        {
+            control.Element.ObservePropertyChanged(control.Context, handler, synchronize, timing);
             return control;
         }
     }

@@ -2,7 +2,7 @@ using TrueMoon.Argentis.Bindings;
 
 namespace TrueMoon.Argentis.Views;
 
-/// <summary>Creates controls for one invocation of a view's content factory.</summary>
+/// <summary>Creates or adopts controls for one invocation of a view's content factory.</summary>
 public interface IUiBuildContext<TData>
 {
     /// <summary>The borrowed view context, when the layout declares a data type.</summary>
@@ -25,4 +25,11 @@ public interface IUiBuildContext<TData>
     /// <returns>The draft coupled to the current build context.</returns>
     UiControl<TControl, TData> Create<TControl, TArguments>(IFactory<TControl, TArguments> factory, TArguments arguments)
         where TControl : Element;
+
+    /// <summary>Transfers a precreated control to the content build.</summary>
+    /// <param name="control">A live, unparented, unattached control on the UI owner thread.</param>
+    /// <returns>The adopted draft coupled to the current build context.</returns>
+    /// <remarks>Accepts a view-owned draft only in that view's own build. Like factory products, adopted controls
+    /// must belong to the returned tree and are cleaned up if the build fails.</remarks>
+    UiControl<TControl, TData> Adopt<TControl>(TControl control) where TControl : Element;
 }

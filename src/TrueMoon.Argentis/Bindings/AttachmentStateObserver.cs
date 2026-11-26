@@ -7,14 +7,16 @@ internal sealed class AttachmentStateObserver : IDisposable
     private readonly Element _element;
     private readonly INotifyPropertyChanged[] _sources;
     private readonly Action _synchronize;
+    private readonly UiSynchronization _timing;
     private Connection? _connection;
     private bool _disposed;
 
-    internal AttachmentStateObserver(Element element, INotifyPropertyChanged[] sources, Action synchronize)
+    internal AttachmentStateObserver(Element element, INotifyPropertyChanged[] sources, Action synchronize, UiSynchronization timing)
     {
         _element = element;
         _sources = sources;
         _synchronize = synchronize;
+        _timing = timing;
         element.AttachmentChanged += Reconnect;
         try { Reconnect(); }
         catch (Exception error)
@@ -77,10 +79,13 @@ internal sealed class AttachmentStateObserver : IDisposable
             var sources = _observer._sources;
             while (_subscribed < sources.Length)
                 sources[_subscribed++].PropertyChanged += _changed;
-            _observer._synchronize();
+            if (_observer._timing == UiSynchronization.AfterTreeChange) RequestSynchronization();
+            else _observer._synchronize();
         }
 
-        private void Changed(object? sender, PropertyChangedEventArgs args)
+        private void Changed(object? sender, PropertyChangedEventArgs args) => RequestSynchronization();
+
+        private void RequestSynchronization()
         {
             if (!_observer._element.IsAttached || Interlocked.CompareExchange(ref _state, Pending, Idle) != Idle) return;
             try { _dispatch(_flush); }

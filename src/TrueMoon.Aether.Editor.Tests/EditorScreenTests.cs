@@ -26,7 +26,7 @@ public sealed class EditorScreenTests
         ui.Update(); Click(ui, view.Entities["green-cube"]); ui.Update();
         var field = Descendants(view).OfType<TextBox>().Single(value => value.AccessibleName == "X");
         ui.Focus(field); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
-        var theme = view.Toolbar.Children.OfType<Button>().Single(button => button.Value == "Тема");
+        var theme = Assert.IsType<HStack>(view.Toolbar).Children.OfType<Button>().Single(button => button.Value == "Тема");
         Click(ui, theme); ui.Update();
         Assert.Equal(Theme.Light.Surface, view.Theme.Surface);
         Assert.Equal(("Consolas", 19f, 500, true), (view.Theme.FontFamily, view.Theme.FontSize, view.Theme.FontWeight, view.Theme.FontItalic));
@@ -49,12 +49,13 @@ public sealed class EditorScreenTests
     {
         using var layout = new EditorLayout(new Box(), new Box(), new Box(), new Box(), new Box());
         layout.Measure(new(1280, 720), new TextLayout()); layout.Arrange(new(0, 0, 1280, 720));
-        Assert.Equal(new Rect(0, 0, 1280, 52), layout.Toolbar.Bounds);
+        var toolbar = Assert.IsType<Box>(layout.Toolbar);
+        Assert.Equal(new Rect(0, 0, 1280, 52), toolbar.Bounds);
         Assert.Equal(new Rect(0, 52, 1280, 640), layout.Viewport.Bounds);
         Assert.Equal(new Rect(8, 60, 264, 10), layout.Hierarchy.Bounds);
         Assert.Equal(new Rect(936, 60, 336, 10), layout.Inspector.Bounds);
         Assert.Equal(new Rect(0, 692, 1280, 28), layout.Status.Bounds);
-        Assert.Equal(new[] { layout.Toolbar, layout.Viewport, layout.Hierarchy, layout.Inspector, layout.Status }, layout.Children);
+        Assert.Equal(new[] { toolbar, layout.Viewport, layout.Hierarchy, layout.Inspector, layout.Status }, layout.Children);
     }
     [Theory] [InlineData(0f, 0f)] [InlineData(3f, 20f)] [InlineData(1100f, 700f)]
     public void ShellGeometry_SmallBoundsStayFiniteNonnegativeAndClipped(float width, float height)

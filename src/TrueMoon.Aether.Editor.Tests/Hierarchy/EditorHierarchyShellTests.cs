@@ -1,4 +1,5 @@
 ﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
@@ -28,7 +29,7 @@ public sealed class EditorHierarchyShellTests
             new Factory<EditorTransformView>(() => new(test.Transform, new EditorTransformViewStyle())), false, null,
             new Factory<EditorHierarchyView>(() => { products++; return new(test.Model, new EditorHierarchyViewStyle()); }));
         using var ui = DocumentUiFixture.Ui(view); Refresh();
-        Assert.Equal(1, products); Assert.Empty(view.Entities); Assert.True(view.EntityList.IsDisposed);
+        Assert.Equal(1, products); Assert.Empty(view.Entities); Assert.Null(view.EntityList);
         var hierarchy = view.Hierarchy!; var tree = hierarchy.Tree; var transform = view.Transform!; var input = transform.Fields["x"];
         hierarchy.Tree.Select(HierarchyFixture.Parent); ui.Update();
         Assert.Equal(HierarchyFixture.Parent, model.SelectedId); Assert.Equal("2", input.Value);
@@ -82,11 +83,12 @@ public sealed class EditorHierarchyShellTests
         using var test = new HierarchyFixture(); using var documents = new EditorDocumentViewModel(test.Owner.Commands);
         using var model = new EditorViewModel(test.Workspace, new((_, _) => Task.CompletedTask, CancellationToken.None), documents, test.Transform, test.Model);
         EditorDocumentView createdDocument = null!; EditorTransformView createdTransform = null!;
-        var error = Assert.Throws<InvalidOperationException>(() => new EditorView(model, new EditorViewStyle(),
+        using var view = new EditorView(model, new EditorViewStyle(),
             new Factory<EditorDocumentView>(() => createdDocument = new(documents, new EditorDocumentViewStyle())),
             new Factory<EditorTransformView>(() => createdTransform = new(test.Transform, new EditorTransformViewStyle())), false, null,
-            new Factory<EditorHierarchyView>(() => null!)));
-        Assert.Contains("Hierarchy view factory returned null", error.Message);
+            new Factory<EditorHierarchyView>(() => null!));
+        var error = Assert.Throws<InvalidOperationException>(() => { using var ui = DocumentUiFixture.Ui(view); });
+        Assert.Equal($"The UI factory for '{typeof(EditorHierarchyView).FullName}' must return a live, unowned control.", error.Message);
         Assert.True(createdDocument.IsDisposed); Assert.True(createdTransform.IsDisposed);
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Equal(0, test.Owner.Authoring.Products[0].Disposals);
         Assert.True(test.Model.Move(HierarchyFixture.Child, null)); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
@@ -99,14 +101,16 @@ public sealed class EditorHierarchyShellTests
         using var model = new EditorViewModel(test.Workspace, new((_, _) => Task.CompletedTask, CancellationToken.None));
         EditorHierarchyView created = null!;
         var cleanup = new Cleanup(); var failure = new IOException("shell style failed");
-        var error = Assert.Throws<IOException>(() => new EditorView(model, new FailingStyle(failure), null, null, false, null,
+        using var view = new EditorView(model, new FailingStyle(failure), null, null, false, null,
             new Factory<EditorHierarchyView>(() =>
             {
                 created = new(test.Model, new EditorHierarchyViewStyle());
                 created.Own(cleanup);
                 return created;
-            })));
+            }));
+        var error = Assert.Throws<IOException>(() => { using var ui = DocumentUiFixture.Ui(view); });
         Assert.Same(failure, error); Assert.True(created.IsDisposed); Assert.Null(created.Child); Assert.Equal(1, cleanup.Count);
+        Assert.False(view.IsAttached); Assert.False(view.IsDisposed); Assert.Null(view.Child);
         Assert.True(test.Model.Move(HierarchyFixture.Child, null)); Assert.False(test.Owner.Commands.Read().Closed);
     }
 

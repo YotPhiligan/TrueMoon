@@ -89,7 +89,8 @@ public sealed class EditorOverlayLayoutTests
         using var ui = new UiSession(frame, new Surface(), new((int)(1280 * scale), (int)(800 * scale), scale)); ui.Update();
         var layout = DocumentTree(view).OfType<EditorLayout>().Single();
         Assert.True(layout.OverlayChrome); Assert.Equal(new Rect(1, 1, 1278, 798), view.Bounds);
-        Assert.Equal(view.Bounds, view.ViewportFrame.Bounds); Assert.False(view.Toolbar.IsVisible);
+        Assert.Equal(view.Bounds, view.ViewportFrame.Bounds);
+        Assert.Null(view.Toolbar); Assert.Null(layout.Toolbar); Assert.Empty(view.Commands);
         Assert.Equal(new Rect(2, 2, 1276, 796), view.Canvas.Bounds);
         Assert.Equal(53f, view.HierarchyIsland.Child!.Bounds.Y); Assert.False(view.ViewportTitle.IsVisible);
         Assert.False(ui.NeedsUpdate); Assert.False(ui.Update());

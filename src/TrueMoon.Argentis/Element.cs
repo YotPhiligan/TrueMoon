@@ -336,6 +336,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     }
 
     internal virtual ElementScope? OwnedScope => null;
+    internal ViewDependencyOwnership? DependencyOwnership { get; set; }
     internal string? PartName { get; private set; }
 
     internal void SetPartName(string name)
@@ -353,6 +354,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         ArgumentNullException.ThrowIfNull(child);
         ObjectDisposedException.ThrowIf(child.IsDisposed, child);
         if (child.Parent != null || child.IsAttached) throw new InvalidOperationException("An element can have only one owner.");
+        if (child.DependencyOwnership?.DraftOwner is { } owner && !ReferenceEquals(owner, this))
+            throw new InvalidOperationException("A view-owned draft must be transferred by its owner.");
         for (Element? node = this; node != null; node = node.Parent)
             if (ReferenceEquals(node, child)) throw new InvalidOperationException("An element cannot contain itself or an ancestor.");
         child.ValidateUnattachedSubtree();
@@ -383,7 +386,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     internal void Adopt(Element child, TreeChange change)
     {
         child.Parent = this;
-        if (child is View view) view.DependencyOwnership?.Release(view);
+        child.DependencyOwnership?.Release(child);
         FindScope()?.CommitPartChange(child, added: true);
         child.ApplyThemeCore(Theme, change);
         if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, _controlFactories, change);
@@ -413,10 +416,12 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         verifyAccess();
         ValidateUnattachedSubtree();
         if (Parent != null) throw new InvalidOperationException("Only an unowned root can be attached directly.");
+        if (DependencyOwnership?.DraftOwner != null)
+            throw new InvalidOperationException("A view-owned draft must be transferred by its owner.");
         PrepareAttachmentSubtree(controlFactories);
         using var change = new TreeChange(this);
         AttachCore(verifyAccess, post, detaching, controlFactories, change);
-        if (this is View view) view.DependencyOwnership?.Release(view);
+        DependencyOwnership?.Release(this);
         change.Complete();
     }
 
@@ -609,6 +614,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         {
             Invalidated = null; PropertyChanged = null; AttachmentChanged = null; FocusChanged = null;
             _disposed = true;
+            DependencyOwnership?.Release(this);
             _disposing = false;
         }
         change.Complete();

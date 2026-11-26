@@ -7,18 +7,21 @@ internal sealed class AttachmentDataContext<TData> : IDisposable where TData : c
     private readonly IDataContext<TData> _context;
     private readonly Func<TData, Func<bool>, IDisposable?> _connect;
     private readonly Action<bool>? _synchronize;
+    private readonly UiSynchronization _timing;
     private IDisposable? _connection;
     private TData? _source;
     private long _version;
     private bool _initialized, _observing, _disposed;
 
     internal AttachmentDataContext(Element element, IDataContext<TData> context,
-        Func<TData, Func<bool>, IDisposable?> connect, Action<bool>? synchronize)
+        Func<TData, Func<bool>, IDisposable?> connect, Action<bool>? synchronize,
+        UiSynchronization timing = UiSynchronization.Immediate)
     {
         _element = element;
         _context = context;
         _connect = connect;
         _synchronize = synchronize;
+        _timing = timing;
         element.AttachmentChanged += AttachmentChanged;
         try { AttachmentChanged(); }
         catch (Exception original)
@@ -59,7 +62,14 @@ internal sealed class AttachmentDataContext<TData> : IDisposable where TData : c
             var connection = source == null ? null : _connect(source, Current);
             if (!Current()) { connection?.Dispose(); return; }
             _connection = connection;
-            _synchronize?.Invoke(connection != null);
+            if (_synchronize is { } synchronize)
+            {
+                var connected = connection != null;
+                if (_timing == UiSynchronization.AfterTreeChange)
+                    _element.Dispatch(() => { if (Current()) synchronize(connected); });
+                else
+                    synchronize(connected);
+            }
         }
         catch (Exception original)
         {

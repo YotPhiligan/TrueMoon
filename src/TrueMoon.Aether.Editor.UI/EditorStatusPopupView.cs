@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Bindings;
 using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
@@ -18,8 +19,6 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     private readonly IEditorStatusBarViewModel _model;
     private readonly Dictionary<(Guid Opening, Guid Source, string Name), (Button Button, EditorModelReimportAction Target)> _reimportButtons = [];
     private readonly Dictionary<(Guid Opening, Guid Source), (HStack Layout, CheckBox Check, Button Place, EditorProjectModelRow Row)> _catalogRows = [];
-
-    private bool _attachedOnce;
 
     /// <summary>Creates a transient view. OverlayHost owns it; the model/style stay App-owned.</summary>
     public EditorStatusPopupView(IEditorStatusBarViewModel model, IViewStyle<EditorStatusPopupView> style, EditorStatusPopupArguments arguments)
@@ -57,19 +56,8 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     }
 
     /// <inheritdoc />
-    protected override void OnContentPrepared()
-    {
-        SynchronizeRows();
-        this.ObservePropertyChanged(_model, ModelChanged, RefreshAfterAttach);
-    }
-
-    private void RefreshAfterAttach()
-    {
-        // Initial rows are installed during preparation. Reattach notifications run
-        // inside a tree change, so refresh retained rows in the session queue.
-        if (_attachedOnce) Dispatch(SynchronizeRows);
-        _attachedOnce = true;
-    }
+    protected override void OnContentPrepared() =>
+        this.ObservePropertyChanged(_model, ModelChanged, SynchronizeRows, UiSynchronization.AfterTreeChange);
 
     private void SynchronizeRows()
     {

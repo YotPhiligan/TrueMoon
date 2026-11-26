@@ -8,17 +8,20 @@ internal sealed class AttachmentPropertyObserver : IDisposable
     private readonly INotifyPropertyChanged _source;
     private readonly PropertyChangedEventHandler _handler;
     private readonly Action? _synchronize;
+    private readonly UiSynchronization _timing;
     private readonly Func<bool>? _isCurrent;
     private Connection? _connection;
     private bool _disposed;
 
     internal AttachmentPropertyObserver(Element element, INotifyPropertyChanged source,
-        PropertyChangedEventHandler handler, Action? synchronize, Func<bool>? isCurrent = null)
+        PropertyChangedEventHandler handler, Action? synchronize, UiSynchronization timing = UiSynchronization.Immediate,
+        Func<bool>? isCurrent = null)
     {
         _element = element;
         _source = source;
         _handler = handler;
         _synchronize = synchronize;
+        _timing = timing;
         _isCurrent = isCurrent;
         element.AttachmentChanged += Reconnect;
         try { Reconnect(); }
@@ -42,7 +45,6 @@ internal sealed class AttachmentPropertyObserver : IDisposable
         try
         {
             connection.Connect();
-            _synchronize?.Invoke();
         }
         catch (Exception error)
         {
@@ -70,11 +72,22 @@ internal sealed class AttachmentPropertyObserver : IDisposable
         private bool _subscribed;
 
         private bool Active => Volatile.Read(ref _active) != 0 && observer._element.IsAttached;
+        private bool IsCurrent => Active && (observer._isCurrent?.Invoke() ?? true);
 
         internal void Connect()
         {
             _subscribed = true;
             observer._source.PropertyChanged += Changed;
+            if (observer._synchronize is { } synchronize)
+            {
+                if (observer._timing == UiSynchronization.AfterTreeChange) _dispatch(Synchronize);
+                else synchronize();
+            }
+        }
+
+        private void Synchronize()
+        {
+            if (IsCurrent) observer._synchronize?.Invoke();
         }
 
         private void Changed(object? sender, PropertyChangedEventArgs args)
@@ -84,7 +97,7 @@ internal sealed class AttachmentPropertyObserver : IDisposable
             {
                 _dispatch(() =>
                 {
-                    if (Active && (observer._isCurrent?.Invoke() ?? true)) observer._handler(sender, args);
+                    if (IsCurrent) observer._handler(sender, args);
                 });
             }
             catch (ObjectDisposedException) when (!Active || observer._element.IsDisposed)

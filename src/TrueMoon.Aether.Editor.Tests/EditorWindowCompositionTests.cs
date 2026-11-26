@@ -42,12 +42,14 @@ public sealed class EditorWindowCompositionTests
         var second = factory.Create(new("Second", new(1500, 900)))!;
         Assert.Same(h.Model, first.DataContext); Assert.Same(h.Model, second.EditorView.DataContext);
         Assert.NotSame(first.EditorView, second.EditorView); Assert.Equal(2, h.ViewCreations); Assert.Equal(2, h.RootStyle.Configurations);
+        Assert.Equal(0, h.ViewStyle.Configurations);
         var engine = app.Services.Resolve<AetherHost>()!;
         Assert.Equal(0, engine.Gpu.ResourceCount); Assert.Equal(0, engine.Gpu.OpenHandleCount); Assert.Equal(0, runtime.Launches);
         Assert.False(Directory.Exists(Path.Combine(files.Root, "reports")));
         first.Dispose(); Assert.False(second.IsDisposed); Assert.Equal(0, h.RootStyle.Disposals);
         app.Dispose(); Assert.False(second.IsDisposed); Assert.Equal(1, h.RootStyle.Disposals);
         second.Dispose(); Assert.True(second.EditorView.IsDisposed); Assert.Equal(1, h.RootStyle.Disposals);
+        Assert.Equal(0, h.ViewStyle.Configurations);
     }
 
     [Theory]
@@ -64,7 +66,9 @@ public sealed class EditorWindowCompositionTests
         }));
         var view = app.Services.Resolve<IFactory<EditorView>>()!.Create()!;
         Assert.False((object)view is Window); Assert.Null(view.Parent); Assert.False(view.IsAttached);
+        Assert.Null(view.Child);
         using var ui = InspectorFixture.Ui(view); ui.Update();
+        Assert.NotNull(view.Child);
         app.Services.Resolve<EditorSession>()!.Present(ui, view);
         Assert.Same(view, ui.Root); Assert.Same(app.Services.Resolve<EditorViewModel>(), view.DataContext);
         Assert.False(view.IsDisposed); Assert.Equal(0, runtime.Launches); Assert.Equal(0, app.Services.Resolve<AetherHost>()!.Gpu.ResourceCount);

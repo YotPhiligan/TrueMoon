@@ -3,6 +3,15 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+В `1.2611.26.13-alpha` наблюдатели могут обновлять дочернее дерево через
+`UiSynchronization.AfterTreeChange`. `OwnDraft` удерживает ранние контролы
+до передачи, `NamedOptional` генерирует nullable-части.
+[Контракты и проверки](HISTORY.md#ui-tree-synchronization-and-drafts-2026-11-26).
+
+В `1.2611.26.12-alpha` `ui.Adopt(control)` включает уже созданный
+неприсоединённый контрол в отложенное Fluent-дерево с откатом при сбое.
+[Контракт и проверки](HISTORY.md#ui-fluent-adopt-2026-11-26).
+
 В `1.2611.26.11-alpha` `SetHeader` заменяет слот одной операцией дерева.
 `ObserveState` объединяет уведомления стабильных моделей на срок attach;
 `DelayedHoverHint` проверяет исходную цель после layout.

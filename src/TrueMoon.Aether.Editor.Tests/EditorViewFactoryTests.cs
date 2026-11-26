@@ -2,8 +2,10 @@
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
+using TrueMoon.Argentis.Layout;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -45,20 +47,60 @@ public sealed class EditorViewFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void FactoryFailure_DisposesUnpublishedViewAndPreservesBorrowedModelAndErrors(bool cleanupFailure)
+    public void AttachFailure_DisposesAdoptedTreeAndPreservesBorrowedModelAndErrors(bool cleanupFailure)
     {
         using var model = new EditorViewModel(new(EditorScene.Demo()), new EditorCommands((_, _) => Task.CompletedTask, CancellationToken.None));
         var expected = new IOException("style creation failed"); var cleanup = new IOException("unpublished view cleanup failed");
-        EditorView unpublished = null!; Element content = null!;
         var resource = new CleanupCounter(cleanupFailure ? cleanup : null);
-        var style = new FailingStyle(view => { unpublished = view; content = view.Child!; view.Own(resource); }, expected);
-        IFactory<EditorView> factory = new Factory<EditorView>(() => new(model, style));
-        var error = Record.Exception(() => factory.Create());
+        var style = new FailingStyle(view => view.Overlays.Own(resource), expected);
+        using var view = new EditorView(model, style);
+        var error = Record.Exception(() => Create(view));
         if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions,
             cause => Assert.Same(expected, cause), cause => Assert.Same(cleanup, cause));
         else Assert.Same(expected, error);
-        Assert.True(unpublished.IsDisposed); Assert.True(content.IsDisposed); Assert.True(unpublished.Canvas.IsDisposed); Assert.Equal(1, resource.Disposals);
+        Assert.False(view.IsDisposed); Assert.False(view.IsAttached); Assert.Null(view.Child);
+        Assert.True(view.Overlays.IsDisposed); Assert.True(view.Canvas.IsDisposed); Assert.Equal(1, resource.Disposals);
         model.Select("green-cube"); Assert.Equal("green-cube", model.SelectedId); Assert.True(model.CanBuild);
+    }
+
+    [Fact]
+    public void UnshownEditor_ReleasesHostAnchorsWithoutCreatingPanelViews()
+    {
+        using var model = new EditorViewModel(new(EditorScene.Demo()), new EditorCommands((_, _) => Task.CompletedTask, CancellationToken.None));
+        var panels = 0;
+        using var view = new EditorView(model, new EditorViewStyle(),
+            new Factory<EditorDocumentView>(() => { panels++; throw new InvalidOperationException("An unshown editor must not create panels."); }));
+        var canvas = new CleanupCounter(); var overlays = new CleanupCounter();
+        view.Canvas.Own(canvas); view.Overlays.Own(overlays);
+
+        view.Dispose();
+
+        Assert.Equal(0, panels);
+        Assert.Equal(1, canvas.Disposals); Assert.Equal(1, overlays.Disposals);
+        model.Select("green-cube"); Assert.Equal("green-cube", model.SelectedId);
+    }
+
+    [Fact]
+    public void EmbeddedEditor_ReattachRetainsAnchorsAndRefreshesLegacySelection()
+    {
+        using var model = new EditorViewModel(new(EditorScene.Demo()), new EditorCommands((_, _) => Task.CompletedTask, CancellationToken.None));
+        using var view = new EditorView(model, new EditorViewStyle());
+        var canvas = view.Canvas; var overlays = view.Overlays;
+        var parent = new Panel().WithChildren(view);
+        using var ui = Create(parent); ui.Update();
+        model.Select("red-cube"); ui.Update();
+        var red = view.Entities["red-cube"]; var green = view.Entities["green-cube"];
+        Assert.Equal(ControlTone.Accent, red.Tone); Assert.Same(overlays, view.Child); Assert.True(canvas.IsAttached);
+
+        parent.Items.Remove(view);
+        model.Select("green-cube"); ui.Update();
+        Assert.Equal(ControlTone.Accent, red.Tone); Assert.Equal(ControlTone.Neutral, green.Tone);
+        Assert.False(canvas.IsAttached);
+        parent.Add(view); ui.Update();
+
+        Assert.Same(overlays, view.Child); Assert.True(canvas.IsAttached);
+        Assert.Same(green, view.Entities["green-cube"]);
+        Assert.Equal(ControlTone.Neutral, red.Tone); Assert.Equal(ControlTone.Accent, green.Tone);
     }
 
     private static UiSession Create(Element root) => new(root, new Surface(), new(1280, 800));

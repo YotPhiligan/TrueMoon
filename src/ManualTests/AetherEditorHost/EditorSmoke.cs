@@ -60,7 +60,12 @@ internal static class EditorSmoke
             WindowId = windowId, Selection = workspace.SelectedId, RuntimePids = factory.Leases.Select(x => x.ProcessId).ToArray() }, new JsonSerializerOptions { WriteIndented = true }));
         async Task Click(EditorCommand command)
         {
-            await UntilAsync(async () => { var available = false; await ui.InvokeAsync(() => available = view.Commands[command].IsEnabled); return available; });
+            await UntilAsync(async () =>
+            {
+                var available = false;
+                await ui.InvokeAsync(() => available = view.Header!.RuntimeCommands[command].CanExecute);
+                return available;
+            });
             if (command is EditorCommand.Play or EditorCommand.Pause or EditorCommand.Stop)
                 await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, command switch
                 { EditorCommand.Play => view.Header!.RunButton, EditorCommand.Pause => view.Header!.PauseButton, _ => view.Header!.StopButton })).WaitAsync(token);

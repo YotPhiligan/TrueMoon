@@ -114,9 +114,10 @@ public sealed class CompactDocumentToolsTests
             new Factory<EditorDocumentView>(() => new(documents, new EditorDocumentViewStyle(), compactHeader: true)), compactHeader: true);
         using var ui = DocumentUiFixture.Ui(view); ui.Update();
         var tools = view.Documents!; var viewport = view.Canvas.Bounds;
-        Assert.False(tools.IsVisible); Assert.False(view.Toolbar.IsVisible);
+        Assert.False(tools.IsVisible); Assert.Null(view.Toolbar);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.S, Control: true)); ui.Update();
         Assert.Equal(DocumentCommand.Save, documents.PathRequest); Assert.True(tools.IsVisible); Assert.Empty(owner.Store.Writes);
+        Assert.Equal(tools.Bounds, tools.Parent!.ChildClipBounds);
         tools.SynchronizeFocus(ui); Assert.True(tools.PathInput.IsFocused);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape)); ui.Update(); tools.SynchronizeFocus(ui);
         Assert.Null(documents.PathRequest); Assert.False(tools.IsVisible); Assert.Equal(viewport, view.Canvas.Bounds);

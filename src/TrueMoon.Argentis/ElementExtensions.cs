@@ -71,6 +71,8 @@ public static partial class ElementExtensions
         element.SetPartName(name);
         return element;
     }
+    /// <summary>Gives an element an optional generated part name; runtime name scoping is unchanged.</summary>
+    public static T NamedOptional<T>(this T element, string name) where T : Element => element.Named(name);
     /// <summary>Binds a typed UI property to one directly selected source property until element disposal.</summary>
     /// <param name="element">The element, preserving its concrete type in the Fluent chain.</param>
     /// <param name="property">The destination UI property; only one binding per property is allowed.</param>
@@ -175,26 +177,49 @@ public static partial class ElementExtensions
     /// <summary>Observes a borrowed source's property notifications while the element is attached.</summary>
     /// <remarks>Notifications are delivered in queue order on the UI owner thread. Synchronization runs on each attachment after subscribing.</remarks>
     public static T ObservePropertyChanged<T>(this T element, INotifyPropertyChanged source,
-        PropertyChangedEventHandler handler, Action? synchronize = null) where T : Element
+        PropertyChangedEventHandler handler, Action? synchronize = null) where T : Element =>
+        element.ObservePropertyChanged(source, handler, synchronize, UiSynchronization.Immediate);
+
+    /// <summary>Observes a borrowed source's property notifications while the element is attached.</summary>
+    /// <param name="element">The element to observe while attached.</param>
+    /// <param name="source">The borrowed notifying source.</param>
+    /// <param name="handler">Handles each notification on the UI owner thread in queue order.</param>
+    /// <param name="synchronize">Reads the current state on each attachment, or null to skip synchronization.</param>
+    /// <param name="timing">Whether to synchronize inline or on the attachment queue.</param>
+    /// <returns>The configured element.</returns>
+    public static T ObservePropertyChanged<T>(this T element, INotifyPropertyChanged source,
+        PropertyChangedEventHandler handler, Action? synchronize, UiSynchronization timing) where T : Element
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(handler);
-        return OwnObserver(element, () => new AttachmentPropertyObserver(element, source, handler, synchronize));
+        return OwnObserver(element, () => new AttachmentPropertyObserver(element, source, handler, synchronize, timing));
     }
 
     /// <summary>Observes property notifications from the current notifying data context while attached.</summary>
     /// <remarks>Notifications are queued on the UI owner thread. Synchronization runs at attach and on context replacement, including null.</remarks>
     public static T ObservePropertyChanged<T, TData>(this T element, IDataContext<TData> context,
         PropertyChangedEventHandler handler, Action? synchronize = null)
+        where T : Element where TData : class, INotifyPropertyChanged =>
+        element.ObservePropertyChanged(context, handler, synchronize, UiSynchronization.Immediate);
+
+    /// <summary>Observes the current notifying data context while attached.</summary>
+    /// <param name="element">The element to observe while attached.</param>
+    /// <param name="context">The borrowed data context.</param>
+    /// <param name="handler">Handles each notification on the UI owner thread in queue order.</param>
+    /// <param name="synchronize">Reads the current state on attach and replacement, including null. Pass null to skip synchronization.</param>
+    /// <param name="timing">Whether to synchronize inline or on the attachment queue.</param>
+    /// <returns>The configured element.</returns>
+    public static T ObservePropertyChanged<T, TData>(this T element, IDataContext<TData> context,
+        PropertyChangedEventHandler handler, Action? synchronize, UiSynchronization timing)
         where T : Element where TData : class, INotifyPropertyChanged
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(handler);
         return OwnObserver(element, () => new AttachmentDataContext<TData>(element, context,
-            (source, current) => new AttachmentPropertyObserver(element, source, handler, null, current),
-            _ => synchronize?.Invoke()));
+            (source, current) => new AttachmentPropertyObserver(element, source, handler, null, isCurrent: current),
+            synchronize == null ? null : _ => synchronize(), timing));
     }
 
     /// <summary>Synchronizes the current state of one or more borrowed sources while attached.</summary>
@@ -205,7 +230,17 @@ public static partial class ElementExtensions
     /// <remarks>Synchronizes immediately on each attachment after subscribing. Any property notification
     /// requests a queued synchronization, with at most one pending across all sources for that attachment.</remarks>
     public static T ObserveState<T>(this T element, Action synchronize, params ReadOnlySpan<INotifyPropertyChanged> sources)
-        where T : Element
+        where T : Element => element.ObserveState(synchronize, UiSynchronization.Immediate, sources);
+
+    /// <summary>Synchronizes the current state of one or more borrowed sources while attached.</summary>
+    /// <param name="element">The element to observe while attached.</param>
+    /// <param name="synchronize">Reads the current state on the UI owner thread.</param>
+    /// <param name="timing">Whether to synchronize on attach inline or on the attachment queue.</param>
+    /// <param name="sources">The notifying sources, captured at registration.</param>
+    /// <returns>The configured element.</returns>
+    /// <remarks>Queued synchronization coalesces notifications and any deferred attachment synchronization.</remarks>
+    public static T ObserveState<T>(this T element, Action synchronize, UiSynchronization timing,
+        params ReadOnlySpan<INotifyPropertyChanged> sources) where T : Element
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(synchronize);
@@ -214,7 +249,7 @@ public static partial class ElementExtensions
             if (source is null) throw new ArgumentException("Sources cannot contain null.", nameof(sources));
 
         var snapshot = sources.ToArray();
-        return OwnObserver(element, () => new AttachmentStateObserver(element, snapshot, synchronize));
+        return OwnObserver(element, () => new AttachmentStateObserver(element, snapshot, synchronize, timing));
     }
 
     private static T OwnObserver<T>(T element, Func<IDisposable> create) where T : Element

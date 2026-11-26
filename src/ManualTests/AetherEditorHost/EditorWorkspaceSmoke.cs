@@ -29,8 +29,9 @@ internal static class EditorWorkspaceSmoke
             try
             {
                 Require(workspace.EntityCount == 0 && workspace.SelectedId == null, "Workspace must not invent a demo scene.");
-                Require(view.Commands[EditorCommand.Build].IsEnabled == workspace.HasProject, "Build availability disagrees with the selected project.");
-                Require(view.Commands.Where(pair => pair.Key != EditorCommand.Build).All(pair => !pair.Value.IsEnabled), "Game actions must be unavailable before an explicit build.");
+                var commands = view.Header!.RuntimeCommands;
+                Require(commands[EditorCommand.Build].CanExecute == workspace.HasProject, "Build availability disagrees with the selected project.");
+                Require(commands.Where(pair => pair.Key != EditorCommand.Build).All(pair => !pair.Value.CanExecute), "Game actions must be unavailable before an explicit build.");
                 Require(engine.Supervisor.Status.State == SessionState.Stopped && factory.Leases.Count == 0 && engine.Builds.ProcessId == null,
                     "Opening a workspace started a game or compiler.");
                 Require((engine.Editor.Status.Context != null) == workspace.HasProject, "Unexpected game context.");

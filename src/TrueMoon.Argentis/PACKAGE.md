@@ -67,6 +67,16 @@ Set `<EnableArgentisGenerator>false</EnableArgentisGenerator>` to opt out in
 projects that do not use generated APIs. Source projects using `ProjectReference`
 instead of NuGet still attach the generator as a project analyzer.
 
+`NamedOptional("Part")` generates a nullable property for a part that is not
+present in every composition. `Named("Part")` still requires the named part.
+
+Use `ui.Adopt(control)` inside deferred `Content(...)` when a host needs a
+specific control before attachment. The control must be live, detached and
+unparented; the build takes ownership and applies the same tree and rollback
+rules as `ui.Create(...)`. In a derived View, register early controls with
+`OwnDraft(control)` first. The View disposes untransferred drafts; only its own
+build can adopt those drafts.
+
 Argentis defines element trees and controls, including the rich-text document/
 editing model. Controls own their input and layout, not their painters. Argentis
 does not depend on a DI provider, renderer, native window or App bootstrap.
@@ -213,6 +223,9 @@ Use `this.ObserveState(refresh, model, otherModel)` to read the latest state of
 stable borrowed models. It synchronizes on each attachment and merges bursts
 into one pending owner-thread callback per subscription. Work from an ended
 attachment is dropped. Use `ObservePropertyChanged` when each notification matters.
+When initial synchronization mutates children, pass `UiSynchronization.AfterTreeChange`
+(`TrueMoon.Argentis.Bindings`) to queue it for the current attachment. The default
+is still inline. Queued synchronization does not run for a replaced context.
 
 `WindowTitleBar.SetHeader` validates a candidate before replacing the old
 tree. Attachment observers see the committed header; observer failures

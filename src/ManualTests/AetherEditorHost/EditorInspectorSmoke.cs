@@ -52,7 +52,8 @@ internal static class EditorInspectorSmoke
             await Capture("inspector-hidden-empty.png");
             await Doc(DocumentCommand.Open, "Inspector.aetherscene");
             await Until(() => model.HasSelection && panel.Components.Count == 3 && !ui.NeedsUpdate);
-            Require(view.Transform == null && view.PropertiesPanel.Children.Count == 0, "Fixed duplicate inspector was composed.");
+            await ui.InvokeAsync(() => Require(view.Transform == null && view.PropertiesPanel == null,
+                "Fixed duplicate inspector was composed.")).WaitAsync(token);
             var first = document.Read().Content!;
             var visibleWidth = view.Canvas.Bounds.Width;
             await ui.InvokeAsync(() =>

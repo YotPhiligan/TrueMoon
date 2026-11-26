@@ -669,6 +669,94 @@ public sealed class ViewStyleTests
     }
 
     [Fact]
+    public void AdoptedControls_UseTheViewScopeAndAreDisposedWithIt()
+    {
+        var root = new Panel();
+        var label = new Text("host-provided");
+        var view = new FactoryView("data", ui => ui.Adopt(root).WithChildren(ui.Adopt(label).Named("Label")));
+        using var session = Create(view);
+        Assert.Same(root, view.Child);
+        Assert.Same(label, view.PreparedChild);
+        Assert.Equal("host-provided", label.Value);
+
+        session.Dispose();
+        Assert.True(root.IsDisposed); Assert.True(label.IsDisposed);
+    }
+
+    [Fact]
+    public void AdoptedControls_RollBackAcceptedDraftsWithoutDisposingForeignChildren()
+    {
+        var accepted = new Panel();
+        var label = new Text("host-owned");
+        using var independent = new Panel().WithChildren(label);
+        using var view = new FactoryView("data", ui => ui.Adopt(accepted).WithChildren(ui.Adopt(label)));
+
+        Assert.Throws<InvalidOperationException>(() => Create(view));
+        Assert.True(accepted.IsDisposed);
+        Assert.Null(view.Child);
+        Assert.Same(label, Assert.Single(independent.Children)); Assert.False(label.IsDisposed);
+    }
+
+    [Fact]
+    public void OwnDraft_AnotherBuilderCannotTakeItAndUnshownOwnerDisposesIt()
+    {
+        using var owner = new PartView();
+        var label = owner.Retain(new Text("host anchor"));
+        using var other = new FactoryView("data", ui => ui.Adopt(label).Named("Label"));
+
+        Assert.Throws<InvalidOperationException>(() => Create(other));
+        Assert.False(label.IsDisposed); Assert.Null(label.Parent);
+        owner.Dispose();
+        Assert.True(label.IsDisposed);
+    }
+
+    [Fact]
+    public void OwnDraft_FailedBuildDisposesTransferredDraftAndLeavesOtherDraftWithOwner()
+    {
+        var transferred = new Panel();
+        var untransferred = new Text("not reached by the builder");
+        using var owner = new FactoryView("data", ui =>
+        {
+            ui.Adopt(transferred);
+            throw new IOException("content failed");
+        });
+        owner.Retain(transferred);
+        owner.Retain(untransferred);
+
+        Assert.Throws<IOException>(() => Create(owner));
+        Assert.True(transferred.IsDisposed);
+        Assert.False(untransferred.IsDisposed);
+        owner.Dispose();
+        Assert.True(untransferred.IsDisposed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NamedOptional_GetsTypedPartsWhenComposedAndReturnsNullAfterRemoval(bool includeDetails)
+    {
+        var view = new OptionalNamedPartsView(includeDetails);
+        using var session = Create(view);
+        var root = Assert.IsType<Panel>(view.Child);
+        if (includeDetails)
+        {
+            var details = Assert.IsType<Text>(view.Details);
+            var badge = Assert.IsType<Text>(view.Badge);
+            Assert.Equal("Details", details.Value); Assert.Equal("Badge", badge.Value);
+            Assert.Same(root, details.Parent); Assert.Same(root, badge.Parent);
+            root.Items.Remove(details);
+            details.Dispose();
+        }
+        else Assert.Null(view.Badge);
+        Assert.Null(view.Details);
+
+        using var main = view.MainLabel;
+        Assert.Equal("Required", main.Value);
+        root.Items.Remove(main);
+        Assert.Throws<KeyNotFoundException>(() => { _ = view.MainLabel; });
+    }
+
+    [Fact]
     public void CompletedStyleDeclaration_CannotMutateRulesOrAddPartsAfterApplication()
     {
         using var view = new SampleView(); IViewStyleBuilder<SampleView> captured = null!; ViewStyleRule rule = null!;
@@ -743,6 +831,7 @@ public sealed class ViewStyleTests
         public int Builds { get; private set; }
         public int Preparations { get; private set; }
         public Element? PreparedChild { get; private set; }
+        public T Retain<T>(T control) where T : Element => OwnDraft(control);
 
         protected override void OnContentPrepared()
         {
@@ -751,7 +840,10 @@ public sealed class ViewStyleTests
         }
     }
 
-    private sealed class PartView : View { }
+    private sealed class PartView : View
+    {
+        public T Retain<T>(T control) where T : Element => OwnDraft(control);
+    }
     private sealed record NamedRow(string Name);
     private static UiSession Create(Element root) => new(root, new Surface(), new(400, 480));
     private sealed class Declaration<TView>(Action<IViewStyleBuilder<TView>> configure) : IViewStyle<TView> where TView : View
@@ -865,4 +957,15 @@ internal sealed class InferredRoleCaption : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+internal sealed class OptionalNamedPartsView : View
+{
+    public OptionalNamedPartsView(bool includeDetails) => Content(ui =>
+    {
+        var root = ui.Panel(ui.Text("Required").Named("MainLabel"));
+        if (includeDetails)
+            root.WithChildren(ui.Text("Details").NamedOptional("Details"), ui.Text("Badge").Element.NamedOptional("Badge"));
+        return root;
+    });
 }

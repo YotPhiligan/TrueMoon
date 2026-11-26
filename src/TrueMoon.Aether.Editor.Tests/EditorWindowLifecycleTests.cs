@@ -124,11 +124,13 @@ public sealed class EditorWindowLifecycleTests
         var engine = app.Services.Resolve<AetherHost>()!; var model = app.Services.Resolve<EditorViewModel>()!;
         var root = new EditorMainWindow(model, app.Services.Resolve<EditorDocumentViewModel>()!, app.Services.Resolve<IFactory<EditorView>>()!,
             new EditorMainWindowStyle(), new("Empty", new(1280, 800)));
+        Assert.Same(model, root.EditorView.DataContext); Assert.Null(root.EditorView.Child);
         var hosted = new HostedUiWindow(new SilkUiWindowOptions(), new NoWindowSessions(), () => throw new Exception("No native root expected"));
         using var adapter = new EditorWindow(hosted, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorWorkspace>()!,
             app.Services.Resolve<RuntimeViewportBinding>()!, engine);
         Element actual = framed ? WindowFrame.CreateDefault(root.Title, root) : root;
         using var ui = InspectorFixture.Ui(actual); ui.Update();
+        var body = root.EditorView.Child; Assert.NotNull(body);
         Assert.False(adapter.Ready.IsCompleted); Assert.Equal(0, engine.Gpu.ResourceCount); Assert.Equal(0, runtime.Launches);
         DocumentUiFixture.Wait(adapter.StartAsync(default)); DocumentUiFixture.Wait(adapter.StartAsync(default));
         adapter.Presented(ui); DocumentUiFixture.Wait(adapter.WaitReadyAsync(default)); var ready = adapter.Ready;
@@ -138,7 +140,9 @@ public sealed class EditorWindowLifecycleTests
         var dispose = adapter.DisposeAsync().AsTask(); Assert.Same(dispose, adapter.DisposeAsync().AsTask()); DocumentUiFixture.Wait(dispose);
         Assert.False(root.IsDisposed); Assert.False(hosted.Completion.IsCompleted); Assert.False(app.Services.Resolve<EditorDocumentCommands>()!.Read().Closed);
         model.Refresh(engine.Supervisor.Status, engine.Editor.Status); Assert.False(root.EditorView.IsDisposed);
+        Assert.Same(body, root.EditorView.Child); Assert.False(body.IsDisposed);
         ui.Dispose(); DocumentUiFixture.Wait(hosted.DisposeAsync().AsTask()); Assert.True(root.IsDisposed);
+        Assert.True(body.IsDisposed);
     }
 
     private sealed class NoWindowSessions : IUiWindowSessionFactory

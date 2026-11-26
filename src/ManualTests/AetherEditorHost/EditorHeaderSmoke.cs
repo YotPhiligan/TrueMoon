@@ -31,7 +31,7 @@ internal static partial class EditorHeaderSmoke
         await UntilAsync(ui, () => !ui.NeedsUpdate, token);
         await ui.InvokeAsync(() =>
         {
-            Require(!view.Toolbar.IsVisible, "Legacy runtime command row is still visible.");
+            Require(view.Toolbar == null && view.Commands.Count == 0, "Compact editor still creates standalone runtime controls.");
             var frame = (WindowFrame)ui.Root;
             Require(frame.Theme.FontFamily == FontDefaults.Family && header.Caption.FontWeight == 600,
                 "Editor did not adopt the framework default family and semibold caption style.");

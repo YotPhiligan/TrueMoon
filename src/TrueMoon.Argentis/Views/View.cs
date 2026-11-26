@@ -8,7 +8,7 @@ namespace TrueMoon.Argentis.Views;
 public abstract class View : ContentControl, IView
 {
     internal sealed override ElementScope OwnedScope { get; }
-    internal ViewDependencyOwnership? DependencyOwnership { get; set; }
+    private ViewDependencyOwnership? _ownedDrafts;
     private Func<IUiControlFactories, Element>? _deferredContent;
     private Action? _deferredStyle;
     private bool _contentPreparationStarted;
@@ -18,6 +18,31 @@ public abstract class View : ContentControl, IView
 
     /// <summary>Initializes behavior after factory-built content and its named parts are installed.</summary>
     protected virtual void OnContentPrepared() { }
+
+    /// <summary>Owns a precreated control that a host needs before this view's content is prepared.</summary>
+    /// <param name="control">A fresh, unattached control with no other owner.</param>
+    /// <returns>The same control, now owned by this view.</returns>
+    /// <remarks>The view disposes untransferred drafts. Transfer a draft with its own <c>ui.Adopt(control)</c>,
+    /// or by installing it directly as this view's content.</remarks>
+    protected TControl OwnDraft<TControl>(TControl control) where TControl : Element
+    {
+        VerifyTreeAccess();
+        ArgumentNullException.ThrowIfNull(control);
+        control.VerifyAccess();
+        if (_contentPreparationStarted || IsAttached || ReferenceEquals(this, control) ||
+            control is not { Parent: null, IsAttached: false, DependencyOwnership: null })
+            throw new InvalidOperationException("OwnDraft requires an unprepared view and an unowned control.");
+        for (var owner = DependencyOwnership?.DraftOwner; owner != null; owner = owner.DependencyOwnership?.DraftOwner)
+            if (ReferenceEquals(owner, control)) throw new InvalidOperationException("View drafts cannot form an ownership cycle.");
+
+        if (_ownedDrafts == null)
+        {
+            _ownedDrafts = new ViewDependencyOwnership(2, this);
+            Own(_ownedDrafts);
+        }
+        _ownedDrafts.Add(control);
+        return control;
+    }
 
     internal bool HasDeferredContent => _deferredContent != null;
 
@@ -31,7 +56,7 @@ public abstract class View : ContentControl, IView
         VerifyTreeAccess();
         if (IsAttached || Child != null || _contentPreparationStarted || HasDeferredContent)
             throw new InvalidOperationException("Deferred content must be declared once on an unprepared view.");
-        _deferredContent = factories => new UiBuildContext<TData>(factories, context).Build(factory);
+        _deferredContent = factories => new UiBuildContext<TData>(this, factories, context).Build(factory);
     }
 
     internal void DeferStyle(Action applyStyle) => _deferredStyle = applyStyle;
@@ -107,7 +132,7 @@ public abstract class View : ContentControl, IView
         {
             if (IsDisposed)
             {
-                DependencyOwnership?.Release(this);
+                _ownedDrafts = null;
                 _deferredContent = null;
                 _deferredStyle = null;
             }

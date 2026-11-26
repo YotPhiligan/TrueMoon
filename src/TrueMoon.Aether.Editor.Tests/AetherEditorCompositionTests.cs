@@ -74,7 +74,8 @@ public sealed class AetherEditorCompositionTests
         var factory = app.Services.Resolve<IFactory<EditorView>>()!;
         var editor = app.Services.Resolve<EditorSession>()!;
         var model = app.Services.Resolve<EditorViewModel>()!;
-        var first = factory.Create()!; var second = factory.Create()!;
+        using var first = factory.Create()!; using var second = factory.Create()!;
+        Assert.Equal(0, style.Configurations); Assert.Null(first.Child); Assert.Null(second.Child);
         using var firstUi = DocumentUiFixture.Ui(first); using var secondUi = DocumentUiFixture.Ui(second);
         firstUi.Update(); secondUi.Update(); editor.Present(firstUi, first); editor.Present(secondUi, second);
         var viewportState=app.Services.Resolve<EditorViewportState>()!;
@@ -90,8 +91,12 @@ public sealed class AetherEditorCompositionTests
         editor.Present(secondUi, second);
         Assert.True(second.ViewportController.IsActive);Assert.Equal(second.ViewportController.ViewId,viewportState.ActiveView);
         Assert.IsType<InvalidOperationException>(Complete(Task.Run(() => Record.Exception(() => editor.Present(secondUi, second)))));
-        using (var third = factory.Create()!) Assert.Same(model, third.DataContext);
-        Assert.Equal(3, style.Configurations);
+        using (var third = factory.Create()!)
+        {
+            Assert.Same(model, third.DataContext);
+            Assert.Null(third.Child);
+        }
+        Assert.Equal(2, style.Configurations);
         Assert.Throws<ObjectDisposedException>(() => editor.Present(firstUi, first));
         Assert.Throws<ObjectDisposedException>(() => editor.ReadPresentedView(first));
         Assert.Equal(0, runtime.Launches);
@@ -160,7 +165,7 @@ public sealed class AetherEditorCompositionTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public void FactoryFailure_DisposesUnpublishedTreeAndCanRetryWithSameBorrowedModels(bool microsoft)
+    public void FirstAttachStyleFailure_RollsBackChildrenAndKeepsRootCallerOwned(bool microsoft)
     {
         using var files = new ProjectFixture(); var runtime = new NeverRuntime(); var style = new ProbeStyle { Fail = true };
         using var app = Builder(microsoft).Setup(context =>
@@ -169,12 +174,22 @@ public sealed class AetherEditorCompositionTests
             context.UseAetherEditor(engine => Configure(engine, files, runtime));
         }).Build();
         var factory = app.Services.Resolve<IFactory<EditorView>>()!;
-        Assert.Same(style.Error, Assert.Throws<IOException>(() => factory.Create()));
-        Assert.True(style.Unpublished!.IsDisposed); Assert.True(style.Unpublished.Documents!.IsDisposed);
-        Assert.True(style.Unpublished.Inspector!.IsDisposed); Assert.True(style.Unpublished.Hierarchy!.IsDisposed);
+        var model = app.Services.Resolve<EditorViewModel>();
+        using var failed = factory.Create()!;
+        Assert.Equal(0, style.Configurations);
+        Assert.Same(model, failed.DataContext); Assert.Null(failed.Child);
+        Assert.Same(style.Error, Assert.Throws<IOException>(() => DocumentUiFixture.Ui(failed)));
+        Assert.Equal(1, style.Configurations);
+        Assert.False(failed.IsDisposed); Assert.False(failed.IsAttached); Assert.Null(failed.Child);
+        Assert.NotNull(style.UnpublishedDocuments); Assert.True(style.UnpublishedDocuments.IsDisposed);
+        Assert.NotNull(style.UnpublishedInspector); Assert.True(style.UnpublishedInspector.IsDisposed);
+        Assert.NotNull(style.UnpublishedHierarchy); Assert.True(style.UnpublishedHierarchy.IsDisposed);
+        failed.Dispose(); Assert.True(failed.IsDisposed);
         style.Fail = false; using var view = factory.Create()!;
-        Assert.Same(app.Services.Resolve<EditorViewModel>(), view.DataContext);
+        Assert.Same(model, view.DataContext); Assert.Equal(1, style.Configurations);
         using var ui = DocumentUiFixture.Ui(view); ui.Update(); app.Services.Resolve<EditorSession>()!.Present(ui, view);
+        Assert.Equal(2, style.Configurations);
+        Assert.NotNull(view.Documents); Assert.False(view.Documents.IsDisposed);
         Assert.False(app.Services.Resolve<EditorDocumentCommands>()!.Read().Closed); Assert.Equal(0, runtime.Launches);
     }
 
@@ -326,12 +341,23 @@ public sealed class AetherEditorCompositionTests
     }
     private sealed class ProbeStyle : IViewStyle<EditorView>
     {
-        public int Configurations; public bool Fail; public EditorView? Unpublished;
+        public int Configurations; public bool Fail;
+        public Element? UnpublishedDocuments, UnpublishedInspector, UnpublishedHierarchy;
         public IOException Error { get; } = new("view style failure");
         public void Configure(IViewStyleBuilder<EditorView> styles)
         {
             Configurations++;
-            if (Fail) { styles.Part(view => { Unpublished = view; return view.Error; }).FontSize(13); throw Error; }
+            if (Fail)
+            {
+                styles.Part(view =>
+                {
+                    UnpublishedDocuments = view.Documents;
+                    UnpublishedInspector = view.Inspector;
+                    UnpublishedHierarchy = view.Hierarchy;
+                    return view.Error;
+                }).FontSize(13);
+                throw Error;
+            }
             new EditorViewStyle().Configure(styles);
         }
     }

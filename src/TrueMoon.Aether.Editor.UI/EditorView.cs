@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using TrueMoon.Argentis.Bindings;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Menus;
@@ -17,6 +19,16 @@ namespace TrueMoon.Aether.Editor.UI;
 /// <summary>Fluent editor composition borrowing its presentation model and style declaration.</summary>
 public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
 {
+    private static readonly IFactory<ViewportLayout> Viewports = new Factory<ViewportLayout>(static () => new());
+    private static readonly IFactory<InspectorLayout> Inspectors = new Factory<InspectorLayout>(static () => new());
+    private static readonly IFactory<EditorIsland, (Element Content, bool FromRight)> Islands =
+        new Factory<EditorIsland, (Element Content, bool FromRight)>(static x => new(x.Content, x.FromRight));
+    private static readonly IFactory<EditorLayout, ShellRegions> Layouts = new Factory<EditorLayout, ShellRegions>(static x =>
+        new(x.Tools, x.Hierarchy, x.Viewport, x.Inspector, x.Footer, x.Diagnostics, overlayChrome: x.Compact));
+
+    private readonly record struct ShellRegions(Element? Tools, EditorIsland Hierarchy, ContentControl Viewport,
+        EditorIsland Inspector, Element Footer, EditorDiagnosticsView? Diagnostics, bool Compact);
+
     public static ViewStyleRole<Border> PaneRole { get; } = new("Pane");
     /// <summary>Persistent floating panel surfaces; separate from ordinary content sections.</summary>
     public static ViewStyleRole<Border> IslandSurfaceRole { get; } = new("IslandSurface");
@@ -32,23 +44,14 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
     public static ViewStyleRole<Text> PropertyNameRole { get; } = new("PropertyName");
     public static ViewStyleRole<VStack> PropertyRowsRole { get; } = new("PropertyRows");
     private readonly IEditorViewModel _model;
-    private readonly Text? _fallbackSceneTitle;
-    private readonly Text? _fallbackStatus;
-    private readonly Dictionary<EditorCommand, Button> _commands = [];
     private readonly Dictionary<string, Button> _entities = new(StringComparer.Ordinal);
-    public HStack Toolbar { get; } = new HStack();
-    public VStack EntityList { get; } = new VStack().WithRole(EntityListRole);
-    public ContentControl PropertiesPanel { get; } = new ContentControl();
-    public Text Selection { get; }
-    /// <summary>The live summary. The compact status bar prepares its summary on attachment.</summary>
-    public Text Status => StatusBar?.SummaryButton ?? _fallbackStatus!;
-    public Text Error { get; }
-    /// <summary>The live scene caption. The hierarchy caption is available after attachment.</summary>
-    public Text SceneTitle => Hierarchy?.Caption ?? _fallbackSceneTitle!;
-    public Text InspectorHint { get; } = new Text("Свойства сцены · только просмотр");
-    public Text ViewportTitle { get; } = new Text("VIEWPORT · Предпросмотр сцены");
-    public ContentControl ViewportFrame { get; }
-    public EditorViewport Canvas { get; } = new();
+
+    /// <summary>The live summary in the prepared status bar or runtime footer.</summary>
+    public Text Status => StatusBar?.SummaryButton ?? this.FallbackStatus ?? throw new InvalidOperationException("Editor content is not prepared.");
+    /// <summary>The live scene caption in the prepared hierarchy or runtime explorer.</summary>
+    public Text SceneTitle => Hierarchy?.Caption ?? this.FallbackSceneTitle ?? throw new InvalidOperationException("Editor content is not prepared.");
+    /// <summary>The viewport borrowed by the host before attachment and retained by the editor tree.</summary>
+    public EditorViewport Canvas { get; }
     /// <summary>Parent-owned exclusive viewport controller, created lazily through the App factory on first presentation.</summary>
     public IEditorViewportController? ViewportController { get; private set; }
     internal void EnsureViewportController(IFactory<IEditorViewportController,EditorViewportArguments> factory)
@@ -57,30 +60,27 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
         var controller=factory.Create(new(this))??throw new InvalidOperationException("Viewport controller factory returned null.");
         ViewportController=controller;Own(controller);
     }
-    /// <summary>Gets the nested project-document view owned by this tree, when configured.</summary>
-    public EditorDocumentView? Documents { get; }
-    /// <summary>Gets the nested Transform form owned by this tree.</summary>
-    public EditorTransformView? Transform { get; }
-    /// <summary>Gets the schema-driven inspector owned by this tree.</summary>
-    public EditorInspectorView? Inspector { get; }
-    /// <summary>Retained inspector island above the full-area viewport.</summary>
-    public Element InspectorPanel { get; }
-    /// <summary>Owned reveal/shadow host for the tree.</summary>
-    public EditorIsland HierarchyIsland { get; }
-    /// <summary>Owned reveal/shadow host for contextual inspection.</summary>
-    public EditorIsland InspectorIsland { get; }
-    public IReadOnlyDictionary<EditorCommand, Button> Commands => _commands;
+    /// <summary>The project-document view, when configured and prepared.</summary>
+    public EditorDocumentView? Documents { get; private set; }
+    /// <summary>The standalone Transform form, when configured and prepared.</summary>
+    public EditorTransformView? Transform { get; private set; }
+    /// <summary>The schema-driven inspector, when configured and prepared.</summary>
+    public EditorInspectorView? Inspector { get; private set; }
+    /// <summary>Retained inspector island above the full-area viewport, available after preparation.</summary>
+    public Element InspectorPanel => this.InspectorIsland;
+    /// <summary>Standalone toolbar buttons. Compact actions are provided by the window header.</summary>
+    public IReadOnlyDictionary<EditorCommand, Button> Commands { get; private set; } = ImmutableDictionary<EditorCommand, Button>.Empty;
     public IReadOnlyDictionary<string, Button> Entities => _entities;
-    /// <summary>Owns document-area popups; the title header borrows this host in the same window tree.</summary>
+    /// <summary>Owns editor popups; the window title borrows it before the editor attaches.</summary>
     public OverlayHost Overlays { get; }
     /// <summary>Borrowed window-owned compact header, when configured by the application.</summary>
     public EditorHeaderView? Header { get; internal set; }
-    /// <summary>Parent-owned compact footer, when configured.</summary>
-    public EditorStatusBarView? StatusBar { get; }
-    /// <summary>Parent-owned hierarchy, or null for the legacy flat-list constructor.</summary>
-    public EditorHierarchyView? Hierarchy { get; }
-    /// <summary>Parent-owned diagnostic console; its model and collector remain App-owned.</summary>
-    public EditorDiagnosticsView? Diagnostics { get; }
+    /// <summary>The compact footer, when configured and prepared.</summary>
+    public EditorStatusBarView? StatusBar { get; private set; }
+    /// <summary>The hierarchical explorer, when configured and prepared.</summary>
+    public EditorHierarchyView? Hierarchy { get; private set; }
+    /// <summary>The diagnostics console, when configured and prepared; its model and collector remain App-owned.</summary>
+    public EditorDiagnosticsView? Diagnostics { get; private set; }
 
     public EditorView(IEditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents = null,
         IFactory<EditorTransformView>? transform = null, bool compactHeader = false)
@@ -113,112 +113,122 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(style);
-        try
-        {
-            _model = model;
-            DataContext = model;
-            var shell = new Panel();
-            Overlays = new(shell);
-            if (compactHeader) Overlays.PopupInsets = new(0, 36, 0, 0);
-            SetContent(Overlays);
-            StatusBar = statusBar?.Create(new(Overlays));
-            if (statusBar != null && StatusBar == null) throw new InvalidOperationException("Status bar factory returned null.");
-            var footer = (Element?)StatusBar ?? (_fallbackStatus = new Text().BindText(model, x => x.StatusText));
-            shell.Add(footer);
-            Documents = documents?.Create();
-            if (documents != null && Documents == null) throw new InvalidOperationException("Document view factory returned null.");
-            Inspector = inspector?.Create();
-            if (inspector != null && Inspector == null) throw new InvalidOperationException("Inspector factory returned null.");
-            Transform = Inspector == null ? transform?.Create() : null;
-            if (Inspector == null && transform != null && Transform == null) throw new InvalidOperationException("Transform view factory returned null.");
-            Hierarchy = hierarchy?.Create();
-            if (hierarchy != null && Hierarchy == null) throw new InvalidOperationException("Hierarchy view factory returned null.");
-            if (Hierarchy != null) EntityList.Dispose();
-            Diagnostics = diagnostics?.Create();
-            if (diagnostics != null && Diagnostics == null) throw new InvalidOperationException("Diagnostics factory returned null.");
-            if (Transform != null) InspectorHint.Value = "Transform · Ctrl+Enter — применить";
-            Selection = new Text().BindText(model, x => x.SelectedName);
-            Error = new Text().BindText(model, x => x.ErrorText);
-            if (Hierarchy == null) _fallbackSceneTitle = new Text(model.Scene.Id).WithRole(SceneCaptionRole);
-            AddCommand(EditorCommand.Build, "Собрать", x => x.CanBuild);
-            AddCommand(EditorCommand.Start, "Запустить", x => x.CanStart);
-            AddCommand(EditorCommand.Play, "Play", x => x.CanPlay);
-            AddCommand(EditorCommand.Pause, "Пауза", x => x.CanPause);
-            AddCommand(EditorCommand.Step, "Шаг", x => x.CanStep);
-            AddCommand(EditorCommand.Stop, "Стоп", x => x.CanStop);
-            AddCommand(EditorCommand.Replace, "Применить сборку", x => x.CanReplace);
-            AddCommand(EditorCommand.Cancel, "Отмена", x => x.CanCancel);
-            Toolbar.Add(new Button("Тема").OnClick(ToggleTheme));
-            if (Diagnostics != null) Toolbar.Add(new Button("Диагностика").OnClick(() => Diagnostics.DataContext!.Toggle()));
-            Toolbar.IsVisible = !compactHeader;
-            UpdateEntities();
+        _model = model;
+        var shell = new Panel();
+        Canvas = OwnDraft(new EditorViewport());
+        Overlays = OwnDraft(new OverlayHost(shell));
+        if (compactHeader) Overlays.PopupInsets = new(0, 36, 0, 0);
 
-            var hierarchyPanel = (Element?)Hierarchy ?? Pane("СЦЕНА", _fallbackSceneTitle!, new ScrollViewer().Content(EntityList));
-            if (hierarchyPanel is Border legacyPane) legacyPane.WithRole(IslandSurfaceRole);
-            HierarchyIsland = new EditorIsland(hierarchyPanel).WithRole(IslandRole);
-            ViewportFrame = new ContentControl().Content(new ViewportLayout(Canvas, ViewportTitle));
-            ViewportTitle.IsVisible = false;
-            InspectorHint.IsVisible = Inspector == null;
-            PropertiesPanel.IsVisible = Inspector == null;
-            var inspectorSurface = Inspector != null ? new Border().WithRole(PaneRole).Content(
-                new InspectorLayout(new Text("ИНСПЕКТОР").WithRole(PaneTitleRole), Selection, InspectorHint, Inspector, PropertiesPanel, Error)) :
-                Transform == null ? Pane("ИНСПЕКТОР", Selection, InspectorHint, PropertiesPanel, Error) :
-                Pane("ИНСПЕКТОР", new ScrollViewer().Content(new VStack().WithRole(PaneItemsRole)
-                    .WithChildren(Selection, InspectorHint, Transform, PropertiesPanel, Error)));
-            inspectorSurface.WithRole(IslandSurfaceRole);
-            InspectorIsland = new EditorIsland(inspectorSurface, fromRight: true) { IsOpen = model.IsInspectorVisible }.WithRole(IslandRole)
+        Content(model, ui =>
+        {
+            var root = ui.Adopt(Overlays);
+            var canvas = ui.Adopt(Canvas);
+
+            StatusBar = statusBar == null ? null : ui.Create(statusBar, new EditorStatusBarArguments(Overlays)).Element;
+            Documents = documents == null ? null : ui.Create(documents).Element;
+            Inspector = inspector == null ? null : ui.Create(inspector).Element;
+            Transform = Inspector != null || transform == null ? null : ui.Create(transform).Element;
+            Hierarchy = hierarchy == null ? null : ui.Create(hierarchy).Element;
+            Diagnostics = diagnostics == null ? null : ui.Create(diagnostics).Element;
+
+            // Keep the contextual surface clipped to its slot, even without a toolbar.
+            Element? tools = compactHeader && Documents is { } compactTools ? ui.VStack(compactTools).Element : null;
+            if (!compactHeader)
+            {
+                var commands = new Dictionary<EditorCommand, Button>();
+                var toolbar = ui.HStack(
+                    Command(EditorCommand.Build, "Собрать", x => x.CanBuild),
+                    Command(EditorCommand.Start, "Запустить", x => x.CanStart).WithRole(EditorViewRoles.StartCommand),
+                    Command(EditorCommand.Play, "Play", x => x.CanPlay).WithRole(EditorViewRoles.PlayCommand),
+                    Command(EditorCommand.Pause, "Пауза", x => x.CanPause),
+                    Command(EditorCommand.Step, "Шаг", x => x.CanStep),
+                    Command(EditorCommand.Stop, "Стоп", x => x.CanStop).WithRole(EditorViewRoles.StopCommand),
+                    Command(EditorCommand.Replace, "Применить сборку", x => x.CanReplace),
+                    Command(EditorCommand.Cancel, "Отмена", x => x.CanCancel),
+                    ui.Button("Тема").OnClick(ToggleTheme)).NamedOptional("Toolbar").WithRole(EditorViewRoles.RuntimeToolbar);
+                if (Diagnostics is { } console)
+                    toolbar.WithChildren(ui.Button("Диагностика").OnClick(() => console.DataContext!.Toggle()));
+                tools = Documents is { } documentsView ? ui.VStack(toolbar, documentsView).Element : toolbar.Element;
+                Commands = commands;
+
+                UiControl<Button, IEditorViewModel> Command(EditorCommand command, string label, Expression<Func<IEditorViewModel, bool>> enabled)
+                {
+                    var button = ui.Button(label).Bind(UiProperties.Enabled, model, enabled).OnClick(() => model.Execute(command));
+                    commands.Add(command, button.Element);
+                    return button;
+                }
+            }
+
+            Element footer = (Element?)StatusBar ?? ui.Text().NamedOptional("FallbackStatus").Bind(Text.ValueProperty, model, x => x.StatusText);
+            Element explorer = (Element?)Hierarchy ?? Pane(ui, "СЦЕНА",
+                ui.Text(model.Scene.Id).NamedOptional("FallbackSceneTitle").WithRole(SceneCaptionRole),
+                ui.ScrollViewer(ui.VStack().NamedOptional("EntityList").WithRole(EntityListRole)))
+                .WithRole(IslandSurfaceRole);
+            var left = ui.Create(Islands, (explorer, false)).Named("HierarchyIsland").WithRole(IslandRole);
+
+            var viewport = ui.Create<ContentControl>().Named("ViewportFrame").Content(
+                ui.Create(Viewports).WithChildren(canvas,
+                    ui.Text("VIEWPORT · Предпросмотр сцены").Named("ViewportTitle").SetValue(UiProperties.Visible, false)));
+
+            var selection = ui.Text().Named("Selection").Bind(Text.ValueProperty, model, x => x.SelectedName);
+            var error = ui.Text().Named("Error").Bind(Text.ValueProperty, model, x => x.ErrorText);
+            UiControl<Border, IEditorViewModel> inspectorSurface;
+            if (Inspector is { } inspectorView)
+            {
+                inspectorSurface = ui.Border(ui.Create(Inspectors).WithChildren(
+                    ui.Text("ИНСПЕКТОР").WithRole(PaneTitleRole), selection, inspectorView, error)).WithRole(PaneRole);
+            }
+            else
+            {
+                var hint = ui.Text(Transform == null ? "Свойства сцены · только просмотр" : "Transform · Ctrl+Enter — применить")
+                    .NamedOptional("InspectorHint").WithRole(EditorViewRoles.LegacyInspectorHint);
+                var properties = ui.Create<ContentControl>().NamedOptional("PropertiesPanel");
+                inspectorSurface = Transform is { } form
+                    ? Pane(ui, "ИНСПЕКТОР", ui.ScrollViewer(ui.VStack(selection, hint, form, properties, error).WithRole(PaneItemsRole)))
+                    : Pane(ui, "ИНСПЕКТОР", selection, hint, properties, error);
+            }
+            var right = ui.Create(Islands, (inspectorSurface.WithRole(IslandSurfaceRole).Element, true))
+                .Named("InspectorIsland").WithRole(IslandRole)
+                .SetValue(EditorIsland.IsOpenProperty, model.IsInspectorVisible)
                 .Bind(EditorIsland.IsOpenProperty, model, x => x.IsInspectorVisible);
-            InspectorPanel = InspectorIsland;
-            Element tools = Documents == null ? Toolbar : new VStack().WithChildren(Toolbar, Documents);
-            shell.Items.Remove(footer);
-            shell.Add(new EditorLayout(tools, HierarchyIsland, ViewportFrame, InspectorIsland, footer, overlayChrome: compactHeader, diagnostics: Diagnostics));
-            UpdateSelection();
-            UpdateProperties();
-            this.WithViewStyle(style);
-            model.PropertyChanged += ModelChanged;
-            Own(new ModelSubscription(model, ModelChanged));
 
-            void AddCommand(EditorCommand command, string label, Expression<Func<IEditorViewModel, bool>> enabled)
-            {
-                var button = new Button(label).Bind(UiProperties.Enabled, model, enabled)
-                    .OnClick(() => model.Execute(command));
-                _commands.Add(command, button);
-                Toolbar.Add(button);
-            }
-        }
-        catch (Exception original)
-        {
-            try
-            {
-                Dispose();
-                if (Documents is { IsDisposed: false, Parent: null }) Documents.Dispose();
-                if (Transform is { IsDisposed: false, Parent: null }) Transform.Dispose();
-                if (StatusBar is { IsDisposed: false, Parent: null }) StatusBar.Dispose();
-                if (Hierarchy is { IsDisposed: false, Parent: null }) Hierarchy.Dispose();
-                if (Inspector is { IsDisposed: false, Parent: null }) Inspector.Dispose();
-                if (Diagnostics is { IsDisposed: false, Parent: null }) Diagnostics.Dispose();
-                if (HierarchyIsland is { IsDisposed: false, Parent: null }) HierarchyIsland.Dispose();
-                if (InspectorIsland is { IsDisposed: false, Parent: null }) InspectorIsland.Dispose();
-            }
-            catch (Exception cleanup)
-            {
-                throw new AggregateException("Editor view creation and cleanup failed.", original, cleanup);
-            }
-
-            throw;
-        }
+            shell.Add(ui.Create(Layouts, new ShellRegions(tools, left, viewport, right, footer, Diagnostics, compactHeader)));
+            return root;
+        });
+        this.WithViewStyle(style);
     }
 
-    private static Border Pane(string title, params Element[] children) => new Border().WithRole(PaneRole).Content(
-        new VStack().WithRole(PaneContentRole).WithChildren(new Text(title).WithRole(PaneTitleRole),
-            new VStack().WithRole(PaneItemsRole).WithChildren(children)));
+    private static UiControl<Border, IEditorViewModel> Pane(IUiBuildContext<IEditorViewModel> ui, string title, params Element[] children) =>
+        ui.Border(ui.VStack(ui.Text(title).WithRole(PaneTitleRole), ui.VStack(children).WithRole(PaneItemsRole))
+            .WithRole(PaneContentRole)).WithRole(PaneRole);
+
+    /// <inheritdoc />
+    protected override void OnContentPrepared()
+    {
+        if (Hierarchy != null && Inspector != null) return;
+        this.ObservePropertyChanged(_model, ModelChanged, SynchronizeLegacyParts, UiSynchronization.AfterTreeChange);
+    }
+
+    private void SynchronizeLegacyParts()
+    {
+        if (this.FallbackSceneTitle is { } title)
+        {
+            title.Value = _model.Scene.Id;
+            UpdateEntities();
+        }
+        if (Inspector == null) UpdateProperties();
+    }
 
     private void ModelChanged(object? sender, PropertyChangedEventArgs change)
     {
-        if (change.PropertyName == nameof(IEditorViewModel.Scene) && Hierarchy == null) Dispatch(() => SceneTitle.Value = _model.Scene.Id);
-        if (change.PropertyName == nameof(IEditorViewModel.EntityIds)) Dispatch(UpdateEntities);
-        if (change.PropertyName == nameof(IEditorViewModel.SelectedId)) Dispatch(UpdateSelection);
-        if (change.PropertyName == nameof(IEditorViewModel.Properties)) Dispatch(UpdateProperties);
+        switch (change.PropertyName)
+        {
+            case null or "": SynchronizeLegacyParts(); break;
+            case nameof(IEditorViewModel.Scene) when this.FallbackSceneTitle is { } title: title.Value = _model.Scene.Id; break;
+            case nameof(IEditorViewModel.EntityIds) when Hierarchy == null: UpdateEntities(); break;
+            case nameof(IEditorViewModel.SelectedId) when Hierarchy == null: UpdateSelection(); break;
+            case nameof(IEditorViewModel.Properties) when Inspector == null: UpdateProperties(); break;
+        }
     }
 
     /// <inheritdoc />
@@ -237,25 +247,25 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
     private void UpdateEntities()
     {
         VerifyAccess();
-        if (Hierarchy != null) return;
+        if (this.EntityList is not { } list) return;
         var ids = _model.EntityIds;
         var wanted = ids.ToHashSet(StringComparer.Ordinal);
         foreach (var id in _entities.Keys.Where(id => !wanted.Contains(id)).ToArray())
         {
-            var old = _entities[id]; EntityList.Items.Remove(old); old.Dispose(); _entities.Remove(id);
+            var old = _entities[id]; list.Items.Remove(old); old.Dispose(); _entities.Remove(id);
         }
         foreach (var id in ids)
         {
             if (_entities.ContainsKey(id)) continue;
             var button = new Button(EditorScene.Name(id)).WithRole(EntityButtonRole)
                 .SetValue(UiProperties.AccessibleName, id).OnClick(() => _model.Select(id));
-            _entities.Add(id, button); EntityList.Add(button);
+            _entities.Add(id, button); list.Add(button);
         }
         for (var index = 0; index < ids.Count; index++)
         {
             var button = _entities[ids[index]];
-            if (ReferenceEquals(EntityList.Children[index], button)) continue;
-            EntityList.Items.Remove(button); EntityList.Items.Insert(index, button);
+            if (ReferenceEquals(list.Children[index], button)) continue;
+            list.Items.Move(list.Items.IndexOf(button), index);
         }
         UpdateSelection();
     }
@@ -270,11 +280,11 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
     private void UpdateProperties()
     {
         VerifyAccess();
-        if (Inspector != null) return;
+        if (this.PropertiesPanel is not { } panel) return;
         var rows = new VStack().WithRole(PropertyRowsRole);
         foreach (var row in _model.Properties) rows.Add(new PropertyRow(row.Key, row.Value).WithRole(PropertyRowRole));
-        var old = PropertiesPanel.Child;
-        PropertiesPanel.SetContent(rows);
+        var old = panel.Child;
+        panel.SetContent(rows);
         old?.Dispose();
     }
 
@@ -288,51 +298,38 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
         });
     }
 
-    private sealed class ModelSubscription(IEditorViewModel model, PropertyChangedEventHandler callback) : IDisposable
-    {
-        public void Dispose() => model.PropertyChanged -= callback;
-    }
-
     private sealed class InspectorLayout : ElementList
     {
-        public InspectorLayout(params Element[] parts) { foreach (var part in parts) Add(part); }
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
             var fixedHeight = 0f;
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 2; i++)
             {
                 Children[i].Measure(available, text);
                 if (Children[i].IsVisible) fixedHeight += Children[i].DesiredSize.Height + 6;
             }
-            Children[5].Measure(available, text);
-            var error = (Text)Children[5]; var errorHeight = error.Value.Length == 0 ? 0 : Math.Min(60, error.DesiredSize.Height);
-            Children[3].Measure(new(available.Width, Math.Max(0, available.Height - fixedHeight - errorHeight)), text);
-            Children[4].Measure(default, text);
-            return new(Math.Min(280, available.Width), Math.Min(available.Height, fixedHeight + Children[3].DesiredSize.Height + errorHeight));
+            var error = (Text)Children[3];
+            error.Measure(available, text);
+            var errorHeight = error.Value.Length == 0 ? 0 : Math.Min(60, error.DesiredSize.Height);
+            Children[2].Measure(new(available.Width, Math.Max(0, available.Height - fixedHeight - errorHeight)), text);
+            return new(Math.Min(280, available.Width), Math.Min(available.Height, fixedHeight + Children[2].DesiredSize.Height + errorHeight));
         }
         protected override void ArrangeCore(Rect area)
         {
             var y = area.Y; var bottom = area.Y + area.Height;
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 2; i++)
             {
                 var part = Children[i]; var height = part.IsVisible ? Math.Min(part.DesiredSize.Height, Math.Max(0, bottom - y)) : 0;
                 part.Arrange(new(area.X, y, area.Width, height)); if (height > 0) y += height + 6;
             }
-            var error = (Text)Children[5]; var errorHeight = error.Value.Length == 0 ? 0 : Math.Min(60, error.DesiredSize.Height);
-            Children[3].Arrange(new(area.X, y, area.Width, Math.Max(0, bottom - y - errorHeight)));
-            Children[4].Arrange(new(area.X, bottom, 0, 0));
+            var error = (Text)Children[3]; var errorHeight = error.Value.Length == 0 ? 0 : Math.Min(60, error.DesiredSize.Height);
+            Children[2].Arrange(new(area.X, y, area.Width, Math.Max(0, bottom - y - errorHeight)));
             error.Arrange(new(area.X, bottom - errorHeight, area.Width, errorHeight));
         }
     }
 
     private sealed class ViewportLayout : ElementList
     {
-        public ViewportLayout(Element canvas, Element title)
-        {
-            Add(canvas);
-            Add(title);
-        }
-
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
             foreach (var child in Children) child.Measure(available, text);

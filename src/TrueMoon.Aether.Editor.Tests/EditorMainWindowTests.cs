@@ -28,10 +28,11 @@ public sealed class EditorMainWindowTests
         var first = h.Create(); var second = h.Create("Second", new(1400, 900));
         var firstOwned = new EditorWindowResource(); var secondOwned = new EditorWindowResource();
         first.EditorView.Own(firstOwned); second.EditorView.Own(secondOwned);
-        Assert.Equal(2, h.ViewCreations); Assert.Equal(2, h.RootStyle.Configurations); Assert.Equal(2, h.ViewStyle.Configurations);
+        Assert.Equal(2, h.ViewCreations); Assert.Equal(2, h.RootStyle.Configurations); Assert.Equal(0, h.ViewStyle.Configurations);
         Assert.Same(h.Model, first.DataContext); Assert.Same(h.Model, first.EditorView.DataContext);
         Assert.Same(first.EditorView, first.Child); Assert.Same(first, first.EditorView.Parent);
         Assert.NotSame(first.EditorView, second.EditorView); Assert.NotSame(first.EditorView.Canvas, second.EditorView.Canvas);
+        Assert.Null(first.EditorView.Child); Assert.Null(second.EditorView.Child);
         Assert.Equal(new Size(1280, 800), first.ClientSize); Assert.Equal(new Size(1400, 900), second.ClientSize);
         Assert.Equal("Editor", first.Title); Assert.Equal("Second", second.Title);
         Assert.Empty(DocumentUiFixture.Tree(first).OfType<WindowFrame>());
@@ -42,6 +43,7 @@ public sealed class EditorMainWindowTests
         h.Model.Select("green-cube"); Assert.Equal("green-cube", h.Model.SelectedId);
         second.Dispose(); Assert.Equal(1, secondOwned.Disposals); Assert.Equal(0, h.RootStyle.Disposals); Assert.Equal(0, h.ViewStyle.Disposals);
         using var third = h.Create(); Assert.Equal(3, h.ViewCreations); Assert.Same(h.Model, third.EditorView.DataContext);
+        Assert.Equal(0, h.ViewStyle.Configurations);
     }
 
     [Theory]
@@ -203,8 +205,10 @@ public sealed class EditorMainWindowTests
     {
         using var h = new EditorMainWindowFixture();
         h.RootStyle.ConfigureAction = styles => styles.Root().Padding(17).FontSize(41).Background(Theme.Dark.Error);
-        var root = h.Create("Custom"); var editor = root.EditorView; var canvas = editor.Canvas; var body = editor.Child;
+        var root = h.Create("Custom"); var editor = root.EditorView; var canvas = editor.Canvas;
+        Assert.Equal(1, h.RootStyle.Configurations); Assert.Equal(0, h.ViewStyle.Configurations);
         using var ui = DocumentUiFixture.Ui(root); ui.Update();
+        var body = editor.Child; Assert.NotNull(body);
         Assert.Equal(new Thickness(17), root.Padding); Assert.Equal(41, root.FontSize);
         Assert.NotEqual(41, editor.FontSize); Assert.NotEqual(41, editor.SceneTitle.FontSize);
         var editorColor = editor.Background; var changes = 0; root.PropertyChanged += (_, property) => { if (ReferenceEquals(property, Window.TitleProperty)) changes++; };

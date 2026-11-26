@@ -1,3 +1,54 @@
+<a id="editor-view-contracts-2026-11-26"></a>
+## 2026-11-26 — контракты EditorView и удаление скрытого Toolbar
+
+`1.2611.26.13-alpha`. `EditorView` владеет ранними `Canvas` и `OverlayHost`
+через `OwnDraft`. Он и статусный popup обновляют дочерние элементы через
+`UiSynchronization.AfterTreeChange`. Части, которые существуют в одном режиме,
+разрешаются через nullable-свойства `NamedOptional`.
+
+Компактный режим больше не создаёт панель и кнопки Runtime. Доступность
+проверяется через `EditorHeaderView.RuntimeCommands`, ввод идёт через
+видимые кнопки и меню. Самостоятельная панель Runtime сохранена, а
+контекстные документы сохраняют прежнюю область клипа своей поверхности.
+
+- Debug: 322/322 адресных теста Editor. `CompactEditor_DefaultFrameOverlayUsesLogicalGeometryWithoutAnIdleDocumentBand`
+  проверяет отсутствие панели на трёх scale. `EditorRoot_ForwardsSaveAndEscapeWhileItsRetainedDocumentToolsAreHidden`
+  проверяет видимую форму, клип и сохранение геометрии viewport.
+- Оконные OpenGL-профили документов и пустого workspace прошли. Из 17 кадров
+  документов, заголовка и статуса 14 побайтно равны `1.2611.26.12-alpha`;
+  остальные отличаются только в строках пути fixture и нового GUID сцены.
+  Финальный документный прогон завершился без оставшихся ресурсов и сессий.
+- Дополнительный legacy-прогон `.csproj` превысил лимит времени после проверок
+  заголовка и статуса; полного отчёта `interaction.json` нет.
+
+[Контракты и проверки Alloy](../alloy/HISTORY.md#ui-tree-synchronization-and-drafts-2026-11-26).
+Артефакты: `TestResults/EditorViewContracts-26-13/`.
+
+<a id="editor-root-fluent-2026-11-26"></a>
+## 2026-11-26 — корень Editor на Fluent Content
+
+`1.2611.26.12-alpha`. `EditorView` готовит layout, вложенные View и стиль
+при первом attach. Хост заранее получает `Canvas`, `Overlays` и модель;
+Fluent-фабрика принимает те же контролы через `ui.Adopt`. Заголовок и
+статус-бар продолжают использовать общий `OverlayHost`. Runtime сохраняет
+простой список и read-only свойства. Полный Editor не создаёт скрытые
+заглушки этих секций при наличии обозревателя и инспектора.
+
+- Debug, Windows x64, SDK 11: 294/294 адресных теста Editor, включая сценарий
+  сохранения и повторного открытия сцены. Откат при ошибках фабрик и стиля
+  освобождает подготовленные контролы, не забирая модель. Проверены Dispose
+  до показа и повторный attach с тем же viewport и актуальным выделением.
+- Оконный `AetherEditorHost --smoke-documents` прошёл на OpenGL: 14 из
+  17 PNG совпали побайтно с `1.2611.26.11-alpha`. В остальных трёх
+  отличаются только пиксели строк с путём рабочей копии или новым GUID сцены.
+  После закрытия: ноль UI-сессий, GPU-ресурсов, handle и дочерних процессов.
+- `VerifyNumeric.ps1 -RunProfile SourceDebug -HostKind Embedded`: окно OpenGL
+  с Microsoft DI, detach/recreate вложенного Editor и четыре проверки ввода
+  и Undo. Контролы сохраняются при редактировании; окно и GPU очищены.
+
+Отчёты и кадры: `TestResults/EditorViewFluent-26-12/`. Свежий пакетный
+профиль и миграция `EditorMainWindow` остаются отдельным срезом.
+
 <a id="editor-header-contracts-2026-11-26"></a>
 ## 2026-11-26 — защита замены заголовка и подсказок
 

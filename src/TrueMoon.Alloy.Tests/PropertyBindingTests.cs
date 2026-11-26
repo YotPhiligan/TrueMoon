@@ -134,6 +134,46 @@ public sealed class PropertyBindingTests
     }
 
     [Fact]
+    public void ObservePropertyChanged_AfterTreeChangeDropsSupersededContextsAndClearsContentForNull()
+    {
+        var first = new Model { Number = 24 };
+        var next = new Model { Number = 70 };
+        var context = new BindingContext { DataContext = first };
+        var reads = new List<Model?>();
+        var deliveries = new List<string?>();
+        using var row = new Text("model");
+        var element = new ContentControl();
+        element.ObservePropertyChanged(context, (_, change) => deliveries.Add(change.PropertyName), () =>
+        {
+            var data = context.DataContext;
+            reads.Add(data);
+            if (data != null) row.Width = data.Number;
+            element.SetContent(data == null ? null : row);
+        }, UiSynchronization.AfterTreeChange);
+        using var ui = Create(element);
+
+        first.Notify("old connection");
+        context.DataContext = next;
+        next.Notify("old context");
+        context.DataContext = first;
+        first.Notify("current connection");
+        Assert.Null(element.Child);
+        Assert.Empty(reads);
+        ui.Update();
+        Assert.Same(first, Assert.Single(reads));
+        Assert.Equal("current connection", Assert.Single(deliveries));
+        Assert.Same(row, element.Child);
+        Assert.Equal(24, row.Bounds.Width);
+
+        context.DataContext = null;
+        Assert.Same(row, element.Child);
+        ui.Update();
+        Assert.Equal(new Model?[] { first, null }, reads);
+        Assert.Null(element.Child);
+        Assert.False(row.IsAttached);
+    }
+
+    [Fact]
     public void ObservePropertyChanged_DeliversOnOwnerInOrderAndDiscardsTheOldAttachment()
     {
         var source = new Model();
@@ -175,6 +215,39 @@ public sealed class PropertyBindingTests
         Assert.Equal(0, source.Subscribers);
         Assert.Equal(2, source.Adds);
         Assert.Equal(2, source.Removes);
+    }
+
+    [Fact]
+    public void ObservePropertyChanged_AfterTreeChangeMutatesBeforeLayoutAndDropsEndedAttachments()
+    {
+        var source = new Model { Number = 25 };
+        var element = new Panel();
+        element.ObservePropertyChanged(source, (_, _) => { },
+            () => element.Items.Add(new Text("model") { Width = source.Number }),
+            UiSynchronization.AfterTreeChange);
+        var root = new Panel().WithChildren(element);
+        using var ui = Create(root);
+
+        Assert.Empty(element.Items);
+        ui.Update();
+        Assert.Equal(25, Assert.Single(element.Items).Bounds.Width);
+
+        Assert.True(root.Items.Remove(element));
+        root.Items.Add(element);
+        Assert.True(root.Items.Remove(element));
+        root.Items.Add(element);
+        source.Number = 60;
+        Assert.Single(element.Items);
+        ui.Update();
+        Assert.Equal(2, element.Items.Count);
+        Assert.Equal(60, element.Items[1].Bounds.Width);
+
+        Assert.True(root.Items.Remove(element));
+        root.Items.Add(element);
+        Assert.True(root.Items.Remove(element));
+        element.Dispose();
+        ui.Update();
+        Assert.Equal(0, source.Subscribers);
     }
 
     [Theory]
@@ -247,6 +320,24 @@ public sealed class PropertyBindingTests
         ui.Update();
         Assert.True(unrelatedRan);
         Assert.Equal(2, snapshots.Count);
+    }
+
+    [Fact]
+    public void ObserveState_AfterTreeChangeCoalescesInitialReadWithNotificationsBeforeLayout()
+    {
+        var first = new Model { Number = 10 };
+        var second = new Model { Number = 20 };
+        var element = new Panel();
+        element.ObserveState(() => element.Items.Add(new Text("snapshot") { Width = first.Number + second.Number }),
+            UiSynchronization.AfterTreeChange, first, second);
+        using var ui = new UiSession(element, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 1, ActionsPerUpdate = 1 });
+
+        RunOnWorker(() => { first.Number = 25; second.Number = 40; });
+        Assert.Empty(element.Items);
+        ui.Update();
+        Assert.Equal(65, Assert.Single(element.Items).Bounds.Width);
+        Assert.False(ui.NeedsUpdate);
     }
 
     [Fact]

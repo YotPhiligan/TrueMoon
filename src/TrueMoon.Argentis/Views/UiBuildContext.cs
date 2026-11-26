@@ -2,7 +2,7 @@ using TrueMoon.Argentis.Bindings;
 
 namespace TrueMoon.Argentis.Views;
 
-internal sealed class UiBuildContext<TData>(IUiControlFactories factories, IDataContext<TData>? context) : IUiBuildContext<TData>
+internal sealed class UiBuildContext<TData>(View view, IUiControlFactories factories, IDataContext<TData>? context) : IUiBuildContext<TData>
 {
     private readonly HashSet<Element> _drafts = new(ReferenceEqualityComparer.Instance);
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
@@ -37,6 +37,22 @@ internal sealed class UiBuildContext<TData>(IUiControlFactories factories, IData
         return Track(factory.Create(arguments));
     }
 
+    public UiControl<TControl, TData> Adopt<TControl>(TControl control) where TControl : Element
+    {
+        VerifyOpen();
+        ArgumentNullException.ThrowIfNull(control);
+        control.VerifyAccess();
+        if (control is not { Parent: null, IsAttached: false })
+            throw new InvalidOperationException("Only a live, unowned control can be adopted by the build context.");
+        var ownership = control.DependencyOwnership;
+        if (ownership?.DraftOwner is { } owner && !ReferenceEquals(owner, view))
+            throw new InvalidOperationException("The draft belongs to another view.");
+        if (!_drafts.Add(control))
+            throw new InvalidOperationException("A control can be adopted by the build context only once.");
+        ownership?.Release(control);
+        return new(control, context);
+    }
+
     private void VerifyOpen()
     {
         if (Environment.CurrentManagedThreadId != _ownerThread)
@@ -46,7 +62,7 @@ internal sealed class UiBuildContext<TData>(IUiControlFactories factories, IData
 
     private UiControl<TControl, TData> Track<TControl>(TControl? control) where TControl : Element
     {
-        if (control is not { Parent: null, IsAttached: false, IsDisposed: false })
+        if (control is not { Parent: null, IsAttached: false, IsDisposed: false, DependencyOwnership: null })
             throw new InvalidOperationException($"The UI factory for '{typeof(TControl)}' must return a live, unowned control.");
         if (!_drafts.Add(control))
             throw new InvalidOperationException($"The UI factory for '{typeof(TControl)}' returned the same control twice.");
@@ -59,14 +75,14 @@ internal sealed class UiBuildContext<TData>(IUiControlFactories factories, IData
         {
             var root = factory(this);
             if (root == null || !_drafts.Contains(root) || root.Parent != null || root.IsAttached || root.IsDisposed)
-                throw new InvalidOperationException("Deferred content must return a live, unowned root created by its build context.");
+                throw new InvalidOperationException("Deferred content must return a live, unowned root created or adopted by its build context.");
 
             foreach (var draft in _drafts)
             {
                 var owner = draft;
                 while (owner.Parent is { } parent) owner = parent;
                 if (owner != root)
-                    throw new InvalidOperationException("Controls created by the build context must belong to the returned tree.");
+                    throw new InvalidOperationException("Controls created or adopted by the build context must belong to the returned tree.");
             }
             return root;
         }

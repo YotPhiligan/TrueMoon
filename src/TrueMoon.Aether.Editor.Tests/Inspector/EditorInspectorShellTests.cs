@@ -1,5 +1,6 @@
 ﻿using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
@@ -35,7 +36,8 @@ public sealed class EditorInspectorShellTests
             new Factory<EditorInspectorView>(() => { inspectorCalls++; return new(test.Model, new EditorInspectorViewStyle()); }));
         using var ui = InspectorFixture.Ui(view); Refresh();
         Assert.Equal(1, inspectorCalls); Assert.Equal(0, legacyCalls); Assert.Null(view.Transform);
-        Assert.NotNull(view.Inspector); Assert.False(view.PropertiesPanel.IsVisible); Assert.False(view.InspectorHint.IsVisible);
+        Assert.NotNull(view.Inspector);
+        Assert.Null(view.PropertiesPanel); Assert.Null(view.InspectorHint);
         Assert.Empty(DocumentUiFixture.Tree(view).OfType<PropertyRow>());
         var inspector = view.Inspector!; var tree = view.Hierarchy!.Tree;
         tree.Select(InspectorFixture.Parent); ui.Update(); Assert.Equal(2, inspector.Components.Count);
@@ -71,10 +73,12 @@ public sealed class EditorInspectorShellTests
         var workspace = new EditorWorkspace(EditorScene.Demo()); workspace.SetDocument(test.Owner.Document.Read().Content);
         using var model = new EditorViewModel(workspace, new((_, _) => Task.CompletedTask, CancellationToken.None), documents, test.Model);
         EditorDocumentView product = null!;
-        var error = Assert.Throws<InvalidOperationException>(() => new EditorView(model, new EditorViewStyle(),
+        using var view = new EditorView(model, new EditorViewStyle(),
             new Factory<EditorDocumentView>(() => product = new(documents, new EditorDocumentViewStyle())), null, false, null, null,
-            new Factory<EditorInspectorView>(() => null!)));
-        Assert.Contains("Inspector factory returned null", error.Message); Assert.True(product.IsDisposed);
+            new Factory<EditorInspectorView>(() => null!));
+        var error = Assert.Throws<InvalidOperationException>(() => { using var ui = InspectorFixture.Ui(view); });
+        Assert.Equal($"The UI factory for '{typeof(EditorInspectorView).FullName}' must return a live, unowned control.", error.Message);
+        Assert.True(product.IsDisposed);
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Equal(0, test.Owner.Authoring.Products[0].Disposals);
         test.Refresh(); test.Property(DocumentData.Custom, "text").Value = "owner survives"; test.Model.Apply();
         Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
@@ -87,11 +91,13 @@ public sealed class EditorInspectorShellTests
         var workspace = new EditorWorkspace(EditorScene.Demo()); workspace.SetDocument(test.Owner.Document.Read().Content);
         using var model = new EditorViewModel(workspace, new((_, _) => Task.CompletedTask, CancellationToken.None), transform: test.Model);
         EditorInspectorView product = null!; var resource = new Cleanup(); var failure = new IOException("root style failed");
-        var error = Assert.Throws<IOException>(() => new EditorView(model, new FailingStyle(failure), null, null, false, null, null,
-            new Factory<EditorInspectorView>(() => { product = new(test.Model, new EditorInspectorViewStyle()); product.Own(resource); return product; })));
+        using var view = new EditorView(model, new FailingStyle(failure), null, null, false, null, null,
+            new Factory<EditorInspectorView>(() => { product = new(test.Model, new EditorInspectorViewStyle()); product.Own(resource); return product; }));
+        var error = Assert.Throws<IOException>(() => { using var ui = InspectorFixture.Ui(view); });
         Assert.Same(failure, error); Assert.Equal(1, resource.Disposals); Assert.True(product.IsDisposed);
         Assert.Null(product.Child);
         Assert.Empty(product.Properties);
+        Assert.False(view.IsAttached); Assert.False(view.IsDisposed); Assert.Null(view.Child);
         test.Refresh(); test.Property(DocumentData.Custom, "flag").BooleanValue = true; test.Model.Apply();
         Assert.True(test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["flag"].Value.GetBoolean());
         Assert.False(test.Owner.Commands.Read().Closed);

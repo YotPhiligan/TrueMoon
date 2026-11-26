@@ -1,4 +1,5 @@
 using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Layout;
 using System.Collections.Concurrent;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tooling;
@@ -74,9 +75,10 @@ public sealed class DocumentShellTests
         Assert.Equal(owner.Document.Read().Content!.Document.Id.Value.ToString("D"), view.SceneTitle.Value);
         Assert.Same(path, view.Documents!.PathInput); Assert.Same(canvas, view.Canvas); Assert.True(canvas.Bounds.Height > 0);
         model.Select(DocumentData.Child.Value.ToString("D")); ui.Update(); var entityButton = view.Entities[model.SelectedId!];
-        Assert.Equal(ControlTone.Accent, entityButton.Tone); var inspector = view.PropertiesPanel.Child;
+        Assert.Equal(ControlTone.Accent, entityButton.Tone);
+        var inspector = Assert.IsType<ContentControl>(view.PropertiesPanel).Child;
         owner.Run(DocumentCommand.Save); model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); ui.Update();
-        Assert.Same(entityButton, view.Entities[model.SelectedId!]); Assert.Same(inspector, view.PropertiesPanel.Child); Assert.Same(nested, view.Documents);
+        Assert.Same(entityButton, view.Entities[model.SelectedId!]); Assert.Same(inspector, view.PropertiesPanel!.Child); Assert.Same(nested, view.Documents);
         Assert.True(owner.Document.Apply(DocumentData.Edit(7, 81)).Succeeded);
         model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); ui.Update();
         Assert.Equal(DocumentData.Child.Value.ToString("D"), model.SelectedId); Assert.Same(entityButton, view.Entities[model.SelectedId!]);
@@ -86,12 +88,13 @@ public sealed class DocumentShellTests
     }
 
     [Fact]
-    public void NestedViewFactoryFailureOrNullProduct_IsObservedAndDoesNotDisposeBorrowedDocumentModel()
+    public void NullDocumentFactoryProduct_FailsOnAttachWithoutDisposingBorrowedDocumentModel()
     {
         using var owner = new DocumentUiFixture(); using var documents = new EditorDocumentViewModel(owner.Commands);
         using var model = new EditorViewModel(new(new("empty", 0, [])), new((_, _) => Task.CompletedTask, CancellationToken.None), documents);
-        var error = Assert.Throws<InvalidOperationException>(() => new EditorView(model, new EditorViewStyle(), new Factory<EditorDocumentView>(() => null!)));
-        Assert.Contains("Document view factory returned null", error.Message);
+        using var view = new EditorView(model, new EditorViewStyle(), new Factory<EditorDocumentView>(() => null!));
+        var error = Assert.Throws<InvalidOperationException>(() => { using var ui = DocumentUiFixture.Ui(view); });
+        Assert.Equal($"The UI factory for '{typeof(EditorDocumentView).FullName}' must return a live, unowned control.", error.Message);
         documents.Refresh(); Assert.True(documents.CanNew); Assert.False(owner.Commands.Read().Closed); Assert.Equal(0, owner.RuntimeStops);
     }
 }

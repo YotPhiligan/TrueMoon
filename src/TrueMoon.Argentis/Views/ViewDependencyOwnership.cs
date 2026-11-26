@@ -1,11 +1,12 @@
 namespace TrueMoon.Argentis.Views;
 
-// Owns products of constructor-injected view factories until a tree or session takes them.
-internal sealed class ViewDependencyOwnership(int capacity) : IDisposable
+// Owns constructor-injected views or explicitly retained drafts until transferred.
+internal sealed class ViewDependencyOwnership(int capacity, View? draftOwner = null) : IDisposable
 {
-    private View?[]? _children;
+    private Element?[]? _children;
     private int _count;
     private bool _constructionComplete;
+    internal View? DraftOwner => draftOwner;
 
     internal TView Track<TView>(TView child) where TView : View
     {
@@ -13,12 +14,19 @@ internal sealed class ViewDependencyOwnership(int capacity) : IDisposable
         if (child is not { IsDisposed: false, IsAttached: false, Parent: null, DependencyOwnership: null })
             throw new InvalidOperationException($"The factory for '{typeof(TView)}' must return a fresh, unowned view.");
 
-        (_children ??= new View?[capacity])[_count++] = child;
-        child.DependencyOwnership = this;
+        Add(child);
         return child;
     }
 
-    internal void Release(View child)
+    internal void Add(Element child)
+    {
+        _children ??= new Element?[capacity];
+        if (_count == _children.Length) Array.Resize(ref _children, Math.Max(1, _count * 2));
+        _children[_count++] = child;
+        child.DependencyOwnership = this;
+    }
+
+    internal void Release(Element child)
     {
         var children = _children!;
         var index = 0;
@@ -27,7 +35,7 @@ internal sealed class ViewDependencyOwnership(int capacity) : IDisposable
         if (remaining > 0) Array.Copy(children, index + 1, children, index, remaining);
         children[_count] = null;
         child.DependencyOwnership = null;
-        if (_count == 0 && _constructionComplete) _children = null;
+        if (_count == 0 && (_constructionComplete || draftOwner != null)) _children = null;
     }
 
     internal void TransferTo(View owner)

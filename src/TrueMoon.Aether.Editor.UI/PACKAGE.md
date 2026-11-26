@@ -82,3 +82,20 @@ arguments and their ownership are unchanged.
 In `1.2611.26.11-alpha`, the header uses `ObserveState` for its borrowed
 models. The header and inspector share delayed hover validation. A pending
 hint waits for a resize to update layout before it can open.
+
+In `1.2611.26.12-alpha`, `EditorView` builds its layout and configured panels on
+first attachment. Only `Canvas`, `Overlays` and `DataContext` are prepared for
+host use before attach; the title bar still borrows that same overlay host.
+Read nested views, `Commands`, `Entities`, and generated parts on the UI owner
+thread after attachment. Rebuild consumers that used the former CLR getters
+and import `TrueMoon.Aether.Editor.UI`. `EntityList` is absent with the
+hierarchical explorer; `InspectorHint` and `PropertiesPanel` are absent with
+the schema-driven inspector. Use `TryGetPart` if the mode is not known.
+Factory-product and style errors surface at attachment, which rolls back the
+prepared tree. If ownership has not transferred, the caller disposes the root.
+
+In `1.2611.26.13-alpha`, compact `EditorView` no longer creates a standalone
+toolbar. `Toolbar` is nullable and `Commands` lists standalone buttons only.
+Use `EditorHeaderView.RuntimeCommands` for availability in compact mode and
+the visible heading/menu actions for input. Mode-specific `EditorView` parts
+such as `EntityList` and `PropertiesPanel` now return null when absent.
