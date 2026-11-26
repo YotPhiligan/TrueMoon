@@ -3,7 +3,10 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
-Текущий срез — `1.2611.26.1-alpha`: локальное упрощение `EditorHierarchyView`.
+Текущий срез — `1.2611.26.3-alpha`: Hosting добавляет DI-фабрики контролов
+точечно через `UseControlFactory`, сохраняя пользовательский или штатный
+реестр для остальных ключей. [Проверка на Player](../engine/HISTORY.md#player-viewport-hosting-2026-11-26).
+
 В предыдущем `1.2611.25.20-alpha` типы Argentis распределены по отдельным
 файлам без смены пространств имён. Растровый, OpenGL и Vulkan бэкенды Skia
 принимают `EditorSubpixelPositioning` для обычного текста редакторов; штатный
@@ -96,9 +99,9 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 
 ## Следующий конкретный шаг
 
-Начать [миграцию View Aether](../engine/PLAN.md#aether-view-authoring-migration)
-с Player: инвентаризировать создание `PlayerView` и `PlayerCanvas`, сохранить
-переопределения фабрики и стиля, затем проверить ввод и первый показанный кадр.
+`PlayerView` [переведён и проверен на исходниках](../engine/HISTORY.md#player-view-migration-2026-11-26).
+Следующий срез [миграции](../engine/PLAN.md#aether-view-authoring-migration) —
+панели Editor/Runtime Editor и инвентаризация частей корня, нужных хосту до attach.
 
 [Проверка замены свойства инспектора](HISTORY.md#inspector-property-replacement)
 пройдена. Эксперимент с удержанием редактора нужен только при подтверждённой

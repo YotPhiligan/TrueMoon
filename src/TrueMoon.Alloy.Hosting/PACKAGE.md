@@ -37,6 +37,14 @@ Exactly one parameter of the selected longest public constructor must match
 `Item` (`ARG021` otherwise). The other parameters and an optional DI-registered
 `IViewStyle<RowView>` follow the ordinary activation rules.
 
+For a custom control, register `IFactory<MyControl>` in DI and call
+`options.UseControlFactory<MyControl>()` in `UseAlloy` or `UsePresentation`.
+Use `UseControlFactory<MyControl, MyArguments>()` with
+`IFactory<MyControl, MyArguments>` for `ui.Create<MyControl, MyArguments>(args)`.
+These bindings take precedence for their exact keys in hosted sessions.
+Other keys go to the existing application registry (or the stock registry).
+The registry is not changed; DI owns the factories and the UI tree owns controls.
+
 Without the analyzer, register `IFactory<MyView>` explicitly or use
 `context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`.
 The window owns the returned root. Session/lifecycle facades borrow their target,

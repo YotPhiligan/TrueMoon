@@ -22,6 +22,7 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     private readonly HostedUiWindow _window;
     private readonly PlayerSession _session;
     private readonly PlayerInput _input;
+    private readonly PlayerViewport _viewport;
     private readonly PlayerOptions _options;
     private readonly Channel<ScenarioRequest>? _scenario;
     private readonly CancellationTokenSource _end=new();
@@ -31,14 +32,13 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     private Task _loop=Task.CompletedTask,_ack=Task.CompletedTask;
     private Task? _stop;
     private UiSession? _ui;
-    private PlayerView? _view;
     private SilkWindowHost? _native;
     private GpuOpenGlContext? _context;
     private Action? _current;
     private int _owner,_closing;
-    internal PlayerWindow(HostedUiWindow window,PlayerSession session,PlayerInput input,PlayerOptions options)
+    internal PlayerWindow(HostedUiWindow window, PlayerSession session, PlayerInput input, PlayerViewport viewport, PlayerOptions options)
     {
-        _window=window;_session=session;_input=input;_options=options;window.FramePresented+=OnPresented;window.Closing+=OnClosing;
+        _window=window;_session=session;_input=input;_viewport=viewport;_options=options;window.FramePresented+=OnPresented;window.Closing+=OnClosing;
         if (options.ManualTicks)
             _scenario = Channel.CreateBounded<ScenarioRequest>(new BoundedChannelOptions(1) { SingleReader = true });
     }
@@ -215,7 +215,7 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
         void OnScenarioPresented(UiSession ui)
         {
             if (presented.Task.IsCompleted || expected is not {} drawn ||
-                !ReferenceEquals(drawn, ((PlayerView)ui.Root).Canvas.Drawn)) return;
+                !ReferenceEquals(drawn, _viewport.Drawn)) return;
             try
             {
                 if (!ReferenceEquals(drawn.Presentation, _session.Presentation) || drawn.Metadata.Tick != tick)
@@ -230,17 +230,17 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
     }
     private void Consume(GpuViewportImage source)
     {
-        if(_ui==null||_view==null||!ReferenceEquals(_session.Presentation,source.Frame.Presentation)||Volatile.Read(ref _closing)!=0)return;
+        if(_ui==null||!_viewport.IsAttached||!ReferenceEquals(_session.Presentation,source.Frame.Presentation)||Volatile.Read(ref _closing)!=0)return;
         var image=((SkiaOpenGLSurface)_ui.Rendering).CopyTexture(source.Texture.Name,source.Texture.Width,source.Texture.Height);
-        try{_view.Canvas.Upload(image,source.Frame,_session.Hud,()=>ReferenceEquals(_session.Presentation,source.Frame.Presentation));CopiedFrames++;}
+        try{_viewport.Upload(image,source.Frame,_session.Hud,()=>ReferenceEquals(_session.Presentation,source.Frame.Presentation));CopiedFrames++;}
         catch{image.Dispose();throw;}
         _window.RequestFrame();
     }
     private void OnPresented(UiSession ui)
     {
         if(Volatile.Read(ref _closing)!=0)return;
-        _ui=ui;_view=(PlayerView)ui.Root;
-        if((_scenario==null||!_first.Task.IsCompleted)&&_ack.IsCompleted&&_view.Canvas.Drawn is {} frame)_ack=AcknowledgeAsync(frame);
+        _ui=ui;
+        if((_scenario==null||!_first.Task.IsCompleted)&&_ack.IsCompleted&&_viewport.Drawn is {} frame)_ack=AcknowledgeAsync(frame);
     }
     private async Task<bool> AcknowledgeAsync(ViewportFrame frame)
     {
@@ -274,7 +274,7 @@ public sealed class PlayerWindow:IStartable,IStoppable,IAsyncDisposable
         // releasing subscriptions after the native/session drain has succeeded.
         try{await _loop.ConfigureAwait(false);}catch(Exception)when(_loop.IsCompleted){}
         try{await _ack.ConfigureAwait(false);}catch(Exception)when(_ack.IsCompleted){}
-        _window.FramePresented-=OnPresented;_window.Closing-=OnClosing;_ui=null;_view=null;
+        _window.FramePresented-=OnPresented;_window.Closing-=OnClosing;_ui=null;
         _end.Dispose();
     }
     /// <summary>App fallback for the same owned loop and subscriptions.</summary>

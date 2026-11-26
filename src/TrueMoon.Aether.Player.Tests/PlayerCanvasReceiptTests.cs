@@ -1,4 +1,5 @@
 using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Layout;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Sessions;
@@ -60,6 +61,43 @@ public sealed class PlayerCanvasReceiptTests
         current = false; Assert.Null(canvas.Drawn);
         UiTreeRenderer.Draw(canvas, context, presenters);
         Assert.Equal(2, context.Images.Count); Assert.Null(canvas.Drawn); Assert.False(presentation.FirstPresented.IsCompleted);
+    }
+
+    [Fact]
+    public void ViewportTracksAttachedCanvasUnderWrapperWithoutAcknowledgingDraw()
+    {
+        var input = new PlayerInput();
+        var viewport = new PlayerViewport();
+        using var view = viewport.Track(new PlayerView(new("test"), input));
+        var root = new Panel().WithChildren(view);
+        var controls = new UiControlFactories();
+        controls.Register(new Factory<PlayerCanvas>(() => new(input)));
+        Assert.False(viewport.IsAttached);
+        using var ui = UiSession.Create(root, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(160, 100),
+            null, new UiDispatchOptions(), controls, PlayerPresenters.Register);
+        Assert.True(viewport.IsAttached);
+        var otherWindow = new PlayerViewport();
+        Assert.Throws<InvalidOperationException>(() => otherWindow.Track(view));
+
+        var presentation = Presentation();
+        var first = presentation.Issue(new(0, 1, 0, 0, 1));
+        viewport.Upload(Image(), first, null, static () => true);
+        ui.Update();
+        Assert.Same(first, viewport.Drawn);
+        Assert.False(presentation.FirstPresented.IsCompleted);
+
+        root.Items.Remove(view);
+        Assert.False(viewport.IsAttached);
+        Assert.Null(viewport.Drawn);
+        root.Items.Add(view);
+        var second = presentation.Issue(new(1, 2, 0, 0, 2));
+        viewport.Upload(Image(), second, null, static () => true);
+        ui.Update();
+        Assert.Same(second, viewport.Drawn);
+        Assert.False(presentation.FirstPresented.IsCompleted);
+        ui.Dispose();
+        Assert.False(viewport.IsAttached);
+        Assert.Null(viewport.Drawn);
     }
 
     private sealed class Drawing : IDrawingContext

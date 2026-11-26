@@ -71,6 +71,14 @@ disposed, parented или already-attached root отвергается с Invali
 в startup/Completion; частично созданные объекты, которые factory не вернула,
 освобождает factory. Application dependencies должны жить до window cleanup.
 
+Для `ui.Create<MyControl>()` зарегистрируйте `IFactory<MyControl>` в DI и
+добавьте `.UseControlFactory<MyControl>()` к настройке `UseAlloy` или
+`UsePresentation`. Для варианта с runtime-аргументом регистрируйте
+`IFactory<MyControl, TArguments>` и `.UseControlFactory<MyControl, TArguments>()`.
+Hosting использует их только для совпавшей пары типа контрола и аргумента
+(или для вызова без аргумента). Остальные вызовы идут в переданный приложением
+или штатный реестр; Hosting не меняет его и не освобождает заимствованные фабрики.
+
 | Renderer (`UiRendererKind`) | Session target | Standalone target/presenter |
 | --- | --- | --- |
 | Raster | RasterUiTarget | Не поддерживается; external host |

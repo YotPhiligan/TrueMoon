@@ -81,7 +81,8 @@ public static class AppConfigurationExtensions
                 {
                     var icon = resolver.Resolve<IFactory<IElementPresenter<IconButtonPaintState>>>();
                     var configure = options.BindPresenters(resolver, ReferenceEquals(icon, StockPresenters.StockIconFactory) ? null : icon);
-                    return new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>(), resolver.Resolve<IUiControlFactories>(), configure);
+                    var controls = options.BindControlFactories(resolver, resolver.Resolve<IUiControlFactories>());
+                    return new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>(), controls, configure);
                 })
                 .Singleton<IUiSessionFactory>(resolver => new BorrowedUiSessionFactory(resolver.Resolve<HostedUiSessionFactory>()));
             services.Singleton<IFactory<UiSession, UiSessionCreation>>(resolver =>

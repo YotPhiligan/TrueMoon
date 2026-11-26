@@ -14,6 +14,18 @@ retains ownership for retry. A game implementing `IGameHudSource` can supply
 a bounded text prompt, status and journal for the active scene. The HUD is drawn
 over the existing Player viewport and shares its scale without receiving input.
 
+The default `PlayerView` is created by the generated factory. Its single
+`PlayerCanvas` is built when the UI session first attaches the view, not in the
+constructor. Use `PlayerView(PlayerViewModel, PlayerInput)` for explicit
+construction and `ViewCreation.Prepare(view, style)` for a custom view factory.
+Access `view.Canvas` only after content preparation. To customize the default
+path, register `IViewStyle<PlayerView>` or `IFactory<PlayerView>` before
+`UseAetherPlayer`. To customize the canvas, register `IFactory<PlayerCanvas>`;
+Hosting adds this key for Player sessions without replacing or mutating a custom
+`IUiControlFactories`. The window uses a typed viewport port that is active only
+while the canvas is attached. It acknowledges a drawn frame only after the
+window confirms presentation.
+
 `UseConfiguredAetherPlayer` uses the exact `PlayerOptions.Schema` in an explicit
 common configuration profile. Artifact/scene identity and renderer callbacks stay
 explicit. Resource limits retain the shared Aether render profile.

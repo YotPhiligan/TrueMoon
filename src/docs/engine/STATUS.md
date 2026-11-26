@@ -171,9 +171,14 @@ Replace работают из интерфейса Editor во время Playin
 
 ## Следующий конкретный шаг
 
-В UI запланирована [миграция всех View Aether](PLAN.md#aether-view-authoring-migration):
-сначала `PlayerView`, затем Runtime Editor и полный Editor. Код ещё не менялся;
-прежние проверки не означают завершения миграции.
+В [миграции View Aether](PLAN.md#aether-view-authoring-migration) завершён срез
+`PlayerView` на исходниках: два оконных кадра совпали до/после, пройден
+оконный/headless паритет. [Протокол и архитектурные выводы](HISTORY.md#player-view-migration-2026-11-26).
+`PlayerWindow` больше не зависит от типа корня: viewport доступен только
+на время attach, подтверждение кадра остаётся на фактическом показе.
+[Порт viewport и регистрация фабрик](HISTORY.md#player-viewport-hosting-2026-11-26).
+Следующие задачи — инвентаризация Editor/Runtime Editor и независимая пакетная
+приёмка Player. Упаковка Player прошла, отдельного restore потребителя не было.
 
 Для TrueMoon.Tales — провести персонажа Kton через ступени и скосы и
 проверить открытие обзора при входе. [Требования игры](PLAN.md#arch1f7-orthographic-camera).

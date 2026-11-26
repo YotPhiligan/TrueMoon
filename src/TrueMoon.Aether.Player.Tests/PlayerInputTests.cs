@@ -1,4 +1,7 @@
 using TrueMoon.Aether.Input;
+using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Alloy.Runtime;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis;
 using Xunit;
@@ -42,16 +45,27 @@ public sealed class PlayerInputTests
         => Assert.Equal((expectedWidth,expectedHeight),PlayerWindow.FitExtent(width,height));
     [Fact]
     public void NegativeExtent_IsRejected() => Assert.Throws<ArgumentOutOfRangeException>(()=>PlayerWindow.FitExtent(1,-1));
-    [Fact]
-    public void ViewStyleAndFocusLoss_PreserveTypedData_AndReleaseInput()
+    [Theory]
+    [InlineData(InputKind.FocusLost)]
+    [InlineData(InputKind.KeyDown)]
+    public void PreparedViewport_FillsWindowAndReleasesCapturedInput(InputKind release)
     {
-        var input=new PlayerInput(); var data=new PlayerViewModel("captured");
-        using var view=new PlayerView(data,input,new PlayerViewStyle());
+        var input = new PlayerInput();
+        var data = new PlayerViewModel("captured");
+        var controls = new UiControlFactories();
+        controls.Register(new Factory<PlayerCanvas>(() => new(input)));
+        using var view = ViewCreation.Prepare(new PlayerView(data, input), new PlayerViewStyle());
+        using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(160, 100),
+            null, new UiDispatchOptions(), controls, PlayerPresenters.Register);
+        ui.Update();
+
         Assert.Same(data, view.DataContext);
-        Assert.Same(view.Canvas, view.Child);
-        Assert.Same(view, view.Canvas.Parent);
-        input.Capture(0,0); input.Key(UiKey.W,true); view.Canvas.OnInputCancelled();
-        Assert.False(input.IsCaptured); Assert.Equal(GameButtons.None,input.Take().Buttons);
-        Assert.True(view.Canvas.Focusable); Assert.False(view.Canvas.IsDisposed);
+        Assert.Equal(new Rect(0, 0, 160, 100), view.Canvas.Bounds);
+        Assert.Equal(6f, view.Canvas.CornerRadius);
+        Assert.True(ui.HandleInput(new(InputKind.PointerDown, 80, 50)).PointerCaptured);
+        Assert.True(ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.W)).Handled);
+        Assert.Equal(new GameInputState(true, GameButtons.Forward), input.Take());
+        Assert.False(ui.HandleInput(new(release, Key: release == InputKind.KeyDown ? UiKey.Escape : UiKey.None)).PointerCaptured);
+        Assert.Equal(default, input.Take());
     }
 }

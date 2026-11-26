@@ -4,6 +4,7 @@ using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
+using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Services;
 using Xunit;
 
@@ -283,6 +284,54 @@ public sealed class HostedUiSessionFactoryTests
         Assert.IsType<Text>(directRoot.Label);
     }
 
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task HostedControlFactories_OverlayOnlyExactKeysAndKeepFallbackRegistry(bool microsoft, bool custom)
+    {
+        var fallback = new UiControlFactories();
+        fallback.Register(new Factory<Text>(() => new CountingText()));
+        fallback.Register(new Factory<FactoryControl>(() => new("fallback")));
+        var backend = new Backend();
+        AlloyOptions? setup = null;
+        await using var app = App.Builder(builder => { if (microsoft) builder.UseDI(); }).Setup(context =>
+        {
+            context.Services(services =>
+            {
+                if (custom) services.Singleton<IUiControlFactories>(_ => fallback);
+                services.Singleton<IFactory<FactoryControl>>(_ => new Factory<FactoryControl>(() => new("from DI")));
+                services.Singleton<IFactory<FactoryControl, string>>(_ => new Factory<FactoryControl, string>(value => new(value)));
+            });
+            context.UseAlloy(options => setup = options.UseRenderer(() => backend).UseExternalHost()
+                .UseControlFactory<FactoryControl>().UseControlFactory<FactoryControl, string>());
+        }).Build();
+        setup!.UseControlFactory<Button>(); // The registered snapshot must not try to resolve this late addition.
+
+        using var view = new FactoryControlRow();
+        using var ui = Required<IUiSessionFactory>(app).Create(view, new Target(), new(100, 100));
+        var items = Assert.IsType<VStack>(view.Child).Items;
+        Assert.Equal("from DI", Assert.IsType<FactoryControl>(items[0]).Value);
+        Assert.Equal("runtime argument", Assert.IsType<FactoryControl>(items[1]).Value);
+        Assert.IsType(custom ? typeof(CountingText) : typeof(Text), items[2]);
+        Assert.IsType<Button>(items[3]);
+        if (custom)
+        {
+            using var unchanged = fallback.Create<FactoryControl>();
+            Assert.Equal("fallback", unchanged.Value);
+        }
+    }
+
+    private sealed class FactoryControl(string value) : Text(value);
+
+    private sealed class FactoryControlRow : View
+    {
+        public FactoryControlRow() => Content(static ui => ui.VStack(
+            ui.Create<FactoryControl>().Element, ui.Create<FactoryControl, string>("runtime argument").Element,
+            ui.Text("fallback text"), ui.Button("stock button")));
+    }
     [Fact]
     public async Task UseAlloy_FailedDeferredFactoryReleasesDraftAndSurfaceAndAllowsFreshRoot()
     {

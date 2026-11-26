@@ -7,6 +7,10 @@ using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Alloy.Runtime;
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Configuration;
@@ -33,7 +37,19 @@ public sealed class PlayerCompositionTests
         Assert.Empty(app.Services.ResolveAll<AetherHost>()); Assert.Empty(app.Services.ResolveAll<GameBuildCompiler>());
         Assert.Equal("Aether Player",app.Services.Resolve<PlayerViewModel>()!.Title);
         var factory=app.Services.Resolve<IFactory<PlayerView>>()!;
-        using var first=factory.Create()!; using var second=factory.Create()!; Assert.NotSame(first,second); Assert.NotSame(first.Canvas,second.Canvas);
+        using var first = factory.Create()!;
+        using var second = factory.Create()!;
+        var controls = DirectControlFactories(app);
+        Assert.Null(first.Child);
+        Assert.Throws<InvalidOperationException>(() => first.Canvas);
+        first.Attach(static () => { }, static work => work(), null, controls);
+        second.Attach(static () => { }, static work => work(), null, controls);
+        var firstCanvas = first.Canvas;
+        Assert.NotSame(firstCanvas, second.Canvas);
+        Assert.Equal(6f, firstCanvas.CornerRadius);
+        first.Dispose();
+        Assert.True(firstCanvas.IsDisposed);
+        Assert.False(second.Canvas.IsDisposed);
         var profile=ConfigurationProfiles.Create(builder=>
         {
             builder.AddSchema(PlayerOptions.Schema);
@@ -43,6 +59,53 @@ public sealed class PlayerCompositionTests
             context.UseConfiguration(profile).UseConfiguredAetherPlayer(start,SkiaFontCatalog.SystemDefault,options=>options.Title+=" plus explicit")).Build();
         Assert.Equal("from profile plus explicit",configured.Services.Resolve<PlayerViewModel>()!.Title);
         Assert.Equal(PlayerState.Created,configured.Services.Resolve<PlayerSession>()!.Status.State);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task PreRegisteredOverrides_PreservePlayerStyleAndOptionalViewFactory(bool microsoft, bool customFactory)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "TrueMoon-player-view-" + Guid.NewGuid().ToString("N"));
+        var artifact = GameArtifactPublisher.Publish(Path.GetDirectoryName(typeof(ProbeGame).Assembly.Location)!, root,
+            new('A', 64), "Game.Logic.dll", "Game.Logic.ProbeGame", 1, runtimeAccess: true);
+        var start = PlayerStart.FromSnapshot(artifact, new("local", 1, []));
+        try
+        {
+            await using var app = App.Builder(configuration => { if (microsoft) configuration.UseDI(); }).Setup(context =>
+            {
+                context.Services(services =>
+                {
+                    services.Singleton<IViewStyle<PlayerView>>(_ => new OverrideStyle());
+                    if (customFactory)
+                        services.Singleton<IFactory<PlayerView>>(resolver => new Factory<PlayerView>(() =>
+                            ViewCreation.Prepare(new PlayerView(new("factory override"), resolver.Resolve<PlayerInput>()),
+                                resolver.Resolve<IViewStyle<PlayerView>>())));
+                });
+                context.UseAetherPlayer(start, SkiaFontCatalog.SystemDefault);
+            }).Build();
+            using var view = app.Services.Resolve<IFactory<PlayerView>>()!.Create()!;
+            var controls = DirectControlFactories(app);
+            view.Attach(static () => { }, static work => work(), null, controls);
+            Assert.Equal(customFactory ? "factory override" : "Aether Player", view.DataContext!.Title);
+            Assert.Equal(11f, view.Canvas.CornerRadius);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static UiControlFactories DirectControlFactories(IApp app)
+    {
+        var controls = new UiControlFactories();
+        controls.Register(app.Services.Resolve<IFactory<PlayerCanvas>>()!);
+        return controls;
+    }
+
+    private sealed class OverrideStyle : IViewStyle<PlayerView>
+    {
+        public void Configure(IViewStyleBuilder<PlayerView> styles) =>
+            styles.Part(static view => view.Canvas).Set(UiProperties.CornerRadius, 11f);
     }
 
     [Theory]

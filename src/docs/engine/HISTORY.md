@@ -1,3 +1,81 @@
+<a id="player-viewport-hosting-2026-11-26"></a>
+## 2026-11-26 — фабрики контролов Hosting и порт viewport Player
+
+`1.2611.26.3-alpha`, Windows x64 / SDK 11, Debug. `AlloyOptions.UseControlFactory`
+добавляет DI-фабрику по точному ключу «контрол, тип аргументов» или «контрол
+без аргументов». Hosted-сессии используют эти ключи первыми; остальные
+делегируются выбранному реестру. Исходный реестр не изменяется. DI владеет
+фабрикой, UI-дерево — созданными контролами.
+
+`UseAetherPlayer` подключает `PlayerCanvas` этим способом. Фабрика оконного
+корня связывает типизированный `PlayerViewport` с Canvas после attach;
+detach снимает связь. `PlayerWindow` больше не читает `UiSession.Root`.
+Рисование выдаёт квитанцию, но подтверждение для PlayerSession остаётся
+на `FramePresented`, включая сценарный readback.
+
+- `HostedUiSessionFactoryTests`: 27/27. На Cobalt и Microsoft DI проверены
+  ключи с аргументом и без него, штатный и пользовательский fallback,
+  отсутствие изменения исходного реестра и снимок настроек.
+- Адресный срез `PlayerCompositionTests`, `PlayerInputTests`,
+  `PlayerCanvasReceiptTests`: 27/27. Порт проверен под обёрткой, при отказе
+  принять чужое дерево, detach/reattach и закрытии. Рисование не подтверждает кадр.
+- `VerifyScenarioProfiles.ps1`: реальное окно (Vulkan → OpenGL) и headless
+  совпали по тикам и наблюдениям. PNG тиков 2 и 6 при 960×540 и 1,5× побайтно
+  совпали с `.26.2`. После закрытия освобождены 3 слота, живых слотов и
+  дескрипторов нет. Vulkan validation не включался; NuGet не проверялся.
+
+Локальные TRX, отчёты и PNG: `src/TestResults/PlayerViewportHosting`.
+
+<a id="player-view-migration-2026-11-26"></a>
+## 2026-11-26 — миграция `PlayerView`
+
+`1.2611.26.2-alpha`, Windows x64, SDK 11, Debug. `PlayerView` оставляет только
+`Content(data, static ui => ui.Create<PlayerCanvas>())` для дерева. `PlayerCanvas`
+выделен в отдельный файл без изменения рисования и передачи кадра. Фабрику
+View создаёт Hosting; фабрика контрола берёт общий `PlayerInput` из DI.
+Фабрика View и стиль переопределяются независимо. `Canvas` — единственный
+дочерний контрол, доступный после подготовки дерева, без поиска по имени.
+
+- `dotnet test` для `PlayerCompositionTests`, `PlayerInputTests` и
+  `PlayerCanvasReceiptTests`: 26 прошли, 0 падений/пропусков, TRX проверен.
+  `PreRegisteredOverrides_PreservePlayerStyleAndOptionalViewFactory` подтвердил
+  переопределения на Cobalt и Microsoft DI;
+  `PreparedViewport_FillsWindowAndReleasesCapturedInput` — размеры, радиус 6
+  и отпуск захвата по Escape/потере фокуса через `UiSession`.
+- На `.26.1` и `.26.2` выполнен один и тот же синтетический сценарий: GPU
+  Vulkan → окно OpenGL, 960×540 px при 1,5×. Переизданы сборки одной исходной
+  фикстуры под точные версии хоста (совпадают хеши сцены и сценария, различаются
+  идентичности хоста и Build). PNG на тиках 2 и 6 совпали по SHA-256 соответственно:
+  `367292A0596228D47F7C8F113CBDAF6834DC3CB7251E8D5F644E741748740F5E`,
+  `1159B17EC4BFDFC3A745893E804F3C66558E881AF48E23B78374A3914FF6B980`.
+  `VerifyScenarioProfiles.ps1` на `.26.2` подтвердил паритет окна и headless:
+  `first-cube.red` равен 1 и 0,5. Окно закрыто, 3 слота освобождены,
+  открытых дескрипторов 0. Нативные PNG этого сценария не содержат HUD;
+  путь отрисовки HUD проверен в `PlayerCanvasReceiptTests`. Vulkan validation
+  не включался.
+- `dotnet pack` собрал Debug-пакет Player. В `.nuspec` — только прямые
+  зависимости Runtime и Hosting версии `.26.2`; DLL анализатора не попала
+  в пакет. Независимый restore/запуск из NuGet не выполнялся.
+
+Локальные отчёты, TRX, PNG и пакет: `src/TestResults/PlayerViewMigration`.
+
+**Архитектурные выводы.**
+
+1. **Реестр контролов не компонуется с DI автоматически.** `IFactory<PlayerCanvas>`
+   нужно явно подключить к `IUiControlFactories`; пользовательский реестр
+   обязан добавить эту фабрику сам. Перед миграцией второго такого экрана
+   стоит проверить аддитивную регистрацию контролов в Hosting, не заменяющую
+   stock или пользовательский реестр. Генерировать её из Fluent не нужно.
+2. **Хост зависит от конкретного UI-дерева.** `PlayerWindow` получает Canvas
+   через `(PlayerView)ui.Root` в обработчиках показа и использует его для
+   загрузки и квитанций. При следующем похожем хосте стоит проверить небольшой
+   типизированный интерфейс viewport, получаемый после attach; подтверждение
+   GPU-кадра должно остаться на событии фактического показа.
+3. **`PlayerViewModel.Title` не участвует в разметке.** Заголовок окна берётся
+   из `PlayerOptions`, HUD рисуется презентером из снимка игры. Перед удалением
+   публичной модели проверить пакетных потребителей; не превращать HUD
+   в дополнительное UI-дерево только ради привязки.
+
 <a id="arch34-2026-11-14"></a>
 ## 2026-11-14 — ARCH3.4: headless Tooling
 

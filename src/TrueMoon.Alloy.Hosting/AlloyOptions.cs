@@ -1,6 +1,7 @@
 using TrueMoon.Argentis;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Services;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -37,10 +38,57 @@ namespace TrueMoon.Alloy.Hosting
         internal bool ExternalHost { get; private set; }
         internal Action<UiPresenters>? PresenterConfiguration { get; private set; }
         private List<Func<IServiceResolver, Action<UiPresenters>>>? _presenterFactories;
+        private Dictionary<(Type Control, Type? Arguments), Func<IServiceResolver, object>>? _controlFactories;
         private bool _bindsIconButton;
         internal SilkUiWindowOptions? Window { get; private set; }
         /// <summary>Selected built-in renderer, or Custom for UseRenderer. Selection creates no native resources.</summary>
         public UiRendererKind Renderer { get; private set; }
+        /// <summary>Uses an application-registered <see cref="IFactory{T}"/> for the exact control type in hosted sessions.</summary>
+        /// <typeparam name="TControl">The control type requested by the view builder.</typeparam>
+        /// <returns>This configuration for fluent chaining.</returns>
+        /// <remarks>The factory is borrowed from DI. All other lookups use the configured control registry.</remarks>
+        public AlloyOptions UseControlFactory<TControl>() where TControl : Element =>
+            AddControlFactory((typeof(TControl), null), static resolver => resolver.Resolve<IFactory<TControl>>());
+
+        /// <summary>Uses an application-registered <see cref="IFactory{T, TArguments}"/> for an exact control and argument type in hosted sessions.</summary>
+        /// <typeparam name="TControl">The control type requested by the view builder.</typeparam>
+        /// <typeparam name="TArguments">The type of the arguments supplied by the view builder, not by DI.</typeparam>
+        /// <returns>This configuration for fluent chaining.</returns>
+        public AlloyOptions UseControlFactory<TControl, TArguments>() where TControl : Element =>
+            AddControlFactory((typeof(TControl), typeof(TArguments)), static resolver => resolver.Resolve<IFactory<TControl, TArguments>>());
+
+        private AlloyOptions AddControlFactory((Type Control, Type? Arguments) key, Func<IServiceResolver, object> resolve)
+        {
+            if (!(_controlFactories ??= []).TryAdd(key, resolve))
+                throw new InvalidOperationException($"A hosted control factory for '{key.Control}' with arguments '{key.Arguments}' is already configured.");
+            return this;
+        }
+
+        internal IUiControlFactories BindControlFactories(IServiceResolver resolver, IUiControlFactories fallback)
+        {
+            if (_controlFactories is not { } bindings) return fallback;
+            var factories = new Dictionary<(Type Control, Type? Arguments), object>(bindings.Count);
+            foreach (var (key, resolve) in bindings) factories.Add(key, resolve(resolver));
+            return new BoundControlFactories(factories, fallback);
+        }
+
+        private sealed class BoundControlFactories(
+            Dictionary<(Type Control, Type? Arguments), object> factories, IUiControlFactories fallback) : IUiControlFactories
+        {
+            public TControl Create<TControl>() where TControl : Element =>
+                factories.TryGetValue((typeof(TControl), null), out var factory)
+                    ? Require(((IFactory<TControl>)factory).Create())
+                    : fallback.Create<TControl>();
+
+            public TControl Create<TControl, TArguments>(TArguments arguments) where TControl : Element =>
+                factories.TryGetValue((typeof(TControl), typeof(TArguments)), out var factory)
+                    ? Require(((IFactory<TControl, TArguments>)factory).Create(arguments))
+                    : fallback.Create<TControl, TArguments>(arguments);
+
+            private static TControl Require<TControl>(TControl? control) where TControl : Element =>
+                control ?? throw new InvalidOperationException($"The UI factory for '{typeof(TControl)}' returned no control.");
+        }
+
         /// <summary>Configures exact control presenters once per new session, before its first draw.</summary>
         public AlloyOptions ConfigurePresenters(Action<UiPresenters> configure)
         {
@@ -122,7 +170,8 @@ namespace TrueMoon.Alloy.Hosting
         {
             BackendFactory = BackendFactory, Renderer = Renderer, ExternalHost = ExternalHost, Window = Window?.Snapshot(),
             PresenterConfiguration = PresenterConfiguration, _bindsIconButton = _bindsIconButton,
-            _presenterFactories = _presenterFactories is null ? null : [.. _presenterFactories]
+            _presenterFactories = _presenterFactories is null ? null : [.. _presenterFactories],
+            _controlFactories = _controlFactories is null ? null : new(_controlFactories)
         };
     }
 

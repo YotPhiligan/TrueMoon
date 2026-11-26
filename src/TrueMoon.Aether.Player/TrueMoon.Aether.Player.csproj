@@ -8,6 +8,8 @@
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
     <ProjectReference Include="../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
+    <ProjectReference Include="../TrueMoon.Argentis.Generator/TrueMoon.Argentis.Generator.csproj"
+                      ReferenceOutputAssembly="false" OutputItemType="Analyzer" PrivateAssets="all" />
     <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 </Project>

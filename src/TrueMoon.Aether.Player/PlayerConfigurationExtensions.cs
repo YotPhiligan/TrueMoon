@@ -3,7 +3,7 @@ using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
-using TrueMoon.Argentis;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Configuration;
 
 namespace TrueMoon.Aether.Player;
@@ -21,19 +21,42 @@ public static class PlayerConfigurationExtensions
         context.UseAetherLocalRuntime(start);
         context.Services(services=>
         {
-            services.Singleton<PlayerInput>(_=>new());services.Singleton<PlayerViewModel>(_=>new(settings.Title));
-            if(!services.Exist<IViewStyle<PlayerView>>())services.Singleton<IViewStyle<PlayerView>>(_=>new PlayerViewStyle());
-            if(!services.Exist<IFactory<PlayerView>>())services.Singleton<IFactory<PlayerView>>(resolver=>
-            {
-                var data=resolver.Resolve<PlayerViewModel>();var input=resolver.Resolve<PlayerInput>();var style=resolver.Resolve<IViewStyle<PlayerView>>();
-                return new Factory<PlayerView>(()=>new(data,input,style));
-            });
+            services.Singleton<PlayerInput>(_ => new())
+                .Singleton<PlayerViewModel>(_ => new(settings.Title));
+            services.Singleton<PlayerViewport>(_ => new());
+
+            if (!services.Exist<IFactory<PlayerCanvas>>())
+                services.Singleton<IFactory<PlayerCanvas>>(resolver =>
+                {
+                    var input = resolver.Resolve<PlayerInput>();
+                    return new Factory<PlayerCanvas>(() => new(input));
+                });
+
+            if (!services.Exist<IFactory<PlayerView>>())
+                services.View<PlayerView, PlayerViewStyle>();
+            else if (!services.Exist<IViewStyle<PlayerView>>())
+                services.Singleton<IViewStyle<PlayerView>>(_ => new PlayerViewStyle());
         });
-        context.UsePresentation<PlayerView>(options=>
-        {options.ConfigurePresenters(PlayerPresenters.Register).UseSkiaOpenGL(fonts);options.UseSilkWindow(window=>{window.Width=settings.Width;window.Height=settings.Height;window.Title=settings.Title;});});
+        context.UsePresentation(
+            static resolver =>
+            {
+                var view = resolver.Resolve<IFactory<PlayerView>>().Create()
+                    ?? throw new InvalidOperationException("The Player view factory returned no view.");
+                return resolver.Resolve<PlayerViewport>().Track(view);
+            },
+            options => options.UseControlFactory<PlayerCanvas>()
+                .ConfigurePresenters(PlayerPresenters.Register)
+                .UseSkiaOpenGL(fonts)
+                .UseSilkWindow(window =>
+                {
+                    window.Width = settings.Width;
+                    window.Height = settings.Height;
+                    window.Title = settings.Title;
+                }));
         context.Services(services=>
         {
-            services.Singleton<PlayerWindow>(resolver=>new(resolver.Resolve<HostedUiWindow>(),resolver.Resolve<PlayerSession>(),resolver.Resolve<PlayerInput>(),settings));
+            services.Singleton<PlayerWindow>(resolver => new(resolver.Resolve<HostedUiWindow>(), resolver.Resolve<PlayerSession>(),
+                resolver.Resolve<PlayerInput>(), resolver.Resolve<PlayerViewport>(), settings));
             if (settings.ManualTicks)
                 services.Singleton<IPlayerScenarioDriver>(resolver => new WindowScenarioDriver(resolver.Resolve<PlayerWindow>()));
             services.Singleton<IStartable>(resolver=>new AppServiceLifecycle(startable:resolver.Resolve<PlayerWindow>()));
