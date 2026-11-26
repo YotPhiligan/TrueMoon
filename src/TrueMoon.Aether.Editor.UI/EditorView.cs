@@ -230,7 +230,7 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
         if(ViewportController?.PreviewInput(input,context)==true)return true;
         if (Hierarchy is { IsAttached: true } hierarchy && hierarchy.NameEditor.IsFocused) return false;
         if (Documents == null || input.Kind != InputKind.KeyDown || !input.Control || input.Key is not (UiKey.S or UiKey.W)) return false;
-        Header?.Menu.CloseMenu();
+        if (Header is { IsAttached: true } header) header.Menu.CloseMenu();
         return Documents.HandleShortcut(input);
     }
 

@@ -70,3 +70,15 @@ status bar's internal layout and controls.
 In `1.2611.26.9-alpha`, status text, availability, colors and actions all use
 the status model supplied to the factory. Assigning a different `DataContext`
 does not retarget the bar or its popup.
+
+In `1.2611.26.10-alpha`, `EditorHeaderView` prepares its tree and style
+at attachment. `Menu`, `BrandIcon`, `Caption` and the action buttons are
+generated extension properties with the same names and types. Rebuild
+consumers, import `TrueMoon.Aether.Editor.UI`, and resolve these parts after
+attachment on the UI owner thread. They are no longer instance getters for
+reflection or binary callers. Command objects, the window-specific factory
+arguments and their ownership are unchanged.
+
+In `1.2611.26.11-alpha`, the header uses `ObserveState` for its borrowed
+models. The header and inspector share delayed hover validation. A pending
+hint waits for a resize to update layout before it can open.

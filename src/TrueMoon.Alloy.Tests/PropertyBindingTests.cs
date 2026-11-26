@@ -211,6 +211,112 @@ public sealed class PropertyBindingTests
     }
 
     [Fact]
+    public void ObserveState_TwoSourceBurstReadsLatestOnceOnOwnerInFirstUpdate()
+    {
+        var first = new Model { Value = "first initial" };
+        var second = new Model { Value = "second initial" };
+        var owner = Environment.CurrentManagedThreadId;
+        var snapshots = new List<(int Thread, string First, string Second)>();
+        INotifyPropertyChanged[] sources = [first, second];
+        var element = new Text().ObserveState(
+            () => snapshots.Add((Environment.CurrentManagedThreadId, first.Value, second.Value)), sources);
+        sources[1] = new Model();
+        using var ui = new UiSession(element, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 2, ActionsPerUpdate = 1 });
+        Assert.Equal((owner, "first initial", "second initial"), Assert.Single(snapshots));
+        Assert.Equal(1, first.Subscribers);
+        Assert.Equal(1, second.Subscribers);
+
+        RunOnWorker(() =>
+        {
+            for (var i = 0; i < 20; i++)
+            {
+                first.SetSilently($"first {i}");
+                first.Notify(nameof(Model.Number));
+                second.SetSilently($"second {i}");
+                second.Notify(null);
+            }
+        });
+        Assert.Single(snapshots);
+        var unrelatedRan = false;
+        ui.Post(() => unrelatedRan = true);
+        ui.Update();
+        Assert.Equal((owner, "first 19", "second 19"), snapshots[1]);
+        Assert.Equal(2, snapshots.Count);
+        Assert.False(unrelatedRan);
+        ui.Update();
+        Assert.True(unrelatedRan);
+        Assert.Equal(2, snapshots.Count);
+    }
+
+    [Fact]
+    public void ObserveState_TransferFencesQueuedAndCopiedNotificationsAndReadsCurrentState()
+    {
+        var first = new Model { Value = "first initial" };
+        var second = new Model { Value = "second initial" };
+        var snapshots = new List<(string First, string Second)>();
+        var element = new Text().ObserveState(() => snapshots.Add((first.Value, second.Value)), first, second);
+        var root = new Panel().WithChildren(element);
+        using var oldUi = Create(root);
+        Assert.Equal(("first initial", "second initial"), Assert.Single(snapshots));
+        oldUi.Update();
+
+        var copiedFirst = first.CaptureNotification();
+        var copiedSecond = second.CaptureNotification();
+        first.Value = "queued before detach";
+        Assert.True(oldUi.NeedsUpdate);
+        Assert.True(root.Items.Remove(element));
+        Assert.Equal(0, first.Subscribers);
+        Assert.Equal(0, second.Subscribers);
+        first.Value = "changed while detached";
+        using var newUi = Create(element);
+        Assert.Equal(("changed while detached", "second initial"), snapshots[1]);
+        Assert.Equal(2, snapshots.Count);
+        Assert.Equal(1, first.Subscribers);
+        Assert.Equal(1, second.Subscribers);
+
+        oldUi.Update();
+        newUi.Update();
+        Assert.Equal(2, snapshots.Count);
+        RunOnWorker(() => { copiedFirst(); copiedSecond(); });
+        Assert.False(oldUi.NeedsUpdate);
+        Assert.False(newUi.NeedsUpdate);
+
+        RunOnWorker(() => second.Value = "live on the new attachment");
+        oldUi.Update();
+        Assert.Equal(2, snapshots.Count);
+        newUi.Update();
+        Assert.Equal(("changed while detached", "live on the new attachment"), snapshots[2]);
+        Assert.Equal(3, snapshots.Count);
+
+        var copiedBeforeDisposal = second.CaptureNotification();
+        second.Value = "queued before disposal";
+        newUi.Dispose();
+        RunOnWorker(copiedBeforeDisposal);
+        Assert.Equal(0, first.Subscribers);
+        Assert.Equal(0, second.Subscribers);
+        Assert.Equal(3, snapshots.Count);
+    }
+
+    [Fact]
+    public void ObserveState_RejectedPostDoesNotPreventNextNotification()
+    {
+        var source = new Model { Value = "initial" };
+        var snapshots = new List<string>();
+        var element = new Text().ObserveState(() => snapshots.Add(source.Value), source);
+        using var ui = new UiSession(element, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 1, ActionsPerUpdate = 1 });
+        ui.Post(() => element.Width = 70);
+        Assert.Throws<InvalidOperationException>(() => source.Value = "rejected");
+        ui.Update();
+        Assert.Equal("initial", Assert.Single(snapshots));
+
+        source.Value = "accepted";
+        ui.Update();
+        Assert.Equal(new[] { "initial", "accepted" }, snapshots);
+    }
+
+    [Fact]
     public void NotificationFlood_CoalescesLatestValueWithoutConsumingTheCommandQueue()
     {
         var source = new Model { Value = "initial" }; var text = new Text().BindText(source, x => x.Value);

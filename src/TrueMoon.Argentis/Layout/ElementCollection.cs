@@ -92,35 +92,53 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
     protected override void InsertItem(int index, Element item)
     {
         VerifyMutation();
-        owner.ValidateChildChange([item], []);
-        using var change = new TreeChange(owner, item);
-        base.InsertItem(index, item);
-        owner.Adopt(item, change);
-        change.Complete();
+        ArgumentNullException.ThrowIfNull(item, "child");
+        ChangeItem(index, null, item);
     }
     /// <inheritdoc />
     protected override void SetItem(int index, Element item)
     {
         VerifyMutation();
-        if (ReferenceEquals(this[index], item)) return;
         var previous = this[index];
-        owner.ValidateChildChange([item], [previous]);
-        using var change = new TreeChange(owner, previous, item);
-        base.SetItem(index, item);
-        owner.Orphan(previous, change);
-        owner.Adopt(item, change);
-        change.Complete();
+        if (ReferenceEquals(previous, item)) return;
+        ArgumentNullException.ThrowIfNull(item, "child");
+        ChangeItem(index, previous, item);
     }
     /// <inheritdoc />
     protected override void RemoveItem(int index)
     {
         VerifyMutation();
-        var item = this[index];
-        using var change = new TreeChange(owner, item);
-        base.RemoveItem(index);
-        owner.Orphan(item, change);
+        ChangeItem(index, this[index], null);
+    }
+
+    internal void SetSlot(Element? previous, Element? item, Action<Element?> committed)
+    {
+        VerifyMutation();
+        var index = Count;
+        if (previous != null)
+        {
+            for (index = 0; index < Count && !ReferenceEquals(this[index], previous); index++) { }
+            if (index == Count) throw new InvalidOperationException("The current slot element is not in the child collection.");
+        }
+        ChangeItem(index, previous, item, committed);
+    }
+
+    private void ChangeItem(int index, Element? previous, Element? item, Action<Element?>? committed = null)
+    {
+        if (item != null) owner.ValidateChildChange([item], previous == null ? [] : [previous]);
+        using var change = previous == null || item == null
+            ? new TreeChange(owner, previous ?? item)
+            : new TreeChange(owner, previous, item);
+        if (previous == null) base.InsertItem(index, item!);
+        else if (item == null) base.RemoveItem(index);
+        else base.SetItem(index, item);
+        if (previous != null) owner.Orphan(previous, change);
+        if (item != null) owner.Adopt(item, change);
+        // Publish container state after updating ownership and before delivering queued observers.
+        committed?.Invoke(item);
         change.Complete();
     }
+
     /// <inheritdoc />
     protected override void ClearItems()
     {

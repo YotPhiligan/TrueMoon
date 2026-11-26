@@ -118,7 +118,6 @@ internal static partial class EditorHeaderSmoke
         await Capture("header-collapsed.png");
 
         var close = ((WindowFrame)ui.Root).DefaultTitleBar!.CloseButton;
-        var pause = header.PauseButton;
         await ui.InvokeAsync(() =>
         {
             Require(close.Background == Color.Transparent && close.Bounds.Width == close.Bounds.Height, "Idle Close button must be transparent and square.");
@@ -130,6 +129,7 @@ internal static partial class EditorHeaderSmoke
         await Capture("header-button-hover.png");
         await ui.InvokeAsync(() =>
         {
+            var pause = header.PauseButton;
             ui.Focus(close);
             Move(ui, pause);
             Require(close.IsFocused && !close.IsHovered && close.Background.A > 0, "Close focus did not retain its surface after pointer leave.");
@@ -139,7 +139,7 @@ internal static partial class EditorHeaderSmoke
         await Capture("header-button-focus.png");
         await ui.InvokeAsync(() => { Move(ui, view.Canvas); ui.HandleInput(new(InputKind.FocusLost)); }).WaitAsync(token);
 
-        await NativeCaptionMoveAsync(window, ui, header.BrandIcon, token);
+        await NativeCaptionMoveAsync(window, ui, header, token);
         await NativeCaptionLeaveAsync(window, token);
         await UntilAsync(ui, () => ((WindowFrame)ui.Root).DefaultTitleBar!.OverlayReveal == 0 && !ui.NeedsUpdate, token);
         File.WriteAllText(Path.Combine(directory, "header.json"), JsonSerializer.Serialize(new
@@ -169,7 +169,7 @@ internal static partial class EditorHeaderSmoke
         }
     }
     // Only the owned HWND is messaged on its owner thread; the user's cursor, focus and OS settings are untouched.
-    internal static Task NativeCaptionMoveAsync(HostedUiWindow window, UiSession ui, Element target, CancellationToken token)
+    internal static Task NativeCaptionMoveAsync(HostedUiWindow window, UiSession ui, EditorHeaderView header, CancellationToken token)
     {
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         window.PostWindow(host =>
@@ -177,7 +177,7 @@ internal static partial class EditorHeaderSmoke
             try
             {
                 var handle = host.NativeWindow.Native!.Win32!.Value.Hwnd;
-                var area = target.Bounds;
+                var area = header.BrandIcon.Bounds;
                 var point = new NativePoint { X = (int)MathF.Round((area.X + area.Width / 2) * ui.Viewport.Scale), Y = (int)MathF.Round((area.Y + area.Height / 2) * ui.Viewport.Scale) };
                 if (ClientToScreen(handle, ref point) == 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
                 var packed = (nint)((uint)(ushort)point.X | (uint)(ushort)point.Y << 16);
@@ -216,8 +216,13 @@ internal static partial class EditorHeaderSmoke
     [LibraryImport("user32.dll")] private static partial nint SendMessageW(nint window, uint message, nuint wparam, nint lparam);
     internal static async Task ClickActionAsync(UiSession ui, EditorView view, string group, string action, CancellationToken token, bool confirmPath = true)
     {
-        var menu = view.Header!.Menu;
-        await ui.InvokeAsync(() => { menu.CloseMenu(); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10)); }).WaitAsync(token);
+        MenuBar menu = null!;
+        await ui.InvokeAsync(() =>
+        {
+            menu = view.Header!.Menu;
+            menu.CloseMenu();
+            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10));
+        }).WaitAsync(token);
         await UntilAsync(ui, () => menu.RevealProgress == 1 && !ui.NeedsRender, token,
             () => { if (!menu.IsExpanded) ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10)); });
         await ui.InvokeAsync(() => Click(ui, menu.Headings[group])).WaitAsync(token);

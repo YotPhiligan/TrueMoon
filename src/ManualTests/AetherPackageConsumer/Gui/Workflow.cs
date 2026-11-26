@@ -283,7 +283,7 @@ internal static class Workflow
             {
                 await Until(() => view.DataContext!.CanRun);
                 var startClock = Stopwatch.StartNew();
-                if (view.Header is { } header) await Click(header.RunButton);
+                if (view.Header is { } header) await Click(await ReadControl(() => header.RunButton));
                 else await ui.InvokeAsync(() => view.DataContext!.RunSimulation()).WaitAsync(token);
                 // Build and prestart verification have compiler-owned budgets; wait for the admitted operation.
                 await playback.Pending.WaitAsync(token);
@@ -337,7 +337,7 @@ internal static class Workflow
                     engine.Editor.Status.Context.Scene.Revision == content.Document.Revision && !documents.CanExecute(DocumentCommand.Save),
                     "Game did not use the captured scene or left authoring admission open.");
                 await Until(() => view.DataContext!.CanPause);
-                if (view.Header is { } pauseHeader) await Click(pauseHeader.PauseButton);
+                if (view.Header is { } pauseHeader) await Click(await ReadControl(() => pauseHeader.PauseButton));
                 else await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Pause)).WaitAsync(token);
                 await Until(() => engine.Supervisor.Status.State == SessionState.Paused && playback.Pending.IsCompleted);
                 var tick = engine.Supervisor.Status.Tick;
@@ -347,7 +347,7 @@ internal static class Workflow
                 var activePid = pids[^1];
                 if (run == 1) { replacement = await ReplaceGame(); activePid = engine.Supervisor.Status.ProcessId!.Value; }
                 await Until(() => view.DataContext!.CanStop);
-                if (view.Header is { } stopHeader) await Click(stopHeader.StopButton);
+                if (view.Header is { } stopHeader) await Click(await ReadControl(() => stopHeader.StopButton));
                 else await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Stop)).WaitAsync(token);
                 await Until(() => playback.Pending.IsCompleted && engine.Supervisor.Status.State == SessionState.Stopped);
                 Program.Check(playback.Error == null && !playback.OwnsRuntime && runtimes.Leases.Single(lease => lease.ProcessId == activePid) is { Reaped: true, ResourcesReleased: true },

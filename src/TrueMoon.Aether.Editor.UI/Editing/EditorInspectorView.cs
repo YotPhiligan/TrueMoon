@@ -80,11 +80,8 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     public IReadOnlyDictionary<ComponentId, IconButton> DetailsButtons => _detailsButtons;
     /// <summary>Specialized controls selected by exact built-in component type and schema.</summary>
     public IReadOnlyDictionary<ComponentId, TransformEditor> TransformEditors => _transforms;
-    private IconButton? _hint;
+    private DelayedHoverHint _hint;
     private OverlayHost? _hintHost;
-    private Rect _hintBounds;
-    private float _hintX, _hintY;
-    private TimeSpan _hintRemaining;
     private readonly List<Element> _hintAncestors = [];
     /// <summary>Gets retained component parts.</summary>
     public IReadOnlyDictionary<ComponentId, InspectorComponentControls> Components => _components;
@@ -121,7 +118,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     /// <summary>Compact primary actions; each icon has a semantic name and delayed hover hint.</summary>
     public HStack Actions => _parts.Actions;
     /// <inheritdoc />
-    public bool NeedsFrame => _hintRemaining > TimeSpan.Zero || _hint != null && !HintIsCurrent();
+    public bool NeedsFrame => _hint.IsPending || _hint.Target != null && !HintIsCurrent();
 
     /// <summary>Builds a parent-owned inspector on the UI owner thread.</summary>
     /// <param name="model">Borrowed presentation.</param><param name="style">Borrowed scoped appearance.</param>
@@ -620,13 +617,13 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (input.Kind == InputKind.PointerMove && !NumericEditors().Any(box => box.IsDragging))
         {
             var hint = IconAt(this, input.X, input.Y);
-            if (!ReferenceEquals(hint, _hint))
+            if (!ReferenceEquals(hint, _hint.Target))
             {
                 CloseHint();
                 if (hint != null && FindOverlay() is { Popup: null } host)
                 {
-                    _hint = hint; _hintHost = host; _hintBounds = hint.Bounds;
-                    _hintX = input.X; _hintY = input.Y; _hintRemaining = TimeSpan.FromMilliseconds(500);
+                    _hint.Start(hint, input.X, input.Y, TimeSpan.FromMilliseconds(500));
+                    _hintHost = host;
                     host.Closed += HintClosed;
                     for (Element? node = this; node != null; node = node.Parent)
                     { _hintAncestors.Add(node); node.PropertyChanged += HintAncestorChanged; }
@@ -643,26 +640,18 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        if (_hint == null) return;
-        if (!HintIsCurrent()) { CloseHint(); return; }
-        if (_hintRemaining <= TimeSpan.Zero) return;
-        _hintRemaining -= elapsed;
-        if (_hintRemaining > TimeSpan.Zero) return;
-        _hintRemaining = TimeSpan.Zero;
+        if (_hint.Target is not { } target) return;
+        var layoutPending = context.HasPendingLayout;
+        if (!layoutPending && !HintIsCurrent()) { CloseHint(); return; }
+        if (!_hint.Advance(elapsed, layoutPending)) return;
         if (_hintHost!.Popup != null) { CloseHint(); return; }
         var popup = new HintSurface { Style = EditorInspectorViewStyle.HintBorder }.Content(
-            new Text(_hint.AccessibleName + (_hint.IsEffectivelyEnabled ? "" : " · сейчас недоступно")) { Style = EditorInspectorViewStyle.HintText });
-        try { _hintHost.Open(this, popup, _hint.Bounds, context, tooltip: true); }
+            new Text(target.AccessibleName + (target.IsEffectivelyEnabled ? "" : " · сейчас недоступно")) { Style = EditorInspectorViewStyle.HintText });
+        try { _hintHost.Open(this, popup, target.Bounds, context, tooltip: true); }
         catch { if (popup.Parent == null && !popup.IsDisposed) popup.Dispose(); throw; }
     }
-    private bool HintIsCurrent()
-    {
-        if (_hint is not { IsDisposed: false, IsAttached: true } || _hint.Bounds != _hintBounds ||
-            !ReferenceEquals(IconAt(this, _hintX, _hintY), _hint) || !ReferenceEquals(FindOverlay(), _hintHost)) return false;
-        for (var node = Parent; node != null; node = node.Parent)
-            if (!node.IsVisible || !node.ChildClipBounds.Contains(_hintX, _hintY)) return false;
-        return true;
-    }
+    private bool HintIsCurrent() => ReferenceEquals(FindOverlay(), _hintHost) &&
+        _hint.IsCurrent(IconAt(this, _hint.X, _hint.Y));
     private OverlayHost? FindOverlay()
     { for (var node = Parent; node != null; node = node.Parent) if (node is OverlayHost host) return host; return null; }
     private static IconButton? IconAt(Element node, float x, float y)
@@ -687,7 +676,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     {
         if (_hintHost != null) _hintHost.Closed -= HintClosed;
         foreach (var node in _hintAncestors) node.PropertyChanged -= HintAncestorChanged;
-        _hintAncestors.Clear(); _hint = null; _hintHost = null; _hintRemaining = TimeSpan.Zero;
+        _hintAncestors.Clear(); _hint.Reset(); _hintHost = null;
     }
     private void Attachment()
     { if (!IsAttached) ForgetHint(); }

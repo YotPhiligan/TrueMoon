@@ -197,6 +197,26 @@ public static partial class ElementExtensions
             _ => synchronize?.Invoke()));
     }
 
+    /// <summary>Synchronizes the current state of one or more borrowed sources while attached.</summary>
+    /// <param name="element">The element, preserving its concrete type.</param>
+    /// <param name="synchronize">Reads the current state on the UI owner thread.</param>
+    /// <param name="sources">The notifying sources, captured at registration.</param>
+    /// <returns>The configured element.</returns>
+    /// <remarks>Synchronizes immediately on each attachment after subscribing. Any property notification
+    /// requests a queued synchronization, with at most one pending across all sources for that attachment.</remarks>
+    public static T ObserveState<T>(this T element, Action synchronize, params ReadOnlySpan<INotifyPropertyChanged> sources)
+        where T : Element
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(synchronize);
+        if (sources.IsEmpty) throw new ArgumentException("At least one source is required.", nameof(sources));
+        foreach (var source in sources)
+            if (source is null) throw new ArgumentException("Sources cannot contain null.", nameof(sources));
+
+        var snapshot = sources.ToArray();
+        return OwnObserver(element, () => new AttachmentStateObserver(element, snapshot, synchronize));
+    }
+
     private static T OwnObserver<T>(T element, Func<IDisposable> create) where T : Element
     {
         element.VerifyAccess();

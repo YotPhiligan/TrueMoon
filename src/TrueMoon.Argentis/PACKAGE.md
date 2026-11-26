@@ -209,6 +209,21 @@ Custom single-line text controls can call `Text.FitSingleLine` from
 `ArrangeCore`. It uses the selected font, keeps a complete UTF-16 surrogate
 pair, and returns just the ellipsis when it fits but no prefix does.
 
+Use `this.ObserveState(refresh, model, otherModel)` to read the latest state of
+stable borrowed models. It synchronizes on each attachment and merges bursts
+into one pending owner-thread callback per subscription. Work from an ended
+attachment is dropped. Use `ObservePropertyChanged` when each notification matters.
+
+`WindowTitleBar.SetHeader` validates a candidate before replacing the old
+tree. Attachment observers see the committed header; observer failures
+propagate without rolling back the replacement. A detached old header is
+caller-owned.
+
+`DelayedHoverHint` shares delay and target validation between controls.
+Defer placement while `IInputContext.HasPendingLayout` is true, then
+compare against the current hit and ancestor clips. Keep content, styling
+and overlay ownership in the calling view.
+
 For implementation details local to a view, use `ui.Create(factory)` or
 `ui.Create(factory, arguments)` with a typed `IFactory`. The builder borrows
 the factory, tracks the returned draft and applies the same rollback and

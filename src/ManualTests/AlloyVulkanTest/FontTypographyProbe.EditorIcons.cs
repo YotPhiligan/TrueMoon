@@ -157,11 +157,10 @@ internal static partial class FontTypographyProbe
         stack.Add(header);
         stack.Add(new Text("Previous geometry · same size") { FontSize = 12, Height = 16 });
         stack.Add(legacy);
+        using var ui = UiSession.Create(root, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: EditorPresenters.Register);
         var buttons = Actions(header);
         var oldButtons = Actions(legacy);
         foreach (var button in oldButtons) button.UseVectorSymbol = false;
-
-        using var ui = UiSession.Create(root, backend, target, viewport, null, new UiDispatchOptions(), configurePresenters: EditorPresenters.Register);
         ui.SetTheme(theme);
         Update();
         var normal = read(ui);

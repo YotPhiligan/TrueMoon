@@ -320,7 +320,7 @@ public sealed class EditorHeaderViewTests
     [Fact]
     public void CaptionEllipsis_UsesTheStyledFaceAndKeepsTheSameVerticalAlignment()
     {
-        using var test = new HeaderFixture(); var caption = test.Header.Caption;
+        using var test = new HeaderFixture(); using var ui = test.Ui(); var caption = test.Header.Caption;
         caption.Value = new string('W', 80); caption.FontFamily = "typography-family"; caption.FontWeight = 600; caption.FontItalic = true;
         var probe = new TypographyRecordingContext();
         using var presenters = UiPresenters.Create(EditorPresenters.Register);
@@ -346,6 +346,7 @@ public sealed class EditorHeaderViewTests
     public void CaptionEllipsis_AtExactWidths_DoesNotSplitSurrogatePairs(float width, string expected)
     {
         using var test = new HeaderFixture();
+        using var ui = test.Ui();
         var caption = test.Header.Caption;
         caption.Value = "A\U0001F680BC";
         caption.FontSize = 14; caption.FontWeight = 400; caption.FontItalic = false;
@@ -392,6 +393,40 @@ public sealed class EditorHeaderViewTests
         Assert.Null(test.Overlays.Popup); Assert.True(popup.IsDisposed); Assert.True(test.Header.Menu.MoreButton.IsFocused);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FileTooltip_ResizeHidingItsButtonCancelsThePendingHint(bool delayExpiresWithResize)
+    {
+        using var test = new HeaderFixture(); using var ui = test.Ui(); ui.Update();
+        var opening = test.Header.OpenButton;
+        var bounds = opening.Bounds;
+        ui.HandleInput(new(InputKind.PointerMove, bounds.X + 4, bounds.Y + 4));
+        Assert.True(test.Header.NeedsFrame);
+        Assert.Null(test.Overlays.Popup);
+
+        ui.Resize(new(420, 800));
+        if (!delayExpiresWithResize) ui.Update();
+        test.Clock.Advance(500);
+        ui.Update();
+        Assert.False(opening.Parent!.IsVisible);
+        Assert.Null(test.Overlays.Popup);
+        // Collapsing the file group during arrange can request another layout pass.
+        for (var pass = 0; pass < 4 && ui.NeedsUpdate; pass++)
+        {
+            ui.Update();
+            Assert.Null(test.Overlays.Popup);
+        }
+        Assert.False(test.Header.NeedsFrame);
+        Assert.Null(test.Overlays.Popup);
+
+        ui.Resize(new(1280, 800)); ui.Update();
+        ui.HandleInput(new(InputKind.PointerMove, opening.Bounds.X + 4, opening.Bounds.Y + 4));
+        test.Clock.Advance(500); ui.Update();
+        var popup = Assert.IsAssignableFrom<Element>(test.Overlays.Popup);
+        Assert.StartsWith(opening.AccessibleName, Assert.Single(DocumentUiFixture.Tree(popup).OfType<Text>()).Value);
+    }
+
     [Fact]
     public void MenuOpening_CancelsPendingIconTooltipAndDoesNotReplaceTheMenuPopup()
     {
@@ -402,6 +437,43 @@ public sealed class EditorHeaderViewTests
         var popup = test.Overlays.Popup; test.Clock.Advance(600); ui.Update();
         Assert.NotNull(popup); Assert.Same(popup, test.Overlays.Popup); Assert.Same(test.Header.Menu, test.Overlays.PopupOwner);
         Assert.False(test.Header.NeedsFrame);
+    }
+
+    [Fact]
+    public void Reattach_RefreshesRetainedPartsAndRoutesARuntimeGestureOnce()
+    {
+        using var test = new HeaderFixture(openDocument: true);
+        var header = test.Header;
+        Assert.False(header.KeepsTitleBarActive);
+        Assert.Throws<KeyNotFoundException>(() => header.Menu);
+        Assert.Throws<KeyNotFoundException>(() => header.Caption);
+        Assert.Throws<KeyNotFoundException>(() => header.RunButton);
+
+        using var ui = test.Ui(); ui.Update();
+        var titleBar = test.Frame.DefaultTitleBar!;
+        var menu = header.Menu; var caption = header.Caption;
+        var run = header.RunButton; var pause = header.PauseButton; var stop = header.StopButton;
+        var menuRun = menu.Groups.Single(group => group.Id == "simulation").Actions.Single(action => action.Id == "simulation.run").Command;
+        var documentTitle = caption.Value;
+        Assert.EndsWith(" · room.aetherscene", documentTitle);
+        Assert.False(run.IsEnabled); Assert.False(menuRun.CanExecute);
+
+        titleBar.SetHeader(null);
+        Assert.False(header.IsAttached); Assert.False(header.KeepsTitleBarActive);
+        test.Owner.Run(DocumentCommand.Close); test.Documents.Refresh();
+        test.Refresh(SessionState.Stopped, candidate: true); ui.Update();
+        Assert.True(test.Model.CanRun);
+        Assert.Equal(documentTitle, caption.Value); Assert.False(run.IsEnabled);
+
+        titleBar.SetHeader(header); ui.Update();
+        Assert.True(header.IsAttached);
+        Assert.Same(menu, header.Menu); Assert.Same(caption, header.Caption);
+        Assert.Same(run, header.RunButton); Assert.Same(pause, header.PauseButton); Assert.Same(stop, header.StopButton);
+        Assert.Equal("TrueMoon Aether Editor · room Мир 🛰️", caption.Value);
+        Assert.True(run.IsEnabled); Assert.False(pause.IsEnabled); Assert.False(stop.IsEnabled);
+        Assert.Same(header.RunCommand, menuRun); Assert.True(menuRun.CanExecute);
+        DocumentUiFixture.Click(ui, run); DocumentUiFixture.Wait(test.Commands.Pending);
+        Assert.Equal(new[] { EditorCommand.Start, EditorCommand.Play }, test.RuntimeCalls.ToArray());
     }
 
     [Fact]
@@ -419,20 +491,35 @@ public sealed class EditorHeaderViewTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void StyleFailure_DisposesUnpublishedHeaderAndPreservesBorrowedModelsAndErrors(bool cleanupFailure)
+    public void StyleFailure_DisposesDraftButLeavesUnpublishedHeaderAndBorrowedModelsCallerOwned(bool cleanupFailure)
     {
         using var owner = new DocumentUiFixture(); using var documents = new EditorDocumentViewModel(owner.Commands);
         using var preview = new EditorPreview((scene, _) => Task.FromResult(EditingFixture.Receipt(scene)), () => Task.CompletedTask);
         using var transform = new EditorTransformViewModel(owner.Commands, preview);
         using var model = new EditorViewModel(new(EditorScene.Demo()), new((_, _) => Task.CompletedTask, CancellationToken.None));
-        using var overlays = new OverlayHost(new Panel());
+        var panel = new Panel();
+        var overlays = new OverlayHost(panel);
+        using var ui = DocumentUiFixture.Ui(overlays);
         var failure = new IOException("header style failed"); var cleanup = new IOException("header cleanup failed");
-        EditorHeaderView unpublished = null!; var resource = new Resource(cleanupFailure ? cleanup : null);
-        var error = Record.Exception(() => new EditorHeaderView(model, documents, transform, new FailingStyle(view => { unpublished = view; view.Own(resource); }, failure), new(overlays, "Editor", () => { })));
-        if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, value => Assert.Same(failure, value), value => Assert.Same(cleanup, value));
-        else Assert.Same(failure, error);
-        Assert.True(unpublished.IsDisposed); Assert.All(DocumentUiFixture.Tree(unpublished), element => Assert.True(element.IsDisposed));
-        Assert.Equal(1, resource.Disposals); Assert.False(overlays.IsDisposed);
+        var resource = new Resource(cleanupFailure ? cleanup : null);
+        Element[] draft = [];
+        var style = new FailingStyle(view => draft = DocumentUiFixture.Tree(view).Skip(1).ToArray(), failure);
+        var unpublished = new EditorHeaderView(model, documents, transform, style, new(overlays, "Editor", () => { }));
+        unpublished.Own(resource);
+
+        Assert.Same(failure, Record.Exception(() => panel.Add(unpublished)));
+        Assert.Empty(panel.Children); Assert.Null(unpublished.Parent);
+        Assert.False(unpublished.IsAttached); Assert.False(unpublished.IsDisposed);
+        Assert.Contains(draft, element => element is MenuBar);
+        Assert.Contains(draft, element => element is IconButton);
+        Assert.All(draft, element => Assert.True(element.IsDisposed));
+        Assert.Equal(0, resource.Disposals);
+
+        var error = Record.Exception(unpublished.Dispose);
+        if (cleanupFailure) Assert.Same(cleanup, error);
+        else Assert.Null(error);
+        Assert.True(unpublished.IsDisposed); Assert.Equal(1, resource.Disposals);
+        Assert.False(overlays.IsDisposed); Assert.True(overlays.IsAttached);
         model.Select("green-cube"); documents.PathDraft = "next.aetherscene"; transform.Refresh(null);
         Assert.Equal("green-cube", model.SelectedId); Assert.False(owner.Commands.Read().Closed);
     }

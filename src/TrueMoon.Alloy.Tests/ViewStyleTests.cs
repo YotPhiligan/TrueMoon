@@ -230,6 +230,132 @@ public sealed class ViewStyleTests
     }
 
     [Fact]
+    public void HeaderReplacement_DeferredStyleFailureLeavesOriginalAttachedAndDraftWithCaller()
+    {
+        var title = new WindowTitleBar("Window");
+        var original = new Text("Original");
+        title.SetHeader(original);
+        Text? draft = null;
+        using var incoming = new FactoryView("incoming", ui => draft = ui.Text("Incoming").Named("Label"));
+        var failure = new InvalidOperationException("Deferred style rejected the header.");
+        ViewCreation.Prepare(incoming, new Declaration<FactoryView>(_ => throw failure));
+        Assert.Equal(0, incoming.Builds);
+        using var ui = Create(title);
+        ui.Update();
+        var before = title.Children.ToArray();
+        var originalNotifications = 0;
+        original.AttachmentChanged += () => originalNotifications++;
+
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => title.SetHeader(incoming)));
+
+        Assert.Equal(1, incoming.Builds);
+        Assert.Equal(1, incoming.Preparations);
+        Assert.True(Assert.IsType<Text>(draft).IsDisposed);
+        Assert.Null(incoming.Child);
+        Assert.Null(incoming.Parent);
+        Assert.False(incoming.IsAttached);
+        Assert.False(incoming.IsDisposed);
+        Assert.Same(original, title.HeaderContent);
+        Assert.Same(title, original.Parent);
+        Assert.True(original.IsAttached);
+        Assert.False(original.IsDisposed);
+        Assert.Equal(0, originalNotifications);
+        Assert.Equal<Element>(before, title.Children);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void HeaderChange_ThrowingDetachObserverSeesCommittedSlotAndChildOrder(bool clear)
+    {
+        var title = new WindowTitleBar("Window");
+        using var original = new Text("Original");
+        using var incoming = clear ? null : new Text("Incoming");
+        var unrelated = new Text("Unrelated");
+        title.SetHeader(original);
+        title.Items.Add(unrelated);
+        using var ui = Create(title);
+        ui.Update();
+        var bounds = original.Bounds;
+        Element[] expected = incoming == null
+            ? [title.MinimizeButton, title.MaximizeButton, title.CloseButton, unrelated]
+            : [title.MinimizeButton, title.MaximizeButton, title.CloseButton, incoming, unrelated];
+        var failure = new InvalidOperationException("Detach observer failed.");
+        var attachNotifications = 0;
+
+        void AssertCommitted()
+        {
+            Assert.Same(incoming, title.HeaderContent);
+            Assert.Equal<Element>(expected, title.Children);
+            Assert.Same(title, unrelated.Parent);
+            Assert.True(unrelated.IsAttached);
+            Assert.Null(original.Parent);
+            Assert.False(original.IsAttached);
+            Assert.False(original.IsDisposed);
+            if (incoming != null)
+            {
+                Assert.Same(title, incoming.Parent);
+                Assert.True(incoming.IsAttached);
+            }
+        }
+
+        original.AttachmentChanged += () =>
+        {
+            AssertCommitted();
+            throw failure;
+        };
+        if (incoming != null)
+            incoming.AttachmentChanged += () =>
+            {
+                if (!incoming.IsAttached) return;
+                AssertCommitted();
+                attachNotifications++;
+            };
+
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => title.SetHeader(incoming)));
+
+        AssertCommitted();
+        Assert.Equal(clear ? 0 : 1, attachNotifications);
+        Assert.True(ui.Update());
+        if (incoming != null) Assert.Equal(bounds, incoming.Bounds);
+        ui.Dispose();
+        Assert.False(original.IsDisposed);
+        Assert.True(unrelated.IsDisposed);
+        if (incoming != null) Assert.True(incoming.IsDisposed);
+    }
+
+    [Fact]
+    public void HeaderSlot_ExternalItemsChangesDoNotPromoteAnUnrelatedChild()
+    {
+        var title = new WindowTitleBar("Window");
+        using var original = new Text("Original");
+        var unrelated = new Text("Unrelated");
+        title.SetHeader(original);
+        using var ui = Create(title);
+        ui.Update();
+
+        title.Items.Insert(3, unrelated);
+        Assert.Same(original, title.HeaderContent);
+        original.AttachmentChanged += () =>
+        {
+            if (!original.IsAttached) Assert.Null(title.HeaderContent);
+        };
+        Assert.True(title.Items.Remove(original));
+        title.SetHeader(null);
+
+        Assert.Null(title.HeaderContent);
+        Assert.Same(unrelated, title.Children[3]);
+        Assert.True(unrelated.IsAttached);
+        Assert.Null(original.Parent);
+        Assert.False(original.IsAttached);
+        Assert.False(original.IsDisposed);
+
+        title.Items.Add(original);
+        Assert.True(original.IsAttached);
+        Assert.Null(title.HeaderContent);
+    }
+
+    [Fact]
     public void FontWeightAndItalic_RespectStylePrecedenceAndRecomputeWithTheme()
     {
         using var view = new SampleView();

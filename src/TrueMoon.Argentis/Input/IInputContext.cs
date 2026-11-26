@@ -5,6 +5,8 @@ public interface IInputContext
 {
     /// <summary>Gets the eligible keyboard focus owner in this session, or <see langword="null"/>.</summary>
     Element? FocusedElement { get; }
+    /// <summary>Whether geometry must be refreshed before using existing bounds for deferred pointer work.</summary>
+    bool HasPendingLayout => false;
     /// <summary>Moves keyboard focus if the target accepts input in this session.</summary>
     /// <param name="element">The requested focus target.</param>
     /// <returns><see langword="false"/> if the target is unavailable; existing focus is unchanged.</returns>

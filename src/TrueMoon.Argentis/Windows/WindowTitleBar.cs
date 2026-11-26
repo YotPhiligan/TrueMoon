@@ -18,7 +18,7 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
     /// <summary>Current reveal progress of the title bar backdrop.</summary>
     public float OverlayReveal => _overlay.Value;
     private bool OverlayActive => OverlayContent && (_pointerInside || _state.Active &&
-        (FocusWithin(this) || _header is IWindowHeaderActivity { KeepsTitleBarActive: true }));
+        (FocusWithin(this) || HeaderContent is IWindowHeaderActivity { KeepsTitleBarActive: true }));
     /// <inheritdoc />
     public bool NeedsFrame => OverlayContent && (_overlay.IsRunning || OverlayActive != _overlayTarget);
     private string _title;
@@ -44,20 +44,23 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
     /// <summary>Close action; a host connects it to its cancellable close coordinator.</summary>
     public IconButton CloseButton { get; }
     /// <summary>Gets optional owned application header content, replacing only the painted caption.</summary>
-    public Element? HeaderContent => _header;
+    public Element? HeaderContent => ReferenceEquals(_header?.Parent, this) ? _header : null;
     /// <summary>Adopts fresh custom content within the area left of standard window buttons. The caller owns any removed content.</summary>
+    /// <remarks>Preparation or validation failure leaves the previous header in place. Notification failures propagate after ownership changes.</remarks>
     /// <param name="header">Fresh unowned header, or null to restore the ordinary caption.</param>
     public void SetHeader(Element? header)
     {
-        VerifyAccess(); if (ReferenceEquals(_header, header)) return;
-        var previous = _header;
-        if (header != null)
-            ValidateChildChange([header], previous == null ? [] : [previous]);
-        if (previous != null) Items.Remove(previous);
-        _header = header;
-        if (header != null) Add(header);
-        Invalidate(Invalidation.Layout);
+        VerifyAccess();
+        var previous = HeaderContent;
+        if (ReferenceEquals(previous, header))
+        {
+            // An explicit clear also forgets content previously removed through Items.
+            _header = header;
+            return;
+        }
+        Items.SetSlot(previous, header, PublishHeader);
     }
+    private void PublishHeader(Element? header) => _header = header;
     /// <summary>Window caption; changing it invalidates only the drawing.</summary>
     public string Title { get => _title; set { VerifyAccess(); ArgumentNullException.ThrowIfNull(value); if (_title == value) return; _title = value; Invalidate(); } }
     /// <summary>Optional borrowed icon. The caller retains ownership.</summary>
@@ -130,7 +133,7 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
         var top = OverlayContent ? area.Y : area.Y + (area.Height - size) / 2;
         Element[] actions = [MinimizeButton, MaximizeButton, CloseButton];
         for (var i = 0; i < actions.Length; i++) actions[i].Arrange(new(start + size * i, top, size, size));
-        _header?.Arrange(new(area.X + 6, area.Y, Math.Max(0, start - area.X - 12), area.Height));
+        HeaderContent?.Arrange(new(area.X + 6, area.Y, Math.Max(0, start - area.X - 12), area.Height));
     }
     /// <inheritdoc />
     public override void Dispose()

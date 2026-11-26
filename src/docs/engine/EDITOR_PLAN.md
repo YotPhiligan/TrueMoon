@@ -44,7 +44,8 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 `EditorStatusPopupView` переведён. Каталог переставляет строки без потери фокуса.
 [Проверки popup](HISTORY.md#editor-status-popup-migration-2026-11-26).
 `EditorStatusBarView` переведён. [Проверки](HISTORY.md#editor-status-bar-migration-2026-11-26).
-Следующие кандидаты — заголовок и корневая композиция.
+`EditorHeaderView` переведён. [Проверки](HISTORY.md#editor-header-fluent-2026-11-26).
+Далее — корневая композиция и оконная обёртка.
 
 В `main` на `a1764fb` проверены первичный импорт из пустого каталога,
 размещение модели и восстановление сцены после перезапуска.

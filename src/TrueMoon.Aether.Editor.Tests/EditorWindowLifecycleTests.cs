@@ -156,6 +156,7 @@ internal sealed class EditorCloseFixture : IDisposable
     private readonly EditorPreview _preview;
     private readonly EditorTransformViewModel _transform;
     private readonly EditorHeaderView _header;
+    private readonly UiSession _headerUi;
     internal EditorWindowNeverRuntime Runtime { get; } = new();
     internal AetherHost Engine { get; }
     internal EditorMainWindow Root { get; }
@@ -178,6 +179,7 @@ internal sealed class EditorCloseFixture : IDisposable
         _transform = new(Data.Owner.Commands, _preview);
         _header = new(Data.Model, Data.Documents, _transform, new EditorHeaderViewStyle(), new(Root.EditorView.Overlays, "Editor", () =>
         { HeaderRequests++; _headerClose = Root.RequestCloseAsync(); }));
+        _headerUi = InspectorFixture.Ui(_header);
     }
     internal Task<bool> Request(string source)
     {
@@ -188,7 +190,7 @@ internal sealed class EditorCloseFixture : IDisposable
     }
     public void Dispose()
     {
-        Adapter.Dispose(); Connection.Dispose(); _header.Dispose(); Root.Dispose(); _transform.Dispose(); _preview.Dispose();
+        Adapter.Dispose(); Connection.Dispose(); _headerUi.Dispose(); Root.Dispose(); _transform.Dispose(); _preview.Dispose();
         DocumentUiFixture.Wait(Hosted.DisposeAsync().AsTask()); _app.Dispose(); Data.Dispose(); _files.Dispose();
     }
     private sealed class Controller(Func<Task<bool>> close) : IWindowController

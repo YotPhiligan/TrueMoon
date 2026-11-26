@@ -38,21 +38,28 @@ public sealed class EditorHeaderConfigurationTests
         var second = factory.Create(new(secondOverlays, "Second project", () => { }))!;
         var firstFrame = WindowFrame.CreateDefault("First", firstOverlays); firstFrame.DefaultTitleBar!.SetHeader(first);
         var secondFrame = WindowFrame.CreateDefault("Second", secondOverlays); secondFrame.DefaultTitleBar!.SetHeader(second);
+        Assert.Equal(0, style.Configurations);
+        Assert.Same(source.Model, first.DataContext); Assert.Same(source.Model, second.DataContext);
+        Assert.NotSame(first.RunCommand, second.RunCommand);
         using var ui1 = new UiSession(firstFrame, new Surface(), new(1280, 800));
         using var ui2 = new UiSession(secondFrame, new Surface(), new(1280, 800));
         ui1.Update(); ui2.Update();
-        Assert.Same(source.Model, first.DataContext); Assert.Same(source.Model, second.DataContext);
-        Assert.NotSame(first, second); Assert.NotSame(first.Menu, second.Menu); Assert.NotSame(first.RunButton, second.RunButton);
-        Assert.NotSame(first.RunCommand, second.RunCommand); Assert.Equal(2, style.Configurations);
+        var firstMenu = first.Menu; var secondMenu = second.Menu;
+        var firstRun = first.RunButton; var secondRun = second.RunButton;
+        Assert.NotSame(first, second); Assert.NotSame(firstMenu, secondMenu); Assert.NotSame(firstRun, secondRun);
+        Assert.Equal(2, style.Configurations);
         Assert.Equal("First project", first.Caption.Value); Assert.Equal("Second project", second.Caption.Value);
         source.Refresh(SessionState.Stopped, candidate: true); ui1.Update(); ui2.Update();
-        Assert.True(first.RunButton.IsEnabled); Assert.True(second.RunButton.IsEnabled);
+        Assert.True(firstRun.IsEnabled); Assert.True(secondRun.IsEnabled);
         ui1.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed);
+        Assert.True(firstMenu.IsDisposed); Assert.True(firstRun.IsDisposed);
+        Assert.False(secondMenu.IsDisposed); Assert.False(secondRun.IsDisposed);
         source.Refresh(SessionState.Playing, candidate: true); ui2.Update();
-        Assert.True(second.PauseButton.IsEnabled); Assert.False(second.RunButton.IsEnabled);
+        Assert.True(second.PauseButton.IsEnabled); Assert.False(secondRun.IsEnabled);
         app.Dispose(); Assert.False(second.IsDisposed);
         Assert.Throws<ObjectDisposedException>(() => source.Model.Select("green-cube"));
         ui2.Dispose(); Assert.True(second.IsDisposed); Assert.True(secondOverlays.IsDisposed);
+        Assert.True(secondMenu.IsDisposed); Assert.True(secondRun.IsDisposed);
     }
 
     [Theory]

@@ -59,6 +59,7 @@ public sealed class UiSession : IDisposable, IInputContext
     /// <summary>Whether the tree/viewport has unapplied visual invalidation. Queued commands and requests
     /// for future frames leave the last completed output usable until they are applied by Update.</summary>
     public bool NeedsRender => _dirty != 0;
+    bool IInputContext.HasPendingLayout => Viewport.IsEmpty || (_dirty & Geometry) != 0;
     /// <summary>Immutable dispatch limits selected when this session was created.</summary>
     public UiDispatchOptions DispatchOptions { get; }
     /// <summary>Whether the session has released its resources.</summary>
