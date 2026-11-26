@@ -1,3 +1,39 @@
+<a id="player-package-view-acceptance-2026-11-26"></a>
+## 2026-11-26 — пакетная приёмка миграции PlayerView
+
+`ManualTests/PlayerProbe/Verify.ps1` из чистого checkout `a5d6cfe71a`:
+Windows x64, .NET SDK 11, RTX 5070 Ti, Vulkan validation и OpenGL. Собраны
+17 свежих NuGet `1.2611.26.17-alpha.player.20261126224843`. PlayerProbe,
+игра и издатель Build независимо восстановлены из закрытого локального
+фида с отдельным кешем, без `ProjectReference`. В графе PlayerProbe из
+Aether только `Player`, `Runtime` и `Abstractions`; `Tooling` нужен отдельному
+издателю, не Player. Сверены SHA-256 пакетов и графов.
+[Манифест](../../TestResults/PlayerPackage-26-17-a5d6cfe/delivery/verification.json).
+
+Прошли 6/6 оконных прогонов: source Debug, published Release и независимый
+NuGet Release, каждый на Cobalt и Microsoft DI. В последних двух прогонах
+подтверждены кадр до Playing, передача ввода игре, resize с 960×540 до
+1200×675 пикселей, остановка тиков при сворачивании и восстановление.
+Игра загружена в процесс Player без Editor/Tooling. В каждом пакетном
+прогоне освобождены 3 поверхности и 9 слотов, открытых GPU-дескрипторов 0;
+Vulkan warnings/errors — 0/0 во всех шести прогонах.
+[Cobalt](../../TestResults/PlayerPackage-26-17-a5d6cfe/delivery/fresh-cobalt/player.json) ·
+[Microsoft DI](../../TestResults/PlayerPackage-26-17-a5d6cfe/delivery/fresh-microsoft/player.json).
+
+`VerifyScenarioProfiles.ps1 -LegacyScene` использовал тот же пакетный
+PlayerProbe, точный Build и сцену ревизии 41. Оконный (Cobalt) и headless
+профили приняли ввод; `first-cube.red` — 1 на тике 2 и 0,5 на тике 6.
+Оконные PNG 960×540 при 1,5× записаны на этих же тиках, SHA-256 сверены;
+headless не создал поверхность или PNG. Окно закрыто, 3 слота освобождены,
+дескрипторов 0, Vulkan warnings/errors — 0/0.
+[Паритет](../../TestResults/PlayerPackage-26-17-a5d6cfe/parity/comparison.json) ·
+[Кадр до ввода](../../TestResults/PlayerPackage-26-17-a5d6cfe/parity/windowed/frame-before-input.png) ·
+[Кадр после ввода](../../TestResults/PlayerPackage-26-17-a5d6cfe/parity/windowed/frame-after-input.png).
+
+Фикстура не содержит игровой HUD. Физический Win32-ввод, смена DPI между
+мониторами, device loss, VRAM и полная alpha-матрица не проверялись. Пакеты
+остались в локальном фиде; публикации NuGet не было.
+
 <a id="editor-package-view-acceptance-2026-11-26"></a>
 ## 2026-11-26 — пакетная приёмка миграции Editor View
 

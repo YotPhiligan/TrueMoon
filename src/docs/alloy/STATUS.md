@@ -147,9 +147,9 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 
 ## Следующий конкретный шаг
 
-Из [миграции Aether View](../engine/PLAN.md#aether-view-authoring-migration)
-остаётся отдельный пакетный restore потребителя Player. Стандартный и
-встраиваемый Editor уже прошли нативную проверку на свежих NuGet.
+[Миграция Aether View](../engine/PLAN.md#aether-view-authoring-migration)
+проверена на свежих NuGet: оба хоста Editor и независимый Player на обоих
+DI-провайдерах. [Проверка Player](../engine/HISTORY.md#player-package-view-acceptance-2026-11-26).
 
 [Проверка замены свойства инспектора](HISTORY.md#inspector-property-replacement)
 пройдена. Эксперимент с удержанием редактора нужен только при подтверждённой

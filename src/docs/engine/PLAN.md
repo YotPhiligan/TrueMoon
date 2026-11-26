@@ -43,11 +43,9 @@ surface принята. Первый оконный сценарий прове�
 захват кадров. Это первый профиль общего инструментария проверок для Player,
 Editor и агентов.
 
-[Миграция всех View Aether](#aether-view-authoring-migration): `PlayerView`,
-оболочка Editor и консоль диагностики проверены в своих профилях из исходников.
-Фабрики инспектора и иерархии проверены на обоих DI-провайдерах.
-Стандартный и встраиваемый Editor прошли пакетную приёмку; остаётся
-отдельный restore потребителя Player.
+[Миграция всех View Aether](#aether-view-authoring-migration) закрыта в
+проверенном объёме: стандартный и встраиваемый Editor и независимый Player
+прошли приёмку на свежих NuGet.
 
 [Два независимых переопределения ED4i](EDITOR_PLAN.md#ed4i-independent-slot-overrides)
 проверены в версии `1.2611.20.3-alpha` с Undo и перезапуском Editor.
@@ -62,7 +60,7 @@ ARCH3.1–9, ARCH1j и ENG7b.3 остаются завершёнными в св
 [запуск Editor/Player](LAUNCH_ACCEPTANCE.md), [прежняя очередь](HISTORY.md#engine-roadmap-before-2026-11-20).
 
 <a id="aether-view-authoring-migration"></a>
-### Миграция всех прикладных View Aether — запланировано 25.11.2026
+### Миграция всех прикладных View Aether — проверена 26.11.2026
 
 По решению владельца перевести **все** рабочие `View` и производные `Window`
 в составе Aether Player, Runtime Editor и полного Editor, включая вложенные
@@ -88,8 +86,10 @@ ARCH3.1–9, ARCH1j и ENG7b.3 остаются завершёнными в св
   Фабрика Canvas подключается через Hosting, `PlayerWindow` получает
   типизированный порт после attach, не читая `UiSession.Root`.
   [Проверка границы и показа](HISTORY.md#player-viewport-hosting-2026-11-26).
-- [ ] **Пакетная приёмка Player.** Пакет собран и его состав проверен;
-  независимый потребитель свежего набора NuGet остаётся отдельной проверкой.
+- [x] **Пакетная приёмка Player.** Независимый Release из закрытого фида на
+  Cobalt и Microsoft DI; нативный resize, сворачивание/восстановление и
+  освобождение ресурсов. Оконный и headless сценарии совпали по тикам и
+  игровым наблюдениям. [Отчёты](HISTORY.md#player-package-view-acceptance-2026-11-26).
 - [x] **Документы Editor.** Оба режима `EditorDocumentView` используют одно
   дерево `Content(...)`. Фабрика с runtime-режимом и стиль сохранены.
   [Граница подготовки и проверки](HISTORY.md#editor-document-view-migration-2026-11-26).

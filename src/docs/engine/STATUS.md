@@ -171,9 +171,10 @@ Replace работают из интерфейса Editor во время Playin
 
 ## Следующий конкретный шаг
 
-В [миграции View Aether](PLAN.md#aether-view-authoring-migration) `PlayerView`
-прошёл исходниковую приёмку в оконном и headless профилях.
-[Результаты Player](HISTORY.md#player-view-migration-2026-11-26).
+В [миграции View Aether](PLAN.md#aether-view-authoring-migration) Player прошёл
+независимый restore из свежего фида, нативный Release на Cobalt и Microsoft DI
+и сверку оконного и headless сценариев.
+[Результаты Player](HISTORY.md#player-package-view-acceptance-2026-11-26).
 Панели, корневой `EditorView` и `EditorMainWindow` переведены; в исходниках
 проверены стандартное окно и встраиваемый корень в объёме своих профилей.
 [Результаты корня](HISTORY.md#editor-root-fluent-2026-11-26) ·
@@ -188,7 +189,6 @@ Replace работают из интерфейса Editor во время Playin
 [Результаты](HISTORY.md#editor-panel-factories-2026-11-26).
 Пакетная приёмка обоих хостов Editor завершена: 8 headless и 2 нативных
 Release-сценария. [Отчёты](HISTORY.md#editor-package-view-acceptance-2026-11-26).
-Пакет Player собран; отдельный restore потребителя миграции остаётся открытым.
 
 Для TrueMoon.Tales — провести персонажа Kton через ступени и скосы и
 проверить открытие обзора при входе. [Требования игры](PLAN.md#arch1f7-orthographic-camera).
