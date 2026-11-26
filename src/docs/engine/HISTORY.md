@@ -1,3 +1,40 @@
+<a id="editor-package-view-acceptance-2026-11-26"></a>
+## 2026-11-26 — пакетная приёмка миграции Editor View
+
+18 NuGet `1.2611.26.17-alpha.aether.20261126222034` из отдельного checkout
+`fd8de39df1`. Windows x64, .NET SDK 11.0.100, RTX 5070 Ti; слой Vulkan
+ValidationLayers подключён только к процессам прогона. Независимые проекты
+восстановлены из свежего фида с отдельным кешем, без `ProjectReference` на
+фреймворк. Production-код не менялся.
+
+- `VerifyPackages.ps1` — 8/8: Debug build и Release publish × Runtime DLL
+  и apphost × Cobalt и Microsoft DI. Проверены независимые деревья после
+  headless attach, общая заимствованная модель, сохранение сцены и все шесть
+  встроенных SPIR-V. [Манифест](../../TestResults/EditorPackage-26-17-fd8de3/packages-final/verification.json).
+- `VerifyGui.ps1 -RunProfile PackageRelease -Scenario WindowRoot` — оба хоста:
+  [стандартный / Cobalt](../../TestResults/EditorPackage-26-17-fd8de3/gui-reattach-standard/verification.json)
+  и [встраиваемый / Microsoft DI](../../TestResults/EditorPackage-26-17-fd8de3/gui-reattach-embedded/verification.json).
+  Сохранение/повторное открытие сцены, удержание инспектора и правки иерархии,
+  смена проекта, Play/Replace и восстановление превью. Стандартное окно прошло
+  три запроса на закрытие (Cancel, ошибка сохранения, успешное закрытие).
+  Встраиваемый хост пересоздал View без уничтожения заимствованной модели.
+- Консоль при нативном resize до 1180×730 логических единиц (1770×1095
+  пикселей, масштаб 1,5) удержала запись и выделение текста при выключенном
+  follow-tail. Routed-ввод сохранил JSON с новым размером; пройдены Structured,
+  stdout/stderr, Health и повторное открытие консоли.
+  Кадры: [стандартный](../../TestResults/EditorPackage-26-17-fd8de3/gui-reattach-standard/diagnostics.png),
+  [встраиваемый](../../TestResults/EditorPackage-26-17-fd8de3/gui-reattach-embedded/diagnostics.png).
+- На каждый хост: 14 дочерних процессов завершены и освободили ресурсы;
+  13 штатных отчётов Vulkan без предупреждений и ошибок. У намеренно
+  завершённого preview-процесса итогового отчёта нет. В родителе после
+  закрытия — 0 UI-сессий, 0 GPU-ресурсов и 0 открытых GPU-дескрипторов.
+
+Начальные сбои были в fixture: сравнение панелей до attach, старый список
+шейдеров, чтение именованных частей вне UI-потока и выбор элемента до
+публикации повторно открытого дерева. Устранены в независимом потребителе.
+Физический Win32-ввод, переход между мониторами с разным DPI, K7/K8 и
+VRAM не входили в прогон. Независимый пакетный сценарий Player остаётся открытым.
+
 <a id="editor-panel-factories-2026-11-26"></a>
 ## 2026-11-26 — ревизия DI-фабрик иерархии и инспектора
 

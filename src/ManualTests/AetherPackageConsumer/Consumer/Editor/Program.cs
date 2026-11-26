@@ -2,6 +2,7 @@ using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis.Views;
 using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -28,6 +29,7 @@ using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Aether.Editor.UI.Diagnostics;
 using TrueMoon.Aether.Editor.Tooling.Diagnostics;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Extensions.DependencyInjection;
 
 namespace PackageEditor;
@@ -78,14 +80,23 @@ internal static class Program
         var service = app.Services.Resolve<PackageService>()!;
         Check(ReferenceEquals(service.Dependency, app.Services.Resolve<PackageDependency>()), "Constructor DI changed.");
         var factory = app.Services.Resolve<IFactory<EditorView>>()!;
+        var controls = new UiControlFactories();
+        var owner = Environment.CurrentManagedThreadId;
+        var posted = new ConcurrentQueue<Action>();
         var first = factory.Create()!; var second = factory.Create()!;
         try
         {
-            Check(!ReferenceEquals(first, second) && !ReferenceEquals(first.Inspector, second.Inspector), "View factory shared an owned tree.");
+            Attach(first); Attach(second);
+            var firstInspector = first.Inspector ?? throw new InvalidOperationException("First attached View has no inspector.");
+            var secondInspector = second.Inspector ?? throw new InvalidOperationException("Second attached View has no inspector.");
+            Check(!ReferenceEquals(firstInspector, secondInspector), "View factory shared an owned inspector.");
             Check(ReferenceEquals(first.DataContext, second.DataContext), "Views do not borrow the App model.");
-            first.Dispose(); Check(first.IsDisposed && first.Inspector!.IsDisposed && !second.IsDisposed, "View cleanup crossed ownership.");
+            first.Dispose();
+            Check(first.IsDisposed && firstInspector.IsDisposed && second.IsAttached && !secondInspector.IsDisposed, "View cleanup crossed ownership.");
             using var third = factory.Create()!;
-            Check(ReferenceEquals(third.DataContext, second.DataContext), "Disposed View released the borrowed model.");
+            Attach(third);
+            Check(third.Inspector is { IsAttached: true } thirdInspector && !ReferenceEquals(thirdInspector, secondInspector) &&
+                ReferenceEquals(third.DataContext, second.DataContext), "Disposed View prevented a new tree over the borrowed model.");
             var store = app.Services.Resolve<ISceneDocumentStore>()!;
             var scene = new SceneDocument(new(Guid.NewGuid()), 17, [], [], []);
             var path = Path.Combine(directory, "scene.aetherscene");
@@ -108,6 +119,13 @@ internal static class Program
                 GeneratedTypes = generated, ThemeType = typeof(Theme).FullName, StyleType = typeof(EditorViewStyle).FullName };
         }
         finally { first.Dispose(); second.Dispose(); }
+
+        void Attach(EditorView view)
+        {
+            view.Attach(() => Check(Environment.CurrentManagedThreadId == owner, "Headless View left its owner thread."),
+                posted.Enqueue, detaching: null, controls);
+            while (posted.TryDequeue(out var work)) work();
+        }
     }
 
     private static async Task<object> RuntimeProof(string runtimePath, string gameProject, string directory, bool microsoft)
@@ -242,6 +260,8 @@ internal static class Program
         {
             "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.cube.frag.spv",
             "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.cube.vert.spv",
+            "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.mesh-textured.frag.spv",
+            "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.mesh-textured.vert.spv",
             "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.mesh.frag.spv",
             "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.mesh.vert.spv"
         }), "Runtime embedded shader closure differs.");

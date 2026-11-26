@@ -64,23 +64,24 @@ internal static class Workflow
             await Doc(DocumentCommand.Open, "Original.aetherscene");
             await ui.InvokeAsync(() => workspace.Select(Program.CubeId.ToString("D"))).WaitAsync(token);
             await Until(() => panel.Properties.Values.Any(p => p.Property.Key == "x" && p.Input.IsEffectivelyEnabled));
-            var field = (TextBox)panel.Properties.Values.Single(p => p.Property.Key == "x").Input;
-            var form = panel.Form;
+            var field = await ReadTransformX();
+            var form = await ReadControl(() => panel.Form);
             var original = document.Read().Content!;
             await Set(field, "NaN");
             await Until(() => !panel.Apply.IsEnabled && model.Fields[0].Error.Length != 0);
             Program.Check(ReferenceEquals(original, document.Read().Content) && !document.Read().IsDirty, "Invalid draft committed.");
             await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = "Noto Sans" })).WaitAsync(token);
             await Until(() => panel.Theme.Surface == Theme.Light.Surface);
-            Program.Check(ReferenceEquals(field, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && field.Value == "NaN", "Theme discarded draft/rebuilt controls.");
+            await ui.InvokeAsync(() => Program.Check(ReferenceEquals(field, TransformX()) && field.Value == "NaN",
+                "Theme discarded draft/rebuilt controls.")).WaitAsync(token);
             await Click(panel.Cancel); await Until(() => field.Value == "-1.5");
             await StartPreview(); await Preview(); await Capture("opened.png", -1.5f);
             await Edit(field, "1.5"); await Preview(); await Capture("edited.png", 1.5f);
             Program.Check(document.Read().Content!.UndoCount == 1, "Transform was not one history transaction.");
             await Click(panel.Undo); await Until(() => !document.Read().IsDirty); await Preview(); await Capture("undo.png", -1.5f);
             await Click(panel.Redo); await Until(() => document.Read().IsDirty); await Preview(); await Capture("redo.png", 1.5f);
-            Program.Check(ReferenceEquals(field, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(form, panel.Form),
-                "Committed edits rebuilt the retained inspector.");
+            await ui.InvokeAsync(() => Program.Check(ReferenceEquals(field, TransformX()) && ReferenceEquals(form, panel.Form),
+                "Committed edits rebuilt the retained inspector.")).WaitAsync(token);
 
             var retained = document.Read().Content;
             var closing = requestClose?.Invoke() ?? window.RequestCloseAsync();
@@ -126,7 +127,7 @@ internal static class Workflow
             var entityProof = await EntityOperations();
             var projectProof = await ProjectOperations();
             var scenePlaybackProof = await ScenePlayback();
-            field = (TextBox)panel.Properties.Values.Single(p => p.Property.Key == "x").Input;
+            field = await ReadTransformX();
             await StartPreview(); await Preview();
             await Capture("hierarchy-named.png", 1.5f);
             await Edit(field, "1.25"); await Preview();
@@ -196,7 +197,7 @@ internal static class Workflow
             File.Copy(initial.Project.GameProjectPath, alternateGame);
             var description = initial.Project.Description with { Id = Guid.NewGuid(), Name = "Switched project", GameProject = "Game2/Game.csproj" };
             await File.WriteAllTextAsync(alternate, JsonSerializer.Serialize(description, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }), token);
-            var field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            var field = await ReadTransformX();
             await Edit(field, "1.75"); var before = document.Read().Content!; var selected = workspace.SelectedId;
             await RequestProject(alternate, capture: true);
             await Until(() => documents.Read().AwaitingDecision);
@@ -205,9 +206,9 @@ internal static class Workflow
                 document.Read().Content!.UndoCount == before.UndoCount && workspace.SelectedId == selected, "Cancelled project switch changed the document/history/selection.");
             await Click(panel.Undo); await Until(() => !document.Read().IsDirty);
             await Doc(DocumentCommand.New); await Until(() => view.Hierarchy!.CubeButton.IsEffectivelyEnabled);
-            await Click(view.Hierarchy!.CubeButton); await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x"));
+            await ClickPart(() => view.Hierarchy!.CubeButton); await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x"));
             var savedId = document.Read().Content!.Document.Id; var savedEntity = workspace.SelectedId!;
-            field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            field = await ReadTransformX();
             await Edit(field, "2.75");
             await StartPreview(); await Preview(); var previewPid = engine.Supervisor.Status.ProcessId!.Value;
             await RequestProject(alternate);
@@ -255,8 +256,7 @@ internal static class Workflow
                     await ui.InvokeAsync(() => header.Menu.OpenGroup("project", ui)).WaitAsync(token);
                     await Until(() => view.Overlays.Popup != null);
                     if (capture) await CapturePanel("project-menu.png");
-                    var action = view.Overlays.Popup!.Children.OfType<MenuItem>().Single(row => row.ActionId == "document.OpenProject");
-                    await Click(action);
+                    await ClickPart(() => view.Overlays.Popup!.Children.OfType<MenuItem>().Single(row => row.ActionId == "document.OpenProject"));
                 }
                 else await ui.InvokeAsync(() => ((EditorDocumentViewModel)view.Documents!.DataContext!).Request(DocumentCommand.OpenProject)).WaitAsync(token);
                 await Until(() => view.Documents!.PathInput.IsEffectivelyEnabled && view.Documents.DataContext!.PathRequest == DocumentCommand.OpenProject);
@@ -270,7 +270,7 @@ internal static class Workflow
         {
             Progress("Scene Build/Play/Pause/Step/Stop workflow");
             var playback = app.Services.Resolve<EditorScenePlayback>()!;
-            var field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            var field = await ReadTransformX();
             await Edit(field, "1.65"); var content = document.Read().Content!; var selected = workspace.SelectedId;
             await StartPreview(); await Preview(); var previewPid = engine.Supervisor.Status.ProcessId!.Value;
             var builds = new List<string>(); var pids = new List<int>(); var inputs = new List<string>();
@@ -454,16 +454,15 @@ internal static class Workflow
             Progress("Entity creation/deletion workflow");
             var hierarchy = view.Hierarchy!;
             await Doc(DocumentCommand.New); await Until(() => hierarchy.CreateButton.IsEffectivelyEnabled && document.Read().Content!.Document.Entities.Length == 0);
-            await Click(hierarchy.CubeButton); await Until(() => document.Read().Content!.Document.Entities.Length == 1 && panel.Properties.Values.Any(property => property.Property.Key == "x"));
+            await ClickPart(() => hierarchy.CubeButton); await Until(() => document.Read().Content!.Document.Entities.Length == 1 && panel.Properties.Values.Any(property => property.Property.Key == "x"));
             var rootId = workspace.SelectedId!; var sceneId = document.Read().Content!.Document.Id;
             await ui.InvokeAsync(() => { ui.Focus(hierarchy.Tree); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10, Shift: true)); }).WaitAsync(token);
             await Until(() => view.Overlays.Popup is MenuPopup);
             await CapturePanel("entity-actions.png");
-            var popup = (MenuPopup)view.Overlays.Popup!;
-            await Click(popup.Children.OfType<MenuItem>().Single(item => item.ActionId == "create.child"));
+            await ClickPart(() => view.Overlays.Popup!.Children.OfType<MenuItem>().Single(item => item.ActionId == "create.child"));
             await Until(() => document.Read().Content!.Document.Entities.Length == 2 && workspace.SelectedId != rootId && panel.Properties.Values.Any(property => property.Property.Key == "x"));
             var childId = workspace.SelectedId!;
-            var field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            var field = await ReadTransformX();
             await Edit(field, "2.25"); await Until(() => !model.HasDraft);
             await ui.InvokeAsync(() => { hierarchy.Tree.Select(rootId); ui.Focus(hierarchy.Tree); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.D, Control: true)); }).WaitAsync(token);
             await Until(() => document.Read().Content!.Document.Entities.Length == 4); var copied = workspace.SelectedId!;
@@ -474,10 +473,17 @@ internal static class Workflow
             await Until(() => document.Read().Content!.Document.Entities.Length == 4);
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Y, Control: true))).WaitAsync(token);
             await Until(() => document.Read().Content!.Document.Entities.Length == 2);
-            await Set(hierarchy.Search, childId); await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter))).WaitAsync(token);
+            await SetPart(() => hierarchy.Search, childId); await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter))).WaitAsync(token);
             await Until(() => workspace.SelectedId == childId && hierarchy.Tree.IsExpanded(rootId));
-            await Doc(DocumentCommand.SaveAs, "Created.aetherscene"); await Doc(DocumentCommand.Close); await Doc(DocumentCommand.Open, "Created.aetherscene");
-            await ui.InvokeAsync(() => hierarchy.Tree.Select(childId)).WaitAsync(token);
+            await Doc(DocumentCommand.SaveAs, "Created.aetherscene"); await Doc(DocumentCommand.Close);
+            await Until(() => hierarchy.Tree.Items.Count == 0);
+            await Doc(DocumentCommand.Open, "Created.aetherscene");
+            await Until(() =>
+            {
+                if (!hierarchy.Tree.Items.Any(item => item.Id == childId)) return false;
+                hierarchy.Tree.Select(childId);
+                return true;
+            });
             await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x" && ((TextBox)property.Input).Value == "2.25"));
             var restored = document.Read().Content!;
             Program.Check(restored.Document.Id == sceneId && restored.UndoCount == 0 && restored.Document.Entities.Length == 2 &&
@@ -487,7 +493,7 @@ internal static class Workflow
             await Doc(DocumentCommand.Close); await Doc(DocumentCommand.Open, "Edited.aetherscene");
             await ui.InvokeAsync(() => workspace.Select(Program.CubeId.ToString("D"))).WaitAsync(token);
             await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x" && ((TextBox)property.Input).Value == "1.5"));
-            await Set(hierarchy.Search, "");
+            await SetPart(() => hierarchy.Search, "");
             return new { CreatedScene = saved, Root = rootId, Child = childId, Duplicate = copied, RemappedSubtree = true, DeleteUndoRedo = true,
                 SearchRevealed = true, ReopenedClean = true, Captures = new[] { "entity-actions.png", "created-entities.png" } };
         }
@@ -516,18 +522,40 @@ internal static class Workflow
                         new Dictionary<string, string?> { ["SessionId"] = correlation, ["Generation"] = i == 20 ? "701" : "700", ["RuntimeRole"] = "Acceptance", ["Nonce"] = "PRIVATE_CONSOLE_NONCE" });
                 await Until(() => data.Snapshot().Records.Count(record => record.EventName == "Console.Native") == 21 && console.IsVisible);
                 Progress("Diagnostics live events visible");
-                await Set(console.Source, "Acceptance.Console"); await Set(console.Session, correlation);
+                await SetPart(() => console.Source, "Acceptance.Console"); await SetPart(() => console.Session, correlation);
                 await Until(() => data.Entries.Count == 2 && data.Entries[0].Count == 20);
                 Progress("Diagnostics filters and groups");
-                var oldEntry = data.Entries[0];
-                await ui.InvokeAsync(() => { console.Events.Select(oldEntry.Id); console.Details.Select(0, 12); }).WaitAsync(token);
-                await Set(console.Generation, "701"); await Until(() => data.Entries.Count == 1 && data.Entries[0].Record.Properties["Generation"] == "701");
-                Program.Check(data.SelectedId == oldEntry.Id && console.Details.SelectionLength == 12, "Filtering discarded the inspected old generation.");
-                await Set(console.Generation, "");
+                EditorDiagnosticEntry oldEntry = null!;
+                await ui.InvokeAsync(() =>
+                {
+                    oldEntry = data.Entries[0]; console.Events.Select(oldEntry.Id); console.Details.Select(0, 12);
+                }).WaitAsync(token);
+                await SetPart(() => console.Generation, "701"); await Until(() => data.Entries.Count == 1 && data.Entries[0].Record.Properties["Generation"] == "701");
+                await ui.InvokeAsync(() => Program.Check(data.SelectedId == oldEntry.Id && console.Details.SelectionLength == 12,
+                    "Filtering discarded the inspected old generation.")).WaitAsync(token);
+                await SetPart(() => console.Generation, "");
                 Progress("Diagnostics inspected old generation");
                 await Until(() => data.Processes?.Processes.Any(process => process.ProcessId == crashedPid &&
                     process.Delivery?.RuntimeObservation is { Collector: not null, GraphicsDevice: not null }) == true);
-                var exportPath = Path.Combine(directory, "console-report.json"); await Set(console.ExportPath, exportPath); await Click(console.Export);
+                const int resizedWidth = 1180, resizedHeight = 730;
+                UiViewport beforeResize = default, afterResize = default;
+                await ui.InvokeAsync(() => beforeResize = ui.Viewport).WaitAsync(token);
+                Program.Check(beforeResize.Width / beforeResize.Scale > resizedWidth && beforeResize.Height / beforeResize.Scale > resizedHeight,
+                    "The initial Editor window is too small to exercise shrinking.");
+                window.Resize(resizedWidth, resizedHeight);
+                await Until(() =>
+                {
+                    var viewport = ui.Viewport;
+                    if (Math.Abs(viewport.Width / viewport.Scale - resizedWidth) >= 2 ||
+                        Math.Abs(viewport.Height / viewport.Scale - resizedHeight) >= 2 || !Ready(console.Export)) return false;
+                    Program.Check(data.SelectedId == oldEntry.Id && console.Details.SelectionLength == 12 && !data.FollowTail,
+                        "Native resize lost the inspected diagnostic or changed follow-tail.");
+                    afterResize = viewport;
+                    return true;
+                });
+                Progress("Diagnostics retained selection and layout after native resize");
+                var exportPath = Path.Combine(directory, "console-report.json");
+                await SetPart(() => console.ExportPath, exportPath); await ClickPart(() => console.Export);
                 await Until(() => !data.IsExporting && data.ExportStatus.Contains("сохранён", StringComparison.Ordinal));
                 Progress("Diagnostics report exported");
                 var bytes = await File.ReadAllBytesAsync(exportPath, token); using var report = JsonDocument.Parse(bytes);
@@ -539,6 +567,11 @@ internal static class Workflow
                     crashedObservation.GetProperty("Collector").GetProperty("Sinks").GetArrayLength() > 0 &&
                     report.RootElement.GetProperty("presentation").GetProperty("Device").GetString()!.Length > 0,
                     "Report lost the last child sink/device observation or actual presentation device.");
+                var presentation = report.RootElement.GetProperty("presentation");
+                Program.Check(presentation.GetProperty("Width").GetInt32() == afterResize.Width &&
+                    presentation.GetProperty("Height").GetInt32() == afterResize.Height &&
+                    presentation.GetProperty("Scale").GetSingle() == afterResize.Scale,
+                    "Console export did not observe the resized native window.");
                 var imported = 0; var crashedHistory = false;
                 await ui.InvokeAsync(() =>
                 {
@@ -547,8 +580,10 @@ internal static class Workflow
                     Program.Check(imported > 0 && crashedHistory, "Console lost retained child/crashed-generation diagnostics.");
                 }).WaitAsync(token);
                 await CapturePanel("diagnostics.png");
-                await Set(console.Source, ""); await Set(console.Session, "");
-                await Click(console.Mode);
+                window.Resize((int)MathF.Round(beforeResize.Width / beforeResize.Scale), (int)MathF.Round(beforeResize.Height / beforeResize.Scale));
+                await Until(() => ui.Viewport == beforeResize);
+                await SetPart(() => console.Source, ""); await SetPart(() => console.Session, "");
+                await ClickPart(() => console.Mode);
                 await Until(() => data.Mode == EditorDiagnosticMode.StandardOutput && data.Processes?.Processes.Any(process =>
                     process.ProcessId == crashedPid && process.StandardOutput?.Output.TotalCharacters > 0) == true);
                 TrueMoon.Aether.Runtime.Diagnostics.ProcessDiagnosticSnapshot raw = null!;
@@ -560,7 +595,7 @@ internal static class Workflow
                         raw.StandardOutput!.ReadFinished && raw.StandardOutput.FileFinished && !data.Rows.Any(row => row.Warning), "Raw stdout snapshot lost its identity, completion or stream classification.");
                 }).WaitAsync(token);
                 await CapturePanel("diagnostics-stdout.png");
-                await Click(console.Mode); await Until(() => data.Mode == EditorDiagnosticMode.StandardError);
+                await ClickPart(() => console.Mode); await Until(() => data.Mode == EditorDiagnosticMode.StandardError);
                 await ui.InvokeAsync(() =>
                 {
                     console.Events.Select(raw.Id);
@@ -568,7 +603,7 @@ internal static class Workflow
                         !data.Rows.Any(row => row.Warning), "Raw stderr availability/severity handling failed.");
                 }).WaitAsync(token);
                 await CapturePanel("diagnostics-stderr.png");
-                await Click(console.Mode); await Until(() => data.Mode == EditorDiagnosticMode.Health && data.CollectorHealth?.Sinks.Any(sink => sink.Written > 0) == true);
+                await ClickPart(() => console.Mode); await Until(() => data.Mode == EditorDiagnosticMode.Health && data.CollectorHealth?.Sinks.Any(sink => sink.Written > 0) == true);
                 await ui.InvokeAsync(() =>
                 {
                     console.Events.Select("process:" + raw.Id);
@@ -578,20 +613,21 @@ internal static class Workflow
                 }).WaitAsync(token);
                 await CapturePanel("diagnostics-health.png");
                 Progress("Diagnostics return to structured");
-                for (var mode = 0; mode < 5 && data.Mode != EditorDiagnosticMode.Structured; mode++) await Click(console.Mode);
+                for (var mode = 0; mode < 5 && data.Mode != EditorDiagnosticMode.Structured; mode++) await ClickPart(() => console.Mode);
                 await Until(() => data.Mode == EditorDiagnosticMode.Structured);
                 Progress("Diagnostics structured selected");
-                await Set(console.Source, "Acceptance.Console"); await Set(console.Session, correlation);
+                await SetPart(() => console.Source, "Acceptance.Console"); await SetPart(() => console.Session, correlation);
                 Progress("Diagnostics structured filters restored");
                 await Until(() => data.Entries.Count == 2 && data.SelectedId == oldEntry.Id);
                 Progress("Diagnostics raw stdout/stderr and health");
-                await Click(console.Close); await Until(() => !console.IsVisible);
+                await ClickPart(() => console.Close); await Until(() => !console.IsVisible);
                 await ui.InvokeAsync(() => data.IsOpen = true).WaitAsync(token); await Until(() => console.IsVisible);
                 Program.Check(ReferenceEquals(retained, document.Read().Content) && workspace.SelectedId == selected && data.SelectedId == oldEntry.Id &&
                     diagnosticThreads.SetEquals([owner]) && data.RetainedCount <= 512 && data.RetainedBytes <= 1024 * 1024, "Console changed domain state, owner thread or budgets.");
-                await Click(console.Close);
+                await ClickPart(() => console.Close);
                 return new { PartialExport = exportPath, Bytes = bytes.Length, Imported = imported, CrashedHistory = crashedHistory,
                     Groups = 2, RetainedDetails = true, Reopened = true, OwnerThreads = diagnosticThreads, Capture = "diagnostics.png",
+                    NativeResize = new { Before = beforeResize, After = afterResize },
                     RawStdoutCharacters = raw.StandardOutput!.Output.TotalCharacters, RawStderrAvailable = raw.StandardError != null,
                     RawOldProcessReleased = raw.ResourcesReleased, CollectorHealthAvailable = data.CollectorHealth != null,
                     CrashedChildObservation = crashedObservation.Clone(), PresentationDevice = report.RootElement.GetProperty("presentation").GetProperty("Device").GetString(),
@@ -640,6 +676,11 @@ internal static class Workflow
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true))).WaitAsync(token);
             await Until(() => document.Read().IsDirty && !model.HasDraft);
         }
+        TextBox TransformX() => (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+        Task<TextBox> ReadTransformX() => ReadControl(TransformX);
+        async Task SetPart(Func<TextBox> part, string value) => await Set(await ReadControl(part), value);
+        async Task ClickPart(Func<Button> part) => await Click(await ReadControl(part));
+
         async Task Set(TextBox field, string value)
         {
             await Until(() => Ready(field));

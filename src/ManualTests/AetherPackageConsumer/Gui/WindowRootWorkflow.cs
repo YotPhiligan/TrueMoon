@@ -51,8 +51,9 @@ internal static class WindowRootWorkflow
                 Program.Check(root.Bounds == view.Bounds, "Neutral Window wrapper changed viewport layout.");
                 root.Closing += reason =>
                 {
-                    Program.Check(Environment.CurrentManagedThreadId == owner && reason == WindowCloseReason.Application,
-                        "Window close guard escaped owner or changed reason.");
+                    Program.Check(Environment.CurrentManagedThreadId == owner, "Window close guard escaped the owner thread.");
+                    if (reason == WindowCloseReason.Shutdown) return Task.FromResult(true);
+                    Program.Check(reason == WindowCloseReason.Application, "Window close guard received an unexpected reason.");
                     componentCloses++; return Task.FromResult(true);
                 };
             }

@@ -8,14 +8,14 @@ runtime-async profile. With a shared delivery, external dependencies also come
 from its local feed. Viewport uses its own fresh cache. The complete sequence is
 documented in `ManualTests/FrameworkDelivery/README.md`.
 
-Windows x64, .NET 10 SDK, PowerShell 7. This is the headless ARCH2e.1/2 profile;
+Windows x64, .NET 11 SDK, PowerShell 7. This is the headless ARCH2e.1/2 profile;
 it opens no window and creates no graphics device.
 
 ```powershell
 ./ManualTests/AetherPackageConsumer/VerifyPackages.ps1
 ```
 
-The runner packs fifteen fresh framework packages with a unique prerelease
+The runner packs eighteen fresh framework packages with a unique prerelease
 version, then copies the `Consumer` sources into a new temporary solution outside
 the checkout. Restore uses a private feed/cache and source mapping. Consumer
 projects have no repository ProjectReference or linked source. The game and
@@ -26,7 +26,8 @@ framework solution.
 The matrix covers Debug build and Release publish, Runtime DLL/apphost commands,
 and Cobalt/Microsoft DI in the parent applications. The runtime child uses Cobalt.
 It checks generated Cobalt constructors and a consumer-owned Enerit contract,
-Editor registration, independent parent-owned Views with borrowed models, shared
+Editor registration, independent parent-owned Views with borrowed models after
+headless attachment (Fluent content is deferred until attach), shared
 scene save/read/conflict handling, and selected-game Build/Start/checkpoint/
 Replace/Stop/restart. CPU frame pixels must come from the selected build. Child
 diagnostics and stdout/stderr capture, bootstrap/fingerprint rejection and owned
@@ -155,6 +156,12 @@ and recovers preview before saving/closing. Separate native startup failure and
 first-frame cancellation cases check rollback and final App disposal. Original
 startup errors may remain observable from Stop/Dispose; only the exact injected
 failure is accepted, and success is recorded after disposal.
+
+The diagnostics console retains the inspected entry and text selection while the
+native window shrinks to 1180×730 logical units. Routed keyboard/pointer input
+exports its report at the new size; the exported presentation must match the
+actual framebuffer and DPI scale. The scenario saves a resized screenshot and
+restores the initial window size.
 
 Reports include loaded extended Skia/font hashes, screenshots, graceful producer
 validation and surface/slot/device/handle teardown, plus actual child reap and

@@ -44,7 +44,8 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 [Проверки из исходников](HISTORY.md#editor-diagnostics-interaction-2026-11-26).
 Фабрики инспектора и иерархии проверены на Cobalt и Microsoft DI.
 [Проверки](HISTORY.md#editor-panel-factories-2026-11-26).
-Далее — пакетная проверка стандартного и встраиваемого Editor.
+Стандартный и встраиваемый Editor прошли
+[пакетную приёмку](HISTORY.md#editor-package-view-acceptance-2026-11-26).
 
 В `main` на `a1764fb` проверены первичный импорт из пустого каталога,
 размещение модели и восстановление сцены после перезапуска.

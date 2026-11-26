@@ -186,7 +186,8 @@ Replace работают из интерфейса Editor во время Playin
 Ревизия фабрик `EditorHierarchyView` и `EditorInspectorView` завершена:
 26/26 адресных тестов на Cobalt и Microsoft DI.
 [Результаты](HISTORY.md#editor-panel-factories-2026-11-26).
-Далее — приёмка стандартного и встраиваемого Editor на свежих пакетах.
+Пакетная приёмка обоих хостов Editor завершена: 8 headless и 2 нативных
+Release-сценария. [Отчёты](HISTORY.md#editor-package-view-acceptance-2026-11-26).
 Пакет Player собран; отдельный restore потребителя миграции остаётся открытым.
 
 Для TrueMoon.Tales — провести персонажа Kton через ступени и скосы и

@@ -7,7 +7,9 @@
 arrange, а `UiSession.ViewportChanged` сообщает принятый resize до layout.
 26.11.2026: 66 адресных тестов в Debug.
 [Контракты и результаты](HISTORY.md#scroll-to-end-and-viewport-2026-11-26).
-Свежие пакеты Editor и физический переход между DPI не проверялись этим прогоном.
+Свежие пакеты Editor затем прошли обе оконные конфигурации. Физический
+переход между DPI остаётся отдельной проверкой.
+[Пакетный прогон](../engine/HISTORY.md#editor-package-view-acceptance-2026-11-26).
 [Следующие шаги](PLAN.md#current-ui-queue).
 
 Hosting проверяет запрет вложенных `Window` до native-окна и после подготовки
@@ -145,9 +147,9 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 
 ## Следующий конкретный шаг
 
-`PlayerView` [переведён и проверен на исходниках](../engine/HISTORY.md#player-view-migration-2026-11-26).
-Следующий срез [миграции](../engine/PLAN.md#aether-view-authoring-migration) —
-панели Editor/Runtime Editor и инвентаризация частей корня, нужных хосту до attach.
+Из [миграции Aether View](../engine/PLAN.md#aether-view-authoring-migration)
+остаётся отдельный пакетный restore потребителя Player. Стандартный и
+встраиваемый Editor уже прошли нативную проверку на свежих NuGet.
 
 [Проверка замены свойства инспектора](HISTORY.md#inspector-property-replacement)
 пройдена. Эксперимент с удержанием редактора нужен только при подтверждённой
