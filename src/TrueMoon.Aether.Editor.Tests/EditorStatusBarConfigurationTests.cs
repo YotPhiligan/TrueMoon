@@ -2,6 +2,7 @@ using TrueMoon.Argentis.Menus;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
+using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
@@ -57,8 +58,11 @@ public sealed class EditorStatusBarConfigurationTests
         firstUi.Update(); secondUi.Update();
         Assert.Same(model, first.DataContext); Assert.Same(model, second.DataContext);
         Assert.Same(model, firstPopup.DataContext); Assert.Same(model, secondPopup.DataContext);
-        Assert.NotSame(first, second); Assert.NotSame(first.SummaryButton, second.SummaryButton);
-        Assert.NotSame(first.Bar, second.Bar); Assert.NotSame(firstPopup.Body, secondPopup.Body);
+        var firstSummary = first.SummaryButton; var secondSummary = second.SummaryButton;
+        Assert.NotSame(first, second); Assert.NotSame(firstSummary, secondSummary);
+        Assert.NotSame(first.Bar, second.Bar);
+        var firstError = firstPopup.Error; var secondError = secondPopup.Error;
+        Assert.NotSame(firstError, secondError);
         Assert.Equal("Сведения о редакторе", firstPopup.Title.Value); Assert.Equal("Edit Preview", secondPopup.Title.Value);
         Assert.Equal(2, barStyle.Configurations); Assert.Equal(2, popupStyle.Configurations);
         source.Refresh(SessionState.Playing, candidate: true);
@@ -66,7 +70,7 @@ public sealed class EditorStatusBarConfigurationTests
         Assert.Equal(EditorStatusKind.Running, model.Kind);
         Assert.Equal("Симуляция", first.SummaryButton.Value); Assert.Equal("Симуляция", second.SummaryButton.Value);
         firstUi.Dispose();
-        Assert.True(first.SummaryButton.IsDisposed); Assert.True(firstPopup.Error.IsDisposed);
+        Assert.True(firstSummary.IsDisposed); Assert.True(firstError.IsDisposed);
         Assert.False(second.IsDisposed); Assert.False(secondPopup.IsDisposed);
         Assert.True(firstHost.IsDisposed); Assert.False(secondHost.IsDisposed);
         Assert.Equal(0, barStyle.Disposals); Assert.Equal(0, popupStyle.Disposals);
@@ -81,7 +85,7 @@ public sealed class EditorStatusBarConfigurationTests
         Assert.Equal(1, barStyle.Disposals); Assert.Equal(1, popupStyle.Disposals);
         Assert.Throws<ObjectDisposedException>(() => model.ShowPreview());
         secondUi.Dispose();
-        Assert.True(second.SummaryButton.IsDisposed); Assert.True(secondPopup.Error.IsDisposed);
+        Assert.True(secondSummary.IsDisposed); Assert.True(secondError.IsDisposed);
     }
 
     [Theory]
@@ -177,34 +181,56 @@ public sealed class EditorStatusBarConfigurationTests
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
     [InlineData(true, true, true)]
-    public void FactoryStyleFailure_DisposesUnpublishedProductPreservesErrorsAndBorrowedModels(bool microsoft, bool popup, bool cleanupFailure)
+    public void StyleFailure_DisposesUnpublishedBarOrPopupAndPreservesBorrowedModels(bool microsoft, bool popup, bool cleanupFailure)
     {
         using var source = new HeaderFixture();
         var failure = new IOException("status style failed"); var cleanup = new IOException("status cleanup failed");
         var resource = new Resource(cleanupFailure ? cleanup : null); Element unpublished = null!;
+        Element? preparedDiagnostic = null;
         using var app = App.Builder(context => { if (microsoft) context.UseDI(); }).Setup(context =>
         {
             Register(context, source);
             context.Services(services =>
             {
-                if (popup) services.Singleton<IViewStyle<EditorStatusPopupView>>(_ => new FailingPopupStyle(view => { unpublished = view; view.Own(resource); }, failure));
-                else services.Singleton<IViewStyle<EditorStatusBarView>>(_ => new FailingBarStyle(view => { unpublished = view; view.Own(resource); }, failure));
+                if (popup) services.Singleton<IViewStyle<EditorStatusPopupView>>(_ => new FailingPopupStyle(view =>
+                {
+                    unpublished = view; preparedDiagnostic = view.Error; view.Own(resource);
+                }, failure));
+                else services.Singleton<IViewStyle<EditorStatusBarView>>(_ => new FailingBarStyle(view =>
+                {
+                    unpublished = view; preparedDiagnostic = view.SummaryButton; view.Own(resource);
+                }, failure));
             });
             context.UseAetherEditorStatusBar();
         }).Build();
         var model = app.Services.Resolve<EditorStatusBarViewModel>()!;
         using var host = new OverlayHost(new Panel());
-        var error = Record.Exception(() =>
+        var bars = app.Services.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>()!;
+        var trigger = popup ? bars.Create(new(host)) : null;
+        if (trigger != null) ((Panel)host.Content!).Add(trigger);
+        using var ui = new UiSession(host, new Surface(), new(1280, 800));
+        ui.Update();
+        if (trigger != null)
         {
-            if (popup) app.Services.Resolve<IFactory<EditorStatusPopupView, EditorStatusPopupArguments>>()!.Create(new(false));
-            else app.Services.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>()!.Create(new(host));
-        });
-        if (cleanupFailure)
-            Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions,
-                value => Assert.Same(failure, value), value => Assert.Same(cleanup, value));
-        else Assert.Same(failure, error);
+            var error = Record.Exception(() => DocumentUiFixture.Click(ui, trigger.DetailsButton));
+            if (cleanupFailure)
+                Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions,
+                    value => Assert.Same(failure, value), value => Assert.Same(cleanup, value));
+            else Assert.Same(failure, error);
+        }
+        else
+        {
+            var candidate = bars.Create(new(host))!;
+            var content = Assert.IsType<Panel>(host.Content);
+            var error = Record.Exception(() => content.Add(candidate));
+            Assert.Empty(content.Children);
+            var disposal = Record.Exception(candidate.Dispose);
+            Assert.Same(failure, error);
+            Assert.Same(cleanupFailure ? cleanup : null, disposal);
+        }
         Assert.NotNull(unpublished); Assert.True(unpublished.IsDisposed);
         Assert.All(Tree(unpublished), element => Assert.True(element.IsDisposed));
+        Assert.True(preparedDiagnostic!.IsDisposed);
         Assert.Equal(1, resource.Disposals); Assert.False(host.IsDisposed); Assert.Null(host.Popup); Assert.Single(host.Children);
         source.Refresh(SessionState.Playing, candidate: true);
         Assert.Equal(EditorStatusKind.Running, model.Kind);

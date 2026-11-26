@@ -153,6 +153,100 @@ public class ControlFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public void LocalFactories_CreateInteractiveControlsWithoutChangingSessionResolution(bool registeredArguments)
+    {
+        var factories = new UiControlFactories();
+        factories.Register(new Factory<Button>(() => new("Session")));
+        if (registeredArguments)
+            factories.Register(new Factory<Button, string>(label => new($"Session: {label}")));
+        var first = new Factory<Button>(() => new("First local"));
+        var second = new Factory<Button>(() => new("Second local"));
+        var withLabel = new Factory<Button, string>(label => new($"Local: {label}"));
+        var activations = new List<Button>();
+        var view = new FactoryView(ui =>
+        {
+            var root = ui.VStack(
+                ui.Create(first).OnActivated((button, _) => activations.Add(button)),
+                ui.Create(second),
+                ui.Create(withLabel, "Apply").OnActivated((button, _) => activations.Add(button)),
+                ui.Create<Button>());
+            if (registeredArguments)
+                root.Element.Add(ui.Create<Button, string>("Apply").Element);
+            return root;
+        });
+
+        Button[] buttons;
+        using (var session = new UiSession(view, new HeadlessSurface(), new UiViewport(300, 400),
+            null, new UiDispatchOptions(), null, factories))
+        {
+            var stack = Assert.IsType<VStack>(view.Child);
+            buttons = stack.Children.Select(child => Assert.IsType<Button>(child)).ToArray();
+            string[] expected = registeredArguments
+                ? ["First local", "Second local", "Local: Apply", "Session", "Session: Apply"]
+                : ["First local", "Second local", "Local: Apply", "Session"];
+            Assert.Equal(expected, buttons.Select(button => button.Value));
+            session.Update();
+            Click(session, buttons[0]);
+            Click(session, buttons[2]);
+            Assert.Equal(new[] { buttons[0], buttons[2] }, activations);
+        }
+        Assert.All(buttons, button => Assert.True(button.IsDisposed));
+    }
+
+    [Fact]
+    public void LocalFactories_OmittedDraftsCauseRollbackAndAreDisposed()
+    {
+        using var surface = new HeadlessSurface();
+        using var first = new Text("Unowned draft");
+        using var second = new Text("Unowned argument draft");
+        using var view = new FactoryView(ui =>
+        {
+            ui.Create(new Factory<Text>(() => first));
+            ui.Create(new Factory<Text, string>(_ => second), "draft");
+            return ui.VStack();
+        });
+
+        Assert.Throws<InvalidOperationException>(() => new UiSession(view, surface, new UiViewport(32, 32)));
+        Assert.True(first.IsDisposed);
+        Assert.True(second.IsDisposed);
+        Assert.Null(view.Child);
+        Assert.False(view.IsAttached);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LocalFactories_RejectAnAttachedProductWithoutTakingItFromItsSession(bool withArguments)
+    {
+        using var surface = new HeadlessSurface();
+        var clicks = 0;
+        var owned = new Button("Owned").OnClick(() => clicks++);
+        using var owner = new UiSession(owned, new HeadlessSurface(), new UiViewport(120, 60));
+        owner.Update();
+        var returnedForeignProduct = false;
+        using var view = new FactoryView(ui =>
+        {
+            var product = withArguments
+                ? ui.Create(new Factory<Button, string>(_ => owned), "foreign")
+                : ui.Create(new Factory<Button>(() => owned));
+            returnedForeignProduct = true;
+            return product;
+        });
+
+        Assert.Throws<InvalidOperationException>(() => new UiSession(view, surface, new UiViewport(32, 32)));
+        Assert.False(returnedForeignProduct);
+        Assert.Null(view.Child);
+        Assert.True(owned.IsAttached);
+        Assert.False(owned.IsDisposed);
+        Click(owner, owned);
+        Assert.Equal(1, clicks);
+        owner.Dispose();
+        Assert.True(owned.IsDisposed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void WithChildren_RejectsOwnedLaterChildWithoutAdoptingEarlierChild(bool contextual)
     {
         using var candidate = new Text("Candidate");

@@ -262,14 +262,16 @@ public sealed class EditorMainWindowTests
         Assert.True(path.IsFocused); var caret = path.CaretIndex; var selection = path.SelectionLength;
         h.Transform.Fields[0].Value = "unfinished transform";
         var content = h.Active.Documents!.Read().Content; var selected = h.Model.SelectedId;
-        var sourceButton = editor.StatusBar!.SourceButton; var old = h.Active;
+        var statusBar = Assert.IsType<EditorStatusBarView>(editor.StatusBar);
+        var sourceButton = statusBar.SourceButton; var old = h.Active;
         h.Bind(); var scan = SourcePresentationFixture.Wait(h.Control.Scanner.Next());
         var oldHints = h.Control.Hints.Latest;
         scan.Complete(EditorSourceScan.Difference(h.Control.Files.Source)); h.Until(snapshot => snapshot.State == EditorSourceState.Changed);
         h.Refresh(); ui.SetTheme(Theme.Light); ui.Update();
         Assert.Equal(old.OwnerKey, h.Model.Source!.OwnerKey); Assert.Equal(EditorSourceState.Changed, h.Model.Source.State);
         Assert.Same(content, h.Active.Documents.Read().Content); Assert.Equal(selected, h.Model.SelectedId);
-        Assert.Same(editor, root.EditorView); Assert.Same(canvas, editor.Canvas); Assert.Same(sourceButton, editor.StatusBar.SourceButton);
+        Assert.Same(editor, root.EditorView); Assert.Same(canvas, editor.Canvas);
+        Assert.Same(statusBar, editor.StatusBar); Assert.Same(sourceButton, statusBar.SourceButton);
         Assert.True(path.IsFocused); Assert.Equal("uncommitted path draft", path.Value); Assert.Equal(caret, path.CaretIndex); Assert.Equal(selection, path.SelectionLength);
         Assert.Equal("unfinished transform", h.Transform.Fields[0].Value); Assert.Equal(1, creations);
         SourcePresentationFixture.Wait(h.Projects.CloseAsync(DocumentCloseChoice.Discard)); h.Refresh(); ui.Update();
@@ -277,7 +279,8 @@ public sealed class EditorMainWindowTests
         Assert.NotEqual(old.OwnerKey, h.Active.OwnerKey); Assert.Equal(h.Active.OwnerKey, h.Model.Source!.OwnerKey);
         Assert.Equal(EditorSourceState.NoBuild, h.Model.Source.State); var current = h.Model.Source;
         oldHints.Signal(true); h.Refresh(); ui.Update(); Assert.Same(current, h.Model.Source);
-        Assert.Same(editor, root.EditorView); Assert.Same(sourceButton, editor.StatusBar.SourceButton); Assert.Equal(1, creations);
+        Assert.Same(editor, root.EditorView); Assert.Same(statusBar, editor.StatusBar);
+        Assert.Same(sourceButton, statusBar.SourceButton); Assert.Equal(1, creations);
         ui.Dispose(); Assert.True(root.IsDisposed); Assert.True(editor.IsDisposed); Assert.False(h.Active.IsClosed);
     }
 }

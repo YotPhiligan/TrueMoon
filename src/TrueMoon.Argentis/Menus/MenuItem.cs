@@ -42,7 +42,7 @@ public sealed class MenuItem : Button
     internal string Shortcut => _action.Shortcut;
     internal float ShortcutWidth { get; private set; }
     /// <inheritdoc />
-    protected override void Activate() { if (!_action.Command.CanExecute) return; var command = _action.Command; _dismiss(); command.Execute(); }
+    protected override void Activate(IInputContext context) { if (!_action.Command.CanExecute) return; var command = _action.Command; _dismiss(); command.Execute(); }
     /// <inheritdoc />
     public override void Dispose() { try { base.Dispose(); } finally { if (IsDisposed) _action.Command.CanExecuteChanged -= Availability; } }
 }

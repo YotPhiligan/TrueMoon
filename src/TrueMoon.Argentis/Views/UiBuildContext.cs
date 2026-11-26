@@ -22,6 +22,21 @@ internal sealed class UiBuildContext<TData>(IUiControlFactories factories, IData
         return Track(factories.Create<TControl, TArguments>(arguments));
     }
 
+    public UiControl<TControl, TData> Create<TControl>(IFactory<TControl> factory) where TControl : Element
+    {
+        VerifyOpen();
+        ArgumentNullException.ThrowIfNull(factory);
+        return Track(factory.Create());
+    }
+
+    public UiControl<TControl, TData> Create<TControl, TArguments>(IFactory<TControl, TArguments> factory, TArguments arguments)
+        where TControl : Element
+    {
+        VerifyOpen();
+        ArgumentNullException.ThrowIfNull(factory);
+        return Track(factory.Create(arguments));
+    }
+
     private void VerifyOpen()
     {
         if (Environment.CurrentManagedThreadId != _ownerThread)
@@ -29,7 +44,7 @@ internal sealed class UiBuildContext<TData>(IUiControlFactories factories, IData
         if (_closed) throw new InvalidOperationException("The UI content factory has already finished.");
     }
 
-    private UiControl<TControl, TData> Track<TControl>(TControl control) where TControl : Element
+    private UiControl<TControl, TData> Track<TControl>(TControl? control) where TControl : Element
     {
         if (control is not { Parent: null, IsAttached: false, IsDisposed: false })
             throw new InvalidOperationException($"The UI factory for '{typeof(TControl)}' must return a live, unowned control.");

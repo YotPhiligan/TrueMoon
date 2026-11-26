@@ -44,3 +44,29 @@ UI owner thread after attachment, and retain a reference for disposal checks.
 command buttons use semantic IDs such as `editor.document.command.Save`.
 The constructor still borrows its model and style and accepts `compactHeader`.
 Style failures occur during attachment; the caller disposes an unpublished view.
+
+In `1.2611.26.6-alpha`, `EditorTransformView` builds its form on first attachment.
+Rebuild consumers and import `TrueMoon.Aether.Editor.UI.Editing` for the generated
+action and status parts. Read `Fields` and named parts only after attachment,
+on the UI owner thread. `PreviewActions`, `ShowPreview`, `StopPreview` and
+`PreviewStatus` exist only when the form hosts inline preview; use `TryGetPart`
+when the mode is not known. `Form`, `Actions` and `History` are no longer public
+parts. The public field, label and input style tokens remain unchanged; the
+unused `ErrorRole` was removed. A field validation error is rendered by the
+input itself. Style failures now surface at attachment.
+
+In `1.2611.26.7-alpha`, `EditorStatusPopupView` prepares its content when an
+overlay attaches it. Rebuild consumers for the generated extension parts and
+resolve them on the session owner thread while the popup is live. `Body`,
+`PreviewActions` and `PreviewDetails` are no longer public parts. A failed
+style surfaces at attachment; the popup owner disposes the unpublished root.
+
+In `1.2611.26.8-alpha`, `EditorStatusBarView` also prepares content at attachment.
+Rebuild consumers for its generated extension parts and resolve them on the
+session owner thread after attach. `EditorView.Status` follows this rule when
+backed by the compact status bar. No control registration is needed to host the
+status bar's internal layout and controls.
+
+In `1.2611.26.9-alpha`, status text, availability, colors and actions all use
+the status model supplied to the factory. Assigning a different `DataContext`
+does not retarget the bar or its popup.

@@ -339,6 +339,27 @@ public sealed class EditorHeaderViewTests
         Assert.Equal(drawn.Y, Assert.Single(probe.Texts).Y);
     }
 
+    [Theory]
+    [InlineData(6, "")]
+    [InlineData(7, "…")]
+    [InlineData(21, "A…")]
+    public void CaptionEllipsis_AtExactWidths_DoesNotSplitSurrogatePairs(float width, string expected)
+    {
+        using var test = new HeaderFixture();
+        var caption = test.Header.Caption;
+        caption.Value = "A\U0001F680BC";
+        caption.FontSize = 14; caption.FontWeight = 400; caption.FontItalic = false;
+        var probe = new TypographyRecordingContext();
+        using var presenters = UiPresenters.Create(EditorPresenters.Register);
+
+        caption.Measure(new(width, 40), probe);
+        caption.Arrange(new(0, 0, width, 40));
+        UiTreeRenderer.Draw(caption, probe, presenters);
+
+        Assert.Equal(expected, Assert.Single(probe.Texts).Text);
+        Assert.DoesNotContain(probe.Measures, call => call.Text == "A\uD83D…");
+    }
+
     [Fact]
     public void WrappedHint_UsesStyledAdvancesAndLineHeightForEachRenderedLine()
     {

@@ -69,7 +69,8 @@ public sealed class EditorInspectorCompositionTests
         Assert.Same(model, current.DataContext); Assert.Same(model, legacy.DataContext);
         Assert.Null(current.Child);
         using var ui = InspectorFixture.Ui(current);
-        ui.Update();
+        using var legacyUi = InspectorFixture.Ui(legacy);
+        ui.Update(); legacyUi.Update();
         Assert.Equal(5, current.Components.Count); Assert.Equal(9, legacy.Fields.Count);
         app.Dispose(); Assert.False(current.IsDisposed); Assert.False(legacy.IsDisposed);
     }

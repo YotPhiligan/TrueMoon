@@ -1,3 +1,4 @@
+using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Styling;
 
 namespace TrueMoon.Argentis;
@@ -27,5 +28,5 @@ public sealed class CheckBox : Button
     /// <summary>The current value.</summary>
     public bool IsChecked { get => Get(IsCheckedProperty); set => Set(IsCheckedProperty, value); }
     /// <inheritdoc />
-    protected override void Activate() { if (IsReadOnly) return; IsChecked = !IsChecked; base.Activate(); }
+    protected override void Activate(IInputContext context) { if (IsReadOnly) return; IsChecked = !IsChecked; base.Activate(context); }
 }

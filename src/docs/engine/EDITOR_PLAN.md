@@ -39,7 +39,12 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 создания; приёмка самого генератора и UI-пакетов ведётся в Alloy.
 Панель документов переведена в обоих режимах; компактный режим не создаёт
 скрытые команды обычной панели. [Оконная приёмка](HISTORY.md#editor-document-view-polish-2026-11-26).
-Следующие кандидаты — `EditorTransformView` и оконные панели.
+`EditorTransformView` переведён в обоих режимах Preview.
+[Растровая проверка формы](HISTORY.md#editor-transform-form-migration-2026-11-26).
+`EditorStatusPopupView` переведён. Каталог переставляет строки без потери фокуса.
+[Проверки popup](HISTORY.md#editor-status-popup-migration-2026-11-26).
+`EditorStatusBarView` переведён. [Проверки](HISTORY.md#editor-status-bar-migration-2026-11-26).
+Следующие кандидаты — заголовок и корневая композиция.
 
 В `main` на `a1764fb` проверены первичный импорт из пустого каталога,
 размещение модели и восстановление сцены после перезапуска.

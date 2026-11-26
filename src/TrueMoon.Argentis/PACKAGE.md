@@ -199,6 +199,27 @@ view instances or run application actions. Explicit DataContext rebinding remain
 the author's responsibility. View creation/factories and model lifetimes belong
 to the host; a view borrows its injected model/style and owns its controls/bindings.
 
+`Named("Part")` in inline `Content(...)` infers the declared control type.
+It supports non-generic nested controls accessible from the generated
+extension class. A part whose type is only assembly-accessible generates
+an `internal` property; existing public control types remain public on
+public views. Use a public factory return type for a public part contract.
+
+Custom single-line text controls can call `Text.FitSingleLine` from
+`ArrangeCore`. It uses the selected font, keeps a complete UTF-16 surrogate
+pair, and returns just the ellipsis when it fits but no prefix does.
+
+For implementation details local to a view, use `ui.Create(factory)` or
+`ui.Create(factory, arguments)` with a typed `IFactory`. The builder borrows
+the factory, tracks the returned draft and applies the same rollback and
+ownership checks as for session factories. The session registry is unchanged.
+
+Use `.OnActivated((button, input) => ...)` when a routed button action needs
+to open a popup or move focus. The input context is borrowed for that call;
+do not retain it. Ordinary `Click`/`.OnClick(...)` and commands require no
+input context. Subclasses overriding `Button.Activate()` must now override
+`Activate(IInputContext context)` and forward the context if calling the base.
+
 Tree mutation and resource ownership follow the UI owner thread. Rich-text
 shaping/painting is provided by the rendering adapter; the control model alone
 does not supply IME, accessibility or complete Unicode/emoji platform support.

@@ -155,13 +155,16 @@ internal static class EditorInspectorSmoke
             Require(saved.Document.Id == first.Document.Id && !document.Read().IsDirty && document.Read().Content!.UndoCount == 0 &&
                 document.Read().Content!.Resolved.Entities[new(Guid.Parse(empty))].Components.ContainsKey(added),
                 "Save/reopen lost component identity or retained ephemeral history.");
-            await Click(view.StatusBar!.PreviewButton);
-            await Until(() => view.Overlays.Popup is EditorStatusPopupView && !ui.NeedsUpdate);
-            await ui.InvokeAsync(() =>
+            Button previewButton = null!;
+            await ui.InvokeAsync(() => previewButton = view.StatusBar!.PreviewButton).WaitAsync(token);
+            await Click(previewButton);
+            await Until(() =>
             {
-                EditorHeaderSmoke.Click(ui, ((EditorStatusPopupView)view.Overlays.Popup!).StartPreview);
+                if (view.Overlays.Popup is not EditorStatusPopupView popup || ui.NeedsUpdate) return false;
+                EditorHeaderSmoke.Click(ui, popup.StartPreview);
                 ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape));
-            }).WaitAsync(token);
+                return true;
+            });
             await Until(() => preview.Read() is { Busy: false, Presented: { } stamp } && stamp.Revision == document.Read().Content!.Document.Revision);
             await Capture("inspector-preview.png", true);
             var viewport = view.Canvas.Bounds; var retainedText = panel.Properties[(custom, "text")].Input;
@@ -224,8 +227,9 @@ internal static class EditorInspectorSmoke
             await Capture("viewport-status-idle.png", true);
             await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, footer.Bar)).WaitAsync(token);
             await Until(() => footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate);
-            Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop && footer.SummaryButton.Opacity == 1,
-                "Status hover reframed the scene or faded its foreground.");
+            await ui.InvokeAsync(() =>
+                Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop && footer.SummaryButton.Opacity == 1,
+                    "Status hover reframed the scene or faded its foreground.")).WaitAsync(token);
             await Capture("viewport-status-hover.png", true);
             await Doc(DocumentCommand.Close);
             Require(runtime.Leases.Count == 1 && runtime.Leases.All(c => c.Reaped && c.ResourcesReleased) && engine.Builds.ProcessId == null,
@@ -255,15 +259,15 @@ internal static class EditorInspectorSmoke
             await commands.Pending.WaitAsync(token); Require(commands.Read().Error == null, "Document command failed: " + commands.Read().Error);
             await Until(() => !commands.Read().Busy && ReferenceEquals(documentModel.Document?.Content?.Document, document.Read().Content?.Document));
         }
-        async Task Reveal(Element element)
-        {
-            await ui.InvokeAsync(() => panel.Scroll.BringIntoView(element.Bounds)).WaitAsync(token);
-            await Until(() => !ui.NeedsUpdate);
-        }
         async Task Click(Element element)
         {
-            Trace("Click " + (element is Text label ? label.Value : element.AccessibleName) + " " + element.GetType().Name);
-            await Reveal(element); await Until(() => element.IsEffectivelyEnabled && element.Bounds.Width > 0);
+            await ui.InvokeAsync(() =>
+            {
+                Trace("Click " + (element is Text label ? label.Value : element.AccessibleName) + " " + element.GetType().Name);
+                panel.Scroll.BringIntoView(element.Bounds);
+            }).WaitAsync(token);
+            await Until(() => !ui.NeedsUpdate);
+            await Until(() => element.IsEffectivelyEnabled && element.Bounds.Width > 0);
             await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, element)).WaitAsync(token);
         }
         async Task Set(Element element, string value)

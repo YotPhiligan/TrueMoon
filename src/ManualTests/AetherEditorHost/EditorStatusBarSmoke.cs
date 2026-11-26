@@ -36,8 +36,8 @@ internal static class EditorStatusBarSmoke
                 footer.DetailsButton.Bounds.X + footer.DetailsButton.Bounds.Width <= grip.Bounds.X,
                 "Resize grip overlaps the status actions.");
             Require(footer.DetailsButton.Bounds.Width == 24 && footer.DetailsButton.Bounds.Height == 24, "Details target changed.");
-            Require(view.Transform == null || !view.Transform.PreviewActions.IsVisible && !view.Transform.PreviewStatus.IsVisible,
-                "Legacy inspector Preview remains visible.");
+            Require(view.Transform is not { } transform || !transform.TryGetPart<Button>("ShowPreview", out _) &&
+                !transform.TryGetPart<Text>("PreviewStatus", out _), "Inline Transform Preview was composed beside the status bar.");
             Require(!footer.SummaryButton.Value.Contains("Tick") && !footer.SummaryButton.Value.Contains("PID"), "Diagnostics leaked into the primary status.");
         }).WaitAsync(token);
         await Capture("status-bar.png");
@@ -45,9 +45,12 @@ internal static class EditorStatusBarSmoke
         // Native pointer samples may arrive between directed gestures and the rendered hover frame.
         await EditorHeaderSmoke.UntilAsync(ui, () => footer.Bar.OverlayReveal == 1 && footer.DetailsButton.IsHovered && !ui.NeedsUpdate, token,
             () => EditorHeaderSmoke.Move(ui, footer.DetailsButton));
-        Require(footer.DetailsButton.CornerRadius == 0, "Status actions must have square corners.");
-        Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop &&
-            footer.Bar.Opacity == 1 && footer.SummaryButton.Opacity == 1, "Status hover reframed the scene or faded its controls.");
+        await ui.InvokeAsync(() =>
+        {
+            Require(footer.DetailsButton.CornerRadius == 0, "Status actions must have square corners.");
+            Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop &&
+                footer.Bar.Opacity == 1 && footer.SummaryButton.Opacity == 1, "Status hover reframed the scene or faded its controls.");
+        }).WaitAsync(token);
         await Capture("status-hover.png");
         await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, footer.DetailsButton)).WaitAsync(token);
         await Until(() => view.Overlays.Popup is EditorStatusPopupView && !ui.NeedsUpdate);

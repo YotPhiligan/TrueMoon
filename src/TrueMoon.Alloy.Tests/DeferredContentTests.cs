@@ -77,6 +77,39 @@ public sealed class DeferredContentTests
     }
 
     [Fact]
+    public void GeneratedParts_PublicAndInternalTypesKeepTheirIdentityStyleAndValueOnReattach()
+    {
+        using var view = ViewCreation.Prepare(new GeneratedPartsView(), new GeneratedPartsStyle());
+        var host = new Panel();
+        using var ui = CreateSession(host, CreateFactories([]));
+
+        host.Add(view);
+        ui.Update();
+
+        GeneratedPartsView.HeadingText heading = view.Heading;
+        var caption = view.Caption;
+        var body = Assert.IsType<HStack>(view.Child);
+        Assert.Same(body.Items[0], heading);
+        Assert.Same(body.Items[1], caption);
+        Assert.Equal(20, heading.FontSize);
+        Assert.Equal(17, caption.FontSize);
+        Assert.Equal("Heading", heading.Value);
+        Assert.Equal("Caption!", view.Caption.EmphasizedValue);
+
+        caption.Value = "Edited caption";
+        Assert.True(host.Items.Remove(view));
+        host.Add(view);
+        ui.Update();
+
+        Assert.Same(heading, view.Heading);
+        Assert.Same(caption, view.Caption);
+        Assert.Equal(20, view.Heading.FontSize);
+        Assert.Equal(17, view.Caption.FontSize);
+        Assert.Equal("Heading", view.Heading.Value);
+        Assert.Equal("Edited caption!", view.Caption.EmphasizedValue);
+    }
+
+    [Fact]
     public void DataContextReplacement_RoutesInputToNewModelAndDiscardsOldNotification()
     {
         var created = new List<Element>();
@@ -204,6 +237,15 @@ public sealed class DeferredContentTests
             styles.Part(view => view.Search).FontSize(18);
     }
 
+    private sealed class GeneratedPartsStyle : IViewStyle<GeneratedPartsView>
+    {
+        public void Configure(IViewStyleBuilder<GeneratedPartsView> styles)
+        {
+            styles.Part(view => view.Heading).FontSize(20);
+            styles.Part(view => view.Caption).FontSize(17);
+        }
+    }
+
     private sealed class Surface : IUiRenderSurface
     {
         public ITextLayoutService TextLayout { get; } = new FixedTextLayout();
@@ -211,6 +253,30 @@ public sealed class DeferredContentTests
         public void Resize(UiViewport viewport) { }
         public void Render(Element root, UiViewport viewport, UiPresenters? presenters = null) { }
         public void Dispose() { }
+    }
+}
+
+/// <summary>A fixture with named parts whose enclosing types have different visibility.</summary>
+public sealed class GeneratedPartsView : View
+{
+    private static readonly Factory<HeadingText> HeadingFactory = new(() => new HeadingText { Value = "Heading" });
+    private static readonly Factory<GeneratedPartControls.CaptionText> CaptionFactory =
+        new(() => new GeneratedPartControls.CaptionText { Value = "Caption" });
+
+    /// <summary>Creates the deferred fixture.</summary>
+    public GeneratedPartsView() => Content(static ui => ui.HStack(
+        ui.Create(HeadingFactory).Named("Heading"),
+        ui.Create(CaptionFactory).Named("Caption")));
+
+    /// <summary>A heading type that can appear in the view's public API.</summary>
+    public sealed class HeadingText : Text;
+}
+
+internal static class GeneratedPartControls
+{
+    public sealed class CaptionText : Text
+    {
+        public string EmphasizedValue => Value + "!";
     }
 }
 

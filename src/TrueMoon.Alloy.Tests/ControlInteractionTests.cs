@@ -64,14 +64,96 @@ public sealed class ControlInteractionTests
     [InlineData(UiKey.Space)]
     public void Button_KeyboardRepeatActivatesOnceAndFocusLossCancelsRelease(UiKey key)
     {
-        var calls = 0; var button = new Button("action").OnClick(() => calls++); using var ui = Create(button); ui.Update(); ui.Focus(button);
-        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: key)); ui.HandleInput(new UiInput(InputKind.KeyDown, Key: key));
-        Assert.True(button.IsPressed); Assert.Equal(0, calls);
-        ui.HandleInput(new UiInput(InputKind.KeyUp, Key: key)); Assert.False(button.IsPressed); Assert.Equal(1, calls);
-        Assert.False(ui.HandleInput(new UiInput(InputKind.KeyUp, Key: key)).Handled); Assert.Equal(1, calls);
-        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: key)); ui.HandleInput(new UiInput(InputKind.FocusLost));
-        Assert.False(button.IsPressed); Assert.False(button.IsFocused);
-        ui.HandleInput(new UiInput(InputKind.KeyUp, Key: key)); Assert.Equal(1, calls);
+        var clicks = 0;
+        var activations = new List<(Button Sender, IInputContext Context)>();
+        var button = new Button("action")
+            .OnClick(() => clicks++)
+            .OnActivated((sender, context) => activations.Add((sender, context)));
+        using var ui = Create(button);
+        ui.Update();
+        ui.Focus(button);
+        ui.HandleInput(new(InputKind.KeyDown, Key: key));
+        ui.HandleInput(new(InputKind.KeyDown, Key: key));
+        Assert.True(button.IsPressed);
+        Assert.Empty(activations);
+        Assert.Equal(0, clicks);
+
+        Assert.True(ui.HandleInput(new(InputKind.KeyUp, Key: key)).Handled);
+        Assert.False(button.IsPressed);
+        var activation = Assert.Single(activations);
+        Assert.Same(button, activation.Sender);
+        Assert.Same(ui, activation.Context);
+        Assert.Equal(1, clicks);
+
+        Assert.False(ui.HandleInput(new(InputKind.KeyUp, Key: key)).Handled);
+        ui.HandleInput(new(InputKind.KeyDown, Key: key));
+        ui.HandleInput(new(InputKind.FocusLost));
+        Assert.False(button.IsPressed);
+        Assert.False(button.IsFocused);
+        ui.HandleInput(new(InputKind.KeyUp, Key: key));
+        Assert.Single(activations);
+        Assert.Equal(1, clicks);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Button_PointerAndSemanticRoutesPassTheSessionToActivationOnce(bool semantic)
+    {
+        const string id = "test.action";
+        var activations = new List<(Button Sender, IInputContext Context, Element? Focus)>();
+        var clicks = 0;
+        var button = new ActivationProbe();
+        button.SemanticId = id;
+        button.Click += () => clicks++;
+        button.Activated += (sender, context) => activations.Add((sender, context, context.FocusedElement));
+        using var ui = Create(new Panel().WithChildren(button));
+        ui.Update();
+        var bounds = button.Bounds;
+        var x = bounds.X + bounds.Width / 2;
+        var y = bounds.Y + bounds.Height / 2;
+
+        Assert.True(Route(InputKind.PointerDown).PointerCaptured);
+        Assert.True(button.IsPressed);
+        Assert.Empty(activations);
+        Assert.Empty(button.Contexts);
+        Assert.Equal(0, clicks);
+        var released = Route(InputKind.PointerUp);
+        Assert.False(released.PointerCaptured);
+        Assert.False(button.IsPressed);
+        var activation = Assert.Single(activations);
+        Assert.Same(ui, Assert.Single(button.Contexts));
+        Assert.Same(ui, activation.Context);
+        Assert.Same(button, activation.Sender);
+        Assert.Same(button, activation.Focus);
+        Assert.Equal(1, clicks);
+
+        UiInputResult Route(InputKind kind)
+        {
+            var input = new UiInput(kind, x, y);
+            if (!semantic)
+            {
+                var routed = ui.HandleInput(input);
+                Assert.True(routed.Handled);
+                return routed;
+            }
+            var result = ui.HandleSemanticInput(ui.CaptureSemantics(), id, input);
+            Assert.Equal(UiSemanticTargetStatus.Routed, result.Status);
+            Assert.Equal(id, result.HitTargetId);
+            Assert.True(result.Input.Handled);
+            return result.Input;
+        }
+    }
+
+    private sealed class ActivationProbe : Button
+    {
+        public List<IInputContext> Contexts { get; } = [];
+
+        protected override void Activate(IInputContext context)
+        {
+            Contexts.Add(context);
+            base.Activate(context);
+        }
     }
 
     [Theory]
@@ -80,12 +162,21 @@ public sealed class ControlInteractionTests
     public void ButtonAndCheckBox_DisablingDuringPressCancelsInputWithoutActivation(bool checkBox)
     {
         var calls = 0; Button button = checkBox ? new CheckBox("toggle") : new Button("action"); button.Click += () => calls++;
+        const string id = "test.disabled-action";
+        var activations = 0;
+        button.Activated += (_, _) => activations++;
+        button.SemanticId = id;
         var root = new Panel().WithChildren(button); using var ui = Create(root); ui.Update();
         Assert.True(ui.HandleInput(new UiInput(InputKind.PointerDown, 20, 20)).PointerCaptured); Assert.True(button.IsPressed);
         root.IsEnabled = false; ui.Update(); Assert.False(button.IsPressed); Assert.False(button.IsFocused);
         var released = ui.HandleInput(new UiInput(InputKind.PointerUp, 20, 20)); Assert.False(released.PointerCaptured); Assert.False(released.KeyboardFocused); Assert.Equal(0, calls);
+        Assert.Equal(0, activations);
+        var disabled = ui.HandleSemanticInput(ui.CaptureSemantics(), id, new(InputKind.PointerDown, 20, 20));
+        Assert.Equal(UiSemanticTargetStatus.Disabled, disabled.Status);
+        Assert.False(disabled.Input.Handled);
         if (button is CheckBox check) Assert.False(check.IsChecked);
         root.IsEnabled = true; ui.Update(); ui.HandleInput(new UiInput(InputKind.PointerUp, 20, 20)); Assert.Equal(0, calls);
+        Assert.Equal(0, activations);
     }
 
     [Fact]

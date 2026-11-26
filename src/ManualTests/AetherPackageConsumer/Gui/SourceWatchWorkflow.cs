@@ -41,11 +41,16 @@ internal static class SourceWatchWorkflow
         var playback = app.Services.Resolve<EditorScenePlayback>()!;
         var runtimes = (NativeRuntimeFactory)app.Services.Resolve<IRuntimeFactory>()!;
         var model = (EditorViewModel)view.DataContext!;
-        var status = (EditorStatusBarViewModel)view.StatusBar!.DataContext!;
+        var footer = view.StatusBar!;
+        var status = (EditorStatusBarViewModel)footer.DataContext!;
         var project = projects.Active!; var watch = project.SourceWatch ?? throw new InvalidOperationException("No project observer.");
         var owner = 0; var threads = new ConcurrentDictionary<int, byte>(); var samples = new List<EditorSourceSnapshot>();
-        var badge = view.StatusBar.SourceButton;
-        await ui.InvokeAsync(() => { owner = Environment.CurrentManagedThreadId; model.PropertyChanged += Changed; status.PropertyChanged += Changed; }).WaitAsync(token);
+        Button badge = null!;
+        await ui.InvokeAsync(() =>
+        {
+            badge = footer.SourceButton;
+            owner = Environment.CurrentManagedThreadId; model.PropertyChanged += Changed; status.PropertyChanged += Changed;
+        }).WaitAsync(token);
         try
         {
             Progress("Open document");
@@ -98,11 +103,12 @@ internal static class SourceWatchWorkflow
             await Until(() => field.Value == "NaN" && inspector.Theme.Surface == Theme.Light.Surface);
             await ui.InvokeAsync(() => Program.Check(field.IsFocused, "Source/theme update lost focused draft.")).WaitAsync(token);
             await Capture("source-changed.png");
-            Program.Check(watch.Read().State == EditorSourceState.Changed && field.Value == "NaN" &&
-                ReferenceEquals(field, inspector.Properties.Values.Single(property => property.Property.Key == "x").Input) &&
-                ReferenceEquals(form, inspector.Form) && ReferenceEquals(badge, view.StatusBar.SourceButton) &&
-                ReferenceEquals(document.Content, project.Documents.Read().Content) && project.Documents.Read().IsDirty == document.IsDirty,
-                "Source/theme update lost retained draft, controls or document state, or reset Changed after revert.");
+            await ui.InvokeAsync(() =>
+                Program.Check(watch.Read().State == EditorSourceState.Changed && field.Value == "NaN" &&
+                    ReferenceEquals(field, inspector.Properties.Values.Single(property => property.Property.Key == "x").Input) &&
+                    ReferenceEquals(form, inspector.Form) && ReferenceEquals(badge, footer.SourceButton) &&
+                    ReferenceEquals(document.Content, project.Documents.Read().Content) && project.Documents.Read().IsDirty == document.IsDirty,
+                    "Source/theme update lost retained draft, controls or document state, or reset Changed after revert.")).WaitAsync(token);
             await ui.InvokeAsync(transform.Cancel).WaitAsync(token);
 
             Progress("New baseline and game");
@@ -165,7 +171,7 @@ internal static class SourceWatchWorkflow
             await playback.Pending.WaitAsync(token); Program.Check(playback.Error == null, "Build failed: " + playback.Error);
         }
         async Task State(EditorSourceState state) => await Until(() => watch.Read().State == state && model.Source?.State == state &&
-            view.StatusBar.SourceButton.Value == status.SourceSummary);
+            footer.SourceButton.Value == status.SourceSummary);
         async Task Doc(DocumentCommand command, string path = "")
         {
             await Until(() => documents.CanExecute(command));
@@ -179,9 +185,12 @@ internal static class SourceWatchWorkflow
         async Task Until(Func<bool> condition)
         {
             var clock = Stopwatch.StartNew();
-            while (!condition())
+            while (true)
             {
                 token.ThrowIfCancellationRequested();
+                var ready = false;
+                await ui.InvokeAsync(() => ready = condition()).WaitAsync(token);
+                if (ready) return;
                 if (clock.Elapsed > TimeSpan.FromSeconds(40)) throw new TimeoutException("Source workflow: " + watch.Read() + "; playback: " + playback.Error);
                 await Task.Delay(20, token);
             }

@@ -346,10 +346,10 @@ internal static class EditorModelBuildSmoke
 
         async Task OpenStatus(string? expected)
         {
-            var button = view.StatusBar!.SummaryButton;
+            var footer = view.StatusBar!;
             await ui.InvokeAsync(() => view.Header!.Menu.CloseMenu()).WaitAsync(token);
-            await EditorHeaderSmoke.UntilAsync(ui, () => (expected == null || view.StatusBar.DataContext!.ModelImportDetails == expected) &&
-                button.Bounds.Width > 0 && !ui.NeedsUpdate, token);
+            await EditorHeaderSmoke.UntilAsync(ui, () => (expected == null || footer.DataContext!.ModelImportDetails == expected) &&
+                footer.SummaryButton.Bounds.Width > 0 && !ui.NeedsUpdate, token);
             await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
                 (expected == null || popup.ModelImportDetails.IsVisible && popup.ModelImportDetails.Value == expected), token, HoldStatus);
         }
@@ -367,18 +367,17 @@ internal static class EditorModelBuildSmoke
         {
             await OpenStatus(expected);
             const string label = "Переимпортировать «Red»";
-            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
-                popup.ReimportActions.Children.OfType<Button>().Any(button => button.Value == label && button.IsEnabled && button.Bounds.Width > 0)
-                && !ui.NeedsUpdate, token, HoldStatus);
             var before = commands.Pending;
-            await ui.InvokeAsync(() =>
+            await EditorHeaderSmoke.UntilAsync(ui, () =>
             {
-                var popup = (EditorStatusPopupView)view.Overlays.Popup!;
-                var button = popup.ReimportActions.Children.OfType<Button>().Single(item => item.Value == label);
+                if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup ||
+                    popup.ReimportActions.Children.OfType<Button>().SingleOrDefault(item => item.Value == label) is not
+                        { IsEnabled: true, Bounds.Width: > 0 } button) return false;
                 EditorHeaderSmoke.Move(ui, button);
                 EditorHeaderSmoke.Click(ui, button);
                 view.Overlays.Close(false);
-            }).WaitAsync(token);
+                return true;
+            }, token, HoldStatus);
             Check(!ReferenceEquals(commands.Pending, before), "Editor declined the reimport action.");
         }
 

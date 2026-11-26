@@ -4,6 +4,9 @@ using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Alloy.Runtime;
+using SkiaSharp;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -84,10 +87,41 @@ public sealed class EditorTransformViewTests
     }
 
     [Fact]
+    public void RasterPreviewModes_KeepFieldLayoutAndOnlyInlineModePaintsPreviewControls()
+    {
+        using var test = new EditingFixture();
+        var style = new EditorTransformViewStyle();
+        var inline = new EditorTransformView(test.Model, style);
+        var hosted = new EditorTransformView(test.Model, style, showPreviewControls: false);
+        var viewport = new UiViewport(520, 560);
+        var backend = new SkiaRasterRenderBackend();
+        using var inlineUi = UiSession.Create(inline, backend, new RasterUiTarget(), viewport);
+        using var hostedUi = UiSession.Create(hosted, backend, new RasterUiTarget(), viewport);
+        inlineUi.Update(); hostedUi.Update();
+
+        foreach (var (key, input) in inline.Fields)
+            Assert.Equal(input.Bounds, hosted.Fields[key].Bounds);
+        Assert.Equal(inline.Apply.Bounds, hosted.Apply.Bounds);
+        Assert.False(hosted.TryGetPart<Button>("ShowPreview", out _));
+        Assert.False(hosted.TryGetPart<Button>("StopPreview", out _));
+        Assert.False(hosted.TryGetPart<Text>("PreviewStatus", out _));
+
+        using var inlineImage = inlineUi.SnapshotRasterImage();
+        using var hostedImage = hostedUi.SnapshotRasterImage();
+        using var inlinePixels = SKBitmap.FromImage(inlineImage);
+        using var hostedPixels = SKBitmap.FromImage(hostedImage);
+        var button = inline.ShowPreview.Bounds;
+        var x = (int)(button.X + button.Width / 2);
+        var y = (int)(button.Y + button.Height / 2);
+        Assert.NotEqual(inlinePixels.GetPixel(x, y), hostedPixels.GetPixel(x, y));
+    }
+
+    [Fact]
     public void ViewDisposal_DetachesBindingsAndPreservesBorrowedModelDocumentAndPreview()
     {
         using var test = new EditingFixture(); var view = new EditorTransformView(test.Model, new EditorTransformViewStyle()); var ui = DocumentUiFixture.Ui(view); ui.Update();
-        var input = view.Fields["x"]; ui.Dispose(); Assert.True(view.IsDisposed); Assert.True(input.IsDisposed); Assert.True(view.Form.IsDisposed);
+        var input = view.Fields["x"]; var form = view.Child!;
+        ui.Dispose(); Assert.True(view.IsDisposed); Assert.True(input.IsDisposed); Assert.True(form.IsDisposed);
         test.Field("x").Value = "63"; test.Model.Apply(); Assert.Equal(63, DocumentData.X(test.Owner.Document.Read().Content!)); Assert.Equal("4", input.Value);
         test.Model.ShowPreview(); DocumentUiFixture.Wait(test.Preview.Pending); Assert.NotNull(test.Preview.Read().Presented);
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Equal(0, test.Owner.RuntimeStops); Assert.Equal(0, test.Owner.Authoring.Disposals);
@@ -95,14 +129,20 @@ public sealed class EditorTransformViewTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public void StyleFailure_DisposesUnpublishedFormAndBindingsWithoutOwningBorrowedModelOrDocument(bool cleanupFailure)
+    public void AttachStyleFailure_DiscardsPreparedFieldsAndLeavesRootCleanupToItsOwner(bool cleanupFailure)
     {
-        using var test = new EditingFixture(); var failure = new IOException("transform style failed"); var cleanup = new IOException("form cleanup failed"); EditorTransformView unpublished = null!;
+        using var test = new EditingFixture();
+        var failure = new IOException("transform style failed"); var cleanup = new IOException("form cleanup failed");
         var resource = new Resource(cleanupFailure ? cleanup : null);
-        var error = Record.Exception(() => new EditorTransformView(test.Model, new FailingStyle(view => { unpublished = view; view.Own(resource); }, failure)));
-        if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, e => Assert.Same(failure, e), e => Assert.Same(cleanup, e));
-        else Assert.Same(failure, error);
-        Assert.Equal(1, resource.Disposals); Assert.True(unpublished.IsDisposed); Assert.True(unpublished.Form.IsDisposed); Assert.All(unpublished.Fields.Values, field => Assert.True(field.IsDisposed));
+        Element? form = null;
+        var unpublished = new EditorTransformView(test.Model, new FailingStyle(view => { form = view.Child; view.Own(resource); }, failure));
+        Assert.Same(failure, Record.Exception(() => { using var ui = DocumentUiFixture.Ui(unpublished); }));
+        Assert.True(form!.IsDisposed); Assert.All(unpublished.Fields.Values, field => Assert.True(field.IsDisposed));
+        Assert.False(unpublished.IsDisposed);
+        var ownerCleanup = Record.Exception(unpublished.Dispose);
+        if (cleanupFailure) Assert.Same(cleanup, ownerCleanup);
+        else Assert.Null(ownerCleanup);
+        Assert.Equal(1, resource.Disposals); Assert.True(unpublished.IsDisposed);
         test.Field("x").Value = "71"; test.Model.Apply(); Assert.Equal(71, DocumentData.X(test.Owner.Document.Read().Content!)); Assert.False(test.Owner.Commands.Read().Closed);
     }
 

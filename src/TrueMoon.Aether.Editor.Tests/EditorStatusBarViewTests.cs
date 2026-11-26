@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Menus;
@@ -39,6 +40,12 @@ public sealed class EditorStatusBarViewTests
         Assert.True(probe.Measure("W" + drawn.Text, drawn.Size, drawn.Family, drawn.Weight, drawn.Italic).Width > available);
         Assert.Contains(probe.Measures, call => call.Text == summary.Value && call.Weight == 600 && call.Italic);
         Assert.Contains(probe.Fills, call => call.Color == summary.Theme.ControlHover && call.Bounds.Width == 120);
+
+        probe.Texts.Clear();
+        summary.Arrange(new(0, 0, summary.Padding.Left + summary.Padding.Right + 20 +
+            probe.Measure("…", drawn.Size, drawn.Family, drawn.Weight, drawn.Italic).Width, 40));
+        UiTreeRenderer.Draw(summary, probe, presenters);
+        Assert.Equal("…", Assert.Single(probe.Texts).Text);
     }
     [Theory]
     [InlineData(1f)] [InlineData(1.5f)] [InlineData(2f)]
@@ -205,6 +212,38 @@ public sealed class EditorStatusBarViewTests
     }
 
     [Fact]
+    public void ReplacingDataContext_StatusAndRoutedActionsStillUseTheInjectedModel()
+    {
+        using var test = new StatusFixture();
+        using var alternateSource = new HeaderFixture(hasProject: false);
+        using var alternate = new EditorStatusBarViewModel(alternateSource.Model, alternateSource.Documents, alternateSource.Transform);
+        using var ui = test.Ui(); ui.Update();
+        test.View.DataContext = alternate; ui.Update();
+        Assert.Same(alternate, test.View.DataContext);
+        Assert.NotEqual(alternate.Summary, test.View.SummaryButton.Value);
+        Assert.Equal(test.Model.Summary, test.View.SummaryButton.Value);
+        Assert.Equal(test.Model.PreviewSummary, test.View.PreviewButton.Value);
+        Assert.Equal(test.Model.EntityText, test.View.Entities.Value);
+
+        test.Source.Model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Build, false));
+        ui.Update();
+        Assert.False(alternate.CanCancel);
+        Assert.Equal("Сборка проекта…", test.View.SummaryButton.Value);
+        Assert.Equal(test.View.Theme.Accent, test.View.SummaryButton.Foreground);
+        Assert.True(test.View.Bar.KeepBackdropVisible);
+        Assert.True(test.View.CancelButton.IsVisible);
+        Assert.True(test.View.CancelButton.IsEnabled);
+        DocumentUiFixture.Click(ui, test.View.CancelButton);
+        DocumentUiFixture.Wait(test.Source.Commands.Pending);
+        Assert.Equal(new[] { EditorCommand.Cancel }, test.Source.RuntimeCalls.ToArray());
+        Assert.Empty(alternateSource.RuntimeCalls);
+
+        DocumentUiFixture.Click(ui, test.View.DetailsButton); ui.Update();
+        var popup = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup);
+        Assert.Contains(DocumentUiFixture.Tree(popup).OfType<Text>(), text => text.Value == test.Model.Summary);
+    }
+
+    [Fact]
     public void ErrorPopup_NormalizesCrLfAndRetainsDiagnosticSelectionFocusAndIdentityAcrossThemeChanges()
     {
         using var test = new StatusFixture();
@@ -266,6 +305,55 @@ public sealed class EditorStatusBarViewTests
     }
 
     [Fact]
+    public void PendingPreviewOverflow_DoesNotCloseTheReplacementSourcePopup()
+    {
+        using var test = new SourcePresentationFixture();
+        var view = test.CreateView(); test.Content.Add(view);
+        using var ui = test.Ui(); ui.Update();
+        Assert.True(view.SourceButton.IsVisible);
+        DocumentUiFixture.Click(ui, view.PreviewButton); ui.Update();
+        var previous = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup);
+
+        // Leave room for source and entities but not the wider Preview segment.
+        var bar = view.Bar;
+        var width = (int)MathF.Ceiling(bar.Padding.Left + bar.Padding.Right + view.DetailsButton.DesiredSize.Width +
+            120 + 3 * 8 + view.SourceButton.DesiredSize.Width + view.Entities.DesiredSize.Width);
+        ui.Resize(new(width, 800)); ui.Update();
+        Assert.Same(view.PreviewButton, Assert.Single(bar.OverflowedItems));
+        Assert.Same(previous, test.Overlays.Popup);
+        Assert.True(view.NeedsFrame);
+
+        // Routing another input would advance participants before it reaches the trigger.
+        var replacement = new EditorStatusPopupView(test.Status, new EditorStatusPopupViewStyle(), new(false));
+        var source = view.SourceButton;
+        test.Overlays.Open(source, replacement, source.Bounds, ui, source);
+        Assert.Same(replacement, test.Overlays.Popup);
+        Assert.True(previous.IsDisposed);
+        Assert.Same(source, test.Overlays.PopupOwner);
+        ui.Focus(source);
+        ui.Update(); ui.Update();
+        Assert.Same(replacement, test.Overlays.Popup);
+        Assert.Same(source, test.Overlays.PopupOwner);
+        Assert.False(replacement.IsDisposed);
+        Assert.Same(source, ui.FocusedElement);
+        Assert.False(view.NeedsFrame);
+    }
+
+    [Fact]
+    public void PendingOverflowFocus_KeepsAnEligibleFocusWhenThePopupCloses()
+    {
+        using var test = new StatusFixture(openDocument: true); using var ui = test.Ui(); ui.Update();
+        DocumentUiFixture.Click(ui, test.View.PreviewButton); ui.Update();
+        var popup = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup);
+        ui.Resize(new(220, 800)); ui.Update(); Assert.True(test.View.NeedsFrame);
+        ui.Focus(test.BodyButton); ui.Update(); ui.Update();
+        Assert.Null(test.Overlays.Popup);
+        Assert.True(popup.IsDisposed);
+        Assert.Same(test.BodyButton, ui.FocusedElement);
+        Assert.False(test.View.NeedsFrame);
+    }
+
+    [Fact]
     public void DetachingDuringPopupOverflow_CancelsDeferredFocusWithoutDisposingBorrowedModel()
     {
         using var test = new StatusFixture(openDocument: true); using var ui = test.Ui(); ui.Update();
@@ -285,10 +373,11 @@ public sealed class EditorStatusBarViewTests
     {
         using var test = new StatusFixture(); var ui = test.Ui(); ui.Update();
         DocumentUiFixture.Click(ui, test.View.DetailsButton); ui.Update();
-        var popup = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup); var summary = test.View.SummaryButton.Value;
-        ui.Dispose(); Assert.True(test.View.IsDisposed); Assert.True(popup.IsDisposed); Assert.True(popup.Error.IsDisposed);
+        var popup = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup);
+        var error = popup.Error; var summaryButton = test.View.SummaryButton; var summary = summaryButton.Value;
+        ui.Dispose(); Assert.True(test.View.IsDisposed); Assert.True(popup.IsDisposed); Assert.True(error.IsDisposed);
         test.Source.Refresh(SessionState.Playing); test.Source.Documents.PathDraft = "still valid.aetherscene";
-        Assert.Equal("Симуляция", test.Model.Summary); Assert.Equal(summary, test.View.SummaryButton.Value);
+        Assert.Equal("Симуляция", test.Model.Summary); Assert.Equal(summary, summaryButton.Value);
         Assert.False(test.Source.Owner.Commands.Read().Closed); Assert.Equal("still valid.aetherscene", test.Source.Documents.PathDraft);
     }
 
@@ -348,6 +437,68 @@ public sealed class EditorStatusBarViewTests
         Assert.False(bar.KeepBackdropVisible); Assert.Equal(0, bar.OverlayReveal);
         Assert.Equal(bounds, test.BodyButton.Bounds); Assert.True(test.BodyButton.IsFocused);
         Assert.False(test.Source.Preview.Read().Active); Assert.Empty(test.Source.RuntimeCalls); Assert.False(ui.NeedsUpdate);
+    }
+
+    [Fact]
+    public void CatalogRows_ReorderingRetainsFocusAndReattachAppliesLatestSelection()
+    {
+        var model = new CatalogStatus();
+        var opening = DocumentData.Id(100);
+        var first = new EditorProjectModelRow(opening, DocumentData.Id(101), "First", "first.gltf", false, true);
+        var second = new EditorProjectModelRow(opening, DocumentData.Id(102), "Second", "second.gltf", false, true);
+        model.Publish(first, second);
+        using var popup = new EditorStatusPopupView(model, new EditorStatusPopupViewStyle(), new(false));
+        var host = new Panel().WithChildren(popup);
+        using var ui = DocumentUiFixture.Ui(host);
+        ui.Update();
+        var secondCheck = CheckAt(1);
+        ui.Focus(secondCheck);
+
+        model.Publish(second, first);
+        ui.Update();
+        Assert.Same(secondCheck, CheckAt(0));
+        Assert.Same(secondCheck, ui.FocusedElement);
+
+        host.Items.Remove(popup);
+        model.Publish(second with { Selected = true }, first);
+        Assert.False(secondCheck.IsChecked);
+        host.Add(popup);
+        ui.Update();
+        Assert.Same(secondCheck, CheckAt(0));
+        Assert.True(secondCheck.IsChecked);
+        Assert.Equal("Second · second.gltf", secondCheck.Value);
+
+        CheckBox CheckAt(int index) => Assert.Single(popup.ModelCatalogRows.Children[index].Children.OfType<CheckBox>());
+    }
+
+    private sealed class CatalogStatus : IEditorStatusBarViewModel
+    {
+        public event PropertyChangedEventHandler? PropertyChanged;
+        public IReadOnlyList<EditorProjectModelRow> ProjectModels { get; private set; } = [];
+        public void Publish(params EditorProjectModelRow[] rows)
+        {
+            ProjectModels = rows;
+            PropertyChanged?.Invoke(this, new(nameof(ProjectModels)));
+        }
+        public string Summary => "Готово";
+        public EditorStatusKind Kind => EditorStatusKind.Ready;
+        public string EntityText => "";
+        public string RuntimeDetails => "";
+        public string OperationDetails => "";
+        public string PreviewSummary => "";
+        public string PreviewDetails => "";
+        public string SourceSummary => "";
+        public string SourceDetails => "";
+        public EditorStatusKind SourceKind => EditorStatusKind.Ready;
+        public bool HasSource => false;
+        public string ErrorDetails => "";
+        public bool HasError => false;
+        public bool CanCancel => false;
+        public bool CanPreview => false;
+        public bool CanStopPreview => false;
+        public Task CancelAsync() => Task.CompletedTask;
+        public void ShowPreview() { }
+        public Task StopPreviewAsync() => Task.CompletedTask;
     }
 
     private sealed class ManualTime : TimeProvider

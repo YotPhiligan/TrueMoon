@@ -140,25 +140,22 @@ public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputO
     }
     internal sealed class MoreTrigger(MenuBar bar) : IconButton(UiSymbol.More, "Меню · F10")
     {
-        private IInputContext? _context;
         protected override float ThemeBorderWidth => 0;
         protected override Color ThemeBackground => IsPressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Color.Transparent;
         internal float RevealProgress => bar.RevealProgress;
-        public override bool HandleInput(UiInput input, IInputContext context) { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
-        protected override void Activate()
+        protected override void Activate(IInputContext context)
         {
-            if (bar._pinned || bar.IsMenuOpen) { bar.CloseMenu(); _context!.Focus(this); }
+            if (bar._pinned || bar.IsMenuOpen) { bar.CloseMenu(); context.Focus(this); }
             else
             {
                 bar._pinned = true; bar.Expand(true); bar._openFirstWhenRevealed = true;
-                _context!.Focus(this); bar.OpenFirstIfReady(_context);
+                context.Focus(this); bar.OpenFirstIfReady(context);
             }
         }
     }
     private sealed class Heading(MenuBar bar, int index, string label) : Button(label)
     {
         public override bool Focusable => bar.IsExpanded;
-        private IInputContext? _context;
         protected override float ThemeBorderWidth => 0;
         protected override Thickness ThemePadding => new(9, 6, 9, 6);
         public override bool HandleInput(UiInput input, IInputContext context)
@@ -167,9 +164,10 @@ public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputO
             if (input.Kind == InputKind.KeyDown && input.Key is UiKey.Down or UiKey.Up) { bar.OpenGroup(bar._groups[index].Id, context); return true; }
             if (input.Kind == InputKind.KeyDown && input.Key is UiKey.Right or UiKey.Left)
             { context.Focus(bar.Children[1 + (index + (input.Key == UiKey.Right ? 1 : bar._groups.Length - 1)) % bar._groups.Length]); return true; }
-            _context = context; try { return base.HandleInput(input, context); } finally { _context = null; }
+            return base.HandleInput(input, context);
         }
-        protected override void Activate() { if (bar._open == index && bar.IsMenuOpen) bar._overlays.Close(); else bar.OpenGroup(bar._groups[index].Id, _context!); }
+        protected override void Activate(IInputContext context)
+        { if (bar._open == index && bar.IsMenuOpen) bar._overlays.Close(); else bar.OpenGroup(bar._groups[index].Id, context); }
     }
     private sealed class Popup : ElementList
     {

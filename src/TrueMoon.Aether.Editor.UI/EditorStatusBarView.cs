@@ -14,28 +14,23 @@ public sealed record EditorStatusBarArguments(OverlayHost Overlays);
 /// <summary>Compact retained status segments. Borrows presentation, style, factory and overlay host.</summary>
 public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiInputObserver, IUiFrameParticipant
 {
+    private static readonly IFactory<Button, (UiSymbol Symbol, string Name)> Segments =
+        new Factory<Button, (UiSymbol Symbol, string Name)>(static args => new SegmentButton(args.Symbol, args.Name));
+    private static readonly IFactory<Text, UiSymbol> Labels = new Factory<Text, UiSymbol>(static symbol => new SegmentLabel(symbol));
+    private static readonly IFactory<IconButton> Details = new Factory<IconButton>(static () => new DetailsAction());
+    private static readonly IFactory<StatusBar, BarParts> Layout = new Factory<StatusBar, BarParts>(static parts =>
+        new StatusBar(parts.Primary, parts.Action, parts.Secondary, parts.Details));
+    private readonly record struct BarParts(Element Primary, Element Action, Element[] Secondary, Element Details);
+
     private readonly IEditorStatusBarViewModel _model;
     private readonly OverlayHost _overlays;
     private readonly IFactory<EditorStatusPopupView, EditorStatusPopupArguments> _popups;
-    private bool _restoreDetailsFocus;
-    /// <summary>Primary status also opens the complete details.</summary>
-    public Button SummaryButton { get; }
-    /// <summary>Current-operation cancellation.</summary>
-    public Button CancelButton { get; }
-    /// <summary>Optional scene count.</summary>
-    public Element Entities { get; }
-    /// <summary>Preview status and popup trigger.</summary>
-    public Button PreviewButton { get; }
-    /// <summary>Retained independent source-state segment and complete-details trigger.</summary>
-    public Button SourceButton { get; }
-    /// <summary>Always-reserved details action.</summary>
-    public IconButton DetailsButton { get; }
-    /// <summary>Shared adaptive UI layout.</summary>
-    public StatusBar Bar { get; }
+    private (Element Popup, Element Trigger)? _pendingOverflow;
     /// <inheritdoc />
-    public bool NeedsFrame => _restoreDetailsFocus || IsAttached && Bar.KeepBackdropVisible != KeepsBackdropVisible;
-    private bool OwnsPopup => ReferenceEquals(_overlays.PopupOwner, SummaryButton) ||
-        ReferenceEquals(_overlays.PopupOwner, PreviewButton) || ReferenceEquals(_overlays.PopupOwner, SourceButton) || ReferenceEquals(_overlays.PopupOwner, DetailsButton);
+    public bool NeedsFrame => IsAttached && (_pendingOverflow != null || this.Bar.KeepBackdropVisible != KeepsBackdropVisible);
+    private bool OwnsPopup => _overlays.PopupOwner is { } owner &&
+        (ReferenceEquals(owner, this.SummaryButton) || ReferenceEquals(owner, this.PreviewButton) ||
+         ReferenceEquals(owner, this.SourceButton) || ReferenceEquals(owner, this.DetailsButton));
     private bool KeepsBackdropVisible => _model.HasError || _model.Kind is EditorStatusKind.Busy or EditorStatusKind.Error or EditorStatusKind.Waiting ||
         _model.HasSource && _model.SourceKind is EditorStatusKind.Busy or EditorStatusKind.Waiting || OwnsPopup;
     /// <inheritdoc />
@@ -43,13 +38,17 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        if (_restoreDetailsFocus)
+        var pending = _pendingOverflow;
+        _pendingOverflow = null;
+        if (pending is { } overflow && this.Bar.OverflowedItems.Contains(overflow.Trigger))
         {
-            _restoreDetailsFocus = false;
-            if (ReferenceEquals(_overlays.PopupOwner, PreviewButton) || ReferenceEquals(_overlays.PopupOwner, SourceButton)) _overlays.Close(false);
-            if (_overlays.Popup == null) context.Focus(DetailsButton);
+            if (ReferenceEquals(_overlays.Popup, overflow.Popup) && ReferenceEquals(_overlays.PopupOwner, overflow.Trigger))
+                _overlays.Close(false);
+            // The root overlay may already have dismissed the hidden trigger this frame.
+            if (overflow.Popup.IsDisposed && _overlays.PopupOwner == null && context.FocusedElement == null)
+                context.TryFocus(this.DetailsButton);
         }
-        Bar.KeepBackdropVisible = KeepsBackdropVisible;
+        this.Bar.KeepBackdropVisible = KeepsBackdropVisible;
     }
     /// <summary>Creates a parent-owned view on its UI owner thread.</summary>
     public EditorStatusBarView(IEditorStatusBarViewModel model, IViewStyle<EditorStatusBarView> style,
@@ -58,63 +57,69 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style); ArgumentNullException.ThrowIfNull(popups);
         ArgumentNullException.ThrowIfNull(arguments); ArgumentNullException.ThrowIfNull(arguments.Overlays);
         _model = model; _overlays = arguments.Overlays; _popups = popups;
-        try
+        Content(model, ui =>
         {
-            SummaryButton = new SegmentButton(UiSymbol.Check, "Состояние редактора", (context, button) => Open(context, button, false))
-                .SetValue(UiProperties.AccessibleName, "Состояние редактора · открыть сведения").BindText(model, x => x.Summary);
-            CancelButton = new SegmentButton(UiSymbol.Close, "Отменить текущую операцию", (_, _) => { _ = Observe(model.CancelAsync()); })
-                { Value = "Отмена", AccessibleName = "Отменить текущую операцию" }.Bind(UiProperties.Visible, model, x => x.CanCancel).Bind(UiProperties.Enabled, model, x => x.CanCancel);
-            Entities = new SegmentLabel(UiSymbol.Objects).BindText(model, x => x.EntityText);
-            PreviewButton = new SegmentButton(UiSymbol.Preview, "Управление Edit Preview", (context, button) => Open(context, button, true))
-                .SetValue(UiProperties.AccessibleName, "Управление Edit Preview").BindText(model, x => x.PreviewSummary);
-            DetailsButton = new DetailsAction((context, button) => Open(context, button, false));
-            SourceButton = new SegmentButton(UiSymbol.Build, "Состояние исходников", (context, button) => Open(context, button, false))
-                .BindText(model, x => x.SourceSummary).Bind(UiProperties.Visible, model, x => x.HasSource);
-            Bar = new(SummaryButton, CancelButton, [Entities, PreviewButton, SourceButton], DetailsButton);
-            void OverflowChanged()
-            {
-                if (ReferenceEquals(_overlays.PopupOwner, PreviewButton) && Bar.OverflowedItems.Contains(PreviewButton) ||
-                    ReferenceEquals(_overlays.PopupOwner, SourceButton) && Bar.OverflowedItems.Contains(SourceButton))
-                    _restoreDetailsFocus = true;
-            }
-            Bar.OverflowChanged += OverflowChanged; Own(new Release(() => Bar.OverflowChanged -= OverflowChanged));
-            void Attachment() { if (!IsAttached) _restoreDetailsFocus = false; }
-            AttachmentChanged += Attachment;
-            Own(new Release(() => { AttachmentChanged -= Attachment; _restoreDetailsFocus = false; }));
-            DataContext = model;
-            SetContent(Bar); this.WithViewStyle(style);
-            model.PropertyChanged += Changed; Own(new Release(() => model.PropertyChanged -= Changed));
-            UpdateKind();
-        }
-        catch (Exception original)
+            var summary = ui.Create(Segments, (UiSymbol.Check, "Состояние редактора · открыть сведения"))
+                .Named("SummaryButton").Bind(Text.ValueProperty, model, x => x.Summary)
+                .Bind(SegmentButton.KindProperty, model, x => x.Kind)
+                .OnActivated((button, input) => Open(input, button, preview: false));
+            var cancel = ui.Create(Segments, (UiSymbol.Close, "Отменить текущую операцию"))
+                .Named("CancelButton").Value("Отмена")
+                .Bind(UiProperties.Visible, model, x => x.CanCancel).Bind(UiProperties.Enabled, model, x => x.CanCancel)
+                .OnClick(() => { _ = Observe(model.CancelAsync()); });
+            var entities = ui.Create(Labels, UiSymbol.Objects).Named("Entities").Bind(Text.ValueProperty, model, x => x.EntityText);
+            var preview = ui.Create(Segments, (UiSymbol.Preview, "Управление Edit Preview"))
+                .Named("PreviewButton").Bind(Text.ValueProperty, model, x => x.PreviewSummary)
+                .OnActivated((button, input) => Open(input, button, preview: true));
+            var source = ui.Create(Segments, (UiSymbol.Build, "Состояние исходников"))
+                .Named("SourceButton").Bind(Text.ValueProperty, model, x => x.SourceSummary)
+                .Bind(UiProperties.Visible, model, x => x.HasSource)
+                .Bind(SegmentButton.KindProperty, model, x => x.SourceKind)
+                .OnActivated((button, input) => Open(input, button, preview: false));
+            var details = ui.Create(Details).Named("DetailsButton").OnActivated((button, input) => Open(input, button, preview: false));
+            return ui.Create(Layout, new BarParts(summary, cancel, [entities, preview, source], details)).Named("Bar");
+        });
+        this.WithViewStyle(style);
+    }
+
+    /// <inheritdoc />
+    protected override void OnContentPrepared()
+    {
+        var bar = this.Bar;
+        var preview = this.PreviewButton;
+        var source = this.SourceButton;
+        void OverflowChanged()
         {
-            try { Dispose(); } catch (Exception cleanup) { throw new AggregateException(original, cleanup); }
-            throw;
+            if (_overlays.Popup is { } popup && _overlays.PopupOwner is { } owner &&
+                (ReferenceEquals(owner, preview) || ReferenceEquals(owner, source)) && bar.OverflowedItems.Contains(owner))
+                _pendingOverflow = (popup, owner);
         }
+        void Attachment() { if (!IsAttached) _pendingOverflow = null; }
+        bar.OverflowChanged += OverflowChanged;
+        AttachmentChanged += Attachment;
+        Own(new Release(() => { bar.OverflowChanged -= OverflowChanged; AttachmentChanged -= Attachment; }));
+        this.ObservePropertyChanged(_model, Changed, UpdateBackdrop);
     }
     private void Changed(object? sender, PropertyChangedEventArgs args)
-    { if (args.PropertyName is nameof(IEditorStatusBarViewModel.Kind) or nameof(IEditorStatusBarViewModel.HasError) or
-        nameof(IEditorStatusBarViewModel.SourceKind) or nameof(IEditorStatusBarViewModel.HasSource)) Dispatch(UpdateKind); }
-    private void UpdateKind()
     {
-        ((SegmentButton)SummaryButton).Symbol = _model.Kind switch
-        {
-            EditorStatusKind.Busy => UiSymbol.Busy, EditorStatusKind.Error or EditorStatusKind.Waiting => UiSymbol.Warning,
-            EditorStatusKind.Paused => UiSymbol.Pause, EditorStatusKind.Running => UiSymbol.Play, _ => UiSymbol.Check
-        };
-        ((SegmentButton)SummaryButton).Kind = _model.Kind;
-        ((SegmentButton)SourceButton).Kind = _model.SourceKind;
-        ((SegmentButton)SourceButton).Symbol = _model.SourceKind == EditorStatusKind.Busy ? UiSymbol.Busy :
-            _model.SourceKind == EditorStatusKind.Waiting ? UiSymbol.Warning : UiSymbol.Build;
-        Bar.KeepBackdropVisible = KeepsBackdropVisible;
+        if (string.IsNullOrEmpty(args.PropertyName) || args.PropertyName is nameof(IEditorStatusBarViewModel.Kind) or
+            nameof(IEditorStatusBarViewModel.HasError) or nameof(IEditorStatusBarViewModel.SourceKind) or nameof(IEditorStatusBarViewModel.HasSource))
+            UpdateBackdrop();
     }
+    private void UpdateBackdrop() => this.Bar.KeepBackdropVisible = KeepsBackdropVisible;
     private void Open(IInputContext context, Element trigger, bool preview)
     {
-        if (ReferenceEquals(_overlays.PopupOwner, trigger)) { _overlays.Close(); Bar.KeepBackdropVisible = KeepsBackdropVisible; return; }
+        if (ReferenceEquals(_overlays.PopupOwner, trigger)) { _overlays.Close(); this.Bar.KeepBackdropVisible = KeepsBackdropVisible; return; }
         var popup = _popups.Create(new(preview)) ?? throw new InvalidOperationException("Status popup factory returned null.");
         var anchor = new Rect(trigger.Bounds.X, Bounds.Y, trigger.Bounds.Width, Bounds.Height);
-        try { _overlays.Open(trigger, popup, anchor, context, trigger); popup.FocusFirst(context); Bar.KeepBackdropVisible = KeepsBackdropVisible; }
-        catch { if (popup.Parent == null && !popup.IsDisposed) popup.Dispose(); throw; }
+        try { _overlays.Open(trigger, popup, anchor, context, trigger); popup.FocusFirst(context); this.Bar.KeepBackdropVisible = KeepsBackdropVisible; }
+        catch (Exception original)
+        {
+            if (popup.Parent == null && !popup.IsDisposed)
+                try { popup.Dispose(); }
+                catch (Exception cleanup) { throw new AggregateException(original, cleanup); }
+            throw;
+        }
     }
     /// <inheritdoc />
     public bool PreviewInput(UiInput input, IInputContext context)
@@ -129,27 +134,26 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
     private sealed class Release(Action release) : IDisposable { public void Dispose() => release(); }
     internal sealed class DetailsAction : IconButton
     {
-        private IInputContext? _context;
-        private readonly Action<IInputContext, Element> _action;
-        public DetailsAction(Action<IInputContext, Element> action) : base(UiSymbol.Info, "Сведения о редакторе")
-        { _action = action; Clear(UiProperties.Width); Clear(UiProperties.Height); }
+        public DetailsAction() : base(UiSymbol.Info, "Сведения о редакторе")
+        { Clear(UiProperties.Width); Clear(UiProperties.Height); }
         protected override float ThemeBorderWidth => 0;
         protected override Color ThemeBackground => IsPressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Color.Transparent;
-        public override bool HandleInput(UiInput input, IInputContext context)
-        { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
-        protected override void Activate() => _action(_context!, this);
     }
     internal sealed class SegmentButton : Button
     {
-        private IInputContext? _context;
-        private UiSymbol _symbol;
-        private readonly Action<IInputContext, Element> _action;
-        public SegmentButton(UiSymbol symbol, string name, Action<IInputContext, Element> action)
-        { _symbol = symbol; AccessibleName = name; _action = action; }
-        private EditorStatusKind _kind;
-        public EditorStatusKind Kind { set { if (_kind != value) { VerifyAccess(); _kind = value; Invalidate(); } } }
-        public UiSymbol Symbol { get => _symbol; set { if (_symbol != value) { VerifyAccess(); _symbol = value; Invalidate(); } } }
-        protected override Color ThemeForeground => EditorStatusBarViewStyle.StatusColor(Theme, _kind);
+        internal static readonly UiProperty<EditorStatusKind> KindProperty = new("Kind", EditorStatusKind.Ready);
+        private readonly UiSymbol _symbol;
+        public SegmentButton(UiSymbol symbol, string name) { _symbol = symbol; AccessibleName = name; }
+        public UiSymbol Symbol => (_symbol, Get(KindProperty)) switch
+        {
+            (UiSymbol.Check or UiSymbol.Build, EditorStatusKind.Busy) => UiSymbol.Busy,
+            (UiSymbol.Check, EditorStatusKind.Error or EditorStatusKind.Waiting) or
+                (UiSymbol.Build, EditorStatusKind.Waiting) => UiSymbol.Warning,
+            (UiSymbol.Check, EditorStatusKind.Paused) => UiSymbol.Pause,
+            (UiSymbol.Check, EditorStatusKind.Running) => UiSymbol.Play,
+            _ => _symbol
+        };
+        protected override Color ThemeForeground => EditorStatusBarViewStyle.StatusColor(Theme, Get(KindProperty));
         protected override float ThemeBorderWidth => 0;
         protected override Thickness ThemePadding => new(4, 2, 4, 2);
         protected override Color ThemeBackground => Color.Transparent;
@@ -162,10 +166,7 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         private ITextLayoutService? _text;
         internal float LabelWidth => LabelSize.Width;
         internal string DisplayText { get; private set; } = "";
-        protected override void ArrangeCore(Rect area) => DisplayText = FitSegment(this, area.Width, _text);
-        public override bool HandleInput(UiInput input, IInputContext context)
-        { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
-        protected override void Activate() => _action(_context!, this);
+        protected override void ArrangeCore(Rect area) => DisplayText = FitSingleLine(_text, area.Width - 20);
     }
     internal sealed class SegmentLabel(UiSymbol symbol) : Text
     {
@@ -174,19 +175,6 @@ public sealed class EditorStatusBarView : View<IEditorStatusBarViewModel>, IUiIn
         { _text = text; var size = base.MeasureCore(available, text); return new(size.Width + 20, Math.Max(14, size.Height)); }
         internal UiSymbol Symbol { get; } = symbol;
         internal string DisplayText { get; private set; } = "";
-        protected override void ArrangeCore(Rect area) => DisplayText = FitSegment(this, area.Width, _text);
-    }
-    private static string FitSegment(Text element, float areaWidth, ITextLayoutService? layout)
-    {
-        var width = Math.Max(0, areaWidth - 20);
-        var display = element.Value;
-        if (layout != null && layout.Measure(display, element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic).Width > width)
-        {
-            var count = display.Length;
-            while (count > 0 && layout.Measure(display[..count] + "…", element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic).Width > width) count--;
-            if (count > 0 && char.IsHighSurrogate(display[count - 1])) count--;
-            display = count == 0 ? "" : display[..count] + "…";
-        }
-        return display;
+        protected override void ArrangeCore(Rect area) => DisplayText = FitSingleLine(_text, area.Width - 20);
     }
 }

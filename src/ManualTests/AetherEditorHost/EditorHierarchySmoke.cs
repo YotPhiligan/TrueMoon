@@ -130,12 +130,13 @@ internal static class EditorHierarchySmoke
             await ui.InvokeAsync(() => { ui.Focus(tree); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Z, Control: true)); }).WaitAsync(token);
             await Until(() => Parent() == parent && !document.Read().IsDirty);
             await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, view.StatusBar!.PreviewButton)).WaitAsync(token);
-            await Until(() => view.Overlays.Popup is EditorStatusPopupView && !ui.NeedsUpdate);
-            await ui.InvokeAsync(() =>
+            await Until(() =>
             {
-                EditorHeaderSmoke.Click(ui, ((EditorStatusPopupView)view.Overlays.Popup!).StartPreview);
+                if (view.Overlays.Popup is not EditorStatusPopupView popup || ui.NeedsUpdate) return false;
+                EditorHeaderSmoke.Click(ui, popup.StartPreview);
                 ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape));
-            }).WaitAsync(token);
+                return true;
+            });
             await Until(() => preview.Read() is { Busy: false, Presented: { } stamp } &&
                 stamp.Revision == document.Read().Content!.Document.Revision && engine.Preview.LastPresented?.Document == stamp);
             await Capture("hierarchy-preview.png", requireFrame: true);

@@ -11,14 +11,13 @@ public sealed class EditorStatusPopupViewStyle : IViewStyle<EditorStatusPopupVie
     public void Configure(IViewStyleBuilder<EditorStatusPopupView> styles)
     {
         styles.Root().Set(UiProperties.Width, 520f).Padding(10).BorderWidth(1);
-        styles.Part(view => view.Body).Spacing(8);
+        styles.Role(EditorStatusPopupViewRoles.Body).Spacing(8);
         styles.Part(view => view.Title).FontSize(14);
         // Display rows stay compact; the readonly diagnostic keeps its own selection/scroll.
         styles.Role(Row).FontSize(12);
-        styles.Part(view => view.PreviewDetails).FontSize(12);
         styles.Part(view => view.StartPreview).FontSize(12).Tone(ControlTone.Accent);
         styles.Part(view => view.StopPreview).FontSize(12);
-        styles.Part(view => view.PreviewActions).Spacing(8);
+        styles.Role(EditorStatusPopupViewRoles.PreviewActions).Spacing(8);
         styles.Part(view => view.ReimportActions).Spacing(4);
         styles.Part(view => view.ReadModelCatalog).FontSize(12);
         styles.Part(view => view.ModelCatalogRows).Spacing(2);

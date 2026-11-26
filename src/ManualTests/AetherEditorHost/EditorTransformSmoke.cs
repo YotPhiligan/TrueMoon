@@ -160,10 +160,14 @@ internal static class EditorTransformSmoke
         {
             // As with the header menu, native focus loss may dismiss a directed popup.
             // Hold only its disclosure; the application Start/Stop action below executes once.
-            await Until(() => view.Overlays.Popup is EditorStatusPopupView && !ui.NeedsUpdate,
-                () => { if (view.Overlays.Popup == null) ClickInput(view.StatusBar!.PreviewButton); });
-            var popup = (EditorStatusPopupView)view.Overlays.Popup!;
-            await Click(start ? popup.StartPreview : popup.StopPreview);
+            await Until(() =>
+            {
+                if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup) return false;
+                var action = start ? popup.StartPreview : popup.StopPreview;
+                if (!action.IsEffectivelyEnabled || action.Bounds.Width <= 0) return false;
+                ClickInput(action);
+                return true;
+            }, () => { if (view.Overlays.Popup == null) ClickInput(view.StatusBar!.PreviewButton); });
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape))).WaitAsync(token);
         }
         async Task Doc(DocumentCommand command, string path = "")

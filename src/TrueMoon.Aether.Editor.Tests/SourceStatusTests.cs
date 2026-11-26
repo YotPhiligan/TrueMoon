@@ -91,10 +91,11 @@ public sealed class SourceStatusTests
         Assert.Equal(view.Theme.Focus, sourceButton.Foreground);
         h.Content.Items.Remove(view); Assert.False(view.IsAttached);
         view.Dispose(); h.Refresh(); Assert.Equal(EditorSourceState.Changed, h.Watch.Read().State);
-        using var recreated = h.CreateView(); Assert.NotSame(sourceButton, recreated.SourceButton);
+        using var recreated = h.CreateView();
         h.Content.Add(recreated);
         try
         {
+            Assert.NotSame(sourceButton, recreated.SourceButton);
             ui.Update(); Assert.Equal(h.Status.SourceSummary, recreated.SourceButton.Value);
             Assert.Equal(EditorSourceState.Changed, h.Model.Source!.State);
         }

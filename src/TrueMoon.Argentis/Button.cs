@@ -33,10 +33,18 @@ public class Button : Text
     public override bool Focusable => true;
     /// <summary>Raised once per completed activation.</summary>
     public event Action? Click;
+    /// <summary>Raised for a completed routed activation with the input services borrowed for this call.</summary>
+    [FluentEvent("button")]
+    public event Action<Button, IInputContext>? Activated;
     /// <summary>Whether an activation is in progress.</summary>
     public bool IsPressed => _pressed;
-    /// <summary>Invokes the button action.</summary>
-    protected virtual void Activate() => Click?.Invoke();
+    /// <summary>Invokes the context-free click and the routed activation handlers.</summary>
+    /// <param name="context">Input services for the current activation; handlers must not retain it.</param>
+    protected virtual void Activate(IInputContext context)
+    {
+        Click?.Invoke();
+        Activated?.Invoke(this, context);
+    }
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
@@ -61,13 +69,13 @@ public class Button : Text
         if (input.Kind == InputKind.PointerUp && input.Button == 0 && _pressed)
         {
             _pressed = false; context.ReleaseCapture(this); Invalidate();
-            if (Bounds.Contains(input.X, input.Y)) Activate();
+            if (Bounds.Contains(input.X, input.Y)) Activate(context);
             return true;
         }
         if (input.Kind == InputKind.KeyDown && input.Key is UiKey.Enter or UiKey.Space)
         { _pressed = true; Invalidate(); return true; }
         if (input.Kind == InputKind.KeyUp && input.Key is UiKey.Enter or UiKey.Space && _pressed)
-        { _pressed = false; Invalidate(); Activate(); return true; }
+        { _pressed = false; Invalidate(); Activate(context); return true; }
         return false;
     }
     /// <inheritdoc />
@@ -76,6 +84,6 @@ public class Button : Text
     public override void Dispose()
     {
         try { base.Dispose(); }
-        finally { if (IsDisposed) Click = null; }
+        finally { if (IsDisposed) { Click = null; Activated = null; } }
     }
 }

@@ -373,17 +373,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
             _inkCenter = ink.Y + ink.Height / 2;
             return base.MeasureCore(available, text);
         }
-        protected override void ArrangeCore(Rect area)
-        {
-            _display = Value;
-            if (_text == null || _text.Measure(_display, FontSize, FontFamily, FontWeight, FontItalic).Width <= area.Width) return;
-            const string ellipsis = "…";
-            if (_text.Measure(ellipsis, FontSize, FontFamily, FontWeight, FontItalic).Width > area.Width) { _display = ""; return; }
-            var count = Value.Length;
-            while (count > 0 && _text.Measure(Value[..count] + ellipsis, FontSize, FontFamily, FontWeight, FontItalic).Width > area.Width) count--;
-            if (count > 0 && char.IsHighSurrogate(Value[count - 1])) count--;
-            _display = Value[..count] + ellipsis;
-        }
+        protected override void ArrangeCore(Rect area) => _display = FitSingleLine(_text, area.Width);
         internal string DisplayText => _display;
         internal float InkCenter => _inkCenter ?? FontSize / 2;
     }

@@ -207,13 +207,14 @@ internal static class EditorDocumentSmoke
                 var status = view.StatusBar?.DataContext as EditorStatusBarViewModel;
                 var count = $"{expectedEntities} объектов";
                 if (workspace.EntityCount != expectedEntities) return;
+                var boundStatus = view.Status.Value;
                 if (status != null)
                 {
-                    if (status.Summary != view.Status.Value || status.EntityText != count ||
-                        ((Text)view.StatusBar!.Entities).Value != count) return;
+                    if (status.Summary != boundStatus || status.EntityText != count ||
+                        view.StatusBar!.Entities.Value != count) return;
                 }
-                else if (shell.StatusText != view.Status.Value ||
-                    !view.Status.Value.EndsWith(" " + count, StringComparison.Ordinal)) return;
+                else if (shell.StatusText != boundStatus ||
+                    !boundStatus.EndsWith(" " + count, StringComparison.Ordinal)) return;
                 window.FramePresented -= Presented;
                 try
                 {
@@ -221,7 +222,7 @@ internal static class EditorDocumentSmoke
                     using var image = current.ReadbackOpenGLImage(); using var data = image.Encode(SKEncodedImageFormat.Png, 100);
                     using var output = File.Create(Path.Combine(directory, name)); data.SaveTo(output); captures.Add(name); completion.TrySetResult();
                     presentations.Add(new { Name = name, workspace.EntityCount, shell.StatusText,
-                        BoundStatus = view.Status.Value, BoundEntityCount = status?.EntityText });
+                        BoundStatus = boundStatus, BoundEntityCount = status?.EntityText });
                 }
                 catch (Exception error) { completion.TrySetException(error); }
             }

@@ -18,73 +18,58 @@ public sealed class EditorTransformView : View<IEditorInspectorViewModel>
     public static ViewStyleRole<Text> LabelRole { get; } = new("TransformLabel");
     /// <summary>Gets numeric text boxes.</summary>
     public static ViewStyleRole<TextBox> InputRole { get; } = new("TransformInput");
-    /// <summary>Gets field-local validation labels.</summary>
-    public static ViewStyleRole<Text> ErrorRole { get; } = new("TransformError");
-    /// <summary>Gets the stable inputs by property key.</summary>
+    /// <summary>Gets retained numeric inputs by property key after the first attachment.</summary>
     public IReadOnlyDictionary<string, TextBox> Fields => _fields;
-    /// <summary>Gets the main form stack.</summary>
-    public VStack Form { get; } = new VStack();
-    /// <summary>Gets the draft action row.</summary>
-    public HStack Actions { get; } = new HStack();
-    /// <summary>Gets the shared history action row.</summary>
-    public HStack History { get; } = new HStack();
-    /// <summary>Gets preview controls.</summary>
-    public HStack PreviewActions { get; } = new HStack();
-    /// <summary>Gets the explicit commit button.</summary>
-    public Button Apply { get; }
-    /// <summary>Gets the draft cancellation button.</summary>
-    public Button Cancel { get; }
-    /// <summary>Gets Undo.</summary>
-    public Button Undo { get; }
-    /// <summary>Gets Redo.</summary>
-    public Button Redo { get; }
-    /// <summary>Gets preview start/retry.</summary>
-    public Button ShowPreview { get; }
-    /// <summary>Gets preview stop.</summary>
-    public Button StopPreview { get; }
-    /// <summary>Gets mutation diagnostics.</summary>
-    public Text Error { get; }
-    /// <summary>Gets actual preview revision/activity.</summary>
-    public Text PreviewStatus { get; }
-    /// <summary>Builds the stable form on the UI owner thread.</summary>
+    /// <summary>Declares the retained form with inline preview controls.</summary>
     /// <param name="model">Borrowed model.</param><param name="style">Borrowed scoped style.</param>
     public EditorTransformView(IEditorInspectorViewModel model, IViewStyle<EditorTransformView> style)
         : this(model, style, true) { }
 
-    /// <summary>Creates the form with optional legacy inline preview controls.</summary>
+    /// <summary>Declares the retained form and its optional inline preview controls.</summary>
+    /// <param name="model">Borrowed model.</param>
+    /// <param name="style">Borrowed scoped style applied on first attachment.</param>
+    /// <param name="showPreviewControls">Whether this form, rather than the host, exposes preview actions and status.</param>
     public EditorTransformView(IEditorInspectorViewModel model, IViewStyle<EditorTransformView> style, bool showPreviewControls)
     {
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style); _model = model;
-        try
+        Content(model, ui =>
         {
-            DataContext = model;
-            Form.Add(new Text("Transform · десятичная точка"));
+            var form = ui.VStack(ui.Text("Transform · десятичная точка")).WithRole(EditorTransformViewRoles.Form);
             foreach (var field in model.Fields)
             {
-                var input = new TextBox().WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, field, x => x.DisplayValue)
-                    .Bind(UiProperties.Enabled, model, x => x.CanEdit).Bind(UiProperties.AccessibleName, field, x => x.InputAccessibleName)
-                    .Bind(UiProperties.HasError, field, x => x.HasError).Bind(UiProperties.ErrorMessage, field, x => x.Error);
-                _fields.Add(field.Key, input);
-                Form.Add(new HStack().WithRole(FieldRole).WithChildren(new Text().WithRole(LabelRole).BindText(field, x => x.DisplayLabel), input));
+                var input = ui.TextBox().WithRole(InputRole).BindValueTwoWay(field, x => x.DisplayValue)
+                    .Bind(UiProperties.Enabled, model, x => x.CanEdit)
+                    .Bind(UiProperties.AccessibleName, field, x => x.InputAccessibleName)
+                    .Bind(UiProperties.HasError, field, x => x.HasError)
+                    .Bind(UiProperties.ErrorMessage, field, x => x.Error);
+                _fields.Add(field.Key, input.Element);
+                form.Element.Add(ui.HStack(
+                    ui.Text().WithRole(LabelRole).Bind(Text.ValueProperty, field, x => x.DisplayLabel),
+                    input).WithRole(FieldRole));
             }
-            Apply = new Button("Применить").Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply);
-            Cancel = new Button("Отменить").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel);
-            Undo = new Button("Undo").Bind(UiProperties.Enabled, model, x => x.CanUndo).OnClick(model.Undo);
-            Redo = new Button("Redo").Bind(UiProperties.Enabled, model, x => x.CanRedo).OnClick(model.Redo);
-            ShowPreview = new Button("Preview").Bind(UiProperties.Enabled, model, x => x.CanPreview).OnClick(model.ShowPreview);
-            StopPreview = new Button("Стоп").Bind(UiProperties.Enabled, model, x => x.CanStopPreview).OnClick(() => { _ = Observe(model.StopPreviewAsync()); });
-            Error = new Text().BindText(model, x => x.ErrorText);
-            PreviewStatus = new Text().BindText(model, x => x.PreviewText);
-            PreviewActions.IsVisible = showPreviewControls; PreviewStatus.IsVisible = showPreviewControls;
-            Actions.WithChildren(Apply, Cancel); History.WithChildren(Undo, Redo); PreviewActions.WithChildren(ShowPreview, StopPreview);
-            Form.WithChildren(Actions, History, Error, PreviewActions, PreviewStatus);
-            SetContent(Form); this.WithViewStyle(style);
-        }
-        catch (Exception original)
-        {
-            try { Dispose(); } catch (Exception cleanup) { throw new AggregateException(original, cleanup); }
-            throw;
-        }
+
+            form.WithChildren(
+                ui.HStack(
+                    ui.Button("Применить").Named("Apply").Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply),
+                    ui.Button("Отменить").Named("Cancel").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel))
+                    .WithRole(EditorTransformViewRoles.ActionRow),
+                ui.HStack(
+                    ui.Button("Undo").Named("Undo").Bind(UiProperties.Enabled, model, x => x.CanUndo).OnClick(model.Undo),
+                    ui.Button("Redo").Named("Redo").Bind(UiProperties.Enabled, model, x => x.CanRedo).OnClick(model.Redo))
+                    .WithRole(EditorTransformViewRoles.ActionRow),
+                ui.Text().Named("Error").Bind(Text.ValueProperty, model, x => x.ErrorText));
+            if (showPreviewControls)
+                form.WithChildren(
+                    ui.HStack(
+                        ui.Button("Preview").Named("ShowPreview").Bind(UiProperties.Enabled, model, x => x.CanPreview).OnClick(model.ShowPreview),
+                        ui.Button("Стоп").Named("StopPreview").Bind(UiProperties.Enabled, model, x => x.CanStopPreview)
+                            .OnClick(() => { _ = Observe(model.StopPreviewAsync()); }))
+                        .Named("PreviewActions").WithRole(EditorTransformViewRoles.ActionRow),
+                    ui.Text().Named("PreviewStatus").WithRole(EditorTransformViewRoles.PreviewStatus)
+                        .Bind(Text.ValueProperty, model, x => x.PreviewText));
+            return form;
+        });
+        this.WithViewStyle(style);
     }
     private static async Task Observe(Task work) { try { await work.ConfigureAwait(false); } catch { /* Error is retained by the preview coordinator. */ } }
     /// <summary>Routes explicit Transform/history shortcuts. Plain Ctrl+Z in a TextBox is left to the focused control.</summary>

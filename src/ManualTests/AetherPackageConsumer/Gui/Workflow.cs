@@ -611,9 +611,21 @@ internal static class Workflow
         async Task StartPreview()
         {
             Progress("Start preview");
-            await Click(view.StatusBar!.PreviewButton);
-            await Until(() => view.Overlays.Popup is EditorStatusPopupView && !ui.NeedsUpdate);
-            await Click(((EditorStatusPopupView)view.Overlays.Popup!).StartPreview);
+            await Until(() =>
+            {
+                var button = view.StatusBar!.PreviewButton;
+                if (!Ready(button)) return false;
+                ClickInput(button);
+                return true;
+            });
+            await Until(() =>
+            {
+                if (view.Overlays.Popup is not EditorStatusPopupView popup) return false;
+                var button = popup.StartPreview;
+                if (!Ready(button)) return false;
+                ClickInput(button);
+                return true;
+            });
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape))).WaitAsync(token);
         }
         async Task Preview()

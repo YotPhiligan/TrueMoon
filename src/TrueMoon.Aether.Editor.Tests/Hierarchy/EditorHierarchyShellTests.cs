@@ -87,7 +87,7 @@ public sealed class EditorHierarchyShellTests
             new Factory<EditorTransformView>(() => createdTransform = new(test.Transform, new EditorTransformViewStyle())), false, null,
             new Factory<EditorHierarchyView>(() => null!)));
         Assert.Contains("Hierarchy view factory returned null", error.Message);
-        Assert.True(createdDocument.IsDisposed); Assert.True(createdTransform.IsDisposed); Assert.True(createdTransform.Fields["x"].IsDisposed);
+        Assert.True(createdDocument.IsDisposed); Assert.True(createdTransform.IsDisposed);
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Equal(0, test.Owner.Authoring.Products[0].Disposals);
         Assert.True(test.Model.Move(HierarchyFixture.Child, null)); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
     }

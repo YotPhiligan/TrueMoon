@@ -33,13 +33,15 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
     public static ViewStyleRole<VStack> PropertyRowsRole { get; } = new("PropertyRows");
     private readonly IEditorViewModel _model;
     private readonly Text? _fallbackSceneTitle;
+    private readonly Text? _fallbackStatus;
     private readonly Dictionary<EditorCommand, Button> _commands = [];
     private readonly Dictionary<string, Button> _entities = new(StringComparer.Ordinal);
     public HStack Toolbar { get; } = new HStack();
     public VStack EntityList { get; } = new VStack().WithRole(EntityListRole);
     public ContentControl PropertiesPanel { get; } = new ContentControl();
     public Text Selection { get; }
-    public Text Status { get; }
+    /// <summary>The live summary. The compact status bar prepares its summary on attachment.</summary>
+    public Text Status => StatusBar?.SummaryButton ?? _fallbackStatus!;
     public Text Error { get; }
     /// <summary>The live scene caption. The hierarchy caption is available after attachment.</summary>
     public Text SceneTitle => Hierarchy?.Caption ?? _fallbackSceneTitle!;
@@ -121,8 +123,7 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
             SetContent(Overlays);
             StatusBar = statusBar?.Create(new(Overlays));
             if (statusBar != null && StatusBar == null) throw new InvalidOperationException("Status bar factory returned null.");
-            Status = StatusBar?.SummaryButton ?? new Text().BindText(model, x => x.StatusText);
-            var footer = StatusBar ?? (Element)Status;
+            var footer = (Element?)StatusBar ?? (_fallbackStatus = new Text().BindText(model, x => x.StatusText));
             shell.Add(footer);
             Documents = documents?.Create();
             if (documents != null && Documents == null) throw new InvalidOperationException("Document view factory returned null.");

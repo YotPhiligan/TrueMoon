@@ -1,3 +1,85 @@
+<a id="editor-status-bar-coherence-2026-11-26"></a>
+## 2026-11-26 — согласованность модели и переполнения статус-бара
+
+`1.2611.26.9-alpha`. Статус-бар и popup используют внедрённую из DI
+модель; присваивание `DataContext` не перенаправляет отдельные привязки.
+При переполнении закрытие относится к исходной паре popup/кнопка:
+переключение на другой popup не закрывает его и не отбирает фокус.
+Статусные сегменты и заголовок используют общий механизм сокращения
+текста, не меняя структуру и жизненный цикл заголовка.
+
+- Debug, Windows x64, SDK 11: 95/95 адресных тестов Editor. Проверены смена
+  `DataContext` с маршрутизируемой отменой, замена popup Preview → Source,
+  сохранение фокуса и отрисовка многоточия на граничной ширине.
+- `AetherEditorHost --smoke-documents` прошёл в OpenGL. Пять снимков статус-бара
+  и семь снимков заголовка побайтно совпали со срезом `1.2611.26.8-alpha`.
+  Отчёты: `TestResults/StatusBarPolish-26-9/native/`.
+- `GuiConsumer.csproj` собран из исходников. NuGet- и release-приёмку
+  не запускали.
+
+<a id="editor-status-bar-migration-2026-11-26"></a>
+## 2026-11-26 — статус-бар на Fluent Content
+
+В `1.2611.26.8-alpha` один `Content(...)` создаёт статусные сегменты и
+адаптивную полосу при attach. Именованные части генерируются; типы
+презентеров, аргументы окна и владение popup остаются прежними.
+Явные локальные фабрики позволяют встраивать View без регистрации
+внутренних контролов. Ошибка подготовки возникает при attach, а не при
+создании View; потребитель разрешает части после attach на потоке сессии.
+
+- Debug, Windows x64, SDK 11: 137/137 адресных тестов Editor; после
+  уточнения проверок владения и отказа стиля повторно прошли два
+  затронутых класса (49/49). Стили и очистка проверены на обоих DI-провайдерах.
+- `AetherEditorHost --smoke-documents` прошёл в OpenGL. Все пять
+  `status-*.png` (обычный, hover, Details, светлая тема, Preview)
+  побайтно совпали со срезом `1.2611.26.7-alpha`.
+  Отчёт: `TestResults/EditorStatusBarMigration-26-8/native/status.json`.
+- `GuiConsumer.csproj` собран на исходниках; NuGet- и release-приёмка
+  не запускались.
+
+<a id="editor-status-popup-migration-2026-11-26"></a>
+## 2026-11-26 — статусный popup на Fluent Content
+
+`1.2611.26.7-alpha`, Windows x64 / SDK 11, Debug. Один `Content(...)` готовит
+Details или Preview при attach; `OverlayHost` по-прежнему владеет экземпляром,
+а App — моделью и стилем. Именованные части генерируются, разметка не хранит
+отдельные экземпляры элементов. Строки каталога переставляются через `Move`
+без detach. При повторном attach состояние обновляется из последнего снимка,
+а при отказе стиля неприсоединённый popup освобождается; ошибка очистки
+не скрывает исходную причину.
+
+- 104/104 адресных тестов Editor. `CatalogRows_ReorderingRetainsFocusAndReattachAppliesLatestSelection`
+  проверил идентичность, фокус и выбор; `StyleFailure_DisposesUnpublishedBarOrPopupAndPreservesBorrowedModels`
+  проверил ошибку подготовки и очистку на обоих DI-провайдерах.
+- `AetherEditorHost --smoke-documents` прошёл в OpenGL, включая статусный блок:
+  Details, Preview, смену темы и закрытие. `status-details.png`, `status-light.png`
+  и `status-preview.png` побайтно совпали с проверкой `1.2611.26.5-alpha`.
+  Отчёт: `TestResults/EditorStatusPopupMigration-26-7/native/status.json`.
+- `GuiConsumer.csproj` собран на исходниках; отдельная приёмка NuGet не запускалась.
+
+[Кандидаты для Alloy/Argentis](../alloy/PLAN.md#editor-chrome-ui-findings):
+контекст активации, фабрики внутренних контролов, списки из снимков.
+
+<a id="editor-transform-form-migration-2026-11-26"></a>
+## 2026-11-26 — форма EditorTransformView на Fluent Content
+
+`1.2611.26.6-alpha`, Windows x64 / SDK 11, Debug. Фабрика
+`UseAetherEditorEditing` по-прежнему выбирает режим Preview; форма заимствует
+модель и стиль. При первом attach создаются девять стабильных полей и
+именованные кнопки. Если Preview вынесен в хост, кнопки и подпись не создаются.
+Оформление формы и рядов задают сгенерированные роли; публичные токены для
+строки поля, подписи и ввода сохранены. Удалён неиспользуемый `ErrorRole`:
+диагностику рисует само поле.
+
+59/59 адресных тестов Editor прошли: ввод, Apply/Cancel, Undo/Redo, угловые
+единицы, сохранение черновика и фокуса, экземпляры двух DI-фабрик и cleanup
+при отказе стиля. `RasterPreviewModes_KeepFieldLayoutAndOnlyInlineModePaintsPreviewControls`
+проверил Skia-кадры: координаты полей и Apply совпали, Preview рисуется
+только во встроенном режиме. TRX:
+`TestResults/EditorTransformViewMigration-26-6/transform.trx`.
+Штатный `--smoke-transform` открывает другой экран (`EditorInspectorView`);
+оконный и пакетный прогоны именно этой формы не выполнялись.
+
 <a id="editor-document-view-polish-2026-11-26"></a>
 ## 2026-11-26 — части, команды и фокус панели документов
 
