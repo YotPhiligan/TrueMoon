@@ -18,7 +18,7 @@ public sealed class EditorDiagnosticsViewStyle : IViewStyle<EditorDiagnosticsVie
         styles.Part(view => view.Summary).FontSize(11);
         styles.Part(view => view.Details).FontSize(12).BorderWidth(1);
         styles.Part(view => view.Events).FontSize(12);
-        styles.Part(view => view.ExportPath).Set(UiProperties.Width, 640f).Height(26).Padding(new Thickness(4, 2, 4, 2)).FontSize(12);
+        styles.Part(view => view.ExportPath).Height(26).Padding(new Thickness(4, 2, 4, 2)).FontSize(12);
         styles.Part(view => view.ExportStatus).FontSize(11);
         styles.Part(view => view.ExportPrivacy).FontSize(11);
     }

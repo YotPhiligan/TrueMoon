@@ -8,6 +8,7 @@ namespace TrueMoon.Argentis.Layout;
 public class ScrollViewer : ContentControl
 {
     private float _offset;
+    private bool _scrollToEnd;
     private bool _scrollDragging;
     private float _grab;
     /// <summary>Shows a square scrollbar when content overflows; setting false preserves a wheel-only viewport.</summary>
@@ -32,12 +33,40 @@ public class ScrollViewer : ContentControl
             return new(track.X + inset, track.Y + (track.Height - height) * Offset / Math.Max(1, Extent - track.Height), Math.Max(0, track.Width - inset * 2), height);
         }
     }
-    /// <summary>Scroll offset in logical pixels, clamped during layout.</summary>
-    public float Offset { get => _offset; set { VerifyAccess(); if (!float.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value)); var next = Math.Max(0, value); if (_offset == next) return; _offset = next; Invalidate(Invalidation.Layout); } }
+    /// <summary>Scroll offset in logical pixels, clamped during layout. Setting it cancels a pending scroll to the end.</summary>
+    public float Offset
+    {
+        get => _offset;
+        set
+        {
+            VerifyAccess();
+            if (!float.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value));
+            _scrollToEnd = false;
+            var next = Math.Max(0, value);
+            if (_offset == next) return;
+            _offset = next;
+            Invalidate(Invalidation.Layout);
+        }
+    }
     /// <summary>The full content height.</summary>
     public float Extent { get; private set; }
     /// <inheritdoc />
     public override Rect ChildClipBounds => Bounds.Deflate(Padding).Deflate(new Thickness(0, 0, HasScrollBar ? 10 : 0, 0));
+    /// <summary>Scrolls to the end on the next arrangement, using the measured extent and the padded viewport.</summary>
+    /// <remarks>This is a one-shot request. It does not keep content pinned on subsequent layouts.</remarks>
+    public void ScrollToEnd()
+    {
+        VerifyAccess();
+        if (_scrollToEnd) return;
+        _scrollToEnd = true;
+        Invalidate(Invalidation.Layout);
+    }
+    /// <summary>Cancels a pending end-scroll request without moving the current offset.</summary>
+    public void CancelScrollToEnd()
+    {
+        VerifyAccess();
+        _scrollToEnd = false;
+    }
     /// <summary>Scrolls enough to expose a root-coordinate rectangle, clamping to the current extent.</summary>
     /// <param name="rectangle">The arranged bounds of content to reveal; oversized content aligns at the top.</param>
     public void BringIntoView(Rect rectangle)
@@ -67,7 +96,9 @@ public class ScrollViewer : ContentControl
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
-        _offset = Math.Clamp(_offset, 0, Math.Max(0, Extent - area.Height));
+        var end = Math.Max(0, Extent - area.Height);
+        _offset = _scrollToEnd ? end : Math.Clamp(_offset, 0, end);
+        _scrollToEnd = false;
         Child?.Arrange(new Rect(area.X, area.Y - _offset, Math.Max(0, area.Width - (HasScrollBar ? 10 : 0)), Math.Max(area.Height, Extent)));
     }
     internal bool IsScrollDragging => _scrollDragging;

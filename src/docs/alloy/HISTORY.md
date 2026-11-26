@@ -1,5 +1,18 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="scroll-to-end-and-viewport-2026-11-26"></a>
+## 2026-11-26 — прокрутка до конца и наблюдение resize
+
+`1.2611.26.17-alpha`. `ScrollViewer.ScrollToEnd()` применяет одноразовый запрос
+при arrange по новому extent и видимой области внутри padding. Установка
+`Offset` или `CancelScrollToEnd()` отменяет ожидающий запрос; уже применённое
+смещение отмена не меняет. `UiSession.ViewportChanged` сообщает изменившийся
+viewport после успешного resize, на owner thread и до нового layout.
+
+Debug, .NET 11: 66/66 адресных тестов Alloy. Проверены один layout, padding,
+отмена, отсутствие повторного уведомления и отсутствие события при сбое
+resize. [TRX](../../TestResults/EditorDiagnosticsInteraction-26-17/Alloy.trx).
+
 ## 2026-11-26 — проверка дерева и стартовых свойств Window
 
 `1.2611.26.15-alpha`. В `HostedUiWindow` исходный `Window` остаётся единственным допустимым оконным

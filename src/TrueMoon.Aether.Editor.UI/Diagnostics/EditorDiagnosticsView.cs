@@ -21,41 +21,32 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
     public static ViewStyleRole<Text> LabelRole { get; } = new("DiagnosticLabel");
     public static ViewStyleRole<CheckBox> ExportChoiceRole { get; } = new("DiagnosticExportChoice");
 
+    private static readonly IFactory<ConsoleLayout> Layouts = new Factory<ConsoleLayout>(static () => new());
+
     private readonly DelegateUiCommand _clear;
     private readonly DelegateUiCommand _refreshDetails;
-    private bool _synchronizing, _followPending, _followReady;
+    private bool _synchronizing;
     private EditorDiagnosticMode _appliedMode;
     private bool _presentationPending = true;
     private UiSession? _presentationSession;
+    private Action<UiViewport>? _viewportChanged;
 
     /// <summary>Gets the Clear View button through its retained part.</summary>
     public Button Clear => this.ClearButton;
 
-    /// <summary>Declares the console and its style for first attachment.</summary>
+    /// <summary>Declares the console for first attachment. The model and style are borrowed.</summary>
+    /// <param name="model">The diagnostic presentation used by the console.</param>
+    /// <param name="style">Appearance applied when the content is prepared.</param>
     public EditorDiagnosticsView(IEditorDiagnosticsViewModel model, IViewStyle<EditorDiagnosticsView> style)
-        : this(model)
-    {
-        ArgumentNullException.ThrowIfNull(style);
-        ViewCreation.Prepare(this, style);
-    }
-
-    /// <summary>Creates a console with a borrowed style to apply at attachment.</summary>
-    public static EditorDiagnosticsView Create(IEditorDiagnosticsViewModel model, IViewStyle<EditorDiagnosticsView> style)
-    {
-        ArgumentNullException.ThrowIfNull(style);
-        return ViewCreation.Prepare(new EditorDiagnosticsView(model), style);
-    }
-
-    private EditorDiagnosticsView(IEditorDiagnosticsViewModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(style);
         _clear = new(() => DataContext?.Clear(), () => DataContext?.CanClear == true);
         _refreshDetails = new(() => DataContext?.RefreshDetails(), () => DataContext?.CanRefreshDetails == true);
         Content(model, ui =>
         {
-            var layout = new ConsoleLayout();
-            var root = ui.Create<ContentControl>().Content(layout);
-            layout.SetSections(
+            var layout = ui.Create(Layouts);
+            layout.Element.SetSections(
                 [
                     Row(ui,
                         ui.Text("ДИАГНОСТИКА"),
@@ -110,7 +101,7 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
                         ui.Button("Открыть исходник").Named("OpenSource")
                             .Bind(UiProperties.Enabled, data => data.CanOpenSource)
                             .OnClick(() => DataContext?.OpenSource()),
-                        ui.TextBox().Named("ExportPath").AccessibleName("Путь нового отчёта JSON")
+                        ui.TextBox().Named("ExportPath").AccessibleName("Путь нового отчёта JSON").Fill().MinWidth(0)
                             .BindValueTwoWay(data => data.ExportPath)
                             .Bind(UiProperties.Enabled, data => data.CanChangeExportOptions),
                         ui.Button("Экспорт без текста").Named("Export")
@@ -119,8 +110,9 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
                 ui.VStack(
                     ui.Text().Named("NavigationStatus").WithRole(LabelRole).BindText(data => data.NavigationStatus),
                     ui.Text().Named("ExportStatus").WithRole(LabelRole).BindText(data => data.ExportStatus)));
-            return root;
+            return layout;
         });
+        ViewCreation.Prepare(this, style);
     }
 
     protected override void OnContentPrepared()
@@ -205,7 +197,7 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
         _presentationPending = true;
         if (DataContext is not { } model)
         {
-            _followPending = _followReady = false;
+            this.Scroll.CancelScrollToEnd();
             IsVisible = false;
             this.Events.SetItems([]);
             return;
@@ -232,15 +224,21 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
         };
 
         if (resetScroll) this.Scroll.Offset = 0;
-        _followPending = model.FollowTail && _appliedMode != EditorDiagnosticMode.Health;
-        _followReady = false;
-        if (_followPending) Invalidate();
+        FollowRows(model);
     }
 
     private void ResetPresentation()
     {
+        if (_presentationSession is { } session) session.ViewportChanged -= _viewportChanged;
         _presentationSession = null;
         _presentationPending = true;
+    }
+
+    private void OnViewportChanged(UiViewport _)
+    {
+        if (_presentationSession is not { } session || DataContext is not { } model) return;
+        ObservePresentation(session, model);
+        if (model.IsOpen) FollowRows(model);
     }
 
     private void Synchronize(IEditorDiagnosticsViewModel model)
@@ -250,9 +248,20 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
         {
             this.Events.SetItems(model.Rows.Select(entry => new TreeItem(entry.Id, null, entry.Label, entry.Warning ? UiSymbol.Warning : UiSymbol.Info)));
             SelectVisible(model);
-            if (model.FollowTail && model.Mode != EditorDiagnosticMode.Health) { _followPending = true; _followReady = false; Invalidate(); }
+            FollowRows(model);
         }
         finally { _synchronizing = false; }
+    }
+
+    private void FollowRows(IEditorDiagnosticsViewModel model)
+    {
+        var scroll = this.Scroll;
+        if (!model.FollowTail || model.Mode == EditorDiagnosticMode.Health)
+            scroll.CancelScrollToEnd();
+        else if (model.Mode == EditorDiagnosticMode.Structured)
+            scroll.ScrollToEnd();
+        else
+            scroll.Offset = 0;
     }
 
     private void SelectVisible(IEditorDiagnosticsViewModel model)
@@ -268,23 +277,19 @@ public sealed class EditorDiagnosticsView : View<IEditorDiagnosticsViewModel>, I
         finally { _synchronizing = previous; }
     }
 
-    public bool NeedsFrame => (_followPending || _presentationPending) && IsVisible;
+    public bool NeedsFrame => _presentationPending && IsVisible;
 
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        if (DataContext is not { } model) return;
-        if (context is UiSession ui)
+        if (context is not UiSession session || DataContext is not { } model) return;
+        if (!ReferenceEquals(_presentationSession, session))
         {
-            _presentationSession = ui;
-            _presentationPending = false;
-            ObservePresentation(ui, model);
+            ResetPresentation();
+            _presentationSession = session;
+            session.ViewportChanged += _viewportChanged ??= OnViewportChanged;
         }
-        if (!_followPending || !IsVisible) return;
-        // Participants run before layout. Allow the new row extent to be measured before following it.
-        if (!_followReady) { _followReady = true; Invalidate(Invalidation.Layout); return; }
-        _followPending = false;
-        var scroll = this.Scroll;
-        if (model.FollowTail) scroll.Offset = model.Mode == EditorDiagnosticMode.Structured ? Math.Max(0, scroll.Extent - scroll.Bounds.Height) : 0;
+        _presentationPending = false;
+        ObservePresentation(session, model);
     }
 
     private static void ObservePresentation(UiSession ui, IEditorDiagnosticsViewModel model)

@@ -106,3 +106,14 @@ owns the early editor draft and adopts it into `Child` on first attachment.
 The wrapper style is applied at that point, not when the window factory
 returns. Caption updates observe the borrowed document model only while
 attached and are coalesced on the current UI session.
+
+In `1.2611.26.16-alpha`, `EditorDiagnosticsView` creates its private console layout
+through the Fluent build context, with no intermediate `ContentControl`. Direct
+callers of `EditorDiagnosticsView.Create(model, style)` must rebuild and use
+`new EditorDiagnosticsView(model, style)`. Models and styles remain borrowed;
+part and command contracts are unchanged.
+
+In `1.2611.26.17-alpha`, the diagnostics console updates presentation metadata
+on session resize even while following is paused. Structured follow-to-end uses
+the next layout instead of requesting an extra frame. The export path takes the
+space left by the source and export buttons, rather than a fixed width.

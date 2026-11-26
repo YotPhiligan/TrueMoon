@@ -14,6 +14,11 @@ usual priority. A renderer configured with an explicit file catalog continues to
 use that catalog. Color-theme changes can preserve FontFamily/FontSize/FontWeight/
 FontItalic while replacing the palette.
 
+`ScrollViewer.ScrollToEnd()` requests a one-shot scroll on the next arrangement,
+using the new content extent and the viewport inside padding. Use
+`CancelScrollToEnd()` to drop the request without moving the current offset.
+Setting `Offset` explicitly also supersedes the pending request.
+
 `NumberBox.AdjustmentEnabled` opts into Up/Down stepping and pointer dragging on
 its prefix or geometric marker. Configure NumericKind, Step and inclusive bounds;
 invalid/nonfinite/overflow values are rejected without coercion or clamping.

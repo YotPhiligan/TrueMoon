@@ -23,6 +23,11 @@ child controls and factory-created viewport controllers. Embedded hosts own View
 call `EditorSession.Present` after presentation and drain before context release.
 Selection/camera/draft/history ownership and stale-generation fences remain in adapters.
 
+`UseAetherEditorDiagnostics` retains one App-owned concrete model and an
+overrideable `IFactory<EditorDiagnosticsView>`. The factory hands the model
+and registered style to a parent-owned console without a second DI lifetime
+registration for the presentation interface.
+
 For imported models, register `UseAetherModelSourceCapture()` before Editor. Attach
 the selected generations and their exact frozen render payload to the open document
 with `SceneDocumentSession.SelectModelImportsAsync`. The status popup shows source

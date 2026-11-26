@@ -50,10 +50,12 @@ public sealed class RenderingFailureTests
         Assert.True(root.IsFocused); Assert.True(root.IsPressed); Assert.True(root.IsHovered);
         var error = Failure(); var reports = new List<UiRenderingException>(); var owner = Environment.CurrentManagedThreadId;
         ui.RenderingFailed += failure => { Assert.Equal(owner, Environment.CurrentManagedThreadId); reports.Add(failure); };
+        var viewportChanges = new List<UiViewport>(); ui.ViewportChanged += viewportChanges.Add;
         surface.Error = error; root.Background = new Color(1, 0, 0);
         Assert.Same(error, Assert.Throws<UiRenderingException>(() => { if (resize) ui.Resize(new UiViewport(901, 1100)); else ui.Update(); }));
         Assert.Same(error, ui.RenderingFailure); Assert.True(ui.IsFaulted); Assert.False(ui.IsDisposed);
         Assert.Equal(Viewport, ui.Viewport); Assert.False(root.IsFocused); Assert.False(root.IsPressed); Assert.False(root.IsHovered);
+        Assert.Empty(viewportChanges);
         Assert.False(ui.ReportRenderingFailure(Failure(UiRenderingFailureKind.DeviceLost))); Assert.Single(reports); Assert.Same(error, reports[0]);
         var calls = surface.WorkCalls;
         foreach (Action operation in new Action[] { () => ui.Update(), () => ui.Resize(Viewport), () => ui.HandleInput(new UiInput(InputKind.Text, Text: "x")), () => ui.Post(() => { }), ui.VerifyRendering, () => ui.SetTheme(Theme.Light), () => ui.Focus(root), () => ui.Capture(root), () => ui.GetClipboardText() })

@@ -70,6 +70,9 @@ public sealed class UiSession : IDisposable, IInputContext
     public bool IsFaulted => _renderingFailure != null;
     /// <summary>Raised after disposal; hosting removes the session from its registry.</summary>
     public event Action<UiSession>? Disposed;
+    /// <summary>Raised on the owner thread after a changed viewport has been applied, before its next layout.</summary>
+    /// <remarks>Equal viewports and failed surface resizes do not notify. Handler errors propagate after the resize commits.</remarks>
+    public event Action<UiViewport>? ViewportChanged;
     /// <summary>Reports operational clipboard failures during routed input on the owner thread. Handler errors propagate.</summary>
     public event Action<UiClipboardException>? ClipboardFailed;
     /// <summary>Reports the first terminal graphics failure on the owner thread. Dispose after the failing operation unwinds.</summary>
@@ -330,6 +333,7 @@ public sealed class UiSession : IDisposable, IInputContext
         catch (UiRenderingException error) { ReportRenderingFailure(error); throw; }
         Viewport = viewport; Invalidated(Invalidation.Layout);
         SetDiagnosticState(_diagnostics);
+        ViewportChanged?.Invoke(viewport);
     }
     /// <summary>Applies a theme to the tree.</summary>
     public void SetTheme(Theme theme) { VerifyRendering(); ArgumentNullException.ThrowIfNull(theme); Root.ApplyTheme(theme); }
@@ -581,6 +585,7 @@ public sealed class UiSession : IDisposable, IInputContext
         _participants = []; _inputObservers = [];
         SetDiagnosticState(_diagnostics);
         var handlers = Disposed; Disposed = null; ClipboardFailed = null; RenderingFailed = null;
+        ViewportChanged = null;
         if (handlers != null) foreach (Action<UiSession> handler in handlers.GetInvocationList()) Release(() => handler(this));
         if (errors.Count != 0) throw new AggregateException("UI session cleanup failed.", errors);
     }

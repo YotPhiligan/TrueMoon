@@ -5,6 +5,7 @@ using TrueMoon.Aether.Editor.Tooling.Diagnostics;
 using TrueMoon.Aether.Editor.UI.Diagnostics;
 using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Tooling.Diagnostics;
+using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Diagnostics;
@@ -135,6 +136,46 @@ public sealed class EditorFullDiagnosticReportTests : IDisposable
         Assert.Contains("отменён", view.ExportStatus.Value); Assert.False(File.Exists(model.ExportPath)); Assert.Equal(1100, model.Snapshot().Presentation!.Width);
         Assert.Equal(340, model.Snapshot().Presentation!.Height); Assert.Equal(1.25f, model.Snapshot().Presentation!.Scale);
         void Key() { ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter)); ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Enter)); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NarrowConsole_ExportRemainsReachableByPointerAndKeyboard(bool keyboard)
+    {
+        var archive = new Archive([]) { Hold = true };
+        using var model = new EditorDiagnosticsViewModel(null, new(), new(archive, archive))
+        {
+            IsOpen = true, FollowTail = false, ExportPath = Path.Combine(_directory, "narrow.json")
+        };
+        var view = new EditorDiagnosticsView(model, new EditorDiagnosticsViewStyle());
+        using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(1280, 360));
+        ui.Update();
+        ui.Resize(new(720, 360));
+        ui.Update();
+
+        var bounds = view.Export.Bounds;
+        Assert.True(view.ExportPath.Bounds.Width > 0);
+        Assert.True(bounds.Width > 0 && bounds.X + bounds.Width <= 720);
+        if (keyboard)
+        {
+            ui.Focus(view.ExportPath);
+            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Tab));
+            Assert.True(view.Export.IsFocused);
+            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
+            ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Enter));
+        }
+        else
+        {
+            var x = bounds.X + bounds.Width / 2;
+            var y = bounds.Y + bounds.Height / 2;
+            Assert.True(ui.HandleInput(new(InputKind.PointerDown, x, y)).Handled);
+            Assert.True(ui.HandleInput(new(InputKind.PointerUp, x, y)).Handled);
+        }
+        Assert.True(model.IsExporting);
+        ui.Update();
+        Assert.False(view.Export.IsEnabled);
+        Assert.True(view.CancelExport.IsEnabled);
     }
 
     private static EditorDiagnosticSnapshot Snapshot(params DiagnosticRecord[] records) => new(records, records.Length, 0, 0, 0, true)

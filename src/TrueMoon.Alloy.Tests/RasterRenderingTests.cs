@@ -204,7 +204,16 @@ public sealed class RasterRenderingTests
         using var ui = Create(root); ui.Update();
         using var first = ui.SnapshotRasterImage();
         Assert.Equal(0, Pixel(first, 45, 25)[3]);
+        var changes = new List<UiViewport>();
+        ui.ViewportChanged += viewport =>
+        {
+            Assert.Equal(viewport, ui.Viewport);
+            Assert.True(ui.NeedsRender);
+            changes.Add(viewport);
+        };
         ui.Resize(new UiViewport(120, 80, 2));
+        ui.Resize(new UiViewport(120, 80, 2));
+        Assert.Equal(new UiViewport(120, 80, 2), Assert.Single(changes));
         Assert.True(ui.Update());
         using var second = ui.SnapshotRasterImage();
         Assert.Equal(new Rect(0, 0, 60, 40), root.Bounds);

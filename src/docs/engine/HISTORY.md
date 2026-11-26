@@ -1,3 +1,36 @@
+<a id="editor-diagnostics-interaction-2026-11-26"></a>
+## 2026-11-26 — resize, автопрокрутка и экспорт в консоли Editor
+
+`1.2611.26.17-alpha`. Консоль обновляет метаданные снимка на resize
+текущей сессии независимо от `FollowTail` и отписывается при detach.
+Автопрокрутка Structured применяет `ScrollToEnd()` в ближайшем layout,
+без второго кадра; пауза сохраняет смещение. Поле пути экспорта сжимается,
+оставляя место кнопкам.
+
+Debug, .NET 11: 91/91 тест диагностики. Проверены resize/DPI без экспорта,
+смена сессии, хвост после добавления строк и изменения высоты, а также
+запуск экспорта мышью и через Tab/Enter при ширине 720 в CPU Skia.
+Нативное окно и пакетный профиль не запускались.
+[TRX](../../TestResults/EditorDiagnosticsInteraction-26-17/Aether.Editor.trx).
+
+<a id="editor-diagnostics-fluent-2026-11-26"></a>
+## 2026-11-26 — Fluent-композиция консоли диагностики Editor
+
+`1.2611.26.16-alpha`. `EditorDiagnosticsView` создаёт частный `ConsoleLayout`
+через `ui.Create` с локальной фабрикой. Промежуточный `ContentControl` и
+дублирующий статический `Create` удалены. Разметка и порядок секций сохранены.
+Tooling оставляет явную `IFactory<EditorDiagnosticsView>`: консоль заимствует
+стиль и конкретную App-owned модель, которую также используют сессия и заголовок.
+Второй disposable DI-алиас для модели не добавлен.
+
+Debug, .NET 11: 104/104 теста диагностики и `EditorWindowCompositionTests`.
+`Console_ResizeKeepsEqualColumnsAndClearUsesModeAdmission` проверил геометрию,
+Clear и видимый зазор между колонками в CPU Skia.
+`BothProviders_ResolveLateCollectorAndCreateParentOwnedIndependentViews`
+проверил Cobalt и Microsoft DI. Проверены повторное подключение, фокус и
+откат при ошибке стиля. Нативный и свежий пакетный профили не запускались.
+[TRX](../../TestResults/EditorDiagnosticsFluent-26-16/editor-diagnostics.trx).
+
 <a id="editor-main-window-fluent-2026-11-26"></a>
 ## 2026-11-26 — EditorMainWindow на Fluent Content
 

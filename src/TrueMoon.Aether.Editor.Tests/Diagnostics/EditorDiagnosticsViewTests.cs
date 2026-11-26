@@ -6,6 +6,7 @@ using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
 using System.ComponentModel;
 using System.Reflection;
+using SkiaSharp;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Diagnostics;
@@ -48,10 +49,15 @@ public sealed class EditorDiagnosticsViewTests
         using (var ui = new UiSession(first, new Surface(), new(1280, 360), clipboard))
         {
             firstEvents = first.Events;
-            ui.Update(); ui.Update(); Assert.True(first.Scroll.Offset > 0);
+            ui.Update(); Assert.True(first.Scroll.Offset > 0);
             first.Events.Select("2"); ui.Focus(first.Events); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.C, Control: true)); Assert.Equal(model.Details, clipboard.Text);
-            source.Add(DiagnosticConsoleFixture.Record(101, "event 101")); model.Refresh(); ui.Update(); ui.Update();
-            Assert.Equal(first.Scroll.Extent - first.Scroll.Bounds.Height, first.Scroll.Offset);
+            source.Add(DiagnosticConsoleFixture.Record(101, "event 101")); model.Refresh(); ui.Update();
+            Assert.Equal(first.Scroll.Extent - first.Scroll.ChildClipBounds.Height, first.Scroll.Offset);
+            Assert.False(ui.NeedsUpdate);
+            var beforeResize = first.Scroll.Offset;
+            ui.Resize(new(1280, 300)); ui.Update();
+            Assert.Equal(first.Scroll.Extent - first.Scroll.ChildClipBounds.Height, first.Scroll.Offset);
+            Assert.True(first.Scroll.Offset > beforeResize);
             model.IsOpen = false; ui.Update(); Assert.False(first.IsVisible); model.IsOpen = true; ui.Update(); Assert.True(first.IsVisible); Assert.Equal("2", model.SelectedId);
         }
         Assert.True(first.IsDisposed); Assert.True(firstEvents.IsDisposed); Assert.Equal(0, source.Disposals);
@@ -135,7 +141,7 @@ public sealed class EditorDiagnosticsViewTests
         previous.FollowTail = next.FollowTail = false;
         previous.Refresh();
         next.Refresh();
-        var view = EditorDiagnosticsView.Create(previous, new EditorDiagnosticsViewStyle());
+        var view = new EditorDiagnosticsView(previous, new EditorDiagnosticsViewStyle());
         var root = new Panel().WithChildren(view);
         using var ui = new UiSession(root, new Surface(), new(1280, 360));
         ui.Update();
@@ -234,6 +240,14 @@ public sealed class EditorDiagnosticsViewTests
             Assert.True(left.Height > 0);
             Assert.Equal(view.Summary.Bounds.Y + view.Summary.Bounds.Height, left.Y);
             Assert.Equal(left.Y + left.Height, view.IncludeText.Bounds.Y);
+
+            if (!raster) return;
+            using var image = ui.SnapshotRasterImage();
+            using var pixels = SKBitmap.FromImage(image);
+            var y = (int)(right.Y + right.Height / 2);
+            var gap = pixels.GetPixel((int)right.X - 4, y);
+            var details = pixels.GetPixel((int)(right.X + right.Width * 0.75f), y);
+            Assert.NotEqual(gap, details);
         }
     }
 

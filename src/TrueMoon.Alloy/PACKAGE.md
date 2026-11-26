@@ -35,6 +35,11 @@ frame-lease requirements. Posted work is bounded; scheduling/diagnostics do not
 promise a particular GPU frame rate or release hardware acceptance. External
 graphics resources remain owned by the application that supplied them.
 
+`UiSession.ViewportChanged` reports the committed framebuffer size and DPI scale
+on the owner thread after a successful changed resize, before the next layout.
+Equal values and failed resizes do not notify. Unsubscribe view observers on
+detach if the session can outlive the view.
+
 On the session owner thread, `IInputContext.FocusedElement` returns the current
 eligible keyboard focus target, or `null`. Use `TryFocus(element)` to restore
 focus: an unavailable target returns `false` without moving existing focus.

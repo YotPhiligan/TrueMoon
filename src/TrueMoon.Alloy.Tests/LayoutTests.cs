@@ -201,6 +201,47 @@ public sealed class LayoutTests
     }
 
     [Fact]
+    public void ScrollToEnd_UsesNewExtentAndPaddedViewportInOneUpdate()
+    {
+        var child = new Panel { Height = 250 };
+        var scroll = new ScrollViewer { Padding = new Thickness(0, 5, 0, 7) };
+        scroll.SetContent(child);
+        using var ui = new UiSession(scroll, new LayoutSurface(), new(100, 80));
+        ui.Update();
+
+        scroll.ScrollToEnd();
+        child.Height = 320;
+        ui.Resize(new(100, 100));
+        Assert.True(ui.Update());
+
+        Assert.Equal(232, scroll.Offset);
+        Assert.Equal(93, child.Bounds.Y + child.Bounds.Height);
+        Assert.False(ui.NeedsUpdate);
+
+        child.Height = 380;
+        ui.Update();
+        Assert.Equal(232, scroll.Offset);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ScrollToEnd_CanBeCancelledWithoutMovingTheCurrentOffset(bool setSameOffset)
+    {
+        var scroll = new ScrollViewer { Offset = 24 };
+        scroll.SetContent(new Panel { Height = 250 });
+        using var ui = new UiSession(scroll, new LayoutSurface(), new(100, 80));
+        ui.Update();
+
+        scroll.ScrollToEnd();
+        if (setSameOffset) scroll.Offset = 24;
+        else scroll.CancelScrollToEnd();
+        ui.Update();
+
+        Assert.Equal(24, scroll.Offset);
+    }
+
+    [Fact]
     public void Draw_ChildFillThrows_RestoresEveryClipBeforePropagating()
     {
         using var panel = new Panel();

@@ -3,6 +3,13 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+В `1.2611.26.17-alpha` `ScrollViewer.ScrollToEnd()` учитывает padding при
+arrange, а `UiSession.ViewportChanged` сообщает принятый resize до layout.
+26.11.2026: 66 адресных тестов в Debug.
+[Контракты и результаты](HISTORY.md#scroll-to-end-and-viewport-2026-11-26).
+Свежие пакеты Editor и физический переход между DPI не проверялись этим прогоном.
+[Следующие шаги](PLAN.md#current-ui-queue).
+
 Hosting проверяет запрет вложенных `Window` до native-окна и после подготовки
 отложенного дерева перед attach. Стартовые `Title`/`ClientSize` берутся до attach;
 chrome limits не зависят от отложенного стиля.

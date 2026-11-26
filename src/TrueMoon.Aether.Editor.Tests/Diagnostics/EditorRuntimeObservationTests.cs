@@ -1,4 +1,5 @@
 using TrueMoon.Argentis.Painting;
+using TrueMoon.Argentis.Layout;
 using System.Text.Json;
 using TrueMoon.Aether.Editor.Tooling.Diagnostics;
 using TrueMoon.Aether.Editor.UI.Diagnostics;
@@ -71,6 +72,42 @@ public sealed class EditorRuntimeObservationTests : IDisposable
         using var session = new UiSession(view, surface, new(1280, 360)); session.Update();
         Assert.Contains("actual-GPU", model.Snapshot().Presentation!.Device); Assert.Equal(1, surface.Reads);
         surface.Info = null; view.AdvanceFrame(TimeSpan.Zero, session); Assert.Null(model.Snapshot().Presentation!.Device);
+    }
+
+    [Fact]
+    public void PresentationResize_UpdatesPausedSnapshotAndUnsubscribesFromTheOldSession()
+    {
+        using var model = new EditorDiagnosticsViewModel(null, new(), new()) { IsOpen = true, FollowTail = false };
+        var view = new EditorDiagnosticsView(model, new EditorDiagnosticsViewStyle());
+        var firstRoot = new Panel().WithChildren(view);
+        using var first = new UiSession(firstRoot, new Surface(), new(1280, 360));
+        first.Update();
+
+        first.Resize(new(1100, 340, 1.25f));
+        first.Update();
+        AssertViewport(1100, 340, 1.25f);
+        Assert.False(first.NeedsUpdate);
+
+        Assert.True(firstRoot.Items.Remove(view));
+        using var secondSurface = new Surface();
+        using var second = new UiSession(new Panel().WithChildren(view), secondSurface, new(960, 300, 1.5f));
+        second.Update();
+        AssertViewport(960, 300, 1.5f);
+
+        secondSurface.Info = null;
+        first.Resize(new(600, 240));
+        AssertViewport(960, 300, 1.5f);
+        Assert.Contains("actual-GPU", model.Snapshot().Presentation!.Device);
+
+        second.Resize(new(960, 300, 2f));
+        AssertViewport(960, 300, 2f);
+        Assert.Null(model.Snapshot().Presentation!.Device);
+
+        void AssertViewport(int width, int height, float scale)
+        {
+            var presentation = Assert.IsType<EditorDiagnosticPresentation>(model.Snapshot().Presentation);
+            Assert.Equal((width, height, scale), (presentation.Width, presentation.Height, presentation.Scale));
+        }
     }
 
     private static ProcessDiagnosticSnapshot Process(long failures)
