@@ -7,6 +7,7 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
+using TrueMoon.Argentis.Styling;
 using TrueMoon.Cobalt;
 using TrueMoon.Extensions.DependencyInjection;
 
@@ -46,7 +47,11 @@ try
     var builder = App.Builder(options => { if (provider == "di") options.UseDI(); });
     builder.Setup(context =>
     {
-        context.Services(services => services.Singleton<ConsumerModel>().View<ConsumerView, ConsumerStyle>());
+        context.Services(services => services.Singleton<ConsumerModel>()
+            .View<ConsumerChild, ConsumerChildStyle>()
+            .Singleton<IViewStyle<ConsumerRow>>(_ => new ConsumerRowStyle())
+            .ViewWithArgs<ConsumerRow, ConsumerItem>()
+            .View<ConsumerView, ConsumerStyle>());
         if (backend == "raster")
             context.UseAlloy(options => options.UseSkiaRaster(fonts).UseExternalHost());
         else
@@ -69,6 +74,9 @@ try
         var model = (ConsumerModel)app.Services.GetService(typeof(ConsumerModel))!;
         ownedFactory = factory;
         ownedModel = model;
+        if (app.Services.GetService(typeof(ConsumerChild)) != null || app.Services.GetService(typeof(ConsumerRow)) != null ||
+            app.Services.GetService(typeof(ConsumerItem)) != null || app.Services.GetService(typeof(IFactory<ConsumerRow>)) != null)
+            throw new InvalidOperationException("A concrete view, runtime argument or untyped row factory leaked into DI.");
         if (factory.ActiveSessionCount != 0 || model.SubscriptionCount != 0)
             throw new InvalidOperationException("App Build created UI sessions or bindings eagerly.");
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));

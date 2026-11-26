@@ -1,5 +1,154 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="hierarchy-action-icons-2026-11-26"></a>
+## UIA1f.12 — локальное упрощение панели иерархии, 26.11.2026
+
+В `1.2611.26.1-alpha` общий приватный метод `CreateActionIcon` использован
+для пяти кнопок `EditorHierarchyView`: создание иконки, роль, снятие локальных
+размеров и префикс семантического ID. Имена частей, команды, callback и порядок
+остались в Fluent-дереве. Генераторы, API и динамические списки не менялись.
+Debug, Windows x64, SDK 11: фильтр `EditorHierarchyViewTests|EntityOperationsTests`
+в `TrueMoon.Aether.Editor.Tests` — 32 прошли, 0 падений, 0 пропусков.
+Это проверка рефакторинга на исходниках, не приёмка пакетов `.26`.
+
+<a id="uia1-view-packages-2026-11-26"></a>
+## UIA1 — пакетная композиция View, 26.11.2026
+
+Основание `2f31e60`, версия исходников `1.2611.25.20-alpha`, Windows x64,
+SDK `11.0.100`. Собраны девять локальных `.nupkg` версии
+`1.2611.25.20-alpha.ui.20261126080219791`. Независимая Debug-сборка получила
+один Argentis analyzer транзитивно, без `Analyzer` в проекте или `ProjectReference`.
+
+| Конфигурация consumer | Raster | OpenGL |
+|---|---:|---:|
+| Cobalt с анализатором Cobalt | 6 кадров | 20 кадров |
+| Microsoft DI с анализатором Cobalt | 6 кадров | 20 кадров |
+| Microsoft DI без анализатора Cobalt | 6 кадров | 20 кадров |
+
+Во всех случаях оконный корень или raster root создан через фабрику. На первом
+кадре: прямой дочерний View создан своей фабрикой, строка получила конкретный
+объект коллекции, зависимость из DI и отдельно зарегистрированный стиль.
+Перемещение сохранило экземпляр строки и живую привязку, удаление освободило
+строку. После закрытия — 0 сессий, 0 подписок, singleton модели освобождён один раз.
+Положительная проверка стандартного радиуса TextBox/RichTextEditor теперь
+ожидает 5. `CoreBoundaryTests` сохраняет allowlist ссылок CLR, но не требует
+наличия ссылки на `TrueMoon.Contracts`: пакетная зависимость и CLR-ссылка
+не одно и то же. Debug-прогон `TrueMoon.Alloy.Tests` прошёл: 1 266 тестов.
+
+Команда: [`RunPackageSmoke.ps1 -ViewCompositionOnly`](../../ManualTests/AlloyPackageConsumer/README.md#адресная-проверка-композиции-view-uia1).
+Локальный протокол: `src/TestResults/AlloyPackages/run-20261126-080219-766/summary.json`.
+Vulkan, publish, direct renderer и полный alpha-проход не запускались.
+
+<a id="uia1f12-fluent-generation-2026-11-26"></a>
+## UIA1f.12 — исследование генерации для Fluent UI, 26.11.2026
+
+В `EditorHierarchyView` пять кнопок повторяют `IconButton`, общую настройку
+роли/размера и префикс `editor.hierarchy.`. Отличаются иконка, текст, имя,
+семантический суффикс и действие. Первые четыре используют команды, пятая —
+`OnClick(RequestContext)`. Их нельзя заменять соглашением по имени: например,
+`CubeButton`, `editor.hierarchy.create-cube` и `create.cube` — разные контракты.
+Поиск, редактирование, порядок дерева и выбор команд оставлены явно.
+
+```csharp
+// Текущий Fluent
+ui.IconButton(UiSymbol.Add, "Создать объект · Insert").Named("CreateButton")
+    .Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create")
+    .WithCommand(_entityCommands["create.empty"])
+
+// Достаточное упрощение: MakeAction вызывает IconButton,
+// применяет ConfigureActionIcon и добавляет префикс к ID.
+MakeAction(ui, UiSymbol.Add, "Создать объект · Insert", "create")
+    .Named("CreateButton").WithCommand(_entityCommands["create.empty"])
+
+// Вариант прототипа: дерево плюс отдельная типизированная декларация
+CreateAction(ui).Named("CreateButton").WithCommand(_entityCommands["create.empty"])
+
+[HierarchyAction(UiSymbol.Add, "Создать объект · Insert", "create")]
+private static partial UiControl<IconButton, IEditorHierarchyViewModel>
+    CreateAction(IUiBuildContext<IEditorHierarchyViewModel> ui);
+```
+
+| Вариант на тех же пяти кнопках | Строк в дереве | Всего авторских строк |
+|---|---:|---:|
+| Текущий Fluent | 5 | 5 |
+| Типизированный C#-метод | 5 | 7 |
+| Генерация реализаций `partial`-методов | 5 | 17 |
+
+Подсчёт — один вызов на строку, одинаковые layout и тела действий исключены.
+Для генерации ещё 7 общих строк объявления атрибута; реализация генератора
+не включена. C#-метод убирает две цепочки и полный префикс из каждого вызова,
+не разносит индивидуальные метаданные по файлу. Генератор делает сами вызовы
+короче, но переносит метаданные в пять дополнительных деклараций.
+
+| Кандидат | Решение |
+|---|---|
+| Повтор общих параметров иконок | Типизированный C#-метод по необходимости. Оставлять `.Named(...)` и действие в `Content`, чтобы Argentis видел вызов и его тип. |
+| Имена, роли и семантические ID | Сохранить существующие генераторы частей и ролей. Не выводить семантический ID из имени части, роли, иконки или ключа команды. |
+| Динамический список (`ProductsView`, `ProductRowView`) | Оставить `BindItems(items, rows.Create)` и `ViewWithArgs`. Четыре поля показывают полезный контракт: две текстовые проекции, двусторонние число и флаг. Фабрика и DI уже генерируются; `item`, поля и режимы привязки остаются явными. |
+| Fluent-обёртки для свойств | Переиспользовать `FluentTwoWayBinding` там, где тип свойства и направление объявлены явно. Никакого автоматического связывания по имени свойства модели. |
+
+Ограниченный прототип `HierarchyActionGenerator` разработан вне поставляемого
+кода. Его вывод подан во вторую компиляцию NuGet-потребителя рядом с пакетным
+Argentis. Пять вызовов в Roslyn разрешаются в авторские `partial`-объявления
+и сгенерированные тела; переходы в конкретной IDE не проверялись. Дублированный
+суффикс вызвал `UISTUDY01` на декларации. На пяти действиях, 30 тёплых итераций
+`GeneratorDriver`: без правок `Cached` (медиана 0,058 мс), на изменении соседнего
+файла `Cached` (0,101 мс), на изменении метаданных `Modified` (0,142 мс).
+Это время драйвера, а не замер сборки всего редактора.
+
+В Debug на Cobalt/Raster и Microsoft DI/OpenGL проверены имена, порядок, ID,
+размеры от роли, маршрутизация команды и callback, замена контекста и живое
+обновление текста. В том же дереве проверено освобождение дочернего View,
+строк списка и подписок при закрытии. Исходники эксперимента, сравнение,
+binlogs, вывод Roslyn и runtime JSON: `src/TestResults/AlloyFluentStudy`
+(локально, не в Git). **Новый генератор не включён в Argentis**; публичный API
+и версия не изменились, `EditorHierarchyView` не мигрировал.
+
+<a id="uiqa3-visual-states-2026-11-26"></a>
+## UIQA.3 — визуальные состояния инспектора Transform, 26.11.2026
+
+База `2f31e60`, версия `1.2611.25.20-alpha`, исходники, Windows x64,
+SDK 11.0.100, `net11.0`, Debug, `runtime-async=on`. [Команды](../engine/SCENARIO_TESTING.md#editor-visual-states).
+В `Transform_ClipsDraftWrapsErrorsAndMovesVisibleFocus` проверены все шесть
+комбинаций Light/Dark и raster-масштабов 1×, 1,25×, 1,75× на 224×480
+логических единицах. При длинном вводе X прокрутился, пиксели его левого
+отступа и соседнего Y не изменились. Tab перенёс фокус X → Y, контур
+появился на новом поле. Некорректный Y дал однопараграфную диагностику
+с мягким переносом. Apply отказал во вводе, Cancel снял ошибку без изменения
+документа. Вместе с `EditorSemanticInputTests` прошли 9 тестов, 0 падений
+и 0 пропусков; числа подтверждены TRX.
+
+В настоящем окне Editor/OpenGL (1920×1200 px, scale 1,5) в обеих темах
+повторены фокус, Tab, ввод, окрашенный контур и диагностика, недоступный
+Apply и Cancel. App, сессия и проект закрылись; ресурсов, отображений
+и дочерних процессов не осталось. Сверены размер и SHA-256 всех
+36 raster и 10 OpenGL PNG. В raster используется Noto Sans, в окне —
+штатная цепочка системных шрифтов Editor с тем же Noto fallback.
+
+- SHA-256 Noto Sans: `b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5`.
+- SHA-256 native Skia: `1d664ec789d08d769ca3edc00ffb4bbffb36879e5678eae32f7626efcb038d39`.
+- Локальный отчёт и PNG: `src/TestResults/UIQA3-20261126-074659` (не в Git).
+
+Это один профиль Transform, не сравнение эталонов, не приёмка Vulkan,
+IME, OS accessibility, физического ввода или переноса окна между мониторами.
+Поставляемый runtime-код и версия не менялись.
+
+<a id="inspector-property-replacement"></a>
+## UIA1f — замена свойства инспектора по тому же адресу, 26.11.2026
+
+`2f31e60`, `1.2611.25.20-alpha`, Windows x64, .NET 11, Debug. Проекция тестовой
+модели меняет один объект `InspectorProperty`, сохраняя `(ComponentId, key)`.
+В `ReplacingPropertyAtSameAddress_RoutesInputToNewSourceAndPreservesNeighbor`
+растровая `UiSession` проверяет замену числового редактора на числовой и на
+`CheckBox`. В обоих случаях старая строка освобождается, ввод меняет только
+новый объект, а соседний Transform сохраняет строку, фокус, выделение и черновик.
+История документа не меняется. Это проверка базового поведения, не сравнение
+производительности и не проверка миграции схемы документа.
+
+Прошли 18 тестов, 0 падений, 0 пропусков. Команда из `src`:
+`dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -p:NuGetAudit=false --filter "FullyQualifiedName~InspectorReorderTests|FullyQualifiedName~GenericInspectorEditorsTests" --verbosity quiet`.
+Код поставляемых сборок и версия не менялись.
+
 <a id="uia1-view-with-args-2026-11-25"></a>
 ## UIA1 — сгенерированные фабрики строк, 25.11.2026
 

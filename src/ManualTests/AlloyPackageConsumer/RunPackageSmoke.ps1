@@ -1,11 +1,12 @@
 [CmdletBinding()]
-param([string] $RunDirectory, [string] $PackageVersion, [switch] $PresentersOnly)
+param([string] $RunDirectory, [string] $PackageVersion, [switch] $PresentersOnly, [switch] $ViewCompositionOnly)
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
 $trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
 
 
 
 $ErrorActionPreference = 'Stop'
+if ($PresentersOnly -and $ViewCompositionOnly) { throw 'Select only one package smoke profile.' }
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $workspace 'TestResults/AlloyPackages')) + [IO.Path]::DirectorySeparatorChar
 $run = if ($RunDirectory) { [IO.Path]::GetFullPath($RunDirectory) } else {
@@ -24,7 +25,7 @@ $logs = Join-Path $run 'logs'
 foreach ($directory in @($run, $feed, $cache, $logs)) { [IO.Directory]::CreateDirectory($directory) | Out-Null }
 $summary = [ordered]@{
     Completed = $false; Version = $PackageVersion; RunDirectory = $run
-    Profile = $(if ($PresentersOnly) { 'presenters-raster' } else { 'full' })
+    Profile = $(if ($ViewCompositionOnly) { 'view-composition' } elseif ($PresentersOnly) { 'presenters-raster' } else { 'full' })
     TimestampUtc = [DateTime]::UtcNow.ToString('O'); Sdk = (& dotnet --version).Trim()
     OS = [Environment]::OSVersion.VersionString
     Architecture = [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
@@ -293,17 +294,23 @@ try {
         if (!$cobalt) { $properties += @('-p:EnableCobaltGenerator=false', '-p:RequireCobaltGeneration=false') }
         Invoke-DotNet "restore-$variant" (@('restore', $project, '--configfile', (Join-Path $consumer 'NuGet.Config'), '--packages', $cache, '--verbosity', 'quiet') + $properties) | Out-Null
         Verify-Assets $consumer
-        foreach ($configuration in @('Debug', 'Release')) {
+        $configurations = if ($ViewCompositionOnly) { 'Debug' } else { @('Debug', 'Release') }
+        foreach ($configuration in $configurations) {
             Invoke-DotNet "build-$variant-$configuration" (@('build', $project, '--configuration', $configuration, '--no-restore', '--verbosity', 'quiet') + $properties) | Out-Null
             Verify-Generation $consumer $configuration $cobalt
-            $publish = Join-Path $run "publish/$variant/$configuration"
-            Invoke-DotNet "publish-$variant-$configuration" (@('publish', $project, '--configuration', $configuration, '--no-restore', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet') + $properties) | Out-Null
-            foreach ($delivery in @(@{ Name = 'build'; Path = Join-Path $consumer "bin/$configuration/$($trueMoonBuildProfile.Framework)" }, @{ Name = 'publish'; Path = $publish })) {
+            $deliveries = @(@{ Name = 'build'; Path = Join-Path $consumer "bin/$configuration/$($trueMoonBuildProfile.Framework)" })
+            if (!$ViewCompositionOnly) {
+                $publish = Join-Path $run "publish/$variant/$configuration"
+                Invoke-DotNet "publish-$variant-$configuration" (@('publish', $project, '--configuration', $configuration, '--no-restore', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet') + $properties) | Out-Null
+                $deliveries += @{ Name = 'publish'; Path = $publish }
+            }
+            foreach ($delivery in $deliveries) {
                 Verify-Delivery $delivery.Path
                 Remember (Join-Path $delivery.Path 'AlloyPackageConsumer.dll')
                 $providers = if ($cobalt) { @('cobalt', 'di') } else { @('di') }
                 foreach ($provider in $providers) {
-                    foreach ($backend in @('raster', 'opengl', 'vulkan')) {
+                    $backends = if ($ViewCompositionOnly) { @('raster', 'opengl') } else { @('raster', 'opengl', 'vulkan') }
+                    foreach ($backend in $backends) {
                         $name = "$variant-$configuration-$($delivery.Name)-$provider-$backend"
                         $report = Join-Path $run "$name.json"
                         $casePid = Invoke-DotNet $name @((Join-Path $delivery.Path 'AlloyPackageConsumer.dll'), $backend, $report, $provider) 45
@@ -319,6 +326,9 @@ try {
             }
         }
     }
+    if ($ViewCompositionOnly) {
+        if ($summary.Cases.Count -ne 6) { throw 'Incomplete view composition matrix.' }
+    } else {
     # Direct renderer: no App/Hosting, with the same explicit font snapshots.
     $direct = Join-Path $run 'direct-renderer'
     [IO.Directory]::CreateDirectory($direct) | Out-Null
@@ -387,6 +397,7 @@ Console.WriteLine("Direct renderer package: passed; fonts, raster, cleanup and n
         Invoke-DotNet 'restore-without-analyzer' @('restore', $project, '--configfile', (Join-Path $negative 'NuGet.Config'), '--packages', $cache, $versionProperty, '-p:EnableCobaltGenerator=false', '--verbosity', 'quiet') | Out-Null
         Invoke-DotNet 'build-without-analyzer' @('build', $project, '--no-restore', $versionProperty, '-p:EnableCobaltGenerator=false', '--verbosity', 'quiet') 180 $true | Out-Null
         if ($summary.Cases.Count -ne 36 -or $summary.DirectCases.Count -ne 4 -or !$summary.NegativeControl) { throw 'Incomplete package matrix.' }
+    }
     }
     foreach ($source in $summary.SourceFiles) {
         if ((Get-FileHash -LiteralPath (Join-Path $workspace $source.Path)).Hash -ne $source.Sha256) { throw "Source changed: $($source.Path)" }

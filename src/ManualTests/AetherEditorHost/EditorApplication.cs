@@ -28,7 +28,7 @@ namespace TrueMoon.ManualTests.AetherEditorHost;
 
 internal static class EditorApplication
 {
-    internal static async Task RunAsync(EditorLaunchOptions options)
+    internal static async Task RunAsync(EditorLaunchOptions options, bool visualStates = false)
     {
         var runtimeSettings = options.ResolveRuntimeSettings(ConfigurationEnvironment.Capture(
             RuntimeStartupSettings.LegacyValidationKey, RuntimeStartupSettings.ValidationKey));
@@ -96,7 +96,13 @@ internal static class EditorApplication
             await app.Services.Resolve<EditorWindow>()!.Ready.WaitAsync(startup.Token);
             selectedProject = projects.Active;
             if (options.Light) await ui.InvokeAsync(() => ui.SetTheme(Theme.Light));
-            if (smoke != null)
+            if (visualStates)
+            {
+                using var visualDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
+                await EditorVisualStatesSmoke.RunNativeAsync(directory, window, ui, view!,
+                    () => documents.Read().Document!.Content!.UndoCount, visualDeadline.Token);
+            }
+            else if (smoke != null)
             {
                 using var headerDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await EditorHeaderSmoke.VerifyAsync(directory, window, ui, view!, headerDeadline.Token);

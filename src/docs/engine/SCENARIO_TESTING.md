@@ -265,3 +265,27 @@ dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c 
 ```powershell
 dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --filter 'FullyQualifiedName~SceneRoundTrip_ReplaysSemanticInputAndRestoresTheSavedTransform'
 ```
+
+<a id="editor-visual-states"></a>
+### Визуальные состояния инспектора Transform (UIQA.3)
+
+Из `src` в PowerShell:
+
+```powershell
+$run = Join-Path $PWD ('TestResults/UIQA3-' + [Guid]::NewGuid().ToString('N'))
+$env:TRUEMOON_UIQA_RESULTS = Join-Path $run 'raster'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -p:NuGetAudit=false `
+  --filter 'FullyQualifiedName~EditorVisualStatesTests|FullyQualifiedName~EditorSemanticInputTests' `
+  --results-directory $run --logger 'trx;LogFileName=raster.trx' -v:q
+if ($LASTEXITCODE -ne 0) { throw 'UIQA raster failed.' }
+dotnet run --project ManualTests/AetherEditorHost/AetherEditorHost.csproj --no-build -- --uiqa-visual (Join-Path $run 'native')
+```
+
+Raster проверяет Light/Dark при логических масштабах 1×, 1,25× и 1,75×.
+Тест сверяет пиксели клипа и мягкого переноса, фокус после Tab, ошибку и
+доступность Apply. Без `TRUEMOON_UIQA_RESULTS` raster удаляет временные
+кадры. Нативный профиль создаёт собственную песочницу, повторяет ввод по ID,
+фокус, диагностику и отмену в настоящем окне OpenGL при его текущем масштабе.
+Он не компилирует и не запускает игру. Каждый отчёт содержит тему, backend,
+масштаб, состояния именованных целей, имена и SHA-256 кадров. В `native`
+есть отдельные отчёты об освобождении сессии и проекта.

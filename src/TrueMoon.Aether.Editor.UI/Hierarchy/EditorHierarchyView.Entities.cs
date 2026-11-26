@@ -2,6 +2,7 @@ using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Menus;
 using TrueMoon.Argentis.Painting;
 using TrueMoon.Argentis.Styling;
+using TrueMoon.Argentis.Views;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.UI.Hierarchy;
@@ -47,11 +48,14 @@ public sealed partial class EditorHierarchyView
                 () => DataContext is { } model && available(model)));
     }
 
-    private static void ConfigureActionIcon(IconButton button)
+    private static UiControl<IconButton, IEditorHierarchyViewModel> CreateActionIcon(
+        IUiBuildContext<IEditorHierarchyViewModel> ui, UiSymbol symbol, string label, string idSuffix)
     {
-        button.WithRole(ActionRole);
-        button.Clear(UiProperties.Width);
-        button.Clear(UiProperties.Height);
+        var icon = ui.IconButton(symbol, label);
+        icon.Element.WithRole(ActionRole);
+        icon.Element.Clear(UiProperties.Width);
+        icon.Element.Clear(UiProperties.Height);
+        return icon.SemanticId("editor.hierarchy." + idSuffix);
     }
 
     private void RequestContext()

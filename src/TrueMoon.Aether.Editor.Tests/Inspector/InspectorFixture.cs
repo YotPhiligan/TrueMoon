@@ -38,9 +38,9 @@ internal sealed class InspectorFixture : IDisposable
     public void Dispose() { Model.Dispose(); Preview.Dispose(); Owner.Dispose(); }
 
     // RichTextEditor needs the renderer's real shaping/layout service. This CPU surface opens no native window.
-    public static UiSession Ui(Element root, TimeProvider? clock = null, int width = 1280, int height = 800)
+    public static UiSession Ui(Element root, TimeProvider? clock = null, int width = 1280, int height = 800, float scale = 1)
     {
-        var viewport = new UiViewport(width, height);
+        var viewport = new UiViewport((int)(width * scale), (int)(height * scale), scale);
         var surface = new SkiaRasterRenderBackend(Fonts.Value).CreateSurface(new RasterUiTarget(), viewport);
         try { return new(root, surface, viewport, null, new UiDispatchOptions(), clock, configurePresenters: EditorPresenters.Register); }
         catch { surface.Dispose(); throw; }

@@ -55,6 +55,21 @@ Runner создаёт новый `TestResults/AlloyPackages/run-*`, уникал
 GPU процессы выполняются последовательно. Для restore внешних зависимостей может
 потребоваться nuget.org.
 
+### Адресная проверка композиции View (UIA1)
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -ViewCompositionOnly
+```
+
+Свежий feed/cache и та же проверка анализаторов; только Debug build, шесть
+процессов: Raster/OpenGL × Cobalt и Microsoft DI с анализатором Cobalt,
+а также Microsoft DI без него. На первом кадре проверяются конкретный дочерний
+View из собственной фабрики, именованные части, scoped-стили и строки
+`ViewWithArgs` с аргументом коллекции и зависимостью из DI. Перемещение
+сохраняет экземпляр строки и привязку, удаление освобождает строку, закрытие
+освобождает дерево и подписки. Этот профиль не запускает publish, Vulkan,
+direct renderer и negative control полной матрицы.
+
 ### Адресная проверка презентеров (UIA1h)
 
 Из `src` одна команда упаковывает только граф `TrueMoon.Alloy.Rendering.Skia`,

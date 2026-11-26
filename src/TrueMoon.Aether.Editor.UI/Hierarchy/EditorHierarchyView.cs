@@ -46,11 +46,16 @@ public sealed partial class EditorHierarchyView : View<IEditorHierarchyViewModel
                     .Configure(header => header.Spacing = 4),
                 ui.Text().Named("CaptionPart").BindText(data => data.Caption),
                 ui.HStack(
-                    ui.IconButton(UiSymbol.Add, "Создать объект · Insert").Named("CreateButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create").WithCommand(_entityCommands["create.empty"]),
-                    ui.IconButton(UiSymbol.Cube, "Создать куб").Named("CubeButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.create-cube").WithCommand(_entityCommands["create.cube"]),
-                    ui.IconButton(UiSymbol.Restore, "Дублировать ветвь · Ctrl+D").Named("DuplicateButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.duplicate").WithCommand(_entityCommands["duplicate"]),
-                    ui.IconButton(UiSymbol.Delete, "Удалить ветвь с потомками · Delete").Named("DeleteButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.delete").WithCommand(_entityCommands["delete"]),
-                    ui.IconButton(UiSymbol.More, "Действия объекта · Shift+F10").Named("ContextButton").Configure(ConfigureActionIcon).SemanticId("editor.hierarchy.context").OnClick(RequestContext))
+                    CreateActionIcon(ui, UiSymbol.Add, "Создать объект · Insert", "create")
+                        .Named("CreateButton").WithCommand(_entityCommands["create.empty"]),
+                    CreateActionIcon(ui, UiSymbol.Cube, "Создать куб", "create-cube")
+                        .Named("CubeButton").WithCommand(_entityCommands["create.cube"]),
+                    CreateActionIcon(ui, UiSymbol.Restore, "Дублировать ветвь · Ctrl+D", "duplicate")
+                        .Named("DuplicateButton").WithCommand(_entityCommands["duplicate"]),
+                    CreateActionIcon(ui, UiSymbol.Delete, "Удалить ветвь с потомками · Delete", "delete")
+                        .Named("DeleteButton").WithCommand(_entityCommands["delete"]),
+                    CreateActionIcon(ui, UiSymbol.More, "Действия объекта · Shift+F10", "context")
+                        .Named("ContextButton").OnClick(RequestContext))
                     .Named("Actions"),
                 ui.HStack(
                     ui.TextBox()

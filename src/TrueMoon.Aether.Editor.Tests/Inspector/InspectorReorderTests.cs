@@ -2,6 +2,8 @@ using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Argentis.Editors;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Argentis;
 using TrueMoon.Argentis.Input;
 using Xunit;
 using Xunit.Abstractions;
@@ -89,7 +91,77 @@ public sealed class InspectorReorderTests(ITestOutputHelper output)
         Assert.Equal(0, fixture.Owner.Document.Read().Content!.UndoCount);
     }
 
-    // Only the presentation order varies; editing, commands and field instances belong to the real model.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReplacingPropertyAtSameAddress_RoutesInputToNewSourceAndPreservesNeighbor(bool changesEditorType)
+    {
+        using var fixture = new InspectorFixture();
+        using var model = new SectionProjection(fixture);
+        model.Refresh(InspectorFixture.Child);
+        var transform = model.Components.Single(c => c.Id == DocumentData.Transform);
+        var component = model.Components.Single(c => c.Id == DocumentData.Custom);
+        var address = (component.Id, "number");
+        var neighborAddress = (transform.Id, "x");
+        model.Present([transform, component]);
+        var view = EditorInspectorView.Create(model, new EditorInspectorViewStyle());
+        using var ui = InspectorFixture.Ui(view);
+        ui.Update();
+        var previous = view.Properties[address];
+        var neighbor = view.Properties[neighborAddress];
+        var neighborInput = Assert.IsType<TextBox>(neighbor.Input);
+        ui.Focus(neighborInput);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        Assert.True(ui.HandleInput(new(InputKind.Text, Text: "42")).Handled);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Left, Shift: true));
+        ui.Update();
+
+        var initialValue = changesEditorType ? PropertyValue.From(false) : PropertyValue.From(8.5);
+        var schema = changesEditorType ? new ComponentPropertySchema(address.Item2, PropertyValueKind.Boolean, initialValue) : previous.Property.Schema;
+        var replacement = new InspectorProperty(component.Id, schema, previous.Property.Label, static () => { });
+        replacement.Load(initialValue, "replacement", local: true);
+        replacement.Enable(true);
+        var previousValue = previous.Property.Value;
+        model.Present([transform, component with
+        {
+            Properties = component.Properties.Select(field => field == previous.Property ? replacement : field).ToArray()
+        }]);
+        ui.Update();
+
+        var current = view.Properties[address];
+        Assert.Same(replacement, current.Property);
+        Assert.True(previous.Row.IsDisposed);
+        Assert.True(previous.Input.IsDisposed);
+        Assert.Same(neighbor.Row, view.Properties[neighborAddress].Row);
+        Assert.True(neighborInput.IsFocused);
+        Assert.Equal((1, 1), (neighborInput.SelectionStart, neighborInput.SelectionLength));
+        Assert.Equal("42", neighborInput.Value);
+
+        if (changesEditorType)
+        {
+            var toggle = Assert.IsType<CheckBox>(current.Input);
+            Assert.False(toggle.IsChecked);
+            ui.Focus(toggle);
+            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Space));
+            Assert.True(ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Space)).Handled);
+            Assert.True(replacement.BooleanValue);
+        }
+        else
+        {
+            var input = Assert.IsType<TextBox>(current.Input);
+            Assert.Equal("8.5", input.Value);
+            ui.Focus(input);
+            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+            Assert.True(ui.HandleInput(new(InputKind.Text, Text: "12.5")).Handled);
+            Assert.Equal("12.5", replacement.Value);
+        }
+        ui.Update();
+        Assert.Equal(previousValue, previous.Property.Value);
+        Assert.Equal("42", neighbor.Property.Value);
+        Assert.Equal(0, fixture.Owner.Document.Read().Content!.UndoCount);
+    }
+
+    // The projection changes the published fields or order, not how UiSession routes input.
     private sealed class SectionProjection(InspectorFixture fixture)
         : EditorInspectorViewModel(fixture.Owner.Commands, fixture.Preview), IEditorInspectorViewModel
     {
