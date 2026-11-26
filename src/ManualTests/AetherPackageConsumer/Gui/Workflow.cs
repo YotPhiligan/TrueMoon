@@ -200,7 +200,7 @@ internal static class Workflow
             await Edit(field, "1.75"); var before = document.Read().Content!; var selected = workspace.SelectedId;
             await RequestProject(alternate, capture: true);
             await Until(() => documents.Read().AwaitingDecision);
-            await Click(view.Documents!.CancelChoice); await documents.Pending.WaitAsync(token);
+            await Click(await ReadControl(() => view.Documents!.CancelChoice)); await documents.Pending.WaitAsync(token);
             Program.Check(ReferenceEquals(initial, projects.Active) && ReferenceEquals(before.Document, document.Read().Content?.Document) &&
                 document.Read().Content!.UndoCount == before.UndoCount && workspace.SelectedId == selected, "Cancelled project switch changed the document/history/selection.");
             await Click(panel.Undo); await Until(() => !document.Read().IsDirty);
@@ -212,8 +212,8 @@ internal static class Workflow
             await StartPreview(); await Preview(); var previewPid = engine.Supervisor.Status.ProcessId!.Value;
             await RequestProject(alternate);
             await Until(() => documents.Read().AwaitingDecision && view.Documents!.SavePathInput.IsEffectivelyEnabled);
-            await Set(view.Documents!.SavePathInput, "ProjectSwitchSaved.aetherscene");
-            await Click(view.Documents.SaveChoice); await documents.Pending.WaitAsync(token);
+            await Set(await ReadControl(() => view.Documents!.SavePathInput), "ProjectSwitchSaved.aetherscene");
+            await Click(await ReadControl(() => view.Documents!.SaveChoice)); await documents.Pending.WaitAsync(token);
             Program.Check(documents.Read().Error == null && projects.Active != null && !ReferenceEquals(initial, projects.Active), "Save project switch failed: " + documents.Read().Error);
             document = projects.Active!.Documents!;
             await Until(() => ReferenceEquals(workspace.Project, projects.Active) && workspace.EntityCount == 0 && workspace.SelectedId == null);
@@ -260,9 +260,9 @@ internal static class Workflow
                 }
                 else await ui.InvokeAsync(() => ((EditorDocumentViewModel)view.Documents!.DataContext!).Request(DocumentCommand.OpenProject)).WaitAsync(token);
                 await Until(() => view.Documents!.PathInput.IsEffectivelyEnabled && view.Documents.DataContext!.PathRequest == DocumentCommand.OpenProject);
-                await Set(view.Documents!.PathInput, path);
+                await Set(await ReadControl(() => view.Documents!.PathInput), path);
                 if (capture) await CapturePanel("project-path.png");
-                await Click(view.Documents.ConfirmPath);
+                await Click(await ReadControl(() => view.Documents!.ConfirmPath));
             }
         }
 
@@ -650,6 +650,12 @@ internal static class Workflow
         {
             await Until(() => Ready(button));
             await ui.InvokeAsync(() => ClickInput(button)).WaitAsync(token);
+        }
+        async Task<T> ReadControl<T>(Func<T> read) where T : Element
+        {
+            T control = null!;
+            await ui.InvokeAsync(() => control = read()).WaitAsync(token);
+            return control;
         }
         static bool Visible(Element element)
         { for (Element? current = element; current != null; current = current.Parent) if (!current.IsVisible) return false; return true; }

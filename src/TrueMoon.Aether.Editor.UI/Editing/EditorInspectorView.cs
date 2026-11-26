@@ -634,8 +634,11 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             }
         }
         else if (input.Kind is InputKind.PointerDown or InputKind.KeyDown or InputKind.FocusLost or InputKind.Wheel) CloseHint();
-        return FocusWithin(this) && input.Kind == InputKind.KeyDown &&
-            (input.Control && input.Key == UiKey.Enter || input.Key == UiKey.Escape) && HandleShortcut(input);
+        if (input.Kind != InputKind.KeyDown || !(input.Control && input.Key == UiKey.Enter || input.Key == UiKey.Escape))
+            return false;
+        for (var focused = context.FocusedElement; focused != null; focused = focused.Parent)
+            if (ReferenceEquals(this, focused)) return HandleShortcut(input);
+        return false;
     }
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
@@ -695,7 +698,6 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         button.Clear(UiProperties.Width); button.Clear(UiProperties.Height); button.Clear(UiProperties.Padding);
         return button.WithRole(ActionRole).WithRole(IconRole);
     }
-    private static bool FocusWithin(Element element) => element.IsFocused || element.Children.Any(FocusWithin);
     /// <inheritdoc />
     public override void Dispose()
     {

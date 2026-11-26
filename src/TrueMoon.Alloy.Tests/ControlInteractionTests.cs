@@ -18,6 +18,47 @@ public sealed class ControlInteractionTests
 {
     private static UiSession Create(Element root) => new(root, new Surface(), new UiViewport(240, 140));
 
+    [Fact]
+    public void TryFocus_UnavailableTargetsDoNotStealFocusAndReenabledTargetsReceiveKeyboardInput()
+    {
+        var current = new Button("Current");
+        var clicks = 0;
+        var candidate = new Button("Candidate").OnClick(() => clicks++);
+        var group = new Panel().WithChildren(candidate);
+        using var ui = Create(new HStack().WithChildren(current, group));
+        using var detached = new Button("Detached");
+        var foreign = new Button("Foreign");
+        using var other = Create(foreign);
+        ui.Update(); other.Update();
+
+        IInputContext input = ui;
+        Assert.Null(input.FocusedElement);
+        Assert.True(input.TryFocus(current));
+        group.IsVisible = false;
+        Assert.False(input.TryFocus(candidate));
+        group.IsVisible = true; group.IsEnabled = false;
+        Assert.False(input.TryFocus(candidate));
+        group.IsEnabled = true; group.IsInputBlocked = true;
+        Assert.False(input.TryFocus(candidate));
+        Assert.False(input.TryFocus(detached));
+        Assert.False(input.TryFocus(foreign));
+        Assert.Same(current, input.FocusedElement);
+        Assert.Throws<ArgumentException>(() => input.Focus(candidate));
+
+        group.IsInputBlocked = false;
+        Assert.False(input.TryFocus(group));
+        Assert.Same(current, input.FocusedElement);
+        Assert.True(input.TryFocus(candidate));
+        Assert.Same(candidate, input.FocusedElement);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Space));
+        ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Space));
+        Assert.Equal(1, clicks);
+        group.IsVisible = false;
+        Assert.Null(input.FocusedElement);
+        ui.Update();
+        Assert.False(candidate.IsFocused);
+    }
+
     [Theory]
     [InlineData(UiKey.Enter)]
     [InlineData(UiKey.Space)]

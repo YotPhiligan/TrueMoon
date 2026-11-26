@@ -250,7 +250,6 @@ internal static class EditorInspectorSmoke
         async Task Doc(DocumentCommand command, string path = "")
         {
             Trace("Document " + command + " " + path);
-            await Until(() => view.Documents!.Commands[command].IsEnabled);
             await ui.InvokeAsync(() => documentModel.PathDraft = path).WaitAsync(token);
             await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document." + command, token);
             await commands.Pending.WaitAsync(token); Require(commands.Read().Error == null, "Document command failed: " + commands.Read().Error);

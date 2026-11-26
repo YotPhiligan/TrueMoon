@@ -51,9 +51,12 @@ internal static class EditorDocumentSmoke
             await Until(() => (view.Hierarchy?.Tree.Items.Count ?? view.Entities.Count) == 2);
             await EditorHierarchySmoke.ClickItemAsync(ui, view, ids[1], token);
             Require(workspace.SelectedId == ids[1] && workspace.Properties().Any(x => x.Key == "count" && x.Value == "0"), "Raw authoring selection/properties were not presented.");
-            Require(view.Commands.All(x => !x.Value.IsEnabled), "Document context must not run a stale game snapshot.");
+            Require(engine.Supervisor.Status.State == SessionState.Stopped && engine.Builds.ProcessId == null && factory.Leases.Count == 0,
+                "Opening an authoring document started the compiler or runtime.");
             await Capture("documents-open-dark.png", 2);
-            var pathControl = panel.PathInput; var canvas = view.Canvas; var firstEntity = (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]];
+            (TextBox Path, Element Canvas, Element FirstEntity) retained = default;
+            await ui.InvokeAsync(() => retained = (panel.PathInput, view.Canvas,
+                (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]])).WaitAsync(token);
             await PathDraft("Copied.aetherscene"); await Click(DocumentCommand.SaveAs);
             Require(File.Exists(Path.Combine(root, "Copied.aetherscene")) && Hash(source) == originalHash, "SaveAs damaged the source or did not publish.");
             File.AppendAllText(Path.Combine(root, "Copied.aetherscene"), " ");
@@ -64,8 +67,9 @@ internal static class EditorDocumentSmoke
             Require(commands.Read().Error == null && !document.Read().IsDirty, "SaveAs did not recover from conflict.");
             await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = panel.Theme.FontFamily, FontSize = panel.Theme.FontSize, FontWeight = panel.Theme.FontWeight, FontItalic = panel.Theme.FontItalic })).WaitAsync(token);
             await Until(() => panel.Theme.Surface == Theme.Light.Surface);
-            Require(ReferenceEquals(panel.PathInput, pathControl) && ReferenceEquals(canvas, view.Canvas) &&
-                ReferenceEquals(firstEntity, (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]]) && model.PathDraft == "Recovered.aetherscene", "Save/theme rebuilt the tree or lost path draft.");
+            await ui.InvokeAsync(() => Require(ReferenceEquals(panel.PathInput, retained.Path) && ReferenceEquals(retained.Canvas, view.Canvas) &&
+                ReferenceEquals(retained.FirstEntity, (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]]) &&
+                model.PathDraft == "Recovered.aetherscene", "Save/theme rebuilt the tree or lost path draft.")).WaitAsync(token);
             await Click(DocumentCommand.Close);
             await Until(() => (view.Hierarchy?.Tree.Items.Count ?? view.Entities.Count) == 0);
             await PathDraft("Recovered.aetherscene"); await Click(DocumentCommand.Open);
@@ -152,14 +156,13 @@ internal static class EditorDocumentSmoke
         }
         async Task Begin(DocumentCommand command)
         {
-            await Until(() => panel.Commands[command].IsEnabled);
             await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document." + command, token); actions.Add(command.ToString());
         }
         async Task Click(DocumentCommand command, bool failure = false)
         {
             await Begin(command); await commands.Pending.WaitAsync(token);
             if (!failure) Require(commands.Read().Error == null, "Document UI action failed: " + commands.Read().Error);
-            await Until(() => !commands.Read().Busy && panel.Commands[DocumentCommand.Open].IsEnabled &&
+            await Until(() => !commands.Read().Busy && model.CanOpen &&
                 ReferenceEquals(model.Document?.Content?.Document, document.Read().Content?.Document));
         }
         async Task Decision() => await Until(() => commands.Read().AwaitingDecision && panel.Decision.IsVisible && panel.CancelChoice.IsFocused);

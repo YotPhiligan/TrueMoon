@@ -81,7 +81,12 @@ public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputO
     /// <inheritdoc />
     public void CloseMenu() { VerifyAccess(); _pinned = false; if (ReferenceEquals(_overlays.PopupOwner, this)) _overlays.Close(); _open = -1; Expand(false); }
     private void PopupClosed() { if (!ReferenceEquals(_overlays.PopupOwner, this)) { _open = -1; _pinned = false; Expand(false); } }
-    private static bool FocusWithin(Element element) => element.IsFocused || element.Children.Any(FocusWithin);
+    private bool ContainsFocus(Element? focused)
+    {
+        for (; focused != null; focused = focused.Parent)
+            if (ReferenceEquals(this, focused)) return true;
+        return false;
+    }
     /// <inheritdoc />
     public bool PreviewInput(UiInput input, IInputContext context)
     {
@@ -96,7 +101,7 @@ public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputO
             var inside = Bounds.Contains(input.X, input.Y) || IsMenuOpen && _overlays.Popup!.Bounds.Contains(input.X, input.Y);
             if (inside) { _closeRemaining = TimeSpan.Zero; if (!_expanded) Expand(true); }
             else if (input.Kind == InputKind.PointerDown && _expanded && !IsMenuOpen) { _pinned = false; Expand(false); }
-            else if (_expanded && !IsMenuOpen && !_pinned && !FocusWithin(this) && _closeRemaining == TimeSpan.Zero)
+            else if (_expanded && !IsMenuOpen && !_pinned && _closeRemaining == TimeSpan.Zero && !ContainsFocus(context.FocusedElement))
             { if (CloseDelay == TimeSpan.Zero) Expand(false); else _closeRemaining = CloseDelay; }
         }
         return false;

@@ -33,3 +33,14 @@ The property names are unchanged in source; they are no longer instance getters
 for reflection or previously compiled binaries. Read parts after the first
 attachment and before disposal; retain a control reference before disposing the
 view if you need to inspect its disposal.
+
+In `1.2611.26.5-alpha`, `EditorDocumentView` exposes its retained controls as
+generated extension properties. Import `TrueMoon.Aether.Editor.UI.Documents`
+and rebuild consumers; these are not CLR instance getters. Look up parts on the
+UI owner thread after attachment, and retain a reference for disposal checks.
+`ConfirmPath`, `CancelPath` and `DismissTools` exist only in compact mode.
+`ScenesRoot` and `Choices` are styling roles, not public parts.
+`Commands` was removed: compact actions live in the File menu; standalone
+command buttons use semantic IDs such as `editor.document.command.Save`.
+The constructor still borrows its model and style and accepts `compactHeader`.
+Style failures occur during attachment; the caller disposes an unpublished view.

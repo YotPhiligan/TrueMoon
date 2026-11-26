@@ -26,7 +26,8 @@ public sealed class CompactDocumentToolsTests
         ui.Focus(scene); tools.SynchronizeFocus(ui); model.Request(DocumentCommand.Open); ui.Update(); tools.SynchronizeFocus(ui);
         Assert.True(tools.IsVisible); Assert.True(tools.PathInput.IsFocused); Assert.True(tools.Actions.IsVisible);
         Assert.Equal(body, scene.Bounds); Assert.Equal(44, tools.Bounds.Y); Assert.InRange(tools.Bounds.Height, 1, 300);
-        Assert.All(tools.Commands.Values, command => Assert.False(command.IsVisible));
+        Assert.DoesNotContain(DocumentUiFixture.Tree(tools), element =>
+            element.SemanticId?.StartsWith("editor.document.command.", StringComparison.Ordinal) == true);
         DocumentUiFixture.Click(ui, tools.CancelPath); ui.Update(); tools.SynchronizeFocus(ui);
         Assert.False(tools.IsVisible); Assert.True(scene.IsFocused); Assert.Equal(body, scene.Bounds);
         Assert.Equal(tree, DocumentUiFixture.Tree(tools).ToArray()); Assert.Empty(owner.Store.Reads);
@@ -55,17 +56,19 @@ public sealed class CompactDocumentToolsTests
     }
 
     [Fact]
-    public void OpenPrompt_RefreshUpdatesConfirmationAvailabilityWhenRuntimeAdmissionChanges()
+    public void OpenPrompt_RechecksAvailabilityAndRetriesFocusAfterAdmissionReturns()
     {
         using var owner = new DocumentUiFixture(); using var model = new EditorDocumentViewModel(owner.Commands);
         var tools = new EditorDocumentView(model, new EditorDocumentViewStyle(), compactHeader: true);
-        using var layout = Layout(tools, new Panel()); using var ui = DocumentUiFixture.Ui(layout); ui.Update();
+        var scene = new TextBox { Value = "scene" };
+        using var layout = Layout(tools, scene); using var ui = DocumentUiFixture.Ui(layout); ui.Update(); ui.Focus(scene);
         model.Request(DocumentCommand.Open); ui.Update(); Assert.True(tools.ConfirmPath.IsEnabled);
-        owner.RuntimeIdle = false; model.Refresh(); ui.Update();
+        owner.RuntimeIdle = false; model.Refresh(); ui.Update(); tools.SynchronizeFocus(ui);
         Assert.False(tools.ConfirmPath.IsEnabled); Assert.False(tools.PathInput.IsEnabled);
+        Assert.Same(scene, ui.FocusedElement);
         DocumentUiFixture.Click(ui, tools.ConfirmPath); Assert.Empty(owner.Store.Reads); Assert.Equal(DocumentCommand.Open, model.PathRequest);
-        owner.RuntimeIdle = true; model.Refresh(); ui.Update();
-        Assert.True(tools.ConfirmPath.IsEnabled); Assert.True(tools.PathInput.IsEnabled);
+        owner.RuntimeIdle = true; model.Refresh(); ui.Update(); tools.SynchronizeFocus(ui);
+        Assert.True(tools.ConfirmPath.IsEnabled); Assert.Same(tools.PathInput, ui.FocusedElement);
         DocumentUiFixture.Click(ui, tools.ConfirmPath); owner.Complete(); model.Refresh(); ui.Update();
         Assert.Single(owner.Store.Reads); Assert.False(tools.IsVisible);
     }
@@ -126,9 +129,11 @@ public sealed class CompactDocumentToolsTests
         using var owner = new DocumentUiFixture(); using var model = new EditorDocumentViewModel(owner.Commands);
         var tools = new EditorDocumentView(model, new EditorDocumentViewStyle(), compactHeader: true);
         var ui = DocumentUiFixture.Ui(tools); ui.Update(); Assert.False(tools.IsVisible);
-        var path = tools.PathInput; var draft = path.Value; ui.Dispose();
-        Assert.True(tools.IsDisposed); Assert.True(path.IsDisposed); Assert.True(tools.ConfirmPath.IsDisposed); Assert.True(tools.CancelPath.IsDisposed);
-        Assert.True(tools.DismissTools.IsDisposed); Assert.All(DocumentUiFixture.Tree(tools), element => Assert.True(element.IsDisposed));
+        var path = tools.PathInput; var draft = path.Value;
+        var confirm = tools.ConfirmPath; var cancel = tools.CancelPath; var dismiss = tools.DismissTools;
+        ui.Dispose();
+        Assert.True(tools.IsDisposed); Assert.True(path.IsDisposed); Assert.True(confirm.IsDisposed); Assert.True(cancel.IsDisposed);
+        Assert.True(dismiss.IsDisposed);
         model.PathDraft = "borrowed.aetherscene"; model.Request(DocumentCommand.Open); model.ConfirmPath(); owner.Complete(); model.Refresh();
         Assert.Equal(draft, path.Value); Assert.NotNull(model.Document!.Content); Assert.Equal(0, owner.Store.Disposals); Assert.Equal(0, owner.RuntimeStops);
     }

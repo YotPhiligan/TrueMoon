@@ -508,9 +508,29 @@ public sealed class UiSession : IDisposable, IInputContext
         _focus = element; if (_focus != null) _focus.IsFocused = true;
     }
     /// <inheritdoc />
+    public Element? FocusedElement
+    {
+        get
+        {
+            VerifyRendering();
+            return _focus is { } focus && CanFocus(focus) ? focus : null;
+        }
+    }
+
+    private bool CanFocus(Element element) => Eligible(element, forInput: true) && element.Focusable;
+
+    /// <inheritdoc />
     public void Focus(Element element)
     {
-        VerifyRendering(); if (!Eligible(element, forInput: true) || !element.Focusable) throw new ArgumentException("Element cannot receive focus.");
+        if (!TryFocus(element)) throw new ArgumentException("Element cannot receive focus.", nameof(element));
+    }
+
+    /// <inheritdoc />
+    public bool TryFocus(Element element)
+    {
+        VerifyRendering();
+        ArgumentNullException.ThrowIfNull(element);
+        if (!CanFocus(element)) return false;
         SetFocus(element);
         var bounds = element.Bounds;
         for (var ancestor = element.Parent; ancestor != null; ancestor = ancestor.Parent)
@@ -519,6 +539,7 @@ public sealed class UiSession : IDisposable, IInputContext
                 var previous = scroll.Offset; scroll.BringIntoView(bounds);
                 bounds = bounds with { Y = bounds.Y - (scroll.Offset - previous) };
             }
+        return true;
     }
     /// <inheritdoc />
     public void Capture(Element element)

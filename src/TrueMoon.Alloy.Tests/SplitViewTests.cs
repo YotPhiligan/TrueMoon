@@ -263,6 +263,8 @@ public sealed class SplitViewTests
     private sealed class FailingCapture(UiSession ui) : IInputContext
     {
         public int Releases;
+        public Element? FocusedElement => ui.FocusedElement;
+        public bool TryFocus(Element element) => ui.TryFocus(element);
         public void Focus(Element element) => ui.Focus(element);
         public void Capture(Element element) => throw new IOException("capture");
         public void ReleaseCapture(Element element) => Releases++;

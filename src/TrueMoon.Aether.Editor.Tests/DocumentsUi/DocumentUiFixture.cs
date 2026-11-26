@@ -56,6 +56,8 @@ internal sealed class DocumentUiFixture : IDisposable, IAsyncDisposable
     public static UiSession Ui(Element root) => new(root, new Surface(), new(1280, 800));
     public static IEnumerable<Element> Tree(Element root)
     { yield return root; foreach (var child in root.Children) foreach (var item in Tree(child)) yield return item; }
+    public static Button CommandButton(EditorDocumentView view, DocumentCommand command) =>
+        Assert.Single(Tree(view).OfType<Button>(), button => button.SemanticId == $"editor.document.command.{command}");
     public static void Click(UiSession ui, Button button)
     { var b = button.Bounds; ui.HandleInput(new(InputKind.PointerDown, b.X + 4, b.Y + 4)); ui.HandleInput(new(InputKind.PointerUp, b.X + 4, b.Y + 4)); }
     private sealed class TextLayout : ITextLayoutService

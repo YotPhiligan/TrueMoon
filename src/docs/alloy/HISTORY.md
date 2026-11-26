@@ -1,5 +1,21 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="ui-focus-context-2026-11-26"></a>
+## 2026-11-26 — текущий фокус и безопасная попытка восстановления
+
+В `1.2611.26.5-alpha` `IInputContext.FocusedElement` возвращает текущего
+допустимого владельца фокуса на потоке сессии. `TryFocus` использует тот же
+путь, что и `Focus`, включая прокрутку к контролу; для недоступной цели
+возвращает `false`, не отбирая фокус. Ошибки потока и сессии не подавляются.
+Сторонние реализации `IInputContext` должны реализовать оба новых члена.
+
+Debug, Windows x64, SDK 11: 137/137 адресных тестов Alloy (`ControlInteractionTests`,
+`MenuInteractionTests`, `MenuPopupTests`, `SplitViewTests`, `OverlayHostTests`).
+В `TryFocus_UnavailableTargetsDoNotStealFocusAndReenabledTargetsReceiveKeyboardInput`
+проверены скрытая, отключённая, заблокированная, чужая и неприсоединённая
+цели, затем принятие доступной цели и доставка клавиатурного события.
+Пакетная и release-матрицы не запускались.
+
 <a id="hierarchy-action-icons-2026-11-26"></a>
 ## UIA1f.12 — локальное упрощение панели иерархии, 26.11.2026
 

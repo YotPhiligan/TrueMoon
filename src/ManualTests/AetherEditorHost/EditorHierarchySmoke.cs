@@ -162,7 +162,6 @@ internal static class EditorHierarchySmoke
         async Task Doc(DocumentCommand command, string path = "")
         {
             File.AppendAllText(Path.Combine(directory, "progress.log"), "Hierarchy document " + command + " " + path + Environment.NewLine);
-            await Until(() => view.Documents.Commands[command].IsEnabled);
             await ui.InvokeAsync(() => documentModel.PathDraft = path).WaitAsync(token);
             await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document." + command, token);
             await commands.Pending.WaitAsync(token);

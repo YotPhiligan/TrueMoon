@@ -12,42 +12,11 @@ namespace TrueMoon.Aether.Editor.UI.Documents;
 public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInputObserver
 {
     private readonly IEditorDocumentViewModel _model;
-    private readonly Dictionary<DocumentCommand, Button> _commands = [];
     private bool _shown;
     private Element? _previousFocus;
     private bool _toolsShown, _pathShown;
     /// <summary>Whether idle tools collapse into the window header instead of reserving a document toolbar.</summary>
     public bool CompactHeader { get; }
-    /// <summary>Confirms the path requested by the shared File menu.</summary>
-    public Button ConfirmPath { get; }
-    /// <summary>Dismisses the path prompt without starting file work.</summary>
-    public Button CancelPath { get; }
-    /// <summary>Dismisses displayed diagnostics while keeping the document and path draft.</summary>
-    public Button DismissTools { get; }
-    /// <summary>Gets the path/action row.</summary>
-    public HStack Actions { get; } = new HStack();
-    /// <summary>Gets the Open/SaveAs path editor.</summary>
-    public TextBox PathInput { get; }
-    /// <summary>Gets the independent first-save path editor.</summary>
-    public TextBox SavePathInput { get; }
-    /// <summary>Gets the persistent dirty/activity line.</summary>
-    public Text Title { get; }
-    /// <summary>Gets the project scene-root line.</summary>
-    public Text ScenesRoot { get; }
-    /// <summary>Gets operation diagnostics.</summary>
-    public Text Error { get; }
-    /// <summary>Gets the inline transition decision container.</summary>
-    public Border Decision { get; }
-    /// <summary>Gets decision action buttons.</summary>
-    public HStack Choices { get; } = new HStack();
-    /// <summary>Gets the safe default decision button.</summary>
-    public Button CancelChoice { get; }
-    /// <summary>Gets the non-undoable discard decision button.</summary>
-    public Button DiscardChoice { get; }
-    /// <summary>Gets the save decision button.</summary>
-    public Button SaveChoice { get; }
-    /// <summary>Gets action buttons by the same command identity used by keyboard input.</summary>
-    public IReadOnlyDictionary<DocumentCommand, Button> Commands => _commands;
 
     /// <summary>Creates the view on its UI owner thread. Parent/window owns the product.</summary>
     /// <param name="model">Borrowed UI model.</param><param name="style">Borrowed appearance declaration.</param>
@@ -59,60 +28,69 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
         CompactHeader = compactHeader;
         try
         {
-            model.Refresh(); DataContext = model;
-            PathInput = new TextBox().SemanticId("editor.document.path").BindTwoWay(TextBox.ValueProperty, model, x => x.RequestedPath)
-                .Bind(UiProperties.Enabled, model, x => x.CanEditPath).Bind(UiProperties.AccessibleName, model, x => x.PathInputLabel);
-            SavePathInput = new TextBox().BindTwoWay(TextBox.ValueProperty, model, x => x.SavePathDraft)
-                .SetValue(UiProperties.AccessibleName, "Сохранить новую сцену как");
-            Title = compactHeader ? new Text().BindText(model, x => x.PathPromptText) : new Text().BindText(model, x => x.Title);
-            ScenesRoot = new Text().BindText(model, x => x.PathHint);
-            Error = new Text().BindText(model, x => x.ErrorText);
-            Actions.Add(new Text("Сцена:")); Actions.Add(PathInput);
-            Add(DocumentCommand.New, "Новая", x => x.CanNew);
-            Add(DocumentCommand.Open, "Открыть", x => x.CanOpen);
-            Add(DocumentCommand.Save, "Сохранить", x => x.CanSave);
-            Add(DocumentCommand.SaveAs, "Сохранить как", x => x.CanSaveAs);
-            Add(DocumentCommand.Close, "Закрыть", x => x.CanClose);
-            Actions.Add(new Button("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel));
-            ConfirmPath = new Button("Продолжить").SemanticId("editor.document.confirm-path")
-                .Bind(UiProperties.Enabled, model, x => x.CanConfirmPath).OnClick(model.ConfirmPath);
-            CancelPath = new Button("Отмена").OnClick(model.CancelPath);
-            DismissTools = new Button("Закрыть").OnClick(model.CancelPath);
+            model.Refresh();
             if (compactHeader)
             {
-                foreach (var button in Actions.Children.OfType<Button>()) button.IsVisible = false;
-                Actions.Children[0].IsVisible = false;
-                DismissTools.Bind(UiProperties.Visible, model, x => x.CanDismissTools);
-                Actions.Add(ConfirmPath); Actions.Add(CancelPath);
-                Actions.Bind(UiProperties.Visible, model, x => x.IsPathPromptOpen);
                 IsVisible = model.IsToolsVisible;
                 this.Bind(UiProperties.Visible, model, x => x.IsToolsVisible);
             }
-            else { ConfirmPath.IsVisible = CancelPath.IsVisible = DismissTools.IsVisible = false; }
-            SaveChoice = new Button("Сохранить").OnClick(() => model.Choose(EditorDocumentCloseChoice.Save));
-            DiscardChoice = new Button("Не сохранять").OnClick(() => model.Choose(EditorDocumentCloseChoice.Discard));
-            CancelChoice = new Button("Отмена").OnClick(() => model.Choose(EditorDocumentCloseChoice.Cancel));
-            Choices.Add(SaveChoice); Choices.Add(DiscardChoice); Choices.Add(CancelChoice);
-            var firstSave = new HStack().WithChildren(new Text("Путь сохранения:"), SavePathInput)
-                .Bind(UiProperties.Visible, model, x => x.NeedsSavePath);
-            Decision = new Border().Bind(UiProperties.Visible, model, x => x.AwaitingDecision).Content(
-                new VStack().WithChildren(new Text().BindText(model, x => x.DecisionText), firstSave, Choices));
-            SetContent(compactHeader
-                ? new VStack().WithChildren(Title, Actions, ScenesRoot, Error, Decision, DismissTools)
-                : new VStack().WithChildren(Actions, Title, ScenesRoot, Error, Decision, DismissTools));
-            if (!compactHeader) { Own(ConfirmPath); Own(CancelPath); }
-            this.WithViewStyle(style);
-            void Add(DocumentCommand command, string label, Expression<Func<IEditorDocumentViewModel, bool>> enabled)
+
+            Content(model, ui =>
             {
-                var button = new Button(label).Bind(UiProperties.Enabled, model, enabled).OnClick(() => model.Execute(command));
-                _commands.Add(command, button); Actions.Add(button);
-            }
+                var path = ui.TextBox().Named("PathInput").SemanticId("editor.document.path")
+                    .BindValueTwoWay(model, x => x.RequestedPath)
+                    .Bind(UiProperties.Enabled, model, x => x.CanEditPath)
+                    .Bind(UiProperties.AccessibleName, model, x => x.PathInputLabel);
+                var actions = (compactHeader
+                    ? ui.HStack(path,
+                        ui.Button("Продолжить").Named("ConfirmPath").SemanticId("editor.document.confirm-path")
+                            .Bind(UiProperties.Enabled, model, x => x.CanConfirmPath).OnClick(model.ConfirmPath),
+                        ui.Button("Отмена").Named("CancelPath").OnClick(model.CancelPath))
+                        .Bind(UiProperties.Visible, model, x => x.IsPathPromptOpen)
+                    : ui.HStack(ui.Text("Сцена:"), path,
+                        Command(ui, DocumentCommand.New, "Новая", x => x.CanNew),
+                        Command(ui, DocumentCommand.Open, "Открыть", x => x.CanOpen),
+                        Command(ui, DocumentCommand.Save, "Сохранить", x => x.CanSave),
+                        Command(ui, DocumentCommand.SaveAs, "Сохранить как", x => x.CanSaveAs),
+                        Command(ui, DocumentCommand.Close, "Закрыть", x => x.CanClose),
+                        ui.Button("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel)))
+                    .Named("Actions");
+                var title = ui.Text().Named("Title")
+                    .Bind(Text.ValueProperty, model, compactHeader ? x => x.PathPromptText : x => x.Title);
+                var content = ui.VStack(
+                    compactHeader ? title.Element : actions.Element,
+                    compactHeader ? actions.Element : title.Element,
+                    ui.Text().WithRole(EditorDocumentViewRoles.ScenesRoot).Bind(Text.ValueProperty, model, x => x.PathHint),
+                    ui.Text().Named("Error").Bind(Text.ValueProperty, model, x => x.ErrorText),
+                    ui.Border().Named("Decision").Content(ui.VStack(
+                        ui.Text().Bind(Text.ValueProperty, model, x => x.DecisionText),
+                        ui.HStack(ui.Text("Путь сохранения:"),
+                            ui.TextBox().Named("SavePathInput").BindValueTwoWay(model, x => x.SavePathDraft)
+                                .SetValue(UiProperties.AccessibleName, "Сохранить новую сцену как"))
+                            .Bind(UiProperties.Visible, model, x => x.NeedsSavePath),
+                        ui.HStack(
+                            ui.Button("Сохранить").Named("SaveChoice").OnClick(() => model.Choose(EditorDocumentCloseChoice.Save)),
+                            ui.Button("Не сохранять").Named("DiscardChoice").OnClick(() => model.Choose(EditorDocumentCloseChoice.Discard)),
+                            ui.Button("Отмена").Named("CancelChoice").OnClick(() => model.Choose(EditorDocumentCloseChoice.Cancel)))
+                            .WithRole(EditorDocumentViewRoles.Choices)))
+                        .Bind(UiProperties.Visible, model, x => x.AwaitingDecision));
+                if (compactHeader)
+                    content.WithChildren(ui.Button("Закрыть").Named("DismissTools")
+                        .Bind(UiProperties.Visible, model, x => x.CanDismissTools).OnClick(model.CancelPath));
+                return content;
+            });
+            this.WithViewStyle(style);
         }
         catch (Exception error)
         {
             try { Dispose(); } catch (Exception cleanup) { throw new AggregateException(error, cleanup); }
             throw;
         }
+
+        Button Command(IUiBuildContext<IEditorDocumentViewModel> ui, DocumentCommand command, string label,
+            Expression<Func<IEditorDocumentViewModel, bool>> enabled)
+            => ui.Button(label).SemanticId($"editor.document.command.{command}")
+                .Bind(UiProperties.Enabled, model, enabled).OnClick(() => model.Execute(command));
     }
 
     /// <summary>Routes document shortcuts through the same model actions as buttons.</summary>
@@ -160,40 +138,30 @@ public sealed class EditorDocumentView : View<IEditorDocumentViewModel>, IUiInpu
     public void SynchronizeFocus(IInputContext context)
     {
         VerifyAccess(); ArgumentNullException.ThrowIfNull(context);
+        if (!IsAttached) return;
         if (CompactHeader)
         {
             if (IsVisible != _model.IsToolsVisible) return;
-            Element root = this; while (root.Parent != null) root = root.Parent;
-            if (_model.IsToolsVisible && !_toolsShown) { _previousFocus = FindFocus(root); _toolsShown = true; }
-            if (_model.AwaitingDecision && !_shown && Decision.IsVisible) { context.Focus(CancelChoice); _shown = true; _pathShown = false; }
-            else if (_model.IsPathPromptOpen && !_pathShown && Actions.IsVisible) { context.Focus(PathInput); _pathShown = true; _shown = false; }
+            if (_model.IsToolsVisible && !_toolsShown) { _previousFocus = context.FocusedElement; _toolsShown = true; }
+            if (_model.AwaitingDecision && !_shown && context.TryFocus(this.CancelChoice))
+            { _shown = true; _pathShown = false; }
+            else if (_model.IsPathPromptOpen && !_pathShown && context.TryFocus(this.PathInput))
+            { _pathShown = true; _shown = false; }
             else if (!_model.IsToolsVisible && _toolsShown)
             {
                 var target = _previousFocus; _previousFocus = null; _toolsShown = _pathShown = _shown = false;
-                try { if (target is { IsDisposed: false, IsAttached: true, IsEffectivelyEnabled: true, IsVisible: true, Focusable: true }) context.Focus(target); }
-                catch (ArgumentException) { /* A previous target may now have a hidden ancestor. */ }
+                if (target != null) context.TryFocus(target);
             }
             return;
         }
-        if (Decision.IsVisible != _model.AwaitingDecision) return; // Wait for queued bindings; never focus hidden controls.
-        if (_model.AwaitingDecision && !_shown) { _shown = true; context.Focus(CancelChoice); }
+        if (this.Decision.IsVisible != _model.AwaitingDecision) return; // Wait for queued visibility binding.
+        if (_model.AwaitingDecision && !_shown) _shown = context.TryFocus(this.CancelChoice);
         else if (!_model.AwaitingDecision && _shown)
         {
-            var target = _previousFocus is { IsDisposed: false, IsAttached: true, IsEffectivelyEnabled: true, IsVisible: true } ? _previousFocus : PathInput;
-            if (!target.IsEffectivelyEnabled || !target.IsVisible) return; // Accepted IO may still be draining.
-            context.Focus(target); _shown = false;
+            if (!(_previousFocus is { } target && context.TryFocus(target)) && !context.TryFocus(this.PathInput)) return;
+            _shown = false;
             _previousFocus = null;
         }
-        if (!_shown)
-        {
-            Element root = this; while (root.Parent != null) root = root.Parent;
-            _previousFocus = FindFocus(root) ?? _previousFocus;
-        }
-    }
-    private static Element? FindFocus(Element element)
-    {
-        if (element.IsFocused) return element;
-        foreach (var child in element.Children) if (FindFocus(child) is { } focused) return focused;
-        return null;
+        if (!_shown) _previousFocus = context.FocusedElement ?? _previousFocus;
     }
 }

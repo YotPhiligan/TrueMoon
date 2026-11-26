@@ -225,6 +225,8 @@ public sealed class EditorViewportTranslationTests
     private sealed class CallbackContext(UiSession ui, Action callback) : IInputContext
     {
         public int Releases;
+        public Element? FocusedElement => ui.FocusedElement;
+        public bool TryFocus(Element element) => ui.TryFocus(element);
         public void Focus(Element element) => ui.Focus(element);
         public void Capture(Element element) => ui.Capture(element);
         public void ReleaseCapture(Element element) { ui.ReleaseCapture(element); Releases++; callback(); }

@@ -35,5 +35,12 @@ frame-lease requirements. Posted work is bounded; scheduling/diagnostics do not
 promise a particular GPU frame rate or release hardware acceptance. External
 graphics resources remain owned by the application that supplied them.
 
+On the session owner thread, `IInputContext.FocusedElement` returns the current
+eligible keyboard focus target, or `null`. Use `TryFocus(element)` to restore
+focus: an unavailable target returns `false` without moving existing focus.
+`Focus(element)` still throws for an unavailable target. Custom `IInputContext`
+implementations must supply both new members; rebuild Argentis/Alloy consumers
+together.
+
 Source, API contracts and current limits:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).

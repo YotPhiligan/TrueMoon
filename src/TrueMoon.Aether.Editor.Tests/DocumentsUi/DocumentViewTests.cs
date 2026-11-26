@@ -18,21 +18,26 @@ public sealed class DocumentViewTests
         using var owner = new DocumentUiFixture(); using var model = new EditorDocumentViewModel(owner.Commands);
         var view = new EditorDocumentView(model, new EditorDocumentViewStyle()); using var ui = DocumentUiFixture.Ui(view); ui.Update();
         Assert.Same(model, view.DataContext); Assert.Equal("Main.aetherscene", view.PathInput.Value);
-        Assert.True(view.Commands[DocumentCommand.New].IsEnabled); Assert.True(view.Commands[DocumentCommand.Open].IsEnabled);
-        Assert.False(view.Commands[DocumentCommand.Save].IsEnabled); Assert.False(view.Decision.IsVisible);
+        var newScene = DocumentUiFixture.CommandButton(view, DocumentCommand.New);
+        var save = DocumentUiFixture.CommandButton(view, DocumentCommand.Save);
+        Assert.True(newScene.IsEnabled); Assert.True(DocumentUiFixture.CommandButton(view, DocumentCommand.Open).IsEnabled);
+        Assert.False(save.IsEnabled); Assert.False(view.Decision.IsVisible);
         Assert.Equal(260, view.PathInput.Width); Assert.Equal(360, view.SavePathInput.Width);
         Assert.Equal(ControlTone.Accent, view.SaveChoice.Tone); Assert.Equal(ControlTone.Danger, view.DiscardChoice.Tone);
+        var hint = Assert.Single(DocumentUiFixture.Tree(view).OfType<Text>(), text => text.Value == model.PathHint);
+        Assert.Equal(11, hint.FontSize); Assert.Equal(view.Theme.Disabled, hint.Foreground);
+        Assert.Equal(8, Assert.IsType<TrueMoon.Argentis.Layout.HStack>(view.SaveChoice.Parent).Spacing);
         ui.Focus(view.PathInput); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true)); ui.HandleInput(new(InputKind.Text, Text: "new-scene.aetherscene"));
         Assert.Equal("new-scene.aetherscene", model.PathDraft);
-        DocumentUiFixture.Click(ui, view.Commands[DocumentCommand.Save]); Assert.Empty(owner.Store.Writes);
-        DocumentUiFixture.Click(ui, view.Commands[DocumentCommand.New]); owner.Complete(); model.Refresh(); ui.Update();
-        Assert.True(view.Commands[DocumentCommand.Save].IsEnabled); Assert.Contains("*", view.Title.Value);
-        DocumentUiFixture.Click(ui, view.Commands[DocumentCommand.Save]); owner.Complete(); model.Refresh(); ui.Update();
+        DocumentUiFixture.Click(ui, save); Assert.Empty(owner.Store.Writes);
+        DocumentUiFixture.Click(ui, newScene); owner.Complete(); model.Refresh(); ui.Update();
+        Assert.True(save.IsEnabled); Assert.Contains("*", view.Title.Value);
+        DocumentUiFixture.Click(ui, save); owner.Complete(); model.Refresh(); ui.Update();
         Assert.EndsWith("new-scene.aetherscene", Assert.Single(owner.Store.Writes).Path); Assert.DoesNotContain("*", view.Title.Value);
         owner.Store.Write = (_, _, _, _) => Task.FromException<SceneFileStamp>(new IOException("destination unavailable"));
-        DocumentUiFixture.Click(ui, view.Commands[DocumentCommand.Save]); owner.Complete(); model.Refresh(); ui.Update();
+        DocumentUiFixture.Click(ui, save); owner.Complete(); model.Refresh(); ui.Update();
         Assert.Contains("destination unavailable", view.Error.Value); Assert.Equal(view.Theme.Error, view.Error.Foreground);
-        Assert.Equal("new-scene.aetherscene", view.PathInput.Value); Assert.True(view.Commands[DocumentCommand.Save].IsEnabled);
+        Assert.Equal("new-scene.aetherscene", view.PathInput.Value); Assert.True(save.IsEnabled);
     }
 
     [Theory]
@@ -43,7 +48,7 @@ public sealed class DocumentViewTests
         using var model = new EditorDocumentViewModel(owner.Commands) { PathDraft = "open-target.aetherscene", SavePathDraft = "saved-original.aetherscene" };
         var view = new EditorDocumentView(model, new EditorDocumentViewStyle()); using var ui = DocumentUiFixture.Ui(view); ui.Update();
         ui.Focus(view.PathInput); view.SynchronizeFocus(ui);
-        DocumentUiFixture.Click(ui, view.Commands[DocumentCommand.Close]); owner.Decision(); model.Refresh(); ui.Update(); view.SynchronizeFocus(ui);
+        DocumentUiFixture.Click(ui, DocumentUiFixture.CommandButton(view, DocumentCommand.Close)); owner.Decision(); model.Refresh(); ui.Update(); view.SynchronizeFocus(ui);
         Assert.True(view.Decision.IsVisible); Assert.True(view.CancelChoice.IsFocused); Assert.True(model.NeedsSavePath);
         Assert.Equal("saved-original.aetherscene", view.SavePathInput.Value); Assert.False(view.PathInput.IsEnabled);
         DocumentUiFixture.Click(ui, choice switch { DocumentCloseChoice.Save => view.SaveChoice, DocumentCloseChoice.Discard => view.DiscardChoice, _ => view.CancelChoice });
@@ -113,8 +118,8 @@ public sealed class DocumentViewTests
     {
         using var owner = new DocumentUiFixture(); using var model = new EditorDocumentViewModel(owner.Commands);
         var view = new EditorDocumentView(model, new EditorDocumentViewStyle()); var ui = DocumentUiFixture.Ui(view); ui.Update();
-        var path = view.PathInput; var value = path.Value; ui.Dispose();
-        Assert.True(view.IsDisposed); Assert.True(path.IsDisposed); Assert.True(view.Decision.IsDisposed);
+        var path = view.PathInput; var decision = view.Decision; var value = path.Value; ui.Dispose();
+        Assert.True(view.IsDisposed); Assert.True(path.IsDisposed); Assert.True(decision.IsDisposed);
         model.PathDraft = "borrowed-model-still-alive.aetherscene"; owner.Run(DocumentCommand.New); model.Refresh();
         Assert.Equal(value, path.Value); Assert.Equal("borrowed-model-still-alive.aetherscene", model.PathDraft);
         Assert.True(model.CanSave); Assert.False(owner.Commands.Read().Closed); Assert.Equal(0, owner.RuntimeStops);
@@ -123,15 +128,23 @@ public sealed class DocumentViewTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public void CreationFailure_DisposesUnpublishedTreeAndOwnedResourcesWithoutOwningModel(bool cleanupFailure)
+    public void AttachStyleFailure_DisposesDraftAndLeavesRootCleanupToItsOwner(bool cleanupFailure)
     {
         using var owner = new DocumentUiFixture(); using var model = new EditorDocumentViewModel(owner.Commands);
         var original = new IOException("document style failed"); var cleanup = new IOException("unpublished document tree cleanup failed");
-        EditorDocumentView unpublished = null!; var resource = new Resource(cleanupFailure ? cleanup : null);
-        var error = Record.Exception(() => new EditorDocumentView(model, new FailingStyle(view => { unpublished = view; view.Own(resource); }, original)));
-        if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, e => Assert.Same(original, e), e => Assert.Same(cleanup, e));
-        else Assert.Same(original, error);
-        Assert.True(unpublished.IsDisposed); Assert.True(unpublished.PathInput.IsDisposed); Assert.True(unpublished.Decision.IsDisposed);
+        var resource = new Resource(cleanupFailure ? cleanup : null);
+        TrueMoon.Argentis.Element? path = null, decision = null;
+        var view = new EditorDocumentView(model, new FailingStyle(candidate =>
+        {
+            path = candidate.PathInput; decision = candidate.Decision; candidate.Own(resource);
+        }, original));
+        Assert.Same(original, Record.Exception(() => { using var ui = DocumentUiFixture.Ui(view); }));
+        Assert.True(path!.IsDisposed); Assert.True(decision!.IsDisposed);
+        Assert.False(view.IsDisposed);
+        var ownerCleanup = Record.Exception(view.Dispose);
+        if (cleanupFailure) Assert.Same(cleanup, ownerCleanup);
+        else Assert.Null(ownerCleanup);
+        Assert.True(view.IsDisposed);
         Assert.Equal(1, resource.Disposals); model.PathDraft = "retry.aetherscene"; model.Refresh(); Assert.True(model.CanNew);
         Assert.False(owner.Commands.Read().Closed); Assert.Equal(0, owner.RuntimeStops);
     }

@@ -61,7 +61,8 @@ public sealed class EditorEditingShellTests
         EditorDocumentView created = null!;
         var error = Assert.Throws<InvalidOperationException>(() => new EditorView(model, new EditorViewStyle(),
             new Factory<EditorDocumentView>(() => created = new(documents, new EditorDocumentViewStyle())), new Factory<EditorTransformView>(() => null!)));
-        Assert.Contains("Transform view factory returned null", error.Message); Assert.True(created.IsDisposed); Assert.True(created.PathInput.IsDisposed);
+        Assert.Contains("Transform view factory returned null", error.Message);
+        Assert.True(created.IsDisposed);
         documents.Refresh(); test.Model.Refresh(DocumentData.Child.Value.ToString()); Assert.True(test.Model.CanEdit); Assert.False(test.Owner.Commands.Read().Closed);
     }
 }

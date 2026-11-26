@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using SkiaSharp;
 using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -30,7 +31,7 @@ internal static partial class EditorHeaderSmoke
         await UntilAsync(ui, () => !ui.NeedsUpdate, token);
         await ui.InvokeAsync(() =>
         {
-            Require(!view.Toolbar.IsVisible && documents.Commands.Values.All(b => !b.IsVisible), "Legacy command rows are still visible.");
+            Require(!view.Toolbar.IsVisible, "Legacy runtime command row is still visible.");
             var frame = (WindowFrame)ui.Root;
             Require(frame.Theme.FontFamily == FontDefaults.Family && header.Caption.FontWeight == 600,
                 "Editor did not adopt the framework default family and semibold caption style.");

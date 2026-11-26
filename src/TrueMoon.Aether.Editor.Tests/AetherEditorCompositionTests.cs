@@ -126,7 +126,7 @@ public sealed class AetherEditorCompositionTests
         var view = app.Services.Resolve<IFactory<EditorView>>()!.Create()!; using var ui = InspectorFixture.Ui(view);
         ui.Update(); editor.Present(ui, view); ui.Update();
         Assert.Equal(2, app.Services.Resolve<EditorWorkspace>()!.EntityCount);
-        Assert.True(documents.Read().Document!.IsDirty); Assert.True(view.Documents!.Commands[DocumentCommand.Save].IsEnabled);
+        Assert.True(documents.Read().Document!.IsDirty); Assert.True(documents.CanExecute(DocumentCommand.Save));
         var close = editor.RequestCloseAsync();
         Assert.True(SpinWait.SpinUntil(() => documents.Read().AwaitingDecision, TimeSpan.FromSeconds(5)));
         Assert.True(documents.Choose(DocumentCloseChoice.Cancel)); Assert.False(Complete(close));

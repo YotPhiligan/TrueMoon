@@ -48,7 +48,8 @@ public sealed class DocumentCompositionTests
         Assert.Equal(1, models); Assert.Equal(2, style.Configurations);
         model.PathDraft = "shared.aetherscene"; firstUi.Update(); secondUi.Update(); Assert.Equal("shared.aetherscene", first.PathInput.Value); Assert.Equal("shared.aetherscene", second.PathInput.Value);
         firstUi.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed);
-        model.Execute(DocumentCommand.New); DocumentUiFixture.Wait(commands.Pending); model.Refresh(); secondUi.Update(); Assert.True(second.Commands[DocumentCommand.Save].IsEnabled);
+        model.Execute(DocumentCommand.New); DocumentUiFixture.Wait(commands.Pending); model.Refresh(); secondUi.Update();
+        Assert.True(DocumentUiFixture.CommandButton(second, DocumentCommand.Save).IsEnabled);
         Assert.Equal(0, store.Disposals); Assert.Equal(0, authoring.Disposals); Assert.Equal(0, stops);
         app.Dispose();
         Assert.True(commands.Read().Closed); Assert.Equal(1, stops); Assert.Equal(1, store.Disposals); Assert.Equal(1, authoring.Disposals);
