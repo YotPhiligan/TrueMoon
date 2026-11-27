@@ -865,7 +865,9 @@ settled-закрытия, закрытие на новом снимке ассе
 - Время не ухудшено: `BuildAndDisposeScene` 1477 / 1501 µs вместо 1532 / 1529 при 2496 строках;
   `BuildScene` 1213 / 1201 вместо 1201 / 2215, где разброс проходов «до» больше эффекта.
 
-Проверка: `TrueMoon.Alloy.Tests` — 1311 без падений, `TrueMoon.Alloy.Hosting.Tests` — 216,
+Проверка: отдельный прогон `--verify` (единственный аргумент, `Benchmarks/TrueMoon.Argentis.Benchmarks/Program.cs:3`)
+на собранном дереве среза — `VIEW_BASELINE_VERIFIED`, отпечаток `TrueMoon.Argentis.dll` `4C4900BE…` тот же,
+что в замере «после». `TrueMoon.Alloy.Tests` — 1311 без падений, `TrueMoon.Alloy.Hosting.Tests` — 216,
 `TrueMoon.Aether.Editor.Tests` — 1612; сборка Release `TrueMoon.Argentis` и стенда — 0 ошибок.
 
 Следующие кандидаты: остаток UIA4.4 по составу — `ElementScope` на каждый View (`Views/View.cs:17`) и
