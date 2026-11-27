@@ -438,7 +438,9 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 закрыты 28.11.2026 UIA4.7 (точки объявления контента, дочерние View-части, кат-овер инспектора на
 сгенерированные свойства) и UIA4.8 (`[ViewConstructor]`, ARG024–ARG026, замкнутость графа регистраций),
 записи в начале раздела. Следующий шаг — остаток UIA4.4 (`ElementScope` на каждый View и обязательный
-слой `ContentControl`) и UIA4.3.1 (виртуализация `ElementList`); UIA4.11 вне ближайшей очереди.
+слой `ContentControl`). UIA4.3.1 закрыта 27.11.2026 (`VirtualizingStack`, `BindVirtualizedItems`,
+[замер](PERFORMANCE_BASELINE.md#uia431-viewport-virtualization-2026-11-27)); в прикладном коде она пока
+без потребителей — переход экранов с длинными списками не планировался; UIA4.11 вне ближайшей очереди.
 
 [Миграция Aether View](../engine/PLAN.md#aether-view-authoring-migration)
 проверена на свежих NuGet: оба хоста Editor и независимый Player на обоих
