@@ -15,11 +15,16 @@ public sealed record PhysicsCharacterOptions
     public float MaximumVerticalForce { get; init; } = 1000;
     /// <summary>Jump speed relative to the support along +Y.</summary>
     public float JumpSpeed { get; init; } = 5;
+    /// <summary>Maximum automatic rise in metres on supported static box steps. Zero disables stepping.</summary>
+    public float MaximumStepHeight { get; init; }
+    /// <summary>Minimum remaining tread depth in metres along the direction of input.</summary>
+    public float MinimumTreadDepth { get; init; } = .30f;
     /// <summary>Validates the bounded PHYS6 profile without mutating a world.</summary>
     public PhysicsError Validate()
     {
         if (!Positive(MaximumSpeed, 50) || !Positive(MaximumSlopeRadians, 1.5f) ||
-            !Positive(MaximumHorizontalForce, 100000) || !Positive(MaximumVerticalForce, 100000) || !Positive(JumpSpeed, 50))
+            !Positive(MaximumHorizontalForce, 100000) || !Positive(MaximumVerticalForce, 100000) || !Positive(JumpSpeed, 50) ||
+            !(MaximumStepHeight >= 0 && MaximumStepHeight <= 1) || !Positive(MinimumTreadDepth, 2))
             return new(PhysicsErrorCode.InvalidArgument, "Character.Options");
         return default;
     }

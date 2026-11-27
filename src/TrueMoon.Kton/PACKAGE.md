@@ -52,8 +52,14 @@ the body alive. Input velocity persists, jump is consumed once at the next Step.
 `PhysicsValidation.ValidateBody` also accepts an explicit current pose and linear/
 angular velocities alongside captured immutable settings. This overload performs
 the same complete admission without allocating a replacement descriptor per frame.
-No air steering, automatic stairs, crouch or root motion is promised. The neutral
-package still has no provider, App, native or Aether dependency.
+`MaximumStepHeight` (default 0, disabled) opts into the BEPU static box step
+profile. `MinimumTreadDepth` (default 0.30 m) is measured along the input.
+The respective admission bounds `[0, 1]` and `(0, 2]` metres are not geometry
+guarantees; depth is validated even when disabled. This profile moves a supported
+capsule onto a clear tread within the same Step and publishes normal solver
+support/contact events, not a teleport. It does not add auto-stepping on mesh
+or moving supports. No air steering, crouch or root motion is promised. The
+neutral package has no provider, App, native or Aether dependency.
 Other providers must explicitly reject operations for absent features. A zero
 published event count alone does not prove that the scene had no physical collisions.
 

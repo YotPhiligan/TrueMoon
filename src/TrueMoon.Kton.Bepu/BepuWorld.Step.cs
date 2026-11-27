@@ -16,8 +16,13 @@ internal sealed partial class BepuWorld
                 Faults.Visit(Checkpoint.StepBegun); CallbackFailed = false; Contacts.BeginStep();
                 for (var i = 0; i < Bodies.Capacity; i++)
                 {
-                    if (Bodies[i] is not { } body || body.PendingImpulse == Vector3.Zero) continue;
-                    var reference = Simulation.Bodies[body.Handle]; reference.Awake = true; reference.ApplyLinearImpulse(body.PendingImpulse); body.PendingImpulse = Vector3.Zero;
+                    if (Bodies[i] is not { } body) continue;
+                    if (body.PendingImpulse != Vector3.Zero)
+                    {
+                        var reference = Simulation.Bodies[body.Handle]; reference.Awake = true;
+                        reference.ApplyLinearImpulse(body.PendingImpulse); body.PendingImpulse = Vector3.Zero;
+                    }
+                    if (body.Character is { Options.MaximumStepHeight: > 0 } character) TryAutoStep(character);
                 }
                 // Synchronous BEPU call joins the owned dispatcher. Cancellation after this admission boundary does not abort a step.
                 Simulation.Timestep(Profile.FixedDeltaSeconds, Resources.Dispatcher);

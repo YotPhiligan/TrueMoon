@@ -6,7 +6,8 @@ namespace TrueMoon.Kton.Characters;
 /// <summary>Optional capsule controller capability of an externally serialized physics world.</summary>
 /// <remarks>The controller borrows a dynamic, upright, nonsensor capsule and locks its rotation. Remove the controller
 /// before removing its body. The world owns controller resources; disposal invalidates all handles. No hidden timer,
-/// air steering, automatic stairs, crouching or root motion. Input is applied only by the caller's fixed Step.</remarks>
+/// air steering, crouching or root motion. A provider may support opt-in automatic steps between axis-aligned static
+/// boxes, with a supported start, sufficient tread and capsule clearance. Input is applied only by the caller's fixed Step.</remarks>
 public interface IPhysicsCharacterWorld
 {
     /// <summary>Attaches one controller to a live capsule, retaining its pose and linear velocity.</summary>

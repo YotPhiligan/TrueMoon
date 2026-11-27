@@ -12,6 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Aether.Kton.Runtime/TrueMoon.Aether.Kton.Runtime.csproj" />
+    <ProjectReference Include="../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
+    <ProjectReference Include="../ManualTests/Game.Logic/Game.Logic.csproj" />
     <ProjectReference Include="../TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj" />
     <ProjectReference Include="../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />

@@ -13,8 +13,19 @@ Remove the controller before removing its body; world disposal releases both.
 the jump pulse at the next fixed Step. `GetCharacterState` reports pose, velocity,
 support body and normal. Walkable slopes and moving/dynamic supports use BEPU solver
 constraints. Teleport/remove immediately invalidates affected supports. No air steering,
-automatic stairs, crouching or root motion. Imported controller license and provenance
+crouching or root motion. Imported controller license and provenance
 are shipped under `licenses/characters/` (Apache-2.0).
+
+`PhysicsCharacterOptions.MaximumStepHeight` opts in to automatic steps in both
+60 Hz profiles (zero by default, including Aether). A grounded upright capsule
+that slows at a riser can step between contiguous axis-aligned static nonsensor
+boxes. The provider checks the rise, remaining `MinimumTreadDepth` along input
+(0.30 m by default), and full-capsule clearance both upward and across. A successful
+step shifts the capsule onto the tread before collision analysis, preserving
+horizontal velocity and clearing vertical velocity. Support comes from normal
+collision analysis in that Step; contact pairs are not invalidated as teleports.
+Jump takes precedence. Stepping does not change downhill or edge behavior and
+does not step onto meshes or moving supports.
 
 Use the existing `IFactory<IPhysicsWorld, PhysicsWorldOptions>` contract from
 TrueMoon.Contracts. `BepuPhysicsWorldFactory` is the low-level factory implementation;

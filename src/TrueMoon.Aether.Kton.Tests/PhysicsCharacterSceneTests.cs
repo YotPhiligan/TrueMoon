@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using TrueMoon.Aether.Ecs.Transforms;
 using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Kton;
@@ -14,19 +15,25 @@ using ISystem = TrueMoon.Aether.Ecs.ISystem;
 
 namespace TrueMoon.Aether.Kton.Tests;
 
-public sealed class PhysicsCharacterSceneTests
+public sealed partial class PhysicsCharacterSceneTests
 {
+    private const float StepCapsuleHalfHeight = .60f;
+    private static readonly PhysicsCharacterInput WalkTowardStep = new(new(0, -2.4f));
+
     [Fact]
     public void CharacterSettings_CaptureNeutralOptionsAndRemainReferenceFree()
     {
         var descriptor = new PhysicsCharacter
         {
             MaximumSpeed = 4, MaximumSlopeRadians = .6f, MaximumHorizontalForce = 500,
-            MaximumVerticalForce = 700, JumpSpeed = 3
+            MaximumVerticalForce = 700, JumpSpeed = 3, MaximumStepHeight = .25f, MinimumTreadDepth = .45f
         };
         var options = descriptor.CaptureOptions();
-        Assert.Equal((4f, .6f, 500f, 700f, 3f),
-            (options.MaximumSpeed, options.MaximumSlopeRadians, options.MaximumHorizontalForce, options.MaximumVerticalForce, options.JumpSpeed));
+        Assert.Equal((4f, .6f, 500f, 700f, 3f, .25f, .45f),
+            (options.MaximumSpeed, options.MaximumSlopeRadians, options.MaximumHorizontalForce, options.MaximumVerticalForce,
+                options.JumpSpeed, options.MaximumStepHeight, options.MinimumTreadDepth));
+        var defaults = new PhysicsCharacter().CaptureOptions();
+        Assert.Equal((0f, .30f), (defaults.MaximumStepHeight, defaults.MinimumTreadDepth));
         Assert.False(options.Validate().IsFailure);
         Assert.True(default(PhysicsCharacter).CaptureOptions().Validate().IsFailure);
         Assert.False(RuntimeHelpers.IsReferenceOrContainsReferences<PhysicsCharacter>());
@@ -45,9 +52,9 @@ public sealed class PhysicsCharacterSceneTests
         var marker = new PhysicsCharacter
         {
             MaximumSpeed = 3, MaximumSlopeRadians = .7f, MaximumHorizontalForce = 400,
-            MaximumVerticalForce = 600, JumpSpeed = 4
+            MaximumVerticalForce = 600, JumpSpeed = 4, MaximumStepHeight = .25f, MinimumTreadDepth = .45f
         };
-        using var graph = PhysicsGraph.Create(app, CharacterDocument(marker: marker));
+        using var graph = PhysicsGraph.Create(app, CharacterDocument(marker: marker, v2: true));
         var entity = graph.Scene.Entities[PhysicsFixture.Entity(0)];
         Assert.Equal(marker, graph.World.GetComponent<PhysicsCharacter>(entity));
         graph.Tick();
@@ -86,6 +93,69 @@ public sealed class PhysicsCharacterSceneTests
     }
 
     [Theory]
+    [InlineData(PhysicsQualityProfile.Baseline60, 1, false, .25f)]
+    [InlineData(PhysicsQualityProfile.Baseline60, 2, false, .25f)]
+    [InlineData(PhysicsQualityProfile.Baseline60, 2, true, .25f)]
+    [InlineData(PhysicsQualityProfile.Baseline60, 2, true, .30f)]
+    [InlineData(PhysicsQualityProfile.FastLinear60, 1, false, .25f)]
+    [InlineData(PhysicsQualityProfile.FastLinear60, 2, false, .25f)]
+    [InlineData(PhysicsQualityProfile.FastLinear60, 2, true, .25f)]
+    [InlineData(PhysicsQualityProfile.FastLinear60, 2, true, .30f)]
+    public async Task AuthoredAutoStep_UsesExplicitOptInAndPublishesSupportWithPose(
+        PhysicsQualityProfile profile, int schemaVersion, bool optIn, float rise)
+    {
+        var scenario = $"{profile}, v{schemaVersion}, opt-in={optIn}, rise={rise}";
+        var schema = schemaVersion == 1 ? LegacyCharacterSchema() : PhysicsComponentSchemas.CharacterV2;
+        await using var app = PhysicsFixture.Build(false, world: new() { Quality = profile });
+        await app.StartAsync();
+        using var game = PhysicsFixture.Game(app);
+        game.LoadSceneWorld(new(StepDocument(rise, schema, optIn)));
+        var scene = game.ActiveScene!;
+        var character = scene.Entities[PhysicsFixture.Entity(0)];
+        var floor = scene.Entities[PhysicsFixture.Entity(1)];
+        var tread = scene.Entities[PhysicsFixture.Entity(2)];
+        var settings = scene.World.GetComponent<PhysicsCharacter>(character);
+        Assert.Equal((optIn ? .25f : 0f, .30f), (settings.MaximumStepHeight, settings.MinimumTreadDepth));
+
+        for (var i = 0; i < 60; i++) game.Tick();
+        var sample = ObserveStep(scene, character);
+        AssertOnSurface(sample, floor, -.02f, .02f, scenario, game.TickNumber);
+
+        var shouldStep = optIn && rise == .25f;
+        var lifted = false;
+        scene.World.SetComponent(character, WalkTowardStep);
+        for (var i = 0; i < 50; i++)
+        {
+            game.Tick();
+            sample = ObserveStep(scene, character);
+            if (shouldStep)
+            {
+                if (!lifted) lifted = CheckFirstRise(sample, tread, scenario, game.TickNumber);
+            }
+            else
+            {
+                var feet = sample.Feet;
+                Assert.True(feet.Y is >= -.02f and <= .02f && feet.Z >= 0,
+                    $"Blocked by riser: {DescribeStep(sample, scenario, game.TickNumber)}");
+            }
+        }
+
+        var finish = DescribeStep(sample, scenario, game.TickNumber);
+        if (shouldStep)
+        {
+            Assert.True(lifted && sample.Feet.Z < -.50f, $"Expected arrival on tread: {finish}");
+            AssertOnSurface(sample, tread, .23f, .27f, scenario, game.TickNumber);
+        }
+        else
+        {
+            var velocityZ = scene.World.GetComponent<PhysicsVelocity>(character).Linear.Z;
+            Assert.True(sample.Feet.Z is >= .24f and <= .36f && MathF.Abs(velocityZ) <= .10f,
+                $"Expected stop at riser, velocity Z={velocityZ}: {finish}");
+            AssertOnSurface(sample, floor, -.02f, .02f, scenario, game.TickNumber);
+        }
+    }
+
+    [Theory]
     [InlineData(false)] [InlineData(true)]
     public async Task JumpSequence_ReplayDoesNotRepeatJumpAndLaterSequenceJumpsAgain(bool microsoft)
     {
@@ -116,6 +186,7 @@ public sealed class PhysicsCharacterSceneTests
 
     [Theory]
     [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)]
+    [InlineData(5)] [InlineData(6)]
     public async Task InvalidCharacterEdit_FailsBeforeNativeTickOrNeighborWriteback(int invalid)
     {
         await using var app = PhysicsFixture.Build(false, world: new());
@@ -135,8 +206,10 @@ public sealed class PhysicsCharacterSceneTests
             case 2: graph.World.SetComponent(entity, new PhysicsCharacterState(true, entity, Vector3.UnitX)); break;
             case 3: graph.World.SetComponent(entity, new PhysicsVelocity(Vector3.Zero, Vector3.UnitY)); break;
             case 4: graph.World.RemoveComponent<PhysicsCharacterInput>(entity); break;
+            case 5: graph.World.SetComponent(entity, new PhysicsCharacter { MaximumStepHeight = -.01f }); break;
+            case 6: graph.World.SetComponent(entity, new PhysicsCharacter { MinimumTreadDepth = 0 }); break;
         }
-        if (invalid == 1)
+        if (invalid is 1 or 5 or 6)
             Assert.Equal(PhysicsErrorCode.InvalidArgument, Assert.Throws<PhysicsException>(() => graph.Tick()).Error.Code);
         else
             Assert.Throws<InvalidDataException>(() => graph.Tick());
@@ -213,7 +286,8 @@ public sealed class PhysicsCharacterSceneTests
 
     private static PhysicsBody CapsuleBody() => new(PhysicsBodyMotion.Dynamic, PhysicsColliderShape.Capsule, new(.5f, 1, 0), 1);
 
-    private static SceneDocument CharacterDocument(PhysicsBody? body = null, PhysicsCharacter? marker = null, bool includeMovingNeighbor = false)
+    private static SceneDocument CharacterDocument(
+        PhysicsBody? body = null, PhysicsCharacter? marker = null, bool includeMovingNeighbor = false, bool v2 = false)
     {
         var bodies = new List<PhysicsFixture.BodySpec>
         {
@@ -222,17 +296,69 @@ public sealed class PhysicsCharacterSceneTests
         };
         if (includeMovingNeighbor)
             bodies.Add(new(PhysicsFixture.Body(), new(10, 5, 0)) { Velocity = new(new(2, 0, 0)) });
-        var source = PhysicsFixture.Document(bodies.ToArray());
+        var descriptor = marker ?? new PhysicsCharacter();
+        List<KeyValuePair<string, PropertyValue>> values =
+        [
+            PhysicsFixture.Number("speed", descriptor.MaximumSpeed), PhysicsFixture.Number("slope", descriptor.MaximumSlopeRadians),
+            PhysicsFixture.Number("horizontalForce", descriptor.MaximumHorizontalForce), PhysicsFixture.Number("verticalForce", descriptor.MaximumVerticalForce),
+            PhysicsFixture.Number("jumpSpeed", descriptor.JumpSpeed)
+        ];
+        if (v2 && marker.HasValue)
+        {
+            values.Add(PhysicsFixture.Number("maximumStepHeight", descriptor.MaximumStepHeight));
+            values.Add(PhysicsFixture.Number("minimumTreadDepth", descriptor.MinimumTreadDepth));
+        }
+        return WithCharacter(PhysicsFixture.Document(bodies.ToArray()),
+            v2 ? PhysicsComponentSchemas.CharacterV2 : PhysicsComponentSchemas.Character, values);
+    }
+
+    private static SceneDocument WithCharacter(SceneDocument source, ComponentSchema schema,
+        IEnumerable<KeyValuePair<string, PropertyValue>> values)
+    {
         var definitions = source.Definitions.ToArray();
         var first = definitions[0];
-        var descriptor = marker ?? new PhysicsCharacter();
-        definitions[0] = new(first.Id, new EntityPatch(first.Changes.AddedComponents.Append(
-            new ComponentData(new(Guid.NewGuid()), PhysicsComponentSchemas.CharacterId, 1,
-            [
-                PhysicsFixture.Number("speed", descriptor.MaximumSpeed), PhysicsFixture.Number("slope", descriptor.MaximumSlopeRadians),
-                PhysicsFixture.Number("horizontalForce", descriptor.MaximumHorizontalForce), PhysicsFixture.Number("verticalForce", descriptor.MaximumVerticalForce),
-                PhysicsFixture.Number("jumpSpeed", descriptor.JumpSpeed)
-            ]))));
-        return new(source.Id, source.Revision, source.Entities, definitions, source.Schemas.Append(PhysicsComponentSchemas.Character));
+        var changes = first.Changes;
+        var component = new ComponentData(new(Guid.NewGuid()), schema.TypeId, schema.Version, values);
+        definitions[0] = new(first.Id, new(changes.AddedComponents.Add(component), changes.RemovedComponents,
+            changes.PropertyOverrides, changes.RestoredComponents), first.BaseDefinitionId, first.Revision);
+        return new(source.Id, source.Revision, source.Entities, definitions, source.Schemas.Add(schema));
     }
+
+    private static SceneDocument StepDocument(float rise, ComponentSchema schema, bool enableStep) =>
+        WithCharacter(PhysicsFixture.Document(
+            new(new(PhysicsBodyMotion.Dynamic, PhysicsColliderShape.Capsule, new(.30f, StepCapsuleHalfHeight, 0), 1), new(0, StepCapsuleHalfHeight, 1)),
+            new(new(PhysicsBodyMotion.Static, PhysicsColliderShape.Box, new(4, 1, 3), 0), new(0, -.5f, 1.5f)),
+            new(new(PhysicsBodyMotion.Static, PhysicsColliderShape.Box, new(4, 1 + rise, 3), 0), new(0, (rise - 1) / 2, -1.5f))),
+            schema, enableStep ? [PhysicsFixture.Number("maximumStepHeight", .25), PhysicsFixture.Number("minimumTreadDepth", .30)] : []);
+
+    // Use the original v1 payload independently of the current registration.
+    private static ComponentSchema LegacyCharacterSchema() =>
+        new(PhysicsComponentSchemas.CharacterId, 1,
+            [Number("speed", 6), Number("slope", MathF.PI / 4), Number("horizontalForce", 1000),
+                Number("verticalForce", 1000), Number("jumpSpeed", 5)], requiredTypes: [PhysicsComponentSchemas.BodyId]);
+
+    private static ComponentPropertySchema Number(string key, double value) =>
+        new(key, PropertyValueKind.Number, PropertyValue.From(value));
+
+    private static StepSample ObserveStep(SceneWorld scene, EntityHandle character) =>
+        new(scene.World.GetComponent<LocalTransform>(character).Position - new Vector3(0, StepCapsuleHalfHeight, 0),
+            scene.World.GetComponent<PhysicsCharacterState>(character));
+
+    private static bool CheckFirstRise(StepSample sample, EntityHandle tread, string scenario, ulong tick)
+    {
+        if (sample.Feet.Y <= .15f) return false;
+        Assert.True(sample.Feet.Z < 0, $"Lift must transfer onto the tread: {DescribeStep(sample, scenario, tick)}");
+        AssertOnSurface(sample, tread, .23f, .27f, scenario, tick);
+        return true;
+    }
+
+    private static void AssertOnSurface(StepSample sample, EntityHandle expected, float minimumY, float maximumY, string scenario, ulong tick) =>
+        Assert.True(sample.Feet.Y >= minimumY && sample.Feet.Y <= maximumY &&
+            sample.Support.IsSupported && sample.Support.SupportEntity == expected && sample.Support.SupportNormal.Y > .99f,
+            $"Expected upward support on {expected} at Y=[{minimumY}, {maximumY}]: {DescribeStep(sample, scenario, tick)}");
+
+    private static string DescribeStep(StepSample sample, string scenario, ulong tick) =>
+        $"{scenario}, tick {tick}, feet={sample.Feet}, support={sample.Support}";
+
+    private readonly record struct StepSample(Vector3 Feet, PhysicsCharacterState Support);
 }

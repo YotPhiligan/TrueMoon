@@ -2,6 +2,116 @@
 
 [План](PLAN.md), [текущий статус](STATUS.md).
 
+<a id="phys6-aether-auto-step-2026-11-27"></a>
+## PHYS6 — автошаг в ECS и сессии Aether, 2026-11-27
+
+`1.2611.27.11-alpha`, Windows x64, SDK 11.0.100, Release/net11.0, VSTest/xUnit v2.
+Из `src`, где `R` — новый абсолютный каталог под `%TEMP%`:
+
+```powershell
+dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj -c Release --framework net11.0 `
+  --filter 'FullyQualifiedName~PhysicsCharacterSceneTests|FullyQualifiedName~PhysicsRegistrationTests|FullyQualifiedName~ProviderCharacter' `
+  "-bl:$R/phys6-aether-{}.binlog" --results-directory "$R" --logger 'trx;LogFileName=phys6-aether.trx'
+```
+
+Exit 0; XML TRX: 128 passed, 0 failed, 0 skipped. `PhysicsCharacterSceneTests` — 27,
+`PhysicsRegistrationTests` — 9; provider: 26 auto-step, 24 corpus, 19 character,
+23 validation. TRX подтвердил восемь movement cases (по четыре на
+`Baseline60` и `FastLinear60`), два случая Pause/Step/Replace (`Cobalt` /
+`Microsoft DI`) и два отказа preflight (`invalid: 5/6`) до native tick и
+изменения поз персонажа и соседа.
+
+На каждом профиле v1 и v2 без новых ключей остановились у уступа 0,25 м;
+v2 opt-in поднялся на него с позой и опорой в одном тике и остановился у
+уступа 0,30 м. При Replace реальный протокол загрузил тот же документ в
+новый мир с новой идентичностью сущностей. На паузе фиксированный вызов не
+сдвинул тик 59; Step дошёл до 60. Кандидат восстановил опору replay 60 idle
+тиков из пустого состояния опоры, затем повторил подъём ручными Step.
+После Stop счётчики `PublishedWorlds` и `ActiveResourceOwners` равны нулю.
+
+Артефакты: `%TEMP%\kton-phys6-aether-660d99d0-29d3-4140-b1c2-360f7a067f53`;
+`phys6-aether.trx` (195134 байта),
+`phys6-aether-20261127-171238--53932--jHXIo7.binlog` (923088 байт),
+`phys6-aether-20261127-171241--53932--EICWWr.binlog` (1090441 байт).
+Хранение по политике временных файлов машины.
+
+In-process lease не запускает DLL кандидата, окно или IPC. Replay — только
+контрольная точка этого теста, не сериализация Kton или гарантия произвольного
+checkpoint. Native Player/ALC, пакетная матрица, T3 и миграция движения Tales
+не проверялись; solver и package pins не менялись.
+
+<a id="phys6-headless-corpus-2026-11-27"></a>
+## PHYS6 — расширенный headless-корпус, 2026-11-27
+
+`1.2611.27.9-alpha` без повышения версии; Windows x64, SDK 11.0.100,
+Release/net11.0, VSTest/xUnit v2. Новый корпус использует только
+`IPhysicsWorld` и `IPhysicsCharacterWorld` в существующем тестовом проекте.
+Из `src`, где `R` — новый абсолютный каталог под `%TEMP%`:
+
+```sh
+dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj -c Release --framework net11.0 \
+  --filter "FullyQualifiedName~ProviderCharacter" \
+  "-bl:$R/phys6-corpus-{}.binlog" --results-directory "$R" --logger "trx;LogFileName=phys6-corpus.trx"
+```
+
+Exit 0; TRX: 92 passed, 0 failed, 0 skipped. Прежние классы: 26 автошаг,
+19 provider, 23 валидация. В [новом классе](../../TrueMoon.Aether.Kton.Tests/ProviderCharacterCorpusTests.cs)
+по аргументам theory подтверждены 12 исходов на профиль (`Baseline60`,
+`FastLinear60`): 8 проёмов/настил, 1 тонкая стена с отходом, 2 направления
+смешанного маршрута и 1 открытый край. На скосе опубликована опора mesh,
+на подъёмах — опора соответствующего бокса. Каждая из четырёх пар запусков
+совпала во всех 166 кадрах по значениям состояния; ID тел сопоставлялись
+только внутри своего мира. Для падения пересечение края и потеря опоры
+проверялись раздельно.
+
+Локальные артефакты: `%TEMP%\kton-phys6-corpus-bd157b38-cda4-4e02-9c18-14cc4024d0a6`,
+`phys6-corpus.trx` и два непустых `phys6-corpus-*.binlog`; хранение по политике
+временных файлов машины. Это проверка upright capsule, в том числе низкого
+прокси Ø0,50 м × 0,55 м, а не вытянутой формы Тени. Архив T3 не прогонялся;
+ECS, App, пакеты, миграция игры и межплатформенный детерминизм не проверялись.
+
+<a id="phys6-auto-step-2026-11-27"></a>
+## PHYS6 — опциональный шаг на статические боксы, 2026-11-27
+
+`1.2611.27.9-alpha`, Windows x64, .NET SDK 11.0.100, Release/net11.0,
+BEPU 2.5.0-beta.33, `Baseline60` и `FastLinear60`.
+Из `src` выполнена узкая проверка VSTest/xUnit v2:
+
+```sh
+dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj -c Release --framework net11.0 \
+  --filter "FullyQualifiedName~ProviderCharacter|FullyQualifiedName~PhysicsCharacterSceneTests|FullyQualifiedName~PhysicsContactTests" \
+  "-bl:phys6-auto-step-{}.binlog" --logger "trx;LogFilePrefix=phys6-auto-step"
+```
+
+TRX: 90 passed, 0 failed, 0 skipped (26 автошаг, 23 валидация, 19 прежний
+provider, 15 ECS scene, 7 contact). Подъём подтверждён по оси и диагонали,
+с опорой на верхнем боксе в первый тик подъёма и `Separated`, а не
+`Teleported`, у завершённого нижнего контакта. Негативные проверки: высокий
+уступ, выключенная политика, короткая проступь, потолок на подъёме и переносе,
+щель и старт в воздухе. Сенсоры/фильтр, приоритет прыжка и независимый спуск
+проверены отдельно.
+
+Headless-сравнение с [baseline](STATUS.md#phys6-tales-route-2026-11-27):
+исходный измеритель собран в Release с проектными ссылками, отдельным
+`--artifacts-path` и binlog. В копии изменены только настройки контроллера
+(`MaximumStepHeight = .25f`, `MinimumTreadDepth = .30f`). Запуск DLL на 11
+сценариях: `Errors=[]`, оба flat controls и 22 точных same-process повтора.
+
+| Наблюдение после прогрева | Baseline60 | FastLinear60 |
+| --- | --- | --- |
+| Ступени 1–4, тик смены опоры | 49, 55, 61, 67 | 49, 55, 61, 67 |
+| Финиш подъёма, Z м / опора | −4,261513 / Room | −4,261242 / Room |
+| Спуск, финиш / тики без опоры | Street / 18 | Street / 21 |
+| Уступ 0,25 м, пересечение Z=29 / финишная опора | 19 / LedgeNorth | 19 / LedgeNorth |
+| Уступ 0,30 м, пересечение / подъём | нет / 0 м | нет / 0 м |
+| Задний край, пересечение / потеря опоры | 32 / 39 | 32 / 39 |
+
+Оба скоса, связка скоса с комнатой и осевой проход двери достигли целей.
+В 18 из 22 пар «до/после» совпали все поля трассы; изменились только два
+подъёма на каждом профиле. Цели описывают исходы сценария, не паритет
+координат с кинематикой. Полный корпус, измерение стоимости, PHYS5/Aether
+opt-in, migration, Replace, межплатформенный детерминизм и пакеты не приняты.
+
 <a id="phys0-2026-11-12"></a>
 ## PHYS0 — exact BEPU packages и headless prototype, 2026-11-12
 

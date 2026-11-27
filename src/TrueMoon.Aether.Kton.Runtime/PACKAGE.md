@@ -1,7 +1,9 @@
 # TrueMoon.Aether.Kton.Runtime
 
 PHYS6 capsule controllers share the existing scene-owned Kton world and fixed
-Movement step. Registry registration includes the optional Character v1 schema.
+Movement step. Registry registration includes the exact optional Character v1
+and v2 schemas; v2 can explicitly opt into automatic stepping when the provider
+supports it. Legacy v1 and omitted v2 settings keep stepping disabled.
 Complete input/support roles are added during private authored-scene preparation;
 runtime changes use the SDK command helpers. Full preflight validates upright
 capsules, settings, velocities, jump sequences and output ownership before native
@@ -30,4 +32,4 @@ PhysicsEntityCommands. Contact projection overflow is explicit, never silent tru
 Dispose scheduler systems before subsystem/native resources, then borrowed SceneWorld
 and App dependencies. Cleanup failure retains the owner for retry. Pause advances no
 native time; paused Step advances one tick. No native-state checkpoint/mod migration,
-character controller, ragdoll, mesh asset import or platform guarantee is added.
+ragdoll, mesh asset import or platform guarantee is added.

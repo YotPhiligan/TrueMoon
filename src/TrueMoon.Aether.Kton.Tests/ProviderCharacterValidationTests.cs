@@ -28,6 +28,30 @@ public sealed class ProviderCharacterValidationTests
     }
 
     [Fact]
+    public void StepOptions_RejectNonfiniteAndOutOfRangeValues()
+    {
+        var defaults = new PhysicsCharacterOptions();
+        Assert.False(defaults.Validate().IsFailure);
+        Assert.False((defaults with { MaximumStepHeight = 1, MinimumTreadDepth = 2 }).ValidateInput(default).IsFailure);
+
+        foreach (var invalid in new[] { -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity, MathF.BitIncrement(1f) })
+            AssertInvalidStepOptions(defaults with { MaximumStepHeight = invalid });
+        foreach (var invalid in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity, MathF.BitIncrement(2f) })
+        {
+            AssertInvalidStepOptions(defaults with { MinimumTreadDepth = invalid });
+            AssertInvalidStepOptions(defaults with { MaximumStepHeight = .25f, MinimumTreadDepth = invalid });
+        }
+
+        static void AssertInvalidStepOptions(PhysicsCharacterOptions options)
+        {
+            var error = options.Validate();
+            Assert.Equal(PhysicsErrorCode.InvalidArgument, error.Code);
+            Assert.Equal("Character.Options", error.Field);
+            Assert.Equal(error, options.ValidateInput(default));
+        }
+    }
+
+    [Fact]
     public void Input_UsesVectorMagnitudeAndIncludesExactMaximum()
     {
         var options = new PhysicsCharacterOptions { MaximumSpeed = 5 };

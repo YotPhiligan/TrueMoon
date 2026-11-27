@@ -19,11 +19,16 @@ public readonly record struct PhysicsCharacter : IComponent
     public float MaximumVerticalForce { get; init; } = 1000;
     /// <summary>Jump speed relative to support.</summary>
     public float JumpSpeed { get; init; } = 5;
+    /// <summary>Maximum automatic step height in metres; zero disables stepping.</summary>
+    public float MaximumStepHeight { get; init; }
+    /// <summary>Minimum remaining tread depth in metres along the movement direction.</summary>
+    public float MinimumTreadDepth { get; init; } = .30f;
     /// <summary>Captures neutral controller options; callers validate before acquiring resources.</summary>
     public PhysicsCharacterOptions CaptureOptions() => new()
     {
         MaximumSpeed = MaximumSpeed, MaximumSlopeRadians = MaximumSlopeRadians, MaximumHorizontalForce = MaximumHorizontalForce,
-        MaximumVerticalForce = MaximumVerticalForce, JumpSpeed = JumpSpeed
+        MaximumVerticalForce = MaximumVerticalForce, JumpSpeed = JumpSpeed,
+        MaximumStepHeight = MaximumStepHeight, MinimumTreadDepth = MinimumTreadDepth
     };
 }
 

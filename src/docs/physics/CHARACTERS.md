@@ -59,18 +59,41 @@ angular velocity; pitch/roll teleport и Sleep контролируемого т
 | MaximumHorizontalForce, Н | 1000 | finite, `0 < value <= 100000` |
 | MaximumVerticalForce, Н | 1000 | finite, `0 < value <= 100000` |
 | JumpSpeed, м/с | 5 | finite, `0 < value <= 50` |
+| MaximumStepHeight, м | 0 (выключено) | finite, `0 <= value <= 1` |
+| MinimumTreadDepth, м | 0,30 | finite, `0 < value <= 2`, в том числе при выключенном шаге |
 
-Эти ceilings — admission policy, не измеренная гарантия для произвольного сочетания
-масс/сил/геометрии. Общие world motion/contact/pool limits сохраняются. Нет отдельного
-таймера, автоступеней, crouch, root motion, сложной локомоции или ragdoll.
+Границы настроек — admission policy, не гарантия для произвольного сочетания
+масс/сил/геометрии. Общие world motion/contact/pool limits сохраняются.
+Нет отдельного таймера, crouch, root motion, сложной локомоции или ragdoll.
+
+## Опциональный автоматический шаг
+
+Положительный `MaximumStepHeight` включает подъём в обоих профилях BEPU.
+Вертикальная капсула начинает на плоском статическом несенсорном боксе: центр
+должен оставаться над его следом, а ходьба уже замедлиться у препятствия.
+Первое препятствие должно быть примыкающим статическим несенсорным боксом
+без поворота. Проверяются высота, остаток проступи вдоль ввода и зазор для всей
+капсулы при подъёме и переносе. Неколлидирующие пары и сенсоры игнорируются;
+прочие солиды могут блокировать шаг, но mesh и подвижная опора не служат ступенью.
+
+Успешный шаг смещает капсулу внутрь проступи до collision analysis текущего Step,
+сохраняя XZ-скорость и обнуляя её Y-компоненту. Опору публикует solver, контакты
+не инвалидируются как при телепортации. Отказ не корректирует позу/скорость;
+прыжок, спуск и падение с края по-прежнему обрабатываются обычным контроллером.
 
 ## Сессия Aether
 
-`PhysicsComponentRegistry.Register` добавляет optional `PhysicsComponentSchemas.Character`
-v1: speed/slope/horizontalForce/verticalForce/jumpSpeed; required type — Body v1.
-Scene с upright capsule может добавить этот schema/component без изменения остальных
-physics entities. `PhysicsCharacter` — reference-free настройки; `new PhysicsCharacter()`
-имеет defaults, `default(PhysicsCharacter)` невалиден. Настройки фиксируются до native
+`PhysicsComponentRegistry.Register` добавляет две точные схемы с одним TypeId.
+`PhysicsComponentSchemas.Character` v1 не менялась: speed/slope/horizontalForce/
+verticalForce/jumpSpeed; обязательна схема Body. `PhysicsComponentSchemas.CharacterV2`
+сохраняет эти поля и добавляет Number `maximumStepHeight` (0) и `minimumTreadDepth`
+(0,30) в метрах. Без положительной высоты автошаг выключен: старые сцены
+не мигрируют, а v2 без указания новых ключей ведёт себя как v1. Границы
+проверяет `PhysicsCharacterOptions.Validate()`; явный ноль высоты не подменяется.
+
+`PhysicsCharacter` — reference-free настройки, включая `MaximumStepHeight` /
+`MinimumTreadDepth` для runtime. `new PhysicsCharacter()` имеет defaults,
+`default(PhysicsCharacter)` невалиден. Настройки фиксируются до native
 mutation; изменение descriptor пересоздаёт контроллер с сохранением тела.
 
 `PhysicsCharacterInput` содержит world XZ velocity и `JumpSequence`. Начальное
@@ -115,6 +138,8 @@ TrueMoon сопровождает адаптацию. Demo camera/input/renderer
 | Identity/ownership/inertia | `CharacterIds_RejectDefaultForeignStaleAndNeverAliasReusedSlot`, `DetachedController_RestoresRotationalResponseToOffCentreContact` |
 | Aether, оба DI, pose/support/render | `AuthoredCharacter_MovesAndPublishesSupportAndRenderPoseInSameTick` |
 | Runtime lifecycle/invalid whole-scene preflight | `RuntimeHelpers_DetachReattachReplaceAndDeleteReleaseControllerOwnership`, `InvalidCharacterEdit_FailsBeforeNativeTickOrNeighborWriteback` |
+| Aether auto-step: legacy v1, v2 defaults, высота 0,25/0,30 м на обоих профилях | `AuthoredAutoStep_UsesExplicitOptInAndPublishesSupportWithPose` |
+| Aether auto-step после Pause/Step/Replace, оба DI | `AutoStepSession_PauseAndStepThenReplaceReloadsPolicyAndRebuildsSupport` |
 
 56 новых cases +68 PHYS5:124passed каждый Debug/Release,0failed/0skipped.
 Independent consumer выполняет52checks на каждый source Debug/published Release/

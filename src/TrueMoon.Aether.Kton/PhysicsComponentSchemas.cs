@@ -2,7 +2,7 @@ using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Kton;
 
-/// <summary>Optional exact v1 authoring schemas. Runtime handles, contact entities and teleport commands are not persisted.</summary>
+/// <summary>Optional exact authoring schemas. Runtime handles, contact entities and teleport commands are not persisted.</summary>
 public static class PhysicsComponentSchemas
 {
     /// <summary>Stable singleton body schema identity.</summary>
@@ -14,6 +14,9 @@ public static class PhysicsComponentSchemas
     /// <summary>Controller settings v1; requires an upright dynamic capsule body. Inputs and state are runtime data.</summary>
     public static ComponentSchema Character { get; } = new(CharacterId, 1,
         [Number("speed",6),Number("slope", MathF.PI / 4),Number("horizontalForce",1000),Number("verticalForce",1000),Number("jumpSpeed",5)], requiredTypes: [BodyId]);
+    /// <summary>Controller settings v2; adds explicit automatic step settings with stepping disabled by default.</summary>
+    public static ComponentSchema CharacterV2 { get; } = new(CharacterId, 2,
+        [.. Character.Properties.Values, Number("maximumStepHeight", 0), Number("minimumTreadDepth", .30)], requiredTypes: [BodyId]);
     /// <summary>Body v1; requires the canonical Transform.</summary>
     public static ComponentSchema Body { get; } = new(BodyId, 1,
     [
