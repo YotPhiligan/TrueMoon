@@ -42,10 +42,23 @@
 0 не пройдено, то же число, что до правок. Сборки потребителей генерируемой регистрации: `TrueMoon.Aether.Player` —
 0 ошибок, эмитированный `ViewRegistrations.g.cs` содержит две прежние строки `ViewActivation<…>.Register(static …)`
 без ключа (`PlayerView`, `PlayerViewStyle`); `ManualTests/AlloyTest` — 0 ошибок.
-`ManualTests/AlloyPackageConsumer` в этом checkout не проверяется: restore падает на NU1101 (пакеты
-`1.2611.25.20-alpha` ищутся на nuget.org, локальный feed настраивает `RunPackageSmoke.ps1`) — состояние до
-правки, к генерации отношения не имеет; контур генерируемой эмиссии вместо него покрыт `Aether.Player` и
-`AlloyTest`. Утверждений о стоимости срез не делает, случай в `TrueMoon.Argentis.Benchmarks` не добавлялся.
+`ManualTests/AlloyPackageConsumer` — пакетный контур (`RunPackageSmoke.ps1 -ViewCompositionOnly`, профиль
+`view-composition`): девять пакетов собраны из этого дерева (`1.2611.27.7-alpha.ui.20261127140301096`),
+consumer восстанавливается только по PackageReference, компилятор использует ровно один анализатор из пакета
+`TrueMoon.Argentis` (его SHA совпадает с producer), набор генерации проверен. Шесть процессов приложения —
+Debug/build × (cobalt, di) × (raster, opengl): все пройдено, кадры 6 и 20, cleanup и хэш native Skia совпали
+([прогон](../../TestResults/AlloyPackages/run-20261127-140301-085/summary.json)). Эмитированный
+`generated/obj/generated/Debug/TrueMoon.Argentis.Generator/…/ViewRegistrations.g.cs` — пять прежних вызовов
+`ViewActivation<…>.Register(…)` без ключа: `ConsumerChild`, `ConsumerChildStyle`,
+`ConsumerRow` + `ConsumerItem`, `ConsumerStyle`, `ConsumerView`; сам потребитель регистрирует их без имени
+вклада (`.View<ConsumerChild, ConsumerChildStyle>()`, `.ViewWithArgs<ConsumerRow, ConsumerItem>()`,
+`.View<ConsumerView, ConsumerStyle>()`), то есть единственный вклад по имени собирающей сборки читается из
+нового реестра. Две предыдущие попытки того же профиля зафиксировали окружение, а не код: прогон в общем
+дереве упал на `Producer/package runtime mismatch` из-за чужого коммита `81411bb` в середине прогона (в сборку
+попадает `SourceRevisionId`, сравнение producer/пакет его учитывает), прогон в ovnfs-checkout на другом томе —
+на копировании native-зависимостей (MSB3021/MSB3027). Итоговый прогон сделан в общем дереве при неизменном
+HEAD `81411bb` до и после. Утверждений о стоимости срез не делает, случай в `TrueMoon.Argentis.Benchmarks`
+не добавлялся.
 
 <a id="uia46-binding-converter"></a>
 28.11.2026 — UIA4.6 (типизированное преобразование значения привязки): `PropertyBinding` разделяет тип
