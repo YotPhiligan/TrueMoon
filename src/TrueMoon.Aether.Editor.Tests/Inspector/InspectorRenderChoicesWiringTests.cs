@@ -175,7 +175,7 @@ public sealed class InspectorRenderChoicesWiringTests
 
         public bool HasSelection => true;
         public bool NoSelection => false;
-        public string SelectionText => "Меши";
+        public InspectorSelection Selection => new(null, true);
         public bool CanEdit => true;
         public bool CanEditProperties => true;
         public bool CanChangeComponents => true;

@@ -141,6 +141,7 @@ public sealed class EditorInspectorViewTests
         Assert.True(view.RestoreButtons.ContainsKey(DocumentData.Interaction));
         test.Model.Refresh(null); ui.Update();
         Assert.Empty(view.Components); Assert.Empty(view.Properties); Assert.True(view.Empty.IsVisible);
+        Assert.Equal("Сущность не выбрана", view.Empty.Value);
         Assert.False(view.Apply.IsEnabled); Assert.False(view.AddComponent.IsEnabled);
     }
 
@@ -350,6 +351,30 @@ public sealed class EditorInspectorViewTests
         Assert.True(test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["flag"].Value.GetBoolean());
         Assert.False(test.Owner.Commands.Read().Closed);
     }
+
+    [Fact]
+    public void EmptyPartCaption_FollowsTypedSelectionThroughBindingConverter()
+    {
+        using var test = new InspectorFixture();
+        using var view = EditorInspectorView.Create(test.Model, new EditorInspectorViewStyle());
+        var host = new Panel().WithChildren(view);
+        using var ui = InspectorFixture.Ui(host);
+        ui.Update();
+
+        test.Refresh(InspectorFixture.Child);
+        ui.Update();
+        var id = DocumentData.Child.Value.ToString("D");
+        Assert.Equal(id[..8] + "…" + id[^8..], view.Empty.Value);
+
+        test.Model.Refresh(null);
+        ui.Update();
+        Assert.True(view.Empty.IsVisible);
+        Assert.Equal("Сущность не выбрана", view.Empty.Value);
+    }
+
+    [Fact]
+    public void EmptyPartCaption_ExplainsMissingSceneDocument() =>
+        Assert.Equal("Нет открытой authoring-сцены", InspectorSelectionText.Describe(new InspectorSelection(null, false)));
 
     private static void Click(UiSession ui, EditorInspectorView view, Button button)
     {

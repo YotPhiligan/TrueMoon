@@ -3,6 +3,34 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+<a id="uia46-binding-converter"></a>
+28.11.2026 — UIA4.6 (типизированное преобразование значения привязки): `PropertyBinding` разделяет тип
+значения источника и тип UI-свойства — `PropertyBinding<TSource, TSourceValue, TValue>`
+(`TrueMoon.Argentis/Bindings/PropertyBinding.cs:7`, `:23-56`). Односторонняя привязка принимает
+`Func<TSourceValue, TValue>`, двусторонняя — `ITwoWayValueConverter<TSourceValue, TValue>`
+(`Bindings/ITwoWayValueConverter.cs`) с `Convert` и `TryConvertBack(value, out sourceValue, out error)`.
+Чтение источника идёт через `_convert` (`:160-166`), обратная запись сравнивает значение контроля с
+каноническим и пишет в источник только когда конвертер дал другое значение источника (`:168-210`).
+Отказ обратного преобразования: черновик остаётся в контроле, источник не тронут, привязка ставит
+`UiProperties.HasError` и `UiProperties.ErrorMessage` и снимает только собственную ошибку — флаг
+`_conversionFailed` (`:135`, `:189-194`, `:212-225`). Публичные перегрузки: `Bind`, `BindTwoWay` и `BindText`
+с преобразователем (`ElementExtensions.cs:151-274`) и те же во Fluent-обёртках
+(`Views/UiBuildExtensions.cs:178-254`); генератор `FluentTwoWayBinding` не менялся.
+В инспекторе Editor presentation-строка убрана из ViewModel: `IEditorInspectorViewModel.SelectionText`
+заменён на `InspectorSelection(EntityId?, IsSceneOpen)` (`Editing/IEditorInspectorViewModel.cs:135-136`),
+реализация — `EditorInspectorViewModel.cs:228-229` с уведомлением `nameof(Selection)` (:324), подпись
+строит `InspectorSelectionText.Describe` в привязке Fluent-дерева (`Editing/EditorInspectorView.cs:153`,
+`Editing/InspectorSelection.cs`). Ветка без модели (`EditorInspectorView.cs:307-313`) остаётся со своим
+текстом: привязки там нет.
+Проверки (28.11.2026, Release/net11.0): `TrueMoon.Alloy.Tests` — 1320 пройдено, 0 не пройдено, из них
+9 новых фактов `ConvertedBindingTests.cs` (проекция и уведомления, смена контекста, двусторонний ввод
+через `TextBox`, отказ с сохранением черновика и `ErrorMessage`, снятие собственной ошибки, чужое
+состояние ошибки не снимается, незаписываемый селектор, бросок конвертера). Фильтр
+`FullyQualifiedName~Inspector` в `TrueMoon.Aether.Editor.Tests` — 255 пройдено, 0 не пройдено (+2 новых
+факта `EditorInspectorViewTests`), полный прогон того же проекта — 1636 пройдено, 0 не пройдено;
+`TrueMoon.Alloy.Hosting.Tests` — 216 пройдено, 0 не пройдено. Утверждений о стоимости срез не делает,
+поэтому случай в `TrueMoon.Argentis.Benchmarks` не добавлялся.
+
 28.11.2026 — UIA4.5 (остаток: legacy-блок свойств Editor на условном слоте): вместо ручной замены панель
 держит `ConditionalContent<PropertySetToken?>` (`TrueMoon.Aether.Editor.UI/EditorView.cs:185-186`,
 `:281-321`), модель отдаёт токен из двух массивов ключей и значений — равный по содержимому токен сохраняет

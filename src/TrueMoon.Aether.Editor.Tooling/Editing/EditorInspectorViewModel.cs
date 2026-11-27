@@ -202,9 +202,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public bool HasSelection => _entity != default;
     /// <summary>Gets whether empty-selection guidance should be shown.</summary>
     public bool NoSelection => !HasSelection;
-    /// <summary>Gets a selection or empty-document description.</summary>
-    public string SelectionText => _entity != default ? EditorScene.Name(_entity.Value.ToString("D")) :
-        _baseline == null ? "Нет открытой authoring-сцены" : "Сущность не выбрана";
+    /// <summary>Gets the authoring selection presented by the inspector.</summary>
+    public InspectorSelection Selection => new(_entity == default ? null : _entity, _baseline != null);
     /// <summary>Gets editing admission for any component, including entities without Transform.</summary>
     public bool CanEditProperties => _canEditProperties;
     /// <summary>Gets presence editing admission; complete or cancel property drafts first.</summary>
@@ -299,7 +298,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
             _addable = content == null || entity == null ? [] : content.Document.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version)
                 .Select(schema => new InspectorComponentType(schema, ComponentName(schema.TypeId) + " v" + schema.Version,
                     (schema.AllowMultiple || !types.Contains(schema.TypeId)) && schema.RequiredTypes.All(types.Contains))).ToArray();
-            foreach (var name in new[] { nameof(Components), nameof(AddableTypes), nameof(RemovedComponents), nameof(HasSelection), nameof(NoSelection), nameof(SelectionText), nameof(HasDraft) }) OnPropertyChanged(name);
+            foreach (var name in new[] { nameof(Components), nameof(AddableTypes), nameof(RemovedComponents), nameof(HasSelection), nameof(NoSelection), nameof(Selection), nameof(HasDraft) }) OnPropertyChanged(name);
         }
         finally { _loading = false; _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); }
     }

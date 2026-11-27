@@ -126,8 +126,8 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <summary>Gets whether empty-selection guidance should be shown.</summary>
     bool NoSelection { get; }
 
-    /// <summary>Gets a selection or empty-document description.</summary>
-    string SelectionText { get; }
+    /// <summary>Gets the authoring selection presented by the inspector.</summary>
+    InspectorSelection Selection { get; }
 
     /// <summary>Gets editing admission for any component, including entities without Transform.</summary>
     bool CanEditProperties { get; }

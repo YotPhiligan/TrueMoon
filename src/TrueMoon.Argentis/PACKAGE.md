@@ -203,6 +203,32 @@ synchronization and lifetime policy. A disposable model can release current obse
 with `ClearPropertyChangedSubscribers()` after its own cleanup. `ViewModel` adds no
 automatic dependency ownership. Bindings still accept any `INotifyPropertyChanged`.
 
+A binding may project the selected source value instead of assigning it directly. The one-way
+overloads take `Func<TSourceValue, TValue>`; the two-way overloads take
+`ITwoWayValueConverter<TSourceValue, TValue>`, whose `Convert` builds the UI value and whose
+`TryConvertBack(value, out sourceValue, out error)` accepts the UI value back.
+
+```csharp
+using TrueMoon.Argentis;
+using TrueMoon.Argentis.Bindings;
+
+public sealed class TemperatureSetting : Bindable
+{
+    private double _celsius = 20;
+    public double Celsius { get => _celsius; set => SetProperty(ref _celsius, value); }
+}
+
+label.Bind(Text.ValueProperty, setting, x => x.Celsius, c => $"{c:0.#} °C");
+editor.BindTwoWay(TextBox.ValueProperty, setting, x => x.Celsius, new CelsiusText());
+```
+
+A rejected back conversion keeps the user's draft in the control, never writes the source and
+reports the reason through `UiProperties.HasError` and `UiProperties.ErrorMessage`; a later source
+change reprojects the canonical value and clears only the error state this binding set itself, never
+an error set by someone else. A throwing `Convert` leaves the UI value unchanged and surfaces the
+exception through the owning update. The selector stays a direct public readable/writable property —
+for a two-way binding, of exactly the converter's source type and without an `init`-only setter.
+
 Separate appearance into `IViewStyle<TView>.Configure(IViewStyleBuilder<TView>)`.
 Declare `Root()`, `Part(view => view.Header)` or `Role(sharedTypedRole)` rules, then
 apply/replace/remove them with `view.WithViewStyle(style)` / `WithViewStyle(null)`.

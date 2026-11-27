@@ -4,21 +4,27 @@ using System.Reflection;
 
 namespace TrueMoon.Argentis.Bindings;
 
-internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSource : class, INotifyPropertyChanged
+internal sealed class PropertyBinding<TSource, TSourceValue, TValue> : IDisposable where TSource : class, INotifyPropertyChanged
 {
     private readonly Element _element;
     private readonly UiProperty<TValue> _property;
     private readonly TSource? _source;
     private readonly IDataContext<TSource>? _context;
-    private readonly Func<TSource, TValue> _read;
-    private readonly Action<TSource, TValue>? _write;
+    private readonly Func<TSource, TSourceValue> _read;
+    private readonly Func<TSourceValue, TValue> _convert;
+    private readonly Func<TValue, TSourceValue>? _toSource;
+    private readonly Action<TSource, TSourceValue>? _write;
+    private readonly ITwoWayValueConverter<TSourceValue, TValue>? _back;
     private readonly string _sourceProperty;
     private Connection? _connection;
     private bool _observingContext;
     private bool _disposed;
 
     internal PropertyBinding(Element element, UiProperty<TValue> property, TSource? source,
-        Expression<Func<TSource, TValue>> selector, bool twoWay = false, IDataContext<TSource>? context = null)
+        Expression<Func<TSource, TSourceValue>> selector, bool twoWay = false,
+        Func<TSourceValue, TValue>? convert = null,
+        ITwoWayValueConverter<TSourceValue, TValue>? back = null,
+        IDataContext<TSource>? context = null)
     {
         Expression body = selector.Body;
         while (!twoWay && body is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked, Method: null } conversion)
@@ -31,15 +37,22 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         _context = context;
         _read = selector.Compile(preferInterpretation: true);
         _sourceProperty = member.Member.Name;
+        if (convert == null && back == null && typeof(TSourceValue) != typeof(TValue))
+            throw new ArgumentException("A binding without a converter requires the source value type to match the UI property type.", nameof(selector));
+        _convert = convert ?? (back is null ? IdentityMap<TSourceValue, TValue>.Map : back.Convert);
         if (twoWay)
         {
             var sourceProperty = (PropertyInfo)member.Member;
-            if (sourceProperty.PropertyType != typeof(TValue) || sourceProperty.GetMethod?.IsPublic != true
+            if (sourceProperty.PropertyType != typeof(TSourceValue) || sourceProperty.GetMethod?.IsPublic != true
                 || sourceProperty.SetMethod is not { IsPublic: true } setter
                 || setter.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(System.Runtime.CompilerServices.IsExternalInit)))
-                throw new ArgumentException("Select a public readable/writable property of exactly the UI property's type, without an init-only setter.", nameof(selector));
-            var value = Expression.Parameter(typeof(TValue), "value");
-            _write = Expression.Lambda<Action<TSource, TValue>>(Expression.Assign(member, value), selector.Parameters[0], value).Compile(preferInterpretation: true);
+                throw new ArgumentException(back == null
+                    ? "Select a public readable/writable property of exactly the UI property's type, without an init-only setter."
+                    : "Select a public readable/writable property of exactly the converter's source type, without an init-only setter.", nameof(selector));
+            var value = Expression.Parameter(typeof(TSourceValue), "value");
+            _write = Expression.Lambda<Action<TSource, TSourceValue>>(Expression.Assign(member, value), selector.Parameters[0], value).Compile(preferInterpretation: true);
+            _back = back;
+            _toSource = back == null ? IdentityMap<TValue, TSourceValue>.Map : null;
         }
         _element.AttachmentChanged += AttachmentChanged;
         try { AttachmentChanged(); }
@@ -113,12 +126,13 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         Disconnect();
     }
 
-    private sealed class Connection(PropertyBinding<TSource, TValue> binding, TSource source) : IDisposable
+    private sealed class Connection(PropertyBinding<TSource, TSourceValue, TValue> binding, TSource source) : IDisposable
     {
         private int _active = 1;
         private int _pending;
         private bool _subscribed;
         private bool _busy;
+        private bool _conversionFailed;
         private bool _writingSource;
         private readonly int _ownerThread = Environment.CurrentManagedThreadId;
         private readonly Action<Action> _dispatch = binding._element.CaptureAttachmentDispatcher();
@@ -146,8 +160,9 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         private void ApplyCanonicalValue()
         {
             if (!Current) return;
-            var value = binding._read(Source);
+            var value = binding._convert(binding._read(Source));
             if (Current) binding._element.Set(binding._property, value);
+            ClearConversionFailure();
         }
 
         private void UiChanged(Element element, object property)
@@ -160,13 +175,23 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
             {
                 try
                 {
-                    var value = element.Get(binding._property);
+                    var shown = element.Get(binding._property);
                     var previous = binding._read(Source);
-                    if (Current && !EqualityComparer<TValue>.Default.Equals(previous, value))
+                    var canonical = binding._convert(previous);
+                    if (Current && !EqualityComparer<TValue>.Default.Equals(canonical, shown))
                     {
-                        _writingSource = true;
-                        try { binding._write!(Source, value); }
-                        finally { _writingSource = false; }
+                        if (binding._back == null) Write(binding._toSource!(shown));
+                        else if (binding._back.TryConvertBack(shown, out var value, out var error))
+                        {
+                            // A converter may normalize, so compare against what the source already holds.
+                            if (!EqualityComparer<TSourceValue>.Default.Equals(previous, value)) Write(value);
+                        }
+                        else
+                        {
+                            // The draft stays in the control; the source is untouched.
+                            ReportConversionFailure(element, error);
+                            return;
+                        }
                     }
                 }
                 catch (Exception error) { (errors ??= []).Add(error); }
@@ -175,6 +200,28 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
             }
             finally { _busy = false; }
             TreeChange.ThrowErrors(errors);
+        }
+
+        private void Write(TSourceValue value)
+        {
+            _writingSource = true;
+            try { binding._write!(Source, value); }
+            finally { _writingSource = false; }
+        }
+
+        private void ReportConversionFailure(Element element, string? error)
+        {
+            _conversionFailed = true;
+            element.Set(UiProperties.HasError, true);
+            element.Set(UiProperties.ErrorMessage, error is { Length: > 0 } ? error : "Значение не принято");
+        }
+
+        private void ClearConversionFailure()
+        {
+            if (!_conversionFailed) return; // someone else's error state is never cleared here
+            _conversionFailed = false;
+            binding._element.Set(UiProperties.HasError, false);
+            binding._element.Set(UiProperties.ErrorMessage, "");
         }
 
         private void Changed(object? sender, PropertyChangedEventArgs args)
@@ -197,6 +244,18 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
             if (Interlocked.Exchange(ref _active, 0) == 0) return;
             if (binding._write != null) binding._element.PropertyChanged -= UiChanged;
             if (_subscribed) Source.PropertyChanged -= Changed;
+        }
+    }
+
+    private static class IdentityMap<TFrom, TTo>
+    {
+        // Compiled once per closed pair; the constructor guard rejects mismatched value types on the identity path.
+        internal static readonly Func<TFrom, TTo> Map = Compile();
+
+        private static Func<TFrom, TTo> Compile()
+        {
+            var value = Expression.Parameter(typeof(TFrom), "value");
+            return Expression.Lambda<Func<TFrom, TTo>>(value, value).Compile(preferInterpretation: true);
         }
     }
 }

@@ -174,6 +174,24 @@ public static class UiBuildExtensions
             control.Element.BindTwoWay(property, context, selector);
             return control;
         }
+
+        /// <summary>Binds to an explicit stable model through a value converter.</summary>
+        public UiControl<TControl, TData> Bind<TSource, TSourceValue, TValue>(UiProperty<TValue> property, TSource source,
+            Expression<Func<TSource, TSourceValue>> selector, Func<TSourceValue, TValue> convert)
+            where TSource : class, INotifyPropertyChanged
+        {
+            control.Element.Bind(property, source, selector, convert);
+            return control;
+        }
+
+        /// <summary>Binds bidirectionally to an explicit stable model through a value converter.</summary>
+        public UiControl<TControl, TData> BindTwoWay<TSource, TSourceValue, TValue>(UiProperty<TValue> property, TSource source,
+            Expression<Func<TSource, TSourceValue>> selector, ITwoWayValueConverter<TSourceValue, TValue> converter)
+            where TSource : class, INotifyPropertyChanged
+        {
+            control.Element.BindTwoWay(property, source, selector, converter);
+            return control;
+        }
     }
 
     extension<TControl, TData>(UiControl<TControl, TData> control)
@@ -186,6 +204,22 @@ public static class UiBuildExtensions
         /// <summary>Binds bidirectionally to the view's current context.</summary>
         public UiControl<TControl, TData> BindTwoWay<TValue>(UiProperty<TValue> property, Expression<Func<TData, TValue>> selector) =>
             control.BindTwoWay(property, control.Context, selector);
+
+        /// <summary>Binds a projected value from the view's current context.</summary>
+        public UiControl<TControl, TData> Bind<TSourceValue, TValue>(UiProperty<TValue> property,
+            Expression<Func<TData, TSourceValue>> selector, Func<TSourceValue, TValue> convert)
+        {
+            control.Element.Bind(property, control.Context, selector, convert);
+            return control;
+        }
+
+        /// <summary>Binds bidirectionally through a value converter over the view's current context.</summary>
+        public UiControl<TControl, TData> BindTwoWay<TSourceValue, TValue>(UiProperty<TValue> property,
+            Expression<Func<TData, TSourceValue>> selector, ITwoWayValueConverter<TSourceValue, TValue> converter)
+        {
+            control.Element.BindTwoWay(property, control.Context, selector, converter);
+            return control;
+        }
 
         /// <summary>Observes notifications from the current context for the control's attachment lifetime.</summary>
         public UiControl<TControl, TData> ObservePropertyChanged(PropertyChangedEventHandler handler, Action? synchronize = null)
@@ -219,6 +253,11 @@ public static class UiBuildExtensions
         /// <summary>Binds text from the view's current context.</summary>
         public UiControl<TControl, TData> BindText(Expression<Func<TData, string>> selector) =>
             control.Bind(global::TrueMoon.Argentis.Text.ValueProperty, selector);
+
+        /// <summary>Binds text built by a converter from a property of the view's current context.</summary>
+        public UiControl<TControl, TData> BindText<TSourceValue>(Expression<Func<TData, TSourceValue>> selector,
+            Func<TSourceValue, string> convert) =>
+            control.Bind(global::TrueMoon.Argentis.Text.ValueProperty, selector, convert);
     }
 
     extension<TControl, TData>(UiControl<TControl, TData> control) where TControl : ElementList

@@ -144,7 +144,28 @@ public static partial class ElementExtensions
         ArgumentNullException.ThrowIfNull(property);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(selector);
-        element.OwnBinding(property, () => new PropertyBinding<TSource, TValue>(element, property, source, selector));
+        element.OwnBinding(property, () => new PropertyBinding<TSource, TValue, TValue>(element, property, source, selector, twoWay: false));
+        return element;
+    }
+
+    /// <summary>Binds a typed UI property to a value projected from one directly selected source property.</summary>
+    /// <param name="element">The element, preserving its concrete type in the Fluent chain.</param>
+    /// <param name="property">The destination UI property; only one binding per property is allowed.</param>
+    /// <param name="source">The notifying source. Its getter must be safe to read on the UI owner thread.</param>
+    /// <param name="selector">A direct instance property access, for example x =&gt; x.Name. Nested paths and computed expressions are unsupported.</param>
+    /// <param name="convert">Projects the selected source value onto the UI property value. The source value type may differ from the UI property type.</param>
+    /// <returns>The configured element.</returns>
+    /// <remarks>One-way only. The converter runs on the UI owner thread every time the source changes; throwing leaves the UI value unchanged. Only the source type is inspected, so a converter accepts whatever the selected property exposes.</remarks>
+    public static T Bind<T, TSource, TSourceValue, TValue>(this T element, UiProperty<TValue> property, TSource source,
+        Expression<Func<TSource, TSourceValue>> selector, Func<TSourceValue, TValue> convert)
+        where T : Element where TSource : class, INotifyPropertyChanged
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(property);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(selector);
+        ArgumentNullException.ThrowIfNull(convert);
+        element.OwnBinding(property, () => new PropertyBinding<TSource, TSourceValue, TValue>(element, property, source, selector, twoWay: false, convert));
         return element;
     }
     /// <summary>Binds a typed UI property to a writable source property in both directions until disposal.</summary>
@@ -161,7 +182,28 @@ public static partial class ElementExtensions
         ArgumentNullException.ThrowIfNull(property);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(selector);
-        element.OwnBinding(property, () => new PropertyBinding<TSource, TValue>(element, property, source, selector, twoWay: true));
+        element.OwnBinding(property, () => new PropertyBinding<TSource, TValue, TValue>(element, property, source, selector, twoWay: true));
+        return element;
+    }
+
+    /// <summary>Binds a typed UI property to a converter round trip over one directly selected source property.</summary>
+    /// <param name="element">The element, preserving its concrete type.</param>
+    /// <param name="property">The UI property; one binding of either direction is allowed per property.</param>
+    /// <param name="source">The notifying source, whose getter and setter run on the UI owner thread.</param>
+    /// <param name="selector">A direct public readable/writable property of exactly the converter's source type; init-only setters are unsupported.</param>
+    /// <param name="converter">Projects the source value onto the UI value and accepts the UI value back.</param>
+    /// <returns>The configured element.</returns>
+    /// <remarks>Attached UI changes convert back before the source is written. A rejected value keeps the user's draft in the control, leaves the source untouched, and sets UiProperties.HasError with UiProperties.ErrorMessage; the binding clears only that error state, never an error set by someone else. A source change reprojects the canonical value and clears the failure.</remarks>
+    public static T BindTwoWay<T, TSource, TSourceValue, TValue>(this T element, UiProperty<TValue> property, TSource source,
+        Expression<Func<TSource, TSourceValue>> selector, ITwoWayValueConverter<TSourceValue, TValue> converter)
+        where T : Element where TSource : class, INotifyPropertyChanged
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(property);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(selector);
+        ArgumentNullException.ThrowIfNull(converter);
+        element.OwnBinding(property, () => new PropertyBinding<TSource, TSourceValue, TValue>(element, property, source, selector, twoWay: true, back: converter));
         return element;
     }
 
@@ -179,15 +221,30 @@ public static partial class ElementExtensions
         where T : Element where TData : class, INotifyPropertyChanged =>
         BindContext(element, property, context, selector, twoWay: true);
 
-    private static T BindContext<T, TData, TValue>(T element, UiProperty<TValue> property,
-        IDataContext<TData> context, Expression<Func<TData, TValue>> selector, bool twoWay)
+    /// <summary>Binds a UI property to a value projected from a property of the current data context.</summary>
+    /// <remarks>While attached, a context replacement reads and projects the new source immediately. A null context suspends the binding and retains the current UI value.</remarks>
+    public static T Bind<T, TData, TSourceValue, TValue>(this T element, UiProperty<TValue> property,
+        IDataContext<TData> context, Expression<Func<TData, TSourceValue>> selector, Func<TSourceValue, TValue> convert)
+        where T : Element where TData : class, INotifyPropertyChanged =>
+        BindContext(element, property, context, selector, twoWay: false, convert);
+
+    /// <summary>Binds a UI property in both directions through a converter over the current data context.</summary>
+    /// <remarks>Only the current source receives edits. A rejected back conversion keeps the draft and reports the error on the element. Detach and context replacement disconnect the old source and fence its queued notifications.</remarks>
+    public static T BindTwoWay<T, TData, TSourceValue, TValue>(this T element, UiProperty<TValue> property,
+        IDataContext<TData> context, Expression<Func<TData, TSourceValue>> selector, ITwoWayValueConverter<TSourceValue, TValue> converter)
+        where T : Element where TData : class, INotifyPropertyChanged =>
+        BindContext(element, property, context, selector, twoWay: true, back: converter);
+
+    private static T BindContext<T, TData, TSourceValue, TValue>(T element, UiProperty<TValue> property,
+        IDataContext<TData> context, Expression<Func<TData, TSourceValue>> selector, bool twoWay,
+        Func<TSourceValue, TValue>? convert = null, ITwoWayValueConverter<TSourceValue, TValue>? back = null)
         where T : Element where TData : class, INotifyPropertyChanged
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(property);
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(selector);
-        element.OwnBinding(property, () => new PropertyBinding<TData, TValue>(element, property, null, selector, twoWay, context));
+        element.OwnBinding(property, () => new PropertyBinding<TData, TSourceValue, TValue>(element, property, null, selector, twoWay, convert, back, context));
         return element;
     }
 
@@ -201,6 +258,20 @@ public static partial class ElementExtensions
     /// <summary>Binds plain text to a directly selected property of the current data context.</summary>
     public static T BindText<T, TData>(this T element, IDataContext<TData> context, Expression<Func<TData, string>> selector)
         where T : Text where TData : class, INotifyPropertyChanged => element.Bind(Text.ValueProperty, context, selector);
+
+    /// <summary>Binds plain text to a value projected from one directly selected notifying source property.</summary>
+    /// <param name="element">The text element.</param>
+    /// <param name="source">The notifying source.</param>
+    /// <param name="selector">A direct property access of any type the converter accepts.</param>
+    /// <param name="convert">Builds the displayed text from the selected value.</param>
+    /// <returns>The same concrete text element.</returns>
+    public static T BindText<T, TSource, TSourceValue>(this T element, TSource source,
+        Expression<Func<TSource, TSourceValue>> selector, Func<TSourceValue, string> convert)
+        where T : Text where TSource : class, INotifyPropertyChanged => element.Bind(Text.ValueProperty, source, selector, convert);
+    /// <summary>Binds plain text to a value projected from a property of the current data context.</summary>
+    public static T BindText<T, TData, TSourceValue>(this T element, IDataContext<TData> context,
+        Expression<Func<TData, TSourceValue>> selector, Func<TSourceValue, string> convert)
+        where T : Text where TData : class, INotifyPropertyChanged => element.Bind(Text.ValueProperty, context, selector, convert);
     /// <summary>Applies arbitrary strongly typed configuration.</summary>
     public static T Configure<T>(this T element, Action<T> configure) where T : Element { configure(element); return element; }
     /// <summary>Applies internal spacing.</summary>

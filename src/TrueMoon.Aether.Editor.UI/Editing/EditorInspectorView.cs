@@ -150,7 +150,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         Content(model, ui => ui.ScrollViewer().Named("ScrollPart").Content(
             ui.VStack(
                 ui.Text().Named("EmptyPart")
-                    .BindText(model => model.SelectionText)
+                    .BindText(model => model.Selection, InspectorSelectionText.Describe)
                     .Bind(UiProperties.Visible, model => model.NoSelection),
                 ui.HStack(
                     ui.IconButton(UiSymbol.Check, "Применить изменения · Ctrl+Enter").Configure(button => ConfigureAction(button)).Named("ApplyPart")
