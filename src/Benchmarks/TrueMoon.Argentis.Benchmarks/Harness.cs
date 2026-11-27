@@ -129,6 +129,15 @@ internal static class Scene
         return source;
     }
 
+    /// <summary>The same ids as a second pre-built set whose names differ, so a swap case can change every
+    /// surviving row without allocating a single model inside the measured sample.</summary>
+    public static RowModel[] RenamedModels(int rows)
+    {
+        var models = new RowModel[rows];
+        for (var index = 0; index < rows; index++) models[index] = new RowModel(index) { Name = "swap-a" };
+        return models;
+    }
+
     public static UiSession Session(Element root) => new(root, new HeadlessSurface(), new UiViewport(HeadlessSurface.Width, HeadlessSurface.Height));
 
     public static Size Available => new(HeadlessSurface.Width, HeadlessSurface.Height);

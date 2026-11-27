@@ -4,6 +4,62 @@
 ## Текущее состояние
 
 
+<a id="uia41-keyed-rebind-allocation-2026-11-28"></a>
+28.11.2026 — UIA4.1 (снятие источника в привязке списков): `CollectionBinding` больше не аллоцирует
+массив снапшота на каждое обновление и не держит четыре словаря. Источник копируется в переиспользуемый
+буфер через `ICollection<T>.CopyTo` (`Argentis/Bindings/CollectionBinding.cs:107-121`, хвост буфера
+обнуляется `:172-173`), строка и её запись источника переезжают одним значением
+`Dictionary<TKey, BoundRow>` (`:20-21`, `:158-165`), предпроход валидации пишет ключи в `_snapshotKeys` и
+использует `_prepared` как множество увидленных ключей (`:134-144`), коммит — обмен `_nodes` и `_prepared`
+(`:175-181`). Публичный контракт не менялся, семантика отказа тоже: пустой ключ, дубликат ключа и чужой
+subtree по-прежнему отсекаются до создания первой строки (`CollectionBindingTests`, новых тестов срез не
+добавлял). Версия сборки `1.2611.27.13-alpha` → `1.2611.28.1-alpha`.
+
+Экономия ровно равна размеру прежнего массива — 8·строк + 32 байта: −344 / −2 528 / −20 000 байт при
+39 / 312 / 2496 строках во всех кейсах группы `keyed-binding`, которые снимают источник целиком, и в
+охранной группе `collection-binding` (reference-ключи, `ObservableCollection`). Единственное наблюдение
+медианой вверх — бимодальный `KeyedAppendRemoveRow` при 312: 84 128 → 85 744 (+1 616), потому что медианы
+сторон попадают в разные моды; сами модовые значения падают ровно на формулу (84 128 → 81 600 и
+88 280 → 85 744). Время по группе смешано и улучшением всей правки не является:
+`KeyedMoveFirstRowToEnd` 1 975 → 1 395 µs и `KeyedRebuildSameKeys` 147 → 95 µs при 2496, но
+`KeyedRefreshUnchanged` 173 → 212 µs и `KeyedAppendRemoveRow` 1 652 → 1 964 µs; механизм ухудшения не
+установлен. Решение принято по побайтовой формуле. Пара до/после и полные диапазоны проходов —
+[база стоимости](PERFORMANCE_BASELINE.md#uia41-keyed-rebind-allocation-2026-11-28).
+
+Заодно исправлено прежнее объяснение в [UIA4.3](PERFORMANCE_BASELINE.md#uia43-addressable-layout-2026-11-27):
+рост `KeyedRebuildSameKeys` до 231/243 µs при неизменных байтах причинно не объяснён кэшем валидности. Шесть
+проходов незменённого движка на том же размере дают 103…201 µs, но это две сборки с разными отпечатками dll
+(`BD205EED…` и `A8C61604…`), а 231/243 лежит выше этой полосы: относить рост к кэшу или к разбросу сборок и
+прогонов этими числами нельзя — прежняя атрибуция недоказана, а не опровергнута. Что замер действительно
+разделяет, так это совокупную стоимость смены значений на всех строках (`rebind` + присваивание свойства +
+инвалидация + перемерка пути): `KeyedSwapPrebuiltModels` стоит 872…891 µs и 579 632 байта при 2496 против
+92…118 µs и 270 232 байт у `KeyedRebuildSameKeys` с теми же значениями, то есть по медианам
+(882 − 95)/2496 ≈ 315 ns и ≈124 байта на строку; слагаемые стенд не измеряет порознь. Следующий шаг по этой
+ветке — коалесинг этой цепочки при массовой смене значений строк, а не адресный сброс черновика привязки.
+
+Стенд: новый кейс `keyed-binding.KeyedSwapPrebuiltModels` (обмен двух предсобранных наборов моделей, без
+аллокации модели внутри сэмпла) и набор `RenamedModels` в `Benchmarks/TrueMoon.Argentis.Benchmarks`,
+проверка `keyed equal-key swap reuses the row` в `WorkloadVerification.KeyedBinding` входит в `--verify`;
+`RunBaseline.ps1` считает группу восемью методами. Артефакты пары — `TestResults/KeyedRebind-20261128/`.
+
+Граница среза: `Bindings/VirtualizingCollectionBinding.cs` намеренно не менялся — у него своя схема
+`_nodes`/`_prepared`/`_instances`/`_preparedInstances`/`_seenKeys` (`:28-32`) и своя группа измерения
+`virtualized-binding`; расхождение двух реализаций привязки этим срезом не закрывалось. Публичный контракт
+`BindItems`/`RefreshItems` и `TrueMoon.Argentis/PACKAGE.md` не менялись: изменён только `internal`-тип,
+гарантия «отвергнутый снимок источника не создаёт строк и не трогает выжившие» по-прежнему закреплена
+`CollectionBindingTests.DuplicateOrNullItems_RejectSnapshotBeforeFactoryAndPreserveTree`. Пакетный профиль
+`RunPackageSmoke.ps1` в срезе не запускался — публичные API и native/GPU-пути те же.
+
+Прогоны (28.11.2026, Release/net11.0, SDK 11.0.100): `TrueMoon.Alloy.Tests` — 1337 пройдено, 0 не пройдено
+(счёт совпал с предыдущим срезом), `TrueMoon.Alloy.Hosting.Tests` — 225, `TrueMoon.Aether.Editor.Tests` —
+1656, `TrueMoon.Argentis.Generator.Tests` — 36, `TrueMoon.Argentis.Benchmarks --verify` —
+`VIEW_BASELINE_VERIFIED`. Нативный smoke инспектора прошёл на новой сборке: `--smoke-inspector --project
+TestResults/InspectorSmoke-20261128-keyedrebind/Documents.aetherproj --smoke …/out` — `"Passed": true`,
+`"Reaped": true`, `"ViewDisposed": true`, `ValidationErrors: 0` при `ValidationReports: 1`, нули на
+`UiSessions`/`Mappings`/`GpuResources`/`GpuHandles`; фикстура — свежая копия
+`InspectorSmoke-20261128-ui44` без `out`, `*-edited*` и `*.write-lock`. Project-free профиль хоста
+(`--smoke` без `--project`) — `TestResults/KeyedRebind-20261128/native-smoke/report.json`, те же нули.
+
 <a id="uia44-view-scope-2026-11-28"></a>
 28.11.2026 — UIA4.4 (четвёртая часть: область View и её слот контента): отдельного объекта области больше
 нет — `Argentis/ElementScope.cs` удалён (93 строки), индекс именованных частей, проверка дублей, обновление
@@ -498,8 +554,10 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 больше не заводится на каждый View, а `View` больше не наследует `ContentControl` и держит слот контента сам
 ([запись в начале раздела](#uia44-view-scope-2026-11-28),
 [замер](PERFORMANCE_BASELINE.md#uia44-view-scope-2026-11-28)); UIA4.4 закрыта полностью. Следующий шаг —
-внеплановой кандидат `KeyedRebuildSameKeys` (231/243 µs при 2496 строках: адресный сброс черновика привязки
-при перепривязке). UIA4.3.1 закрыта 27.11.2026 (`VirtualizingStack`, `BindVirtualizedItems`,
+кандидат, закрытый 28.11.2026: `KeyedRebuildSameKeys` (231/243 µs при 2496 строках) разобран в
+[записи выше](#uia41-keyed-rebind-allocation-2026-11-28) — прежняя атрибуция недоказана, правка привязки
+сняла ровно 20 000 байт на обновление при 2496 строках, остаток — совокупная цепочка смены значения на
+строке (по медианам ≈315 ns и ≈124 байта на строку). UIA4.3.1 закрыта 27.11.2026 (`VirtualizingStack`, `BindVirtualizedItems`,
 [замер](PERFORMANCE_BASELINE.md#uia431-viewport-virtualization-2026-11-27)); в прикладном коде она пока
 без потребителей — переход экранов с длинными списками не планировался; UIA4.11 вне ближайшей очереди.
 

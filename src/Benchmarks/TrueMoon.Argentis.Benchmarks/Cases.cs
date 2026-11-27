@@ -90,6 +90,7 @@ internal static class Cases
         yield return new("keyed-binding", "KeyedAppendRemoveRow", size => new KeyedAppendRemoveRow(size));
         yield return new("keyed-binding", "KeyedMoveFirstRowToEnd", size => new KeyedMoveFirstRowToEnd(size));
         yield return new("keyed-binding", "KeyedRebuildSameKeys", size => new KeyedRebuildSameKeys(size));
+        yield return new("keyed-binding", "KeyedSwapPrebuiltModels", size => new KeyedSwapPrebuiltModels(size));
         yield return new("keyed-binding", "KeyedReplaceRowInstance", size => new KeyedReplaceRowInstance(size));
     }
 
@@ -708,6 +709,33 @@ internal sealed class KeyedReplaceRowInstance(int rows) : KeyedListCase(rows)
     {
         _renamed = !_renamed;
         Source[0] = new RowModel(0) { Name = _renamed ? "renamed-a" : "renamed-b" };
+        List.RefreshItems();
+        Session.Update();
+    }
+}
+
+/// <summary>
+/// The same keys swapped between two pre-built model sets. The sample allocates no models, and the swapped names
+/// differ, so unlike <see cref="KeyedRebuildSameKeys"/> every surviving row really is invalidated: the pair of
+/// cases separates source allocation and the invalidation path from the binding's per-key bookkeeping.
+/// </summary>
+internal sealed class KeyedSwapPrebuiltModels(int rows) : KeyedListCase(rows)
+{
+    private RowModel[] _plain = null!, _renamed = null!;
+    private bool _flip;
+
+    public override void Run()
+    {
+        if (_plain == null)
+        {
+            _plain = [.. Source];
+            _renamed = Scene.RenamedModels(rows);
+        }
+
+        var target = _flip ? _plain : _renamed;
+        _flip = !_flip;
+        Source.Clear();
+        for (var index = 0; index < target.Length; index++) Source.Add(target[index]);
         List.RefreshItems();
         Session.Update();
     }

@@ -60,6 +60,7 @@ time: a collection mutation also lays out what it dirtied.
 | keyed-binding.KeyedAppendRemoveRow | Alternating append and remove in a plain `List<T>` plus `RefreshItems` and `Update` |
 | keyed-binding.KeyedMoveFirstRowToEnd | `Move` of the first item to the end; identity carried by key, not reference |
 | keyed-binding.KeyedRebuildSameKeys | `Clear` plus re-adding the same ids as new instances; every row must survive |
+| keyed-binding.KeyedSwapPrebuiltModels | the same keys swapped between two pre-built model sets; no model allocation inside the sample, every rebind writes a different name |
 | keyed-binding.KeyedReplaceRowInstance | One item instance replaced under a preserved key; `rebind` runs, no new subtree |
 | property-binding.CreateBindings | K detached bindings: expression handling and binding objects |
 | property-binding.AttachAndFirstSync | K bindings, attach, first synchronization, teardown through the session |

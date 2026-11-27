@@ -155,6 +155,16 @@ internal static class WorkloadVerification
         list.RefreshItems();
         session.Update();
         Check(list.Items.Count == 2 && ReferenceEquals(list.Items[0], last) && ReferenceEquals(list.Items[1], first) && middle.IsDisposed, "keyed removed row disposed");
+        source.Add(new RowModel(7));
+        list.RefreshItems();
+        session.Update();
+        var swapped = list.Items[^1];
+        source.Clear();
+        source.Add(new RowModel(7) { Name = "swap-a" });
+        list.RefreshItems();
+        session.Update();
+        Check(list.Items.Count == 1 && ReferenceEquals(list.Items[0], swapped) &&
+            ((Text)((HStack)swapped).Items[0]).Value == "swap-a", "keyed equal-key swap reuses the row");
         source.Clear();
         list.RefreshItems();
         session.Update();

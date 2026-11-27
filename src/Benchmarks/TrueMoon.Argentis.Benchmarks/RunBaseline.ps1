@@ -33,7 +33,7 @@ $sizesByGroup = [ordered]@{
     'conditional-slot' = @(39, 312, 2496)
     'tree-sync' = @(39, 312, 2496)
 }
-$methodsByGroup = @{ 'node-cost' = 7; 'view-node' = 3; 'property-access' = 7; 'property-store' = 4; 'collection-binding' = 7; 'keyed-binding' = 7; 'virtualized-binding' = 8; 'property-binding' = 6; 'conditional-slot' = 6; 'tree-sync' = 3 }
+$methodsByGroup = @{ 'node-cost' = 7; 'view-node' = 3; 'property-access' = 7; 'property-store' = 4; 'collection-binding' = 7; 'keyed-binding' = 8; 'virtualized-binding' = 8; 'property-binding' = 6; 'conditional-slot' = 6; 'tree-sync' = 3 }
 
 # A focused measurement runs the selected groups in the same process shape as the full baseline.
 if ($Groups) {
