@@ -18,13 +18,12 @@ public class ContentControl : Element
         VerifyTreeAccess();
         var previous = Child;
         if (ReferenceEquals(content, previous)) return;
-        if (content != null)
-            ValidateChildChange([content], previous == null ? [] : [previous]);
+        if (content != null) ValidateChildChange(content, previous);
         using var change = new TreeChange(this, previous, content);
         _children = content == null ? [] : [content];
         if (previous != null) Orphan(previous, change);
         if (content != null) Adopt(content, change);
-        change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
+        change.ScheduleInvalidation(this, Invalidation.Tree | Invalidation.Layout);
         change.Complete();
     }
     /// <inheritdoc />

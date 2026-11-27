@@ -19,6 +19,16 @@ using the new content extent and the viewport inside padding. Use
 `CancelScrollToEnd()` to drop the request without moving the current offset.
 Setting `Offset` explicitly also supersedes the pending request.
 
+`VirtualizingStack` inside a `ScrollViewer` realizes only the rows the viewport can show plus
+`Buffer` on each side; rows outside the window are not children, so they cost no construction,
+measure, arrange or memory. The container still reports the full extent: a realized row keeps the
+height it was measured with, a row never realized is assumed to have the average of the measured
+ones (`EstimatedRowHeight` before any row has been measured). Bind it with
+`BindVirtualizedItems(items, factory, keySelector, rebind)` over any `IReadOnlyList`; with `rebind`
+a row that leaves the window is pooled and re-bound to another item, without it rows are created
+and disposed on every scroll step. Without a `ScrollViewer` ancestor nothing defines a window, so
+every row is realized; rows cannot use `StackBase.Fill`.
+
 `NumberBox.AdjustmentEnabled` opts into Up/Down stepping and pointer dragging on
 its prefix or geometric marker. Configure NumericKind, Step and inclusive bounds;
 invalid/nonfinite/overflow values are rejected without coercion or clamping.

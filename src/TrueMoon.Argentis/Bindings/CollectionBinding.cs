@@ -1,21 +1,50 @@
 using TrueMoon.Argentis.Layout;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
 
 namespace TrueMoon.Argentis.Bindings;
 
-internal sealed class CollectionBinding<TItem> : IItemsBinding where TItem : class
+/// <summary>
+/// Keeps a container's children mapped to a source list by a stable key. A row survives whenever its key survives,
+/// so replacing an item instance with an equal key reuses the subtree, its focus and its subscriptions.
+/// </summary>
+internal sealed class CollectionBinding<TItem, TKey> : IItemsBinding where TItem : class where TKey : notnull
 {
     private readonly ElementList _element;
     private readonly IReadOnlyList<TItem> _items;
-    private readonly INotifyCollectionChanged _source;
+    private readonly INotifyCollectionChanged? _source;
     private readonly Func<TItem, Element> _factory;
-    private Dictionary<TItem, Element> _nodes = new(ReferenceEqualityComparer.Instance);
-    private Connection? _connection;
+    private readonly Func<TItem, TKey> _keySelector;
+    private readonly Action<Element, TItem>? _rebind;
+    private readonly IEqualityComparer<TKey> _comparer;
+    private Dictionary<TKey, Element> _nodes;
+    private Dictionary<TKey, Element> _prepared;
+    private Dictionary<TKey, TItem> _instances;
+    private Dictionary<TKey, TItem> _preparedInstances;
+    private HashSet<TKey> _seenKeys;
+    private readonly HashSet<Element> _draftNodes = new(ReferenceEqualityComparer.Instance);
+    private readonly List<Element> _drafts = [];
+    private Element[] _desired = [];
+    private ItemsBindingConnection? _connection;
     private bool _disposed;
 
-    internal CollectionBinding(ElementList element, IReadOnlyList<TItem> items, INotifyCollectionChanged source, Func<TItem, Element> factory)
+    internal CollectionBinding(
+        ElementList element,
+        IReadOnlyList<TItem> items,
+        INotifyCollectionChanged? source,
+        Func<TItem, Element> factory,
+        Func<TItem, TKey> keySelector,
+        IEqualityComparer<TKey>? comparer,
+        Action<Element, TItem>? rebind)
     {
-        _element = element; _items = items; _source = source; _factory = factory;
+        _element = element; _items = items; _source = source; _factory = factory; _keySelector = keySelector;
+        _rebind = rebind;
+        _comparer = comparer ?? EqualityComparer<TKey>.Default;
+        _nodes = new Dictionary<TKey, Element>(_comparer);
+        _prepared = new Dictionary<TKey, Element>(_comparer);
+        _instances = new Dictionary<TKey, TItem>(_comparer);
+        _preparedInstances = new Dictionary<TKey, TItem>(_comparer);
+        _seenKeys = new HashSet<TKey>(_comparer);
         element.Items.Reserve(this);
         element.AttachmentChanged += Reconnect;
         try { Reconnect(); }
@@ -33,7 +62,7 @@ internal sealed class CollectionBinding<TItem> : IItemsBinding where TItem : cla
         _connection = null;
         previous?.Dispose();
         if (_disposed || !_element.IsAttached) return;
-        var connection = new Connection(this);
+        var connection = new ItemsBindingConnection(_element, _source, Synchronize);
         _connection = connection;
         try
         {
@@ -59,58 +88,89 @@ internal sealed class CollectionBinding<TItem> : IItemsBinding where TItem : cla
         var connection = _connection;
         _connection = null;
         _nodes.Clear();
+        _prepared.Clear();
+        _instances.Clear();
+        _preparedInstances.Clear();
         _element.Items.Release(this);
         connection?.Dispose();
         // Current nodes remain children: Element.Dispose owns their cleanup.
     }
 
-    private void Synchronize(Connection connection)
+    // Steady state must not allocate per row: mapping and desired buffers are reused, and only new keys run the factory.
+    private void Synchronize()
     {
-        if (!connection.Active) return;
+        var connection = _connection;
+        if (connection is null || !connection.Active) return;
         _element.VerifyTreeAccess();
         var version = connection.Version;
         var snapshot = _items.ToArray();
-        var identities = new HashSet<TItem>(ReferenceEqualityComparer.Instance);
-        foreach (var item in snapshot)
-        {
-            if (item == null) throw new InvalidOperationException("Bound items cannot be null.");
-            if (!identities.Add(item)) throw new InvalidOperationException("Bound items must have unique object references.");
-        }
-        var drafts = new List<Element>();
-        var draftSet = new HashSet<Element>(ReferenceEqualityComparer.Instance);
-        var next = new Dictionary<TItem, Element>(ReferenceEqualityComparer.Instance);
-        var desired = new Element[snapshot.Length];
+        var count = snapshot.Length;
+        if (_desired.Length < count) Array.Resize(ref _desired, count);
+        _drafts.Clear();
+        _draftNodes.Clear();
+        _seenKeys.Clear();
+        var prepared = _prepared;
+        prepared.Clear();
+        var preparedInstances = _preparedInstances;
+        preparedInstances.Clear();
         var committed = false;
         try
         {
             CheckPreparation(connection, version);
-            for (var index = 0; index < snapshot.Length; index++)
+            // Validate the whole snapshot before any row is created, so a rejected source leaves the tree untouched.
+            for (var index = 0; index < count; index++)
             {
                 var item = snapshot[index];
-                if (!_nodes.TryGetValue(item, out var node))
+                if (item == null) throw new InvalidOperationException("Bound items cannot be null.");
+                var key = _keySelector(item);
+                if (key is null) throw new InvalidOperationException("Bound item keys cannot be null.");
+                if (!_seenKeys.Add(key)) throw new InvalidOperationException("Bound item keys must be unique.");
+            }
+
+            for (var index = 0; index < count; index++)
+            {
+                var item = snapshot[index];
+                var key = _keySelector(item);
+                if (!_nodes.TryGetValue(key, out var node))
                 {
                     node = _factory(item) ?? throw new InvalidOperationException("An item factory must return an element.");
                     // Reject foreign ownership, ancestors and duplicate returns before accepting cleanup responsibility.
-                    if (node.Parent != null || node.IsAttached || node.IsDisposed || IsAncestor(node) || !draftSet.Add(node))
+                    if (node.Parent != null || node.IsAttached || node.IsDisposed || IsAncestor(node) || !_draftNodes.Add(node))
                         throw new InvalidOperationException("An item factory must return a new live, unowned subtree.");
-                    drafts.Add(node);
+                    _drafts.Add(node);
                     _element.ValidateChild(node);
                 }
-                next.Add(item, node);
-                desired[index] = node;
+                else if (_rebind != null && (!_instances.TryGetValue(key, out var bound) || !ReferenceEquals(bound, item)))
+                    _rebind(node, item);
+
+                prepared[key] = node;
+                preparedInstances[key] = item;
+                _desired[index] = node;
                 CheckPreparation(connection, version);
             }
-            _element.Items.Reconcile(this, desired, () => { _nodes = next; committed = true; });
+
+            _element.Items.Reconcile(this, _desired, count, () =>
+            {
+                var previous = _nodes;
+                _nodes = prepared;
+                _prepared = previous;
+                var previousInstances = _instances;
+                _instances = preparedInstances;
+                _preparedInstances = previousInstances;
+                committed = true;
+            });
         }
         catch (Exception error)
         {
             if (committed) throw;
             var errors = new List<Exception> { error };
-            foreach (var node in drafts)
+            foreach (var node in _drafts)
             {
                 try { node.Dispose(); }
                 catch (Exception cleanup) { errors.Add(cleanup); }
             }
+
+            _drafts.Clear();
             TreeChange.ThrowErrors(errors);
         }
     }
@@ -122,62 +182,18 @@ internal sealed class CollectionBinding<TItem> : IItemsBinding where TItem : cla
         return false;
     }
 
-    private static void CheckPreparation(Connection connection, int version)
+    private static void CheckPreparation(ItemsBindingConnection connection, int version)
     {
         if (!connection.Active || version != connection.Version)
             throw new InvalidOperationException("The collection or attachment changed while preparing bound items.");
     }
+}
 
-    private sealed class Connection(CollectionBinding<TItem> binding) : IDisposable
-    {
-        private int _active = 1;
-        private int _pending;
-        private int _version;
-        private bool _subscribed;
-        private readonly Action<Action> _dispatch = binding._element.CaptureAttachmentDispatcher();
-        internal bool Active => Volatile.Read(ref _active) != 0 && binding._element.IsAttached;
-        internal int Version => Volatile.Read(ref _version);
+/// <summary>Keys rows by object identity, which is what the parameterless <c>BindItems</c> overloads promise.</summary>
+internal sealed class ReferenceKeyComparer<T> : IEqualityComparer<T>
+{
+    internal static readonly ReferenceKeyComparer<T> Instance = new();
 
-        internal void Connect()
-        {
-            _subscribed = true;
-            binding._source.CollectionChanged += Changed;
-            Request();
-        }
-
-        private void Changed(object? sender, NotifyCollectionChangedEventArgs args)
-        {
-            if (!Active) return;
-            Interlocked.Increment(ref _version);
-            Request();
-        }
-
-        internal void Request()
-        {
-            if (!Active || Interlocked.Exchange(ref _pending, 1) != 0) return;
-            try
-            {
-                _dispatch(() =>
-                {
-                    Interlocked.Exchange(ref _pending, 0);
-                    if (Active) binding.Synchronize(this);
-                });
-            }
-            catch (ObjectDisposedException) when (!Active || binding._element.IsDisposed)
-            {
-                Interlocked.Exchange(ref _pending, 0);
-            }
-            catch
-            {
-                Interlocked.Exchange(ref _pending, 0);
-                throw;
-            }
-        }
-
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _active, 0) == 0) return;
-            if (_subscribed) binding._source.CollectionChanged -= Changed;
-        }
-    }
+    public bool Equals(T? x, T? y) => ReferenceEquals(x, y);
+    public int GetHashCode(T value) => RuntimeHelpers.GetHashCode(value!);
 }

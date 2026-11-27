@@ -2,12 +2,12 @@
 
 public abstract class PropertiesBase : IProperties
 {
-    private readonly Dictionary<string,IProperty> _properties = [];
-    
+    private Dictionary<string,IProperty>? _properties;
+
     public T? Get<T>(string? name = default)
     {
         var n = name ?? typeof(T).Name;
-        if (_properties.TryGetValue(n, out var value))
+        if (_properties != null && _properties.TryGetValue(n, out var value))
         {
             return value is IProperty<T> m ? m.Value : default;
         }
@@ -24,13 +24,13 @@ public abstract class PropertiesBase : IProperties
 
     private void SetCore<T>(string name, T? value)
     {
-        if (_properties.TryGetValue(name, out var property) && property is IProperty<T> m)
+        if (_properties != null && _properties.TryGetValue(name, out var property) && property is IProperty<T> m)
         {
             m.Value = value;
         }
         else
         {
-            _properties.Add(name, new Property<T>(name,value));
+            (_properties ??= []).Add(name, new Property<T>(name, value));
         }
     }
 
@@ -41,7 +41,7 @@ public abstract class PropertiesBase : IProperties
         SetCore(n, value);
     }
 
-    public bool Has(string name) => _properties.ContainsKey(name);
+    public bool Has(string name) => _properties?.ContainsKey(name) == true;
 
     public bool Has<T>()
     {
@@ -52,7 +52,7 @@ public abstract class PropertiesBase : IProperties
     public bool TryGet<T>(string name, out T? parameter)
     {
         var n = name ?? typeof(T).Name;
-        if (_properties.TryGetValue(n, out var value))
+        if (_properties != null && _properties.TryGetValue(n, out var value))
         {
             if (value is IProperty<T> m)
             {

@@ -56,41 +56,47 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
 
     private IEditorInspectorViewModel? _presentedContext;
     private NamedControls _parts = null!;
-    private readonly Dictionary<ComponentId, InspectorComponentControls> _components = [];
-    private readonly Dictionary<(ComponentId, string), InspectorPropertyControls> _properties = [];
-    private readonly Dictionary<(ComponentId, string), ScrollViewer> _renderLists = [];
+    /// <summary>Stable mirror the component binding reads: a section survives while its occurrence id is presented.</summary>
+    private readonly List<InspectorComponent> _componentRows = [];
     private InspectorRenderAssetSelection? _shownRenderAssets;
     private Guid? _openRenderSlot;
     internal static ViewStyleRole<ScrollViewer> RenderChoicesRole { get; } = new("InspectorRenderChoices");
-    private readonly Dictionary<(ComponentTypeId, int), Button> _addButtons = [];
-    private readonly Dictionary<ComponentId, Button> _restoreButtons = [];
+    /// <summary>Stable mirrors the keyed bindings of the choice and restoration containers read.</summary>
+    private readonly List<InspectorComponentType> _addableTypes = [];
+    private readonly List<InspectorRemovedComponent> _removedComponents = [];
     private readonly HashSet<ComponentId> _collapsed = [];
     private readonly HashSet<ComponentId> _details = [];
-    private readonly Dictionary<ComponentId, IconButton> _detailsButtons = [];
-    private readonly Dictionary<ComponentId, TransformEditor> _transforms = [];
-    private readonly Dictionary<ComponentId, VStack> _transformDetails = [];
-    private readonly Dictionary<(ComponentId, string), PropertyEditorRow> _genericEditors = [];
-    private readonly Dictionary<(ComponentId, string), NumberBox> _numericEditors = [];
-    /// <summary>Retained generic numeric, Boolean and string rows, keyed by exact component/property addresses.</summary>
-    public IReadOnlyDictionary<(ComponentId, string), PropertyEditorRow> GenericEditors => _genericEditors;
+    /// <summary>Generic numeric, Boolean and string rows projected from the field rows the bindings retain.</summary>
+    public IReadOnlyDictionary<(ComponentId, string), PropertyEditorRow> GenericEditors =>
+        PropertyRows().ToDictionary(row => row.Address, row => row.Editor);
     private InspectorUpdate _pendingUpdate;
     private long _contextVersion;
+    private long _presentationGeneration;
     private bool _dynamicInputBlocked;
     /// <summary>Retained per-component details disclosures for provenance and inheritance resets.</summary>
-    public IReadOnlyDictionary<ComponentId, IconButton> DetailsButtons => _detailsButtons;
+    public IReadOnlyDictionary<ComponentId, IconButton> DetailsButtons =>
+        Sections().ToDictionary(section => section.Address, section => section.Details);
     /// <summary>Specialized controls selected by exact built-in component type and schema.</summary>
-    public IReadOnlyDictionary<ComponentId, TransformEditor> TransformEditors => _transforms;
+    public IReadOnlyDictionary<ComponentId, TransformEditor> TransformEditors =>
+        Sections().Where(section => section.Transform != null)
+            .ToDictionary(section => section.Address, section => section.Transform!);
     private DelayedHoverHint _hint;
     private OverlayHost? _hintHost;
     private readonly List<Element> _hintAncestors = [];
     /// <summary>Gets retained component parts.</summary>
-    public IReadOnlyDictionary<ComponentId, InspectorComponentControls> Components => _components;
+    public IReadOnlyDictionary<ComponentId, InspectorComponentControls> Components =>
+        Sections().ToDictionary(section => section.Address, section => section.Controls);
     /// <summary>Gets property editors using stable addresses.</summary>
-    public IReadOnlyDictionary<(ComponentId, string), InspectorPropertyControls> Properties => _properties;
-    /// <summary>Gets addition choices.</summary>
-    public IReadOnlyDictionary<(ComponentTypeId, int), Button> AddButtons => _addButtons;
-    /// <summary>Gets hidden occurrence restoration actions.</summary>
-    public IReadOnlyDictionary<ComponentId, Button> RestoreButtons => _restoreButtons;
+    public IReadOnlyDictionary<(ComponentId, string), InspectorPropertyControls> Properties =>
+        AllFields().ToDictionary(controls => (controls.Property.ComponentId, controls.Property.Key));
+    /// <summary>Gets addition choices projected from the rows the binding currently retains.</summary>
+    public IReadOnlyDictionary<(ComponentTypeId, int), Button> AddButtons => IsDisposed
+        ? new Dictionary<(ComponentTypeId, int), Button>()
+        : this.AddChoicesPart.Items.OfType<AddChoiceButton>().ToDictionary(button => button.Address, button => (Button)button);
+    /// <summary>Gets hidden occurrence restoration actions projected from the rows the binding currently retains.</summary>
+    public IReadOnlyDictionary<ComponentId, Button> RestoreButtons => IsDisposed
+        ? new Dictionary<ComponentId, Button>()
+        : this.RemovedPart.Items.OfType<RestoreRow>().ToDictionary(row => row.Address, row => (Button)row.Restore);
     /// <summary>Gets the complete inspector layout.</summary>
     public VStack Form => _parts.Form;
     /// <summary>Gets the dynamic component host.</summary>
@@ -182,6 +188,18 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     {
         _parts = new(this.ScrollPart, this.FormPart, this.EmptyPart, this.ActionsPart, this.ApplyPart, this.CancelPart,
             this.UndoPart, this.RedoPart, this.AddComponentPart, this.AddChoicesPart, this.ErrorPart, this.ComponentListPart, this.RemovedPart);
+        // Section keys carry the presentation generation: every draft record and captured closure belongs to one view model,
+        // so a replaced context rebuilds the sections, while a model refresh inside one context reuses them.
+        this.ComponentListPart.BindItems(_componentRows, CreateComponentSection,
+            component => (component.Id, _presentationGeneration),
+            (element, component) =>
+            {
+                var section = (ComponentSection)element;
+                section.Present(component);
+                PresentSection(section);
+            });
+        this.AddChoicesPart.BindItems(_addableTypes, CreateAddChoice, static choice => (choice.Schema.TypeId, choice.Schema.Version), PresentAddChoice);
+        this.RemovedPart.BindItems(_removedComponents, CreateRestoreRow, static removed => removed.Id, PresentRestoreRow);
         AttachmentChanged += Attachment;
         SynchronizeContext();
         this.ObservePropertyChanged(this, (_, change) => ModelChanged(change), SynchronizeContext);
@@ -248,6 +266,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         var replaced = !ReferenceEquals(_presentedContext, model);
         if (replaced)
         {
+            _presentationGeneration++;
             update |= InspectorUpdate.All;
             foreach (var box in NumericEditors()) box.CancelGesture();
             this.AddChoicesPart.IsVisible = false;
@@ -256,8 +275,8 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             SynchronizeRenderAssets(model?.RenderAssets);
         if ((update & InspectorUpdate.Structure) != 0)
         {
-            SynchronizeComponents(model, replaced);
-            SynchronizeComponentChoices(model, replaced);
+            SynchronizeComponents(model);
+            SynchronizeComponentChoices(model);
         }
         _presentedContext = model;
 
@@ -280,153 +299,170 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if ((update & InspectorUpdate.RenderAssets) != 0) SynchronizeRenderEditors();
     }
 
-    private void SynchronizeComponents(IEditorInspectorViewModel? model, bool replaced)
+    /// <summary>
+    /// Hands the component list to its keyed binding. Sections keep their subtree, disclosure state and focus across a
+    /// model refresh and across detach/reattach; a replaced view model advances the generation and rebuilds them.
+    /// </summary>
+    private void SynchronizeComponents(IEditorInspectorViewModel? model)
     {
-        var wanted = (model?.Components ?? []).Select(component => component.Id).ToHashSet();
-        foreach (var id in _components.Keys.Where(id => replaced || !wanted.Contains(id)).ToArray())
-        {
-            var section = _components[id];
-            this.ComponentListPart.Items.Remove(section.Section);
-            section.Section.Dispose();
-            _components.Remove(id);
-            foreach (var address in _properties.Keys.Where(key => key.Item1 == id).ToArray())
-            {
-                _properties.Remove(address);
-                _genericEditors.Remove(address);
-                _numericEditors.Remove(address);
-                _renderLists.Remove(address);
-            }
-            _collapsed.Remove(id);
-            _details.Remove(id);
-            _detailsButtons.Remove(id);
-            _transforms.Remove(id);
-            _transformDetails.Remove(id);
-        }
-        if (model == null) return;
-
-        for (var index = 0; index < model.Components.Count; index++)
-        {
-            var component = model.Components[index];
-            if (!_components.TryGetValue(component.Id, out var parts))
-            {
-                var body = new VStack().WithRole(StackRole);
-                var header = new ComponentHeader().WithRole(HeaderRole)
-                    .SemanticId($"editor.inspector.component.{component.Id.Value:N}");
-                header.OnClick(() => ToggleComponent(component.Id, body, header));
-                var remove = Action(UiSymbol.Delete, "Удалить компонент " + component.Title).OnClick(() => model.RemoveComponent(component.Id));
-                var details = Action(UiSymbol.More, "Сведения и сброс значений · " + component.Title).OnClick(() => ToggleDetails(component.Id));
-                _detailsButtons.Add(component.Id, details);
-                var metadata = new Text().WithRole(MetadataRole);
-                metadata.IsVisible = false;
-                var section = new Border().WithRole(SectionRole).Content(new VStack().WithRole(StackRole).WithChildren(
-                    new ComponentLine(header, details, remove), metadata, body));
-                parts = new(section, header, body, remove, metadata); _components.Add(component.Id, parts); this.ComponentListPart.Add(section);
-            }
-            parts.Header.Value = component.Title;
-            parts.Header.AccessibleName = component.Title + " · свернуть или раскрыть";
-            parts.Metadata.Value = component.SourceText + " · v" + component.SchemaVersion + " · " + component.Id.Value.ToString("D")[..8];
-            parts.Metadata.AccessibleName = $"Type {component.TypeId.Value:D}; component {component.Id.Value:D}; schema {component.SchemaVersion}";
-            if (component.TypeId == BuiltInComponents.TransformId && component.SchemaVersion == 1)
-            {
-                if (!_transforms.ContainsKey(component.Id)) AddTransform(model, component, parts.Body);
-                Reorder(this.ComponentListPart, parts.Section, index);
-                continue;
-            }
-            var addresses = component.Properties.Select(p => (component.Id, p.Key)).ToHashSet();
-            foreach (var address in _properties.Keys.Where(key => key.Item1 == component.Id && !addresses.Contains(key)).ToArray()) RemoveProperty(address, parts.Body);
-            for (var position = 0; position < component.Properties.Count; position++)
-            {
-                var property = component.Properties[position]; var address = (component.Id, property.Key);
-                if (_properties.TryGetValue(address, out var existing) && !ReferenceEquals(existing.Property, property)) RemoveProperty(address, parts.Body);
-                if (!_properties.TryGetValue(address, out var row))
-                { row = CreatePropertyEditor(model, property, component.Title); _properties.Add(address, row); parts.Body.Add(row.Row); }
-                Reorder(parts.Body, row.Row, position);
-            }
-            Reorder(this.ComponentListPart, parts.Section, index);
-        }
+        _componentRows.Clear();
+        if (model != null) _componentRows.AddRange(model.Components);
+        var presented = _componentRows.Select(component => component.Id).ToHashSet();
+        _collapsed.RemoveWhere(id => !presented.Contains(id));
+        _details.RemoveWhere(id => !presented.Contains(id));
+        this.ComponentListPart.RefreshItems();
     }
 
-    private void ToggleComponent(ComponentId id, VStack body, ComponentHeader header)
+    /// <summary>Builds one section and gives its field container a second keyed binding, so rows never overlap.</summary>
+    private Element CreateComponentSection(InspectorComponent component)
     {
-        if (!_collapsed.Add(id)) _collapsed.Remove(id);
-        header.Expanded = body.IsVisible = !_collapsed.Contains(id);
+        var section = new ComponentSection(component);
+        section.Header.SemanticId($"editor.inspector.component.{component.Id.Value:N}");
+        section.Header.OnClick(() => ToggleComponent(section));
+        section.Remove.OnClick(() => DataContext?.RemoveComponent(section.Address));
+        section.Details.OnClick(() => ToggleDetails(section));
+        // A specialized Transform section keeps its fields inside the compact editor instead of the bound body.
+        if (!IsSpecializedTransform(component)) section.Body.BindItems(section.Fields,
+            property => CreatePropertyRow(section, property),
+            property => (property.Key, property, _presentationGeneration));
+        section.Present(component);
+        PresentSection(section);
+        return section;
     }
 
-    private void SynchronizeComponentChoices(IEditorInspectorViewModel? model, bool replaced)
+    /// <summary>Brings one section to the live model: availability, disclosures, the specialized editor and the fields.</summary>
+    private void PresentSection(ComponentSection section)
     {
-        var types = (model?.AddableTypes ?? []).Select(type => (type.Schema.TypeId, type.Schema.Version)).ToHashSet();
-        foreach (var key in _addButtons.Keys.Where(key => replaced || !types.Contains(key)).ToArray())
+        var id = section.Address;
+        section.Remove.IsEnabled = DataContext?.CanChangeComponents ?? false;
+        section.Header.Expanded = section.Body.IsVisible = !_collapsed.Contains(id);
+        var visible = _details.Contains(id);
+        section.Metadata.IsVisible = visible;
+        section.Details.Tone = visible ? ControlTone.Accent : ControlTone.Neutral;
+        if (section.TransformPanel != null) section.TransformPanel.IsVisible = visible;
+        if (IsSpecializedTransform(section.Component))
         {
-            var button = _addButtons[key];
-            this.AddChoicesPart.Items.Remove(button);
-            button.Dispose();
-            _addButtons.Remove(key);
+            if (DataContext is { } model && section.Transform == null) AddTransform(section, model);
+            return;
         }
-        var hidden = (model?.RemovedComponents ?? []).Select(component => component.Id).ToHashSet();
-        foreach (var id in _restoreButtons.Keys.Where(id => replaced || !hidden.Contains(id)).ToArray())
-        {
-            var row = _restoreButtons[id].Parent!;
-            this.RemovedPart.Items.Remove(row);
-            row.Dispose();
-            _restoreButtons.Remove(id);
-        }
-        if (model == null) return;
 
-        for (var i = 0; i < model.AddableTypes.Count; i++)
-        {
-            var choice = model.AddableTypes[i]; var key = (choice.Schema.TypeId, choice.Schema.Version);
-            if (!_addButtons.TryGetValue(key, out var button))
+        section.Fields.Clear();
+        section.Fields.AddRange(section.Component.Properties);
+        section.Body.RefreshItems();
+    }
+
+    private static bool IsSpecializedTransform(InspectorComponent component) =>
+        component.TypeId == BuiltInComponents.TransformId && component.SchemaVersion == 1;
+
+    private FieldRow CreatePropertyRow(ComponentSection section, InspectorProperty property)
+    {
+        var model = DataContext ?? throw new InvalidOperationException("A property row requires a presented inspector model.");
+        var parts = InspectorPropertyEditorFactory.Create(model, property, section.Component.Title,
+            _details.Contains(section.Address),
+            choices => ToggleRenderChoices(property, choices),
+            () =>
             {
-                button = new Button(choice.Title).WithRole(ActionRole).OnClick(() => { model.AddComponent(choice.Schema.TypeId, choice.Schema.Version); this.AddChoicesPart.IsVisible = false; });
-                _addButtons.Add(key, button); this.AddChoicesPart.Add(button);
-            }
-            Reorder(this.AddChoicesPart, button, i);
-        }
-        for (var i = 0; i < model.RemovedComponents.Count; i++)
+                if (DataContext is { } current && current.RenderAssets is { CanRestoreMeshMaterial: true } selection &&
+                    selection.Component == property.ComponentId)
+                    current.RestoreMeshMaterial(selection);
+            });
+        // A row created inside a reconcile must arrive fully presented: the later editor passes only refresh live rows.
+        ApplyEditorState(parts.Controls);
+        ApplyGenericState(parts.Row);
+        return parts.Row;
+    }
+
+    private void ToggleComponent(ComponentSection section)
+    {
+        if (!_collapsed.Add(section.Address)) _collapsed.Remove(section.Address);
+        section.Header.Expanded = section.Body.IsVisible = !_collapsed.Contains(section.Address);
+    }
+
+    /// <summary>
+    /// Hands both choice lists to their keyed bindings. Rows of surviving keys keep their instance, so focus, hover
+    /// and click state survive a model refresh or a replaced view model; only new keys build a row and removed keys
+    /// release one. The containers reject manual child edits while the bindings own them.
+    /// </summary>
+    private void SynchronizeComponentChoices(IEditorInspectorViewModel? model)
+    {
+        _addableTypes.Clear();
+        _removedComponents.Clear();
+        if (model != null)
         {
-            var removed = model.RemovedComponents[i];
-            if (!_restoreButtons.TryGetValue(removed.Id, out var button))
-            {
-                button = Action(UiSymbol.Redo, "Восстановить компонент " + removed.Title).OnClick(() => model.RestoreComponent(removed.Id));
-                _restoreButtons.Add(removed.Id, button);
-                this.RemovedPart.Add(new HStack().WithRole(RowRole).WithChildren(button, new Text(removed.Title).WithRole(MetadataRole)));
-            }
-            Reorder(this.RemovedPart, button.Parent!, i);
+            _addableTypes.AddRange(model.AddableTypes);
+            _removedComponents.AddRange(model.RemovedComponents);
         }
+        this.AddChoicesPart.RefreshItems();
+        this.RemovedPart.RefreshItems();
+    }
+
+    private Element CreateAddChoice(InspectorComponentType choice)
+    {
+        var button = new AddChoiceButton(choice).WithRole(ActionRole);
+        // Click reads the row's current choice and the live model, so a reused row never keeps a stale capture.
+        button.OnClick(() =>
+        {
+            if (DataContext is { } model)
+            {
+                model.AddComponent(button.Choice.Schema.TypeId, button.Choice.Schema.Version);
+                this.AddChoicesPart.IsVisible = false;
+            }
+        });
+        return button;
+    }
+
+    private void PresentAddChoice(Element element, InspectorComponentType choice)
+    {
+        var model = DataContext;
+        ((AddChoiceButton)element).Present(choice, model != null && model.CanChangeComponents && choice.CanAdd);
+    }
+
+    private Element CreateRestoreRow(InspectorRemovedComponent removed)
+    {
+        var row = new RestoreRow(removed);
+        row.Restore.OnClick(() => DataContext?.RestoreComponent(row.Address));
+        return row;
+    }
+
+    private void PresentRestoreRow(Element element, InspectorRemovedComponent removed)
+    {
+        var model = DataContext;
+        ((RestoreRow)element).Present(removed, model != null && model.CanChangeComponents);
     }
 
     private void SynchronizeComponentAvailability(IEditorInspectorViewModel model)
     {
         var canChange = model.CanChangeComponents;
-        foreach (var section in _components.Values) section.Remove.IsEnabled = canChange;
-        foreach (var choice in model.AddableTypes)
-            if (_addButtons.TryGetValue((choice.Schema.TypeId, choice.Schema.Version), out var button))
-                button.IsEnabled = canChange && choice.CanAdd;
-        foreach (var button in _restoreButtons.Values) button.IsEnabled = canChange;
+        foreach (var section in Sections()) section.Remove.IsEnabled = canChange;
+        foreach (var button in this.AddChoicesPart.Items.OfType<AddChoiceButton>())
+            button.IsEnabled = canChange && button.Choice.CanAdd;
+        foreach (var row in this.RemovedPart.Items.OfType<RestoreRow>())
+            row.Restore.IsEnabled = canChange;
     }
 
     private void SynchronizeRenderAssets(InspectorRenderAssetSelection? assets)
     {
         if (ReferenceEquals(_shownRenderAssets, assets)) return;
-        foreach (var list in _renderLists.Values) CloseRenderChoices(list);
+        foreach (var list in RenderLists()) CloseRenderChoices(list);
         _shownRenderAssets = assets;
         _openRenderSlot = null;
     }
 
     private void SynchronizeRenderEditors()
     {
-        foreach (var address in _renderLists.Keys)
+        foreach (var row in PropertyRows())
         {
-            var property = _properties[address];
-            var picker = (Button)property.Input;
-            var choices = RenderChoices(property.Property);
+            if (row.Choices == null) continue;
+            var controls = row.Controls;
+            var picker = (Button)controls.Input;
+            var choices = RenderChoices(controls.Property);
             picker.Value = choices.Items.FirstOrDefault(item => item.Id == choices.Selected)?.Name ?? "Выбрать";
             picker.IsEnabled = _shownRenderAssets?.Enabled == true && choices.Items.Count != 0;
-            if (property.Property.Key == "bindings")
+            if (controls.Property.Key == "bindings")
             {
-                property.Reset.IsEnabled = _shownRenderAssets is { CanRestoreMeshMaterial: true } selection &&
-                    selection.Component == property.Property.ComponentId;
-                RefreshSlotPickers(property);
+                controls.Reset.IsEnabled = _shownRenderAssets is { CanRestoreMeshMaterial: true } selection &&
+                    selection.Component == controls.Property.ComponentId;
+                RefreshSlotPickers(row);
             }
         }
     }
@@ -434,50 +470,43 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private void SynchronizeEditors()
     {
         // Coalesce presentation updates instead of adding two dispatcher entries per field on every model reload.
-        foreach (var property in _properties.Values)
+        foreach (var section in Sections())
         {
-            property.Input.HasError = property.Property.HasError; property.Input.IsModified = property.Property.HasDraft;
-            property.Input.ErrorMessage = property.Property.Error;
-            if (property.Input is CheckBox boolean) boolean.Value = property.Property.BooleanValue ? "Да" : "Нет";
-            if (_genericEditors.TryGetValue((property.Property.ComponentId, property.Property.Key), out var editor))
+            foreach (var row in section.Body.Items.OfType<FieldRow>())
             {
-                editor.ShowEmpty(property.Property.IsNull);
-                editor.Empty.IsModified = property.Property.HasDraft;
-                editor.Empty.HasError = property.Property.HasError;
-                if (property.Null != null) property.Null.IsModified = property.Property.HasDraft;
+                ApplyEditorState(row.Controls);
+                ApplyGenericState(row);
             }
+
+            foreach (var field in section.TransformFields) ApplyEditorState(field.Controls);
         }
     }
 
-    private InspectorPropertyControls CreatePropertyEditor(IEditorInspectorViewModel model, InspectorProperty property, string title)
+    private static void ApplyEditorState(InspectorPropertyControls controls)
     {
-        var address = (property.ComponentId, property.Key);
-        var parts = InspectorPropertyEditorFactory.Create(model, property, title, _details.Contains(property.ComponentId),
-            choices => ToggleRenderChoices(property, choices), () =>
-            {
-                if (ReferenceEquals(DataContext, model) &&
-                    _shownRenderAssets is { CanRestoreMeshMaterial: true } selection && selection.Component == property.ComponentId)
-                    model.RestoreMeshMaterial(selection);
-            });
-        _genericEditors.Add(address, parts.Editor);
-        if (parts.Number != null) _numericEditors.Add(address, parts.Number);
-        if (parts.Choices != null) _renderLists.Add(address, parts.Choices);
-        return parts.Controls;
+        controls.Input.HasError = controls.Property.HasError;
+        controls.Input.IsModified = controls.Property.HasDraft;
+        controls.Input.ErrorMessage = controls.Property.Error;
+        if (controls.Input is CheckBox boolean) boolean.Value = controls.Property.BooleanValue ? "Да" : "Нет";
     }
 
-    private void AddTransform(IEditorInspectorViewModel model, InspectorComponent component, VStack body)
+    private static void ApplyGenericState(FieldRow row)
     {
-        var parts = InspectorTransformEditorFactory.Create(this, model, component);
-        _transforms.Add(component.Id, parts.Editor);
-        _transformDetails.Add(component.Id, parts.Details);
-        foreach (var field in parts.Fields)
-        {
-            var address = (component.Id, field.Controls.Property.Key);
-            _properties.Add(address, field.Controls);
-            _numericEditors.Add(address, field.Number);
-        }
-        body.Add(parts.Editor);
-        body.Add(parts.Details);
+        row.Editor.ShowEmpty(row.Controls.Property.IsNull);
+        row.Editor.Empty.IsModified = row.Controls.Property.HasDraft;
+        row.Editor.Empty.HasError = row.Controls.Property.HasError;
+        if (row.Controls.Null != null) row.Controls.Null.IsModified = row.Controls.Property.HasDraft;
+    }
+
+    private void AddTransform(ComponentSection section, IEditorInspectorViewModel model)
+    {
+        var parts = InspectorTransformEditorFactory.Create(this, model, section.Component);
+        section.Transform = parts.Editor;
+        section.TransformPanel = parts.Details;
+        section.TransformFields.AddRange(parts.Fields);
+        section.Body.Add(parts.Editor);
+        section.Body.Add(parts.Details);
+        parts.Details.IsVisible = _details.Contains(section.Address);
     }
 
     private (IReadOnlyList<InspectorRenderAssetChoice> Items, Guid? Selected) RenderChoices(InspectorProperty property)
@@ -486,14 +515,14 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         return property.Key == "mesh" ? (selection.Meshes, selection.Mesh) : (selection.Materials, selection.Material);
     }
 
-    private void RefreshSlotPickers(InspectorPropertyControls controls)
+    private void RefreshSlotPickers(FieldRow row)
     {
+        var controls = row.Controls;
         var property = controls.Property;
         if (controls.SlotPickers is not { } pickers) return;
-        var key = (property.ComponentId, property.Key);
         var selection = _shownRenderAssets;
         var slots = selection?.Component == property.ComponentId ? selection.Slots : [];
-        _genericEditors[key].IsVisible = slots.Count == 0;
+        row.Editor.IsVisible = slots.Count == 0;
         pickers.Panel.IsVisible = slots.Count != 0;
         foreach (var stale in pickers.Buttons.Keys.Where(id => slots.All(slot => slot.Id != id)).ToArray())
         {
@@ -508,7 +537,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             if (!pickers.Buttons.TryGetValue(slot.Id, out var button))
             {
                 button = new Button().WithRole(ActionRole)
-                    .OnClick(() => ToggleRenderChoices(property, _renderLists[key], slot.Id));
+                    .OnClick(() => ToggleRenderChoices(property, row.Choices!, slot.Id));
                 pickers.Buttons.Add(slot.Id, button);
                 pickers.Panel.Add(button);
             }
@@ -526,7 +555,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     {
         if (DataContext is not { } model || !ReferenceEquals(model, _presentedContext)) return;
         var open = !scroll.IsVisible || _openRenderSlot != slotId;
-        foreach (var list in _renderLists.Values) CloseRenderChoices(list);
+        foreach (var list in RenderLists()) CloseRenderChoices(list);
         if (!open || _shownRenderAssets is not { Enabled: true } selection) return;
         var slot = slotId.HasValue ? selection.Slots.FirstOrDefault(item => item.Id == slotId) : null;
         if (slotId.HasValue && slot is not { CanSelect: true }) return;
@@ -570,22 +599,32 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         scroll.SetContent(null);
         list?.Dispose();
     }
-    private IEnumerable<NumberBox> NumericEditors() => _numericEditors.Values;
-    private void ToggleDetails(ComponentId id)
+    private IEnumerable<NumberBox> NumericEditors() => PropertyRows().Select(row => row.Number)
+        .Concat(Sections().SelectMany(section => section.TransformFields.Select(field => field.Number))).OfType<NumberBox>();
+    private IEnumerable<ComponentSection> Sections() =>
+        IsDisposed ? [] : this.ComponentListPart.Items.OfType<ComponentSection>();
+    private IEnumerable<FieldRow> PropertyRows() => Sections().SelectMany(section => section.Body.Items.OfType<FieldRow>());
+    private IEnumerable<InspectorPropertyControls> AllFields() => PropertyRows().Select(row => row.Controls)
+        .Concat(Sections().SelectMany(section => section.TransformFields.Select(field => field.Controls)));
+    private IEnumerable<ScrollViewer> RenderLists() => PropertyRows().Select(row => row.Choices).OfType<ScrollViewer>();
+    private static IEnumerable<InspectorPropertyControls> FieldsOf(ComponentSection section) =>
+        section.Body.Items.OfType<FieldRow>().Select(row => row.Controls)
+            .Concat(section.TransformFields.Select(field => field.Controls));
+
+    private void ToggleDetails(ComponentSection section)
     {
-        if (!_details.Add(id)) _details.Remove(id);
-        var visible = _details.Contains(id); _components[id].Metadata.IsVisible = visible;
-        _detailsButtons[id].Tone = visible ? ControlTone.Accent : ControlTone.Neutral;
-        if (_transformDetails.TryGetValue(id, out var panel)) panel.IsVisible = visible;
-        foreach (var entry in _properties.Where(p => p.Key.Item1 == id).Select(p => p.Value))
+        if (!_details.Add(section.Address)) _details.Remove(section.Address);
+        var visible = _details.Contains(section.Address);
+        section.Metadata.IsVisible = visible;
+        section.Details.Tone = visible ? ControlTone.Accent : ControlTone.Neutral;
+        if (section.TransformPanel != null) section.TransformPanel.IsVisible = visible;
+        foreach (var controls in FieldsOf(section))
         {
-            if (!entry.Property.IsRenderReference) entry.Reset.IsVisible = visible;
-            entry.Source.IsVisible = visible;
-            entry.Source.Parent!.IsVisible = visible;
+            if (!controls.Property.IsRenderReference) controls.Reset.IsVisible = visible;
+            controls.Source.IsVisible = visible;
+            controls.Source.Parent!.IsVisible = visible;
         }
     }
-    private void RemoveProperty((ComponentId, string) address, VStack body)
-    { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); _renderLists.Remove(address); }
     private static void Reorder(VStack parent, Element child, int index)
     {
         var items = parent.Items;
@@ -604,7 +643,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (input.Key == UiKey.Escape && model.CanCancel) { model.Cancel(); return true; }
         if (!input.Control) return false;
         if (input.Key == UiKey.Enter) { model.Apply(); return true; }
-        if (_properties.Values.Any(p => p.Input is TextBox or RichTextEditor && p.Input.IsFocused)) return false;
+        if (AllFields().Any(controls => controls.Input is TextBox or RichTextEditor && controls.Input.IsFocused)) return false;
         if (input.Key == UiKey.Z) { if (input.Shift) model.Redo(); else model.Undo(); return true; }
         if (input.Key == UiKey.Y) { model.Redo(); return true; }
         return false;
@@ -707,6 +746,108 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     }
 
     // Keep the existing public part handles inspectable after disposal.
+    /// <summary>Addition choice row kept by its type and schema key; the label and availability follow the current record.</summary>
+    private sealed class AddChoiceButton : Button
+    {
+        public AddChoiceButton(InspectorComponentType choice) : base(choice.Title) => Choice = choice;
+        internal InspectorComponentType Choice { get; private set; }
+        internal (ComponentTypeId, int) Address => (Choice.Schema.TypeId, Choice.Schema.Version);
+        internal void Present(InspectorComponentType choice, bool enabled)
+        {
+            Choice = choice;
+            Value = choice.Title;
+            IsEnabled = enabled;
+        }
+    }
+
+    /// <summary>Restoration row kept by the hidden occurrence key; action name and label follow the current record.</summary>
+    private sealed class RestoreRow : HStack
+    {
+        public RestoreRow(InspectorRemovedComponent removed)
+        {
+            this.WithRole(RowRole);
+            Add(Restore = Action(UiSymbol.Redo, RestoreName(removed)));
+            Add(Title = new Text(removed.Title).WithRole(MetadataRole));
+            Removed = removed;
+        }
+        internal IconButton Restore { get; }
+        internal Text Title { get; }
+        internal InspectorRemovedComponent Removed { get; private set; }
+        internal ComponentId Address => Removed.Id;
+        internal void Present(InspectorRemovedComponent removed, bool enabled)
+        {
+            Removed = removed;
+            Restore.AccessibleName = RestoreName(removed);
+            Title.Value = removed.Title;
+            Restore.IsEnabled = enabled;
+        }
+        private static string RestoreName(InspectorRemovedComponent removed) => "Восстановить компонент " + removed.Title;
+    }
+
+    /// <summary>
+    /// Component section kept by its occurrence id inside one presentation context: a model refresh reuses the section,
+    /// its focus and its disclosure state, while a replaced context builds a new one because every draft record and
+    /// captured action belongs to the previous view model. Handlers read the component the section currently presents.
+    /// </summary>
+    private sealed class ComponentSection : Border
+    {
+        public ComponentSection(InspectorComponent component)
+        {
+            Component = component;
+            Header = new ComponentHeader().WithRole(HeaderRole);
+            Details = Action(UiSymbol.More, DetailsName(component));
+            Remove = Action(UiSymbol.Delete, RemoveName(component));
+            Metadata = new Text().WithRole(MetadataRole);
+            Body = new VStack().WithRole(StackRole);
+            this.WithRole(SectionRole).Content(new VStack().WithRole(StackRole).WithChildren(
+                new ComponentLine(Header, Details, Remove), Metadata, Body));
+            Controls = new InspectorComponentControls(this, Header, Body, Remove, Metadata);
+        }
+
+        internal InspectorComponent Component { get; private set; }
+        internal ComponentId Address => Component.Id;
+        internal ComponentHeader Header { get; }
+        internal IconButton Details { get; }
+        internal Button Remove { get; }
+        internal Text Metadata { get; }
+        internal VStack Body { get; }
+        internal InspectorComponentControls Controls { get; }
+        /// <summary>Source mirror of the field binding; a specialized Transform section keeps its body unbound.</summary>
+        internal readonly List<InspectorProperty> Fields = [];
+        internal TransformEditor? Transform { get; set; }
+        internal VStack? TransformPanel { get; set; }
+        internal readonly List<InspectorTransformEditorFactory.Field> TransformFields = [];
+        internal void Present(InspectorComponent component)
+        {
+            Component = component;
+            Header.Value = component.Title;
+            Header.AccessibleName = component.Title + " · свернуть или раскрыть";
+            Metadata.Value = component.SourceText + " · v" + component.SchemaVersion + " · " + component.Id.Value.ToString("D")[..8];
+            Metadata.AccessibleName = $"Type {component.TypeId.Value:D}; component {component.Id.Value:D}; schema {component.SchemaVersion}";
+            Details.AccessibleName = DetailsName(component);
+            Remove.AccessibleName = RemoveName(component);
+        }
+        private static string DetailsName(InspectorComponent component) => "Сведения и сброс значений · " + component.Title;
+        private static string RemoveName(InspectorComponent component) => "Удалить компонент " + component.Title;
+    }
+
+    /// <summary>One schema field subtree kept by its exact draft record, so the binding owns create and dispose.</summary>
+    internal sealed class FieldRow : VStack
+    {
+        internal InspectorPropertyControls Controls { get; private set; } = null!;
+        internal PropertyEditorRow Editor { get; private set; } = null!;
+        internal NumberBox? Number { get; private set; }
+        internal ScrollViewer? Choices { get; private set; }
+        internal (ComponentId, string) Address => (Controls.Property.ComponentId, Controls.Property.Key);
+        internal void Initialize(InspectorPropertyControls controls, PropertyEditorRow editor, NumberBox? number, ScrollViewer? choices)
+        {
+            Controls = controls;
+            Editor = editor;
+            Number = number;
+            Choices = choices;
+        }
+    }
+
     private sealed record NamedControls(ScrollViewer Scroll, VStack Form, Text Empty, HStack Actions,
         Button Apply, Button Cancel, Button Undo, Button Redo, Button AddComponent, VStack AddChoices,
         RichTextEditor Error, VStack ComponentList, VStack Removed);

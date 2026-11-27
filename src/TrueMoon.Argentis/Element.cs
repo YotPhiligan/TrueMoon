@@ -10,17 +10,21 @@ namespace TrueMoon.Argentis;
 /// <summary>A retained UI element with typed properties, layout, and deterministic attachment lifetime.</summary>
 public abstract class Element : PropertiesBase, IElement, IDisposable
 {
-    private readonly Dictionary<object, object?> _values = [];
-    private readonly List<IDisposable> _subscriptions = [];
-    private readonly List<IDisposable> _attachmentSubscriptions = [];
-    private readonly HashSet<object> _boundProperties = [];
+    private object? _localKey, _localValue, _localKey2, _localValue2;
+    private Dictionary<object, object?>? _values;
+    private List<IDisposable>? _subscriptions;
+    private List<IDisposable>? _attachmentSubscriptions;
+    private HashSet<object>? _boundProperties;
     private Action? _verifyAccess;
     private Action<Action>? _post;
     private Action<Element>? _detaching;
     private IUiControlFactories? _controlFactories;
     private int _attachmentVersion;
+    private int _treeLockDepth;
     private bool _disposing;
-    internal bool ChangingTree { get; set; }
+    internal bool ChangingTree => _treeLockDepth > 0;
+    internal void BeginTreeLock() => _treeLockDepth++;
+    internal void EndTreeLock() => _treeLockDepth--;
     internal Element? PresentationRootForAttach { private get; set; }
     private Style? _style;
     private Style? _viewStyle;
@@ -30,6 +34,11 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private LayoutAlignment _horizontal = LayoutAlignment.Stretch, _vertical = LayoutAlignment.Stretch;
     private bool _disposed;
     private bool _hovered, _focused, _inputBlocked;
+    private Size _measuredFor;
+    private ITextLayoutService? _measuredWith;
+    private bool _measureValid;
+    private Rect _arrangedFor;
+    private bool _arrangeValid;
     /// <summary>Parent ownership is managed exclusively by containers.</summary>
     public Element? Parent { get; private set; }
     IElement? IElement.Parent => Parent;
@@ -108,6 +117,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Color ThemeForeground => Theme.Foreground;
     /// <summary>Corner radius when no local or styled value is supplied.</summary>
     protected virtual float ThemeCornerRadius => SupportsValidationIcon ? Theme.EditorCornerRadius : Theme.CornerRadius;
+    /// <summary>Whether this subtree holds only the rows a scroll viewport shows, so an offset change must re-measure it.</summary>
+    internal virtual bool RealizesScrollWindow => false;
     internal virtual bool SquareDescendantButtons => Parent?.SquareDescendantButtons ?? false;
     /// <summary>Semantic editor role inherited by composite parts unless explicitly overridden.</summary>
     protected virtual EditorColorRole ThemeColorRole => Parent?.ColorRole ?? EditorColorRole.Neutral;
@@ -200,7 +211,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Gets a local, element-styled, view-styled, themed, or default value in that order.</summary>
     public T Get<T>(UiProperty<T> property)
     {
-        if (_values.TryGetValue(property, out var value)) return (T)value!;
+        if (ReferenceEquals(_localKey, property)) return (T)_localValue!;
+        if (ReferenceEquals(_localKey2, property)) return (T)_localValue2!;
+        if (_values != null && _values.TryGetValue(property, out var value)) return (T)value!;
         if (_style != null && _style.TryGet(property, out T styled)) return styled;
         if (_viewStyle != null && _viewStyle.TryGet(property, out T viewStyled)) return viewStyled;
         if (SupportsValidationIcon && Parent?.SharesValidationWithEditors == true &&
@@ -228,7 +241,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         VerifyAccess();
         property.Validate(value);
         var previous = Get(property);
-        _values[property] = value;
+        StoreLocal(property, value);
         if (EqualityComparer<T>.Default.Equals(previous, value)) return;
         NotifyPropertyChanged(property, property.Affects);
     }
@@ -236,9 +249,35 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public void Clear<T>(UiProperty<T> property)
     {
         VerifyAccess();
-        if (!_values.Remove(property)) return;
+        if (ReferenceEquals(_localKey, property)) { _localKey = _localKey2; _localValue = _localValue2; _localKey2 = null; _localValue2 = null; }
+        else if (ReferenceEquals(_localKey2, property)) { _localKey2 = null; _localValue2 = null; }
+        else if (_values == null || !_values.Remove(property)) return;
         NotifyPropertyChanged(property, property.Affects);
     }
+    /// <summary>
+    /// Keeps the two most recent local values inline; the dictionary appears only at the third property. Clearing slot
+    /// one compresses slot two into it, so the inline part never leaves a hole behind.
+    /// </summary>
+    private void StoreLocal(object property, object? value)
+    {
+        if (ReferenceEquals(_localKey, property)) { _localValue = value; return; }
+        if (ReferenceEquals(_localKey2, property)) { _localValue2 = value; return; }
+        if (_localKey == null) { _localKey = property; _localValue = value; return; }
+        if (_localKey2 == null) { _localKey2 = property; _localValue2 = value; return; }
+        if (_values == null)
+        {
+            _values = new Dictionary<object, object?> { [_localKey!] = _localValue, [_localKey2!] = _localValue2 };
+            _localKey = property;
+            _localValue = value;
+            _localKey2 = null;
+            _localValue2 = null;
+            return;
+        }
+        _values[property] = value;
+    }
+    private bool HasLocalValue(object property) =>
+        ReferenceEquals(_localKey, property) || ReferenceEquals(_localKey2, property) || _values?.ContainsKey(property) == true;
+
     /// <summary>Restores control invariants after a typed property commits and before observers run.</summary>
     /// <param name="property">The changed typed property identifier.</param>
     protected virtual void OnPropertyChanged(object property) { }
@@ -262,6 +301,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Requests rendering or layout at the owning session.</summary>
     public void Invalidate(Invalidation reason = Invalidation.Render)
     {
+        if ((reason & (Invalidation.Layout | Invalidation.Tree)) != 0) { _measureValid = false; _arrangeValid = false; }
         List<Exception>? errors = null;
         var handlers = Invalidated;
         if (handlers != null)
@@ -301,7 +341,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(subscription);
         if (_disposing) throw new InvalidOperationException("Cannot own resources during disposal.");
-        _subscriptions.Add(subscription);
+        (_subscriptions ??= []).Add(subscription);
     }
     /// <summary>Tracks a resource until the current attachment ends. Reattachment requires a new subscription.</summary>
     /// <param name="subscription">The resource whose ownership transfers only when this call succeeds.</param>
@@ -310,19 +350,19 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(subscription);
         if (!IsAttached || _disposing) throw new InvalidOperationException("An attachment subscription requires an attached, live element.");
-        _attachmentSubscriptions.Add(subscription);
+        (_attachmentSubscriptions ??= []).Add(subscription);
     }
 
     internal void OwnBinding(object property, Func<IDisposable> create)
     {
         VerifyAccess();
         if (_disposing) throw new InvalidOperationException("Cannot create bindings during disposal.");
-        if (!_boundProperties.Add(property)) throw new InvalidOperationException("The UI property already has a binding.");
+        if (!(_boundProperties ??= []).Add(property)) throw new InvalidOperationException("The UI property already has a binding.");
         IDisposable? binding = null;
         try { binding = create(); Own(binding); }
         catch
         {
-            _boundProperties.Remove(property);
+            _boundProperties!.Remove(property);
             binding?.Dispose();
             throw;
         }
@@ -373,16 +413,28 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         for (var i = 0; i < children.Count; i++) children[i].ValidateScopeThemes(theme);
     }
 
-    internal void ValidateChildChange(IReadOnlyList<Element> added, IReadOnlyList<Element> removed)
+    internal void ValidateChildChange(Element[] added, int addedCount, Element[]? removed, int removedCount)
     {
-        foreach (var child in added) ValidateChild(child);
-        FindScope()?.ValidatePartChanges(added, removed);
+        for (var index = 0; index < addedCount; index++) ValidateChild(added[index]);
+        if (FindScope() is not { } scope) return;
+        // Binding buffers are reused and oversized, so the part table only receives the live prefix.
+        scope.ValidatePartChanges(Slice(added, addedCount), Slice(removed, removedCount));
     }
+    /// <summary>Validates a single structural replacement. A removed element keeps its owner until the change commits.</summary>
+    internal void ValidateChildChange(Element? added, Element? removed)
+    {
+        if (added != null) ValidateChild(added);
+        if (FindScope() is not { } scope) return;
+        scope.ValidatePartChanges(added == null ? [] : new[] { added }, removed == null ? [] : new[] { removed });
+    }
+    private static Element[] Slice(Element[]? buffer, int count) =>
+        buffer == null || count == 0 ? [] : count == buffer.Length ? buffer : buffer[..count];
     private void ValidateUnattachedSubtree()
     {
         VerifyTreeAccess();
         if (IsAttached) throw new InvalidOperationException("The subtree already belongs to a UI session.");
-        foreach (var child in Children) child.ValidateUnattachedSubtree();
+        var children = Children;
+        for (var index = 0; index < children.Count; index++) children[index].ValidateUnattachedSubtree();
     }
     internal void Adopt(Element child, TreeChange change)
     {
@@ -391,7 +443,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         FindScope()?.CommitPartChange(child, added: true);
         child.ApplyThemeCore(Theme, change);
         if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, _controlFactories, change);
-        change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
+        change.ScheduleInvalidation(this, Invalidation.Tree | Invalidation.Layout);
     }
     internal void Orphan(Element child, TreeChange change)
     {
@@ -399,7 +451,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         FindScope()?.CommitPartChange(child, added: false);
         child.RefreshViewStyles();
         child.DetachCore(change);
-        change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
+        change.ScheduleInvalidation(this, Invalidation.Tree | Invalidation.Layout);
     }
     /// <summary>Attaches this subtree to a host; normally called by UiSession.</summary>
     /// <param name="verifyAccess">Checks access to the host's owner thread.</param>
@@ -433,27 +485,46 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private void PrepareAttachmentSubtree(IUiControlFactories? factories, Element? attachedParent = null)
     {
         PrepareForAttach(factories, attachedParent);
-        foreach (var child in Children) child.PrepareAttachmentSubtree(factories, attachedParent);
+        var children = Children;
+        for (var index = 0; index < children.Count; index++) children[index].PrepareAttachmentSubtree(factories, attachedParent);
     }
 
+    // Scratch subtree of the current attach/detach walk. The two walks of one operation share it as the half-open
+    // range [start, end), so a nested operation that collects its own subtree cannot disturb the range in progress.
+    [ThreadStatic] private static List<Element>? _subtreeScratch;
+    /// <summary>Appends the subtree to the thread scratch in parent-before-child order and returns the new end.</summary>
+    private static int CollectSubtree(Element root, bool onlyAttached)
+    {
+        var scratch = _subtreeScratch ??= [];
+        if (!onlyAttached || root.IsAttached) scratch.Add(root);
+        var children = root.Children;
+        for (var index = 0; index < children.Count; index++) CollectSubtree(children[index], onlyAttached);
+        return scratch.Count;
+    }
+    private static void ReleaseSubtreeRange(int start) => _subtreeScratch!.RemoveRange(start, _subtreeScratch.Count - start);
     private void AttachCore(Action verifyAccess, Action<Action> post, Action<Element>? detaching,
         IUiControlFactories? controlFactories, TreeChange change)
     {
-        var nodes = Subtree().ToArray();
-        foreach (var node in nodes)
+        var start = _subtreeScratch?.Count ?? 0;
+        var end = CollectSubtree(this, onlyAttached: false);
+        try
         {
-            node._verifyAccess = verifyAccess;
-            node._post = post;
-            node._detaching = detaching;
-            node._controlFactories = controlFactories;
-            Interlocked.Increment(ref node._attachmentVersion);
+            var scratch = _subtreeScratch!;
+            for (var index = start; index < end; index++)
+            {
+                var node = scratch[index];
+                node._verifyAccess = verifyAccess;
+                node._post = post;
+                node._detaching = detaching;
+                node._controlFactories = controlFactories;
+                Interlocked.Increment(ref node._attachmentVersion);
+            }
+            for (var index = end - 1; index >= start; index--) change.Notify(scratch[index].AttachmentChanged);
         }
-        foreach (var node in nodes.Reverse()) change.Notify(node.AttachmentChanged);
-    }
-    private IEnumerable<Element> Subtree()
-    {
-        yield return this;
-        foreach (var child in Children) foreach (var node in child.Subtree()) yield return node;
+        finally
+        {
+            ReleaseSubtreeRange(start);
+        }
     }
     /// <summary>Disconnects an unowned root without disposing it. Owned children must be removed by their container.</summary>
     public void Detach()
@@ -467,27 +538,42 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     }
     private void DetachCore(TreeChange change)
     {
-        var nodes = Subtree().Where(node => node.IsAttached).ToArray();
-        foreach (var node in nodes)
+        var start = _subtreeScratch?.Count ?? 0;
+        var end = CollectSubtree(this, onlyAttached: true);
+        try
         {
-            var detaching = node._detaching;
-            change.Schedule(() => detaching?.Invoke(node));
-            node._verifyAccess = null;
-            node._post = null;
-            node._detaching = null;
-            node._controlFactories = null;
-            Interlocked.Increment(ref node._attachmentVersion);
-            var focused = node._focused;
-            node._hovered = node._focused = false;
-            if (focused) change.Schedule(() => node.FocusChanged?.Invoke(node));
+            var scratch = _subtreeScratch!;
+            for (var index = start; index < end; index++)
+            {
+                var node = scratch[index];
+                var detaching = node._detaching;
+                change.Schedule(() => detaching?.Invoke(node));
+                node._verifyAccess = null;
+                node._post = null;
+                node._detaching = null;
+                node._controlFactories = null;
+                Interlocked.Increment(ref node._attachmentVersion);
+                var focused = node._focused;
+                node._hovered = node._focused = false;
+                if (focused) change.Schedule(() => node.FocusChanged?.Invoke(node));
+            }
+            // Deepest first: an observer never sees a parent reported detached while its children are still attached.
+            for (var index = end - 1; index >= start; index--)
+            {
+                var node = scratch[index];
+                change.Schedule(node.OnInputCancelled);
+                if (node._attachmentSubscriptions != null)
+                {
+                    var subscriptions = node._attachmentSubscriptions.ToArray();
+                    node._attachmentSubscriptions.Clear();
+                    foreach (var subscription in subscriptions) change.Schedule(subscription.Dispose);
+                }
+                change.Notify(node.AttachmentChanged);
+            }
         }
-        foreach (var node in nodes.Reverse())
+        finally
         {
-            change.Schedule(node.OnInputCancelled);
-            var subscriptions = node._attachmentSubscriptions.ToArray();
-            node._attachmentSubscriptions.Clear();
-            foreach (var subscription in subscriptions) change.Schedule(subscription.Dispose);
-            change.Notify(node.AttachmentChanged);
+            ReleaseSubtreeRange(start);
         }
     }
     /// <summary>Applies the session's theme to this subtree.</summary>
@@ -499,16 +585,31 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         ApplyThemeCore(theme, change);
         change.Complete();
     }
+    [ThreadStatic] private static List<(Element Node, Style? Style)>? s_styleResolution;
+    /// <summary>Resolves styles for the whole subtree before committing any of them: a theme value factory that throws
+    /// leaves the previous theme and the previous resolved values standing. Invalidation is queued deepest first.</summary>
     private void ApplyThemeCore(Theme theme, TreeChange change)
     {
-        List<(Element Node, Style? Value)> pending = [];
-        ResolveSubtreeStyles(Parent?.FindScope(), theme, pending);
-        foreach (var (node, value) in pending) { node.Theme = theme; node._viewStyle = value; }
-        for (var i = pending.Count - 1; i >= 0; i--)
+        var pending = s_styleResolution ??= [];
+        pending.Clear();
+        ResolveThemeStyles(theme, Parent?.FindScope(), pending);
+        for (var index = 0; index < pending.Count; index++)
         {
-            var node = pending[i].Node;
-            change.Schedule(() => node.Invalidate(Invalidation.Layout));
+            var (node, style) = pending[index];
+            node.Theme = theme;
+            node._viewStyle = style;
         }
+
+        for (var index = pending.Count - 1; index >= 0; index--) change.ScheduleInvalidation(pending[index].Node, Invalidation.Layout);
+        // Release the borrowed buffer: it must not outlive the change and keep disposed nodes alive.
+        pending.Clear();
+    }
+    private void ResolveThemeStyles(Theme theme, ElementScope? inherited, List<(Element Node, Style? Style)> pending)
+    {
+        var scope = OwnedScope ?? inherited;
+        pending.Add((this, scope?.ResolveStyle(this, theme)));
+        var children = Children;
+        for (var index = 0; index < children.Count; index++) children[index].ResolveThemeStyles(theme, scope, pending);
     }
     internal ElementScope? FindScope()
     {
@@ -525,40 +626,42 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         _viewStyle = FindScope()?.ResolveStyle(this, Theme);
         Invalidate(Invalidation.Layout | Invalidation.Render);
     }
-    private void RefreshViewStyles()
-    {
-        List<(Element Node, Style? Value)> pending = [];
-        ResolveSubtreeStyles(null, null, pending);
-        foreach (var (node, value) in pending) node._viewStyle = value;
-    }
-
-    private void ResolveSubtreeStyles(ElementScope? inherited, Theme? theme, List<(Element Node, Style? Value)> pending)
+    private void RefreshViewStyles() => RefreshViewStylesCore(null);
+    private void RefreshViewStylesCore(ElementScope? inherited)
     {
         var scope = OwnedScope ?? inherited;
-        pending.Add((this, scope?.ResolveStyle(this, theme ?? Theme)));
+        _viewStyle = scope?.ResolveStyle(this, Theme);
         var children = Children;
-        for (var i = 0; i < children.Count; i++) children[i].ResolveSubtreeStyles(scope, theme, pending);
+        for (var index = 0; index < children.Count; index++) children[index].RefreshViewStylesCore(scope);
     }
     /// <summary>Measures the subtree within a logical size constraint.</summary>
     public void Measure(Size available, ITextLayoutService text)
     {
-        if (!IsVisible) { DesiredSize = default; return; }
+        if (!IsVisible) { DesiredSize = default; _measureValid = false; return; }
+        // A cached result stands for the same constraint and text service. Invalidation clears the flag on the
+        // changed element and its ancestors only, so sibling subtrees keep their measured size and are skipped here.
+        if (_measureValid && ReferenceEquals(text, _measuredWith) && available == _measuredFor) return;
         var inner = new Size(Math.Max(0, Math.Min(available.Width - Margin.Horizontal, float.IsNaN(Width) ? MaxWidth : Width) - Padding.Horizontal),
             Math.Max(0, Math.Min(available.Height - Margin.Vertical, float.IsNaN(Height) ? MaxHeight : Height) - Padding.Vertical));
         var desired = MeasureCore(inner, text);
         DesiredSize = new Size(Math.Clamp(float.IsNaN(Width) ? desired.Width + Padding.Horizontal : Width, MinWidth, MaxWidth) + Margin.Horizontal,
             Math.Clamp(float.IsNaN(Height) ? desired.Height + Padding.Vertical : Height, MinHeight, MaxHeight) + Margin.Vertical);
+        _measuredFor = available; _measuredWith = text; _measureValid = true;
+        // A recomputed size can change the slot this element receives, so its arrangement is recomputed as well.
+        _arrangeValid = false;
     }
     /// <summary>Arranges this subtree in a logical parent slot.</summary>
     public void Arrange(Rect slot)
     {
-        if (!IsVisible) { Bounds = default; return; }
+        if (!IsVisible) { Bounds = default; _arrangeValid = false; return; }
+        if (_arrangeValid && slot == _arrangedFor) return;
         var area = slot.Deflate(Margin);
         var width = Math.Clamp(float.IsNaN(Width) ? (HorizontalAlignment == LayoutAlignment.Stretch ? area.Width : DesiredSize.Width - Margin.Horizontal) : Width, MinWidth, MaxWidth);
         var height = Math.Clamp(float.IsNaN(Height) ? (VerticalAlignment == LayoutAlignment.Stretch ? area.Height : DesiredSize.Height - Margin.Vertical) : Height, MinHeight, MaxHeight);
         width = Math.Min(width, area.Width); height = Math.Min(height, area.Height);
         Bounds = new Rect(area.X + Align(area.Width - width, HorizontalAlignment), area.Y + Align(area.Height - height, VerticalAlignment), width, height);
         ArrangeCore(Bounds.Deflate(Padding));
+        _arrangedFor = slot; _arrangeValid = true;
     }
     private static float Align(float extra, LayoutAlignment alignment) => alignment switch { LayoutAlignment.Center => extra / 2, LayoutAlignment.End => extra, _ => 0 };
     /// <summary>Measures custom content excluding margins and padding.</summary>
@@ -583,7 +686,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     }
 
     private bool OverridesAppearance<T>(UiProperty<T> property) =>
-        _values.ContainsKey(property) || _style?.TryGet(property, out _) == true || _viewStyle?.TryGet(property, out _) == true;
+        HasLocalValue(property) || _style?.TryGet(property, out _) == true || _viewStyle?.TryGet(property, out _) == true;
     /// <summary>Handles a routed input event, returning true when consumed.</summary>
     public virtual bool HandleInput(UiInput input, IInputContext context) => false;
     /// <summary>Resets transient interaction state after focus or capture is lost.</summary>
@@ -608,10 +711,14 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         {
             DetachCore(change);
             change.Flush();
-            var subscriptions = _subscriptions.ToArray();
-            _subscriptions.Clear();
-            foreach (var subscription in subscriptions) change.Run(subscription.Dispose);
-            foreach (var child in Children) change.Run(child.Dispose);
+            if (_subscriptions != null)
+            {
+                var subscriptions = _subscriptions.ToArray();
+                _subscriptions.Clear();
+                foreach (var subscription in subscriptions) change.Run(subscription.Dispose);
+            }
+            var children = Children;
+            for (var index = 0; index < children.Count; index++) change.Run(children[index].Dispose);
         }
         finally
         {

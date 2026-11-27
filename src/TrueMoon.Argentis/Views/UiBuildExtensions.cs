@@ -249,6 +249,27 @@ public static class UiBuildExtensions
             control.Element.BindItems(items, factory);
             return control;
         }
+
+        /// <summary>Binds children to a stable key of every item; a list that does not notify synchronizes through <c>RefreshItems</c>.</summary>
+        public UiControl<TControl, TData> BindItems<TItem, TKey>(IReadOnlyList<TItem> items, Func<TItem, Element> factory,
+            Func<TItem, TKey> keySelector, Action<Element, TItem>? rebind = null)
+            where TItem : class where TKey : notnull
+        {
+            control.Element.BindItems(items, factory, keySelector, rebind);
+            return control;
+        }
+    }
+
+    extension<TControl, TData>(UiControl<TControl, TData> control) where TControl : VirtualizingStack
+    {
+        /// <summary>Binds a window of rows to stable keys; rows outside the scroll viewport do not exist.</summary>
+        public UiControl<TControl, TData> BindVirtualizedItems<TItem, TKey>(IReadOnlyList<TItem> items,
+            Func<TItem, Element> factory, Func<TItem, TKey> keySelector, Action<Element, TItem>? rebind = null)
+            where TItem : class where TKey : notnull
+        {
+            control.Element.BindVirtualizedItems(items, factory, keySelector, rebind);
+            return control;
+        }
     }
 
     extension<TControl, TData>(UiControl<TControl, TData> control) where TControl : ContentControl

@@ -384,9 +384,10 @@ public sealed class CollectionBindingTests
     }
 
     [Fact]
-    public void BoundItems_RejectEveryManualMutationAndDuplicateRegistrationWithoutChangingRows()
+    public void BoundItems_RejectEveryManualMutationAndShareOneContainerBetweenBindings()
     {
-        var source = new Source([new Model(1)]); var list = new Panel().BindItems(source, _ => new Text());
+        var source = new Source([new Model(1)]); var other = new Source([new Model(2), new Model(3)]);
+        var list = new Panel().BindItems(source, _ => new Text());
         using var ui = Create(list); ui.Update(); var kept = Assert.Single(list.Items); using var candidate = new Text();
         Assert.Throws<InvalidOperationException>(() => list.Items.Add(candidate));
         Assert.Throws<InvalidOperationException>(() => list.Items.Insert(0, candidate));
@@ -394,8 +395,61 @@ public sealed class CollectionBindingTests
         Assert.Throws<InvalidOperationException>(() => list.Items.Remove(kept));
         Assert.Throws<InvalidOperationException>(() => list.Items.Clear());
         Assert.Throws<InvalidOperationException>(() => list.Items.Move(0, 0));
-        Assert.Throws<InvalidOperationException>(() => list.BindItems(source, _ => new Text()));
         Assert.Same(kept, Assert.Single(list.Items)); Assert.True(kept.IsAttached); Assert.Null(candidate.Parent); Assert.Equal(1, source.Subscribers);
+
+        list.BindItems(other, item => new Text(item.Name));
+        Assert.Equal(1, other.Subscribers); Assert.Same(kept, Assert.Single(list.Items));
+        ui.Update();
+        Assert.Equal(3, list.Items.Count); Assert.Same(kept, list.Items[0]);
+        Assert.Equal("row 2", ((Text)list.Items[1]).Value); Assert.Equal("row 3", ((Text)list.Items[2]).Value);
+        other.RemoveAt(0); ui.Update();
+        Assert.Equal(2, list.Items.Count); Assert.Same(kept, list.Items[0]); Assert.Equal("row 3", ((Text)list.Items[1]).Value);
+        source.Clear(); ui.Update();
+        Assert.Single(list.Items); Assert.Equal("row 3", ((Text)list.Items[0]).Value); Assert.True(kept.IsDisposed);
+        Assert.Equal(1, source.Subscribers); Assert.Equal(1, other.Subscribers);
+    }
+
+    [Fact]
+    public void KeyedItems_ReuseRowRebindInstanceAndNeverRecreateSurvivors()
+    {
+        var first = new Model(1); var second = new Model(2); var replacement = new Model(1) { Name = "renamed" };
+        var source = new Source([first, second]); var calls = 0; var rebinds = 0;
+        var list = new Panel().BindItems(
+            source,
+            item => { calls++; return new Text(item.Name); },
+            item => item.Id,
+            (element, item) => { rebinds++; ((Text)element).Value = item.Name; });
+        using var ui = Create(list); ui.Update();
+        Assert.Equal(2, calls); var kept = list.Items[0]; var otherRow = list.Items[1]; Assert.Equal("row 1", ((Text)kept).Value);
+
+        source[0] = replacement; ui.Update();
+        Assert.Equal(2, calls); Assert.Equal(1, rebinds); Assert.Same(kept, list.Items[0]);
+        Assert.Equal("renamed", ((Text)kept).Value); Assert.True(kept.IsAttached);
+
+        source.ResetTo([second, replacement]); ui.Update();
+        Assert.Equal(2, calls); Assert.Equal(1, rebinds); Assert.Same(kept, list.Items[1]); Assert.Same(otherRow, list.Items[0]);
+
+        source.Add(new Model(3)); ui.Update();
+        Assert.Equal(3, calls); Assert.Equal(3, list.Items.Count);
+
+        source.Clear(); ui.Update();
+        Assert.Empty(list.Items); Assert.True(kept.IsDisposed);
+    }
+
+    [Fact]
+    public void PlainListBinding_SynchronizesOnlyThroughRefreshItems()
+    {
+        var items = new List<Model> { new(1) }; var calls = 0;
+        var list = new Panel().BindItems(items, item => { calls++; return new Text(item.Name); }, item => item.Id);
+        using var ui = Create(list); ui.Update();
+        Assert.Equal(1, calls); var kept = Assert.Single(list.Items);
+        items.Add(new Model(2));
+        ui.Update();
+        Assert.Equal(1, calls); Assert.Same(kept, Assert.Single(list.Items));
+        list.RefreshItems(); ui.Update();
+        Assert.Equal(2, calls); Assert.Equal(2, list.Items.Count);
+        items.Clear(); list.RefreshItems(); ui.Update();
+        Assert.Equal(2, calls); Assert.Empty(list.Items); Assert.True(kept.IsDisposed);
     }
 
     [Fact]

@@ -651,7 +651,10 @@ var volume = new Slider()
 
 ## Привязки коллекций
 
-`BindItems` заполняет первоначально пустой ElementList из ObservableCollection<TItem> или ReadOnlyObservableCollection<TItem>, где TItem — reference type. Возвращается конкретный тип контейнера:
+`BindItems` заполняет первоначально пустой ElementList из ObservableCollection<TItem>,
+ReadOnlyObservableCollection<TItem> или любого другого IReadOnlyList<TItem>, где TItem — reference type. Строку
+опознаёт либо сам объект (сравнение по ссылке), либо стабильный ключ из `keySelector`. Возвращается конкретный тип
+контейнера:
 
 ```csharp
 using TrueMoon.Argentis;
@@ -664,17 +667,51 @@ var rows = new VStack().BindItems(model.Rows, row =>
         new Button("Удалить").OnClick(() => model.Rows.Remove(row))));
 ```
 
-Одному уникальному ненулевому объекту соответствует одна строка, сравнение — ReferenceEquals. Разные объекты, равные по Equals или имеющие одинаковый Id, создают разные строки. Повтор одной ссылки/null отклоняются до изменения дерева. Add/Remove/Replace/Move/Reset и range notifications запрашивают сверку актуального состава при Update; промежуточные состояния могут объединяться. Reset сохраняет строки для тех же объектов и переставляет без detach, включая focus/selection/subscriptions. Новый объект с прежним Id создаёт новую строку. Свойства item изменяют обычные Bind/BindTwoWay, фабрика повторно для них не вызывается.
+Ключ нужен там, где экземпляр строки живёт недолго, а состояние — список компонентов или скрытых вхождений элемента
+сцены — должно пережить перезагрузку источника:
 
-Source фиксирован до Dispose; замена model property с коллекцией не отслеживается автоматически. После регистрации Items управляется только binding: ручные Add/Remove/Clear/Move/index replacement запрещены даже при detach. Для статических соседей используйте внешний контейнер. `rows.RefreshItems()` запрашивает повторную сверку (например, после исправления причины factory failure); detached контейнер прочитает актуальный состав при следующем attach. Unbind и keys/повторяющиеся occurrences пока не предусмотрены.
+```csharp
+var rows = new VStack().BindItems(
+    model.Rows,                                  // List<TItem> без уведомлений
+    row => row.Id,                               // стабильный ключ строки
+    row => new PropertyEditorRow(row),
+    (rowView, item) => rowView.RefreshFrom(item)); // смена экземпляра под прежним ключом
 
-До attach source не читается и factory не вызывается. Initial sync также выполняется в следующем Update до layout, а не внутри AttachmentChanged; пока контейнер detached, source subscription отсутствует и прежние строки остаются в контейнере. Reattach восстанавливает одну subscription и сверяет актуальную коллекцию. Captured dispatcher/active guard отбрасывают stale queued/in-flight events. Фоновые уведомления только ставят sync в очередь; snapshot/factory/tree mutations выполняются на UI owner thread. ObservableCollection не становится потокобезопасной: сериализацию изменений и безопасного перечисления обеспечивает её владелец. Обычно worker результат следует применять к модели через dispatcher.
+model.Rows.Clear();
+model.Rows.AddRange(next);
+rows.RefreshItems();                             // явная сверка состава
+```
+
+Ключевая привязка не требует `INotifyCollectionChanged`: источник перечитывается в `Update`, а состав после изменений
+модели публикует `RefreshItems`.
+
+Сравнение по ссылке: одному уникальному ненулевому объекту соответствует одна строка; разные объекты, равные по Equals
+или имеющие одинаковый Id, создают разные строки. Сравнение по ключу: строку находит значение `keySelector`, повтор
+ключа в снимке отклоняется до изменения дерева, поэтому ключ обязан быть уникальным в пределах списка. `Clear` с
+последующим добавлением тех же ключей сохраняет строки, фокус, ввод и подписки: строка переживает замену экземпляра, а
+`rebind` получает новый. Новый объект с прежним Id при сравнении по ссылке создаёт новую строку. Свойства item изменяют
+обычные Bind/BindTwoWay, фабрика повторно для них не вызывается.
+
+Source фиксирован до Dispose; замена model property с коллекцией не отслеживается автоматически. Источник с
+`INotifyCollectionChanged` сам запрашивает сверку актуального состава при Update на Add/Remove/Replace/Move/Reset и
+range notifications, промежуточные состояния могут объединяться; `IReadOnlyList` без уведомлений перечитывается явным
+`rows.RefreshItems()` — например после исправления причины factory failure. После регистрации Items управляется только
+binding: ручные Add/Remove/Clear/Move/index replacement запрещены даже при detach. Для статических соседей используйте
+внешний контейнер. Detached контейнер прочитает актуальный состав при следующем attach. Unbind пока не предусмотрен. На
+один контейнер допускается несколько привязок с разными коллекциями строк: reconcile каждой видит только свои строки,
+поэтому соседние привязки и добавленные вручную дети не вытесняются.
+
+Обработчики и привязки, захватившие экземпляр источника (`Bind(prop, row, x => x.Name)`, лямбда с `row`), продолжают
+наблюдать именно его и после `rebind`. Внутри `rebind` обновляйте зависимости строки от экземпляра сами — значения
+свойств, обработчики и `DataContext` строки.
+
+До attach source не читается и factory не вызывается. Initial sync также выполняется в следующем Update до layout, а не внутри AttachmentChanged; пока контейнер detached, source subscription отсутствует и прежние строки остаются в контейнере. Reattach восстанавливает subscription каждой привязки и сверяет актуальную коллекцию. Captured dispatcher/active guard отбрасывают stale queued/in-flight events. Фоновые уведомления только ставят sync в очередь; snapshot/factory/tree mutations выполняются на UI owner thread. ObservableCollection не становится потокобезопасной: сериализацию изменений и безопасного перечисления обеспечивает её владелец. Обычно worker результат следует применять к модели через dispatcher.
 
 Модель/коллекция остаются caller-owned. Factory возвращает новый live unowned subtree; accepted drafts до commit принадлежат binding, после — контейнеру. При удалении строки binding получает её ownership и вызывает Dispose. Это ответственность binding как caller существующего Remove, не изменение общих правил Remove/SetContent ниже. Detach контейнера сохраняет строки; Dispose освобождает текущих детей обычным путём. Ресурсы, выделенные factory до throw и не возвращённые binding, очищает factory; чужие owned nodes binding не освобождает.
 
 Сначала snapshot проверяется и создаются все новые строки, затем один batch commit фиксирует порядок, parent/attachment и mapping до notifications. Factory/validation failure сохраняет прежнее дерево и очищает drafts best-effort; source не откатывается. Source mutation из factory отклоняет подготовку; source changes из observers ставят отдельную синхронизацию в очередь. Notification/attachment/cleanup failure после commit не откатывает дерево: остальные observers и освобождение удалённых строк продолжаются, ошибки передаются из Update (одиночная исходная либо AggregateException). Автоматически повторять mutation нельзя. Direct UiSession caller может исправить source/factory и вызвать RefreshItems; HostedUiWindow закрывается и сообщает ошибку через Completion/StopAsync по существующей callback boundary.
 
-[Согласованный контракт 3.5c](../docs/alloy/PLAN.md#контракт-коллекционных-привязок-35c--согласован-2026-10-07-после-93a5cae), [реализация и проверки](../docs/alloy/STATUS.md), [динамический список AlloyTest](../ManualTests/AlloyTest/README.md).
+[Согласованный контракт 3.5c](../docs/alloy/PLAN.md#контракт-коллекционных-привязок-35c--согласован-2026-10-07-после-93a5cae), [реализация и проверки](../docs/alloy/STATUS.md), [стоимость ключей и reconcile](../docs/alloy/PERFORMANCE_BASELINE.md#uia41-collection-reconcile-2026-11-27), [динамический список AlloyTest](../ManualTests/AlloyTest/README.md).
 
 ## Владение динамическим деревом
 

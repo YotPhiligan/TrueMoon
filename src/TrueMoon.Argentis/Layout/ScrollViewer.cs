@@ -11,6 +11,7 @@ public class ScrollViewer : ContentControl
     private bool _scrollToEnd;
     private bool _scrollDragging;
     private float _grab;
+    private float _measuredViewport;
     /// <summary>Shows a square scrollbar when content overflows; setting false preserves a wheel-only viewport.</summary>
     public static readonly UiProperty<bool> ShowScrollBarProperty = new("ShowScrollBar", true, Invalidation.Layout);
     /// <summary>Whether an overflowing viewport reserves a ten-unit track.</summary>
@@ -46,10 +47,15 @@ public class ScrollViewer : ContentControl
             if (_offset == next) return;
             _offset = next;
             Invalidate(Invalidation.Layout);
+            // The child has to re-arrange at the new offset even when its own size is cached; only its measure may
+            // stay valid, so the window of a virtualizing container is the part that additionally drops it.
+            if (Child is { RealizesScrollWindow: true } windowed) windowed.Invalidate(Invalidation.Layout);
         }
     }
     /// <summary>The full content height.</summary>
     public float Extent { get; private set; }
+    /// <summary>Height of the visible area: the arranged viewport, or the measured area before the first arrangement.</summary>
+    public float ViewportHeight => Bounds.Height > 0f ? Bounds.Deflate(Padding).Height : _measuredViewport;
     /// <inheritdoc />
     public override Rect ChildClipBounds => Bounds.Deflate(Padding).Deflate(new Thickness(0, 0, HasScrollBar ? 10 : 0, 0));
     /// <summary>Scrolls to the end on the next arrangement, using the measured extent and the padded viewport.</summary>
@@ -84,9 +90,23 @@ public class ScrollViewer : ContentControl
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
+        _measuredViewport = available.Height;
         Child?.Measure(new Size(available.Width, float.PositiveInfinity), text);
         Extent = Child?.DesiredSize.Height ?? 0;
-        if (ShowScrollBar && Extent > available.Height)
+        if (_scrollToEnd && Child is { RealizesScrollWindow: true } windowed)
+        {
+            // A window follows the offset, so it has to see the requested position before it measures its rows again.
+            // The measure constraint can differ from the viewport arrange hands over, so the exact pin stays in
+            // ArrangeCore and the request stays pending; an ordinary child never needs this estimate at all.
+            _offset = Math.Max(0, Extent - available.Height);
+            windowed.Invalidate(Invalidation.Layout);
+            windowed.Measure(new Size(available.Width, float.PositiveInfinity), text);
+            Extent = windowed.DesiredSize.Height;
+        }
+
+        // The narrower track is only worth a second walk when the content really needs those ten units;
+        // otherwise the first constraint already covers the narrowed one and the cached sizes stand.
+        if (ShowScrollBar && Extent > available.Height && (Child?.DesiredSize.Width ?? 0) > available.Width - 10)
         {
             Child?.Measure(new Size(Math.Max(0, available.Width - 10), float.PositiveInfinity), text);
             Extent = Child?.DesiredSize.Height ?? 0;
@@ -96,6 +116,15 @@ public class ScrollViewer : ContentControl
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
+        // The first measure ran before any arrangement, so it sized the window from the measure constraint; one
+        // extra pass aligns it with the viewport the child actually received. An open-ended measure has no viewport
+        // to compare against, and only a windowed container cares, so an ordinary child never churns here.
+        if (Child is { RealizesScrollWindow: true } windowed && float.IsFinite(area.Height) && area.Height != _measuredViewport)
+        {
+            _measuredViewport = area.Height;
+            windowed.Invalidate(Invalidation.Layout);
+        }
+
         var end = Math.Max(0, Extent - area.Height);
         _offset = _scrollToEnd ? end : Math.Clamp(_offset, 0, end);
         _scrollToEnd = false;

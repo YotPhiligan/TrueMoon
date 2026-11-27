@@ -48,7 +48,7 @@ public sealed partial class OverlayHost : ElementList, IUiInputObserver, IUiFram
         if (!IsAttached || !ReferenceEquals(RootOf(owner), RootOf(this))) throw new ArgumentException("Popup owner must belong to the same UI tree.", nameof(owner));
         if (!float.IsFinite(anchor.X) || !float.IsFinite(anchor.Y) || !float.IsFinite(anchor.Width) || !float.IsFinite(anchor.Height) || anchor.Width < 0 || anchor.Height < 0)
             throw new ArgumentOutOfRangeException(nameof(anchor));
-        ValidateChildChange([popup], _popup == null ? [] : [_popup]);
+        ValidateChildChange(popup, _popup);
         if (!ReferenceEquals(popup, _validationPopup)) CancelValidationHint();
         Close(false);
         _owner = owner; _anchor = anchor; _context = context; _returnFocus = returnFocus; _tooltip = tooltip;

@@ -51,7 +51,7 @@ internal static class InspectorPropertyEditorFactory
         if (nullable != null) { nullable.ColorRole = input.ColorRole; nullable.AccessibleName = "Нет значения · " + component + " " + property.Key; }
         var source = new Text().WithRole(MetadataRole).BindText(property, x => x.SourceText);
         source.IsVisible = showDetails; reset.IsVisible = restoreMaterial || showDetails && !property.IsRenderReference;
-        var row = new VStack().WithRole(StackRole);
+        var row = new FieldRow().WithRole(StackRole);
         var line = new PropertyEditorRow(content, nullable, property.Label).WithRole(FieldRole);
         line.Label.WithRole(VectorLabelRole); line.Empty.WithRole(EmptyValueRole);
         line.Empty.AccessibleName = component + " " + property.Key + ": null";
@@ -71,7 +71,8 @@ internal static class InspectorPropertyEditorFactory
         {
             SlotPickers = slotPanel == null ? null : (slotPanel, new())
         };
-        return new(controls, line, number, choices);
+        row.Initialize(controls, line, number, choices);
+        return new(controls, row);
     }
 
     private static TextBox ConfigureScalarNumber(IEditorInspectorViewModel model, InspectorProperty property, NumberBox number)
@@ -96,5 +97,5 @@ internal static class InspectorPropertyEditorFactory
         else box.AccessibleName = property.Label + gestureHint;
     }
 
-    internal sealed record Parts(InspectorPropertyControls Controls, PropertyEditorRow Editor, NumberBox? Number, ScrollViewer? Choices);
+    internal sealed record Parts(InspectorPropertyControls Controls, FieldRow Row);
 }

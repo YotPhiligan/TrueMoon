@@ -19,7 +19,8 @@ public static partial class ElementExtensions
     /// <returns>The same concrete container.</returns>
     /// <remarks>Initial attach and notifications synchronize during Update. Reset retains surviving references; intermediate source states may be coalesced. Detach disconnects the source and retains rows.</remarks>
     public static T BindItems<T, TItem>(this T element, ObservableCollection<TItem> source, Func<TItem, Element> factory)
-        where T : ElementList where TItem : class => BindItemsCore(element, source, source, factory);
+        where T : ElementList where TItem : class =>
+        BindItemsCore(element, source, source, factory, static item => item, ReferenceKeyComparer<TItem>.Instance, null);
 
     /// <summary>Binds an empty container to a read-only observable collection using reference identity.</summary>
     /// <param name="element">The container whose children are exclusively managed by this binding.</param>
@@ -27,15 +28,71 @@ public static partial class ElementExtensions
     /// <param name="factory">Creates a new unowned subtree; generated rows are disposed when removed.</param>
     /// <returns>The same concrete container.</returns>
     public static T BindItems<T, TItem>(this T element, ReadOnlyObservableCollection<TItem> source, Func<TItem, Element> factory)
-        where T : ElementList where TItem : class => BindItemsCore(element, source, source, factory);
+        where T : ElementList where TItem : class =>
+        BindItemsCore(element, source, source, factory, static item => item, ReferenceKeyComparer<TItem>.Instance, null);
 
-    private static T BindItemsCore<T, TItem>(T element, IReadOnlyList<TItem> items, INotifyCollectionChanged source, Func<TItem, Element> factory)
-        where T : ElementList where TItem : class
+    /// <summary>Binds children to a stable key of every item, so a row survives its item instance being replaced by an equal key.</summary>
+    /// <param name="element">A container whose bound children this binding manages. Several bindings can share one container.</param>
+    /// <param name="items">Items with unique non-null keys. A list that does not notify changes synchronizes only through <see cref="RefreshItems{T}"/>.</param>
+    /// <param name="factory">Creates a new unowned subtree for a key without a row; the binding disposes rows of removed keys.</param>
+    /// <param name="keySelector">Stable item identity. Equal keys reuse the row, its focus, its input and its subscriptions.</param>
+    /// <param name="rebind">Points an existing row at a different item instance with the same key; null leaves the row subtree untouched.</param>
+    /// <returns>The same concrete container.</returns>
+    /// <remarks>
+    /// Every synchronization reads the current list, so intermediate source states never reach the factory. Rows of
+    /// surviving keys are neither recreated nor detached, whichever position they take. Observing sources also notify.
+    /// </remarks>
+    public static T BindItems<T, TItem, TKey>(this T element, IReadOnlyList<TItem> items, Func<TItem, Element> factory,
+        Func<TItem, TKey> keySelector, Action<Element, TItem>? rebind = null)
+        where T : ElementList where TItem : class where TKey : notnull =>
+        BindItemsCore(element, items, items as INotifyCollectionChanged, factory, keySelector, EqualityComparer<TKey>.Default, rebind);
+
+    private static T BindItemsCore<T, TItem, TKey>(
+        T element,
+        IReadOnlyList<TItem> items,
+        INotifyCollectionChanged? source,
+        Func<TItem, Element> factory,
+        Func<TItem, TKey> keySelector,
+        IEqualityComparer<TKey> comparer,
+        Action<Element, TItem>? rebind)
+        where T : ElementList where TItem : class where TKey : notnull
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(factory);
-        var binding = new CollectionBinding<TItem>(element, items, source, factory);
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var binding = new CollectionBinding<TItem, TKey>(element, items, source, factory, keySelector, comparer, rebind);
+        try { element.Own(binding); }
+        catch { binding.Dispose(); throw; }
+        return element;
+    }
+
+    /// <summary>Binds a scrolling container to a window of rows: only rows the viewport can show exist as children.</summary>
+    /// <param name="element">A <see cref="VirtualizingStack"/> inside a scroll viewport; its children are managed by this binding.</param>
+    /// <param name="items">Items with unique non-null keys. A list that does not notify changes synchronizes only through <see cref="RefreshItems{T}(T)"/>.</param>
+    /// <param name="factory">Creates an unowned subtree for a row that enters the window without a reusable one.</param>
+    /// <param name="keySelector">Stable item identity; a row is reused while its key stays inside the window.</param>
+    /// <param name="rebind">Points a recycled row at a different item. Without it rows are created and disposed per scroll step, because their closures keep the old item.</param>
+    /// <returns>The same container.</returns>
+    /// <remarks>
+    /// The container measures and arranges the window plus <see cref="VirtualizingStack.Buffer"/> rows and reports the
+    /// full extent from measured and estimated row heights. A source notification only marks the window stale, so its
+    /// cost no longer grows with the list.
+    /// </remarks>
+    public static VirtualizingStack BindVirtualizedItems<TItem, TKey>(
+        this VirtualizingStack element,
+        IReadOnlyList<TItem> items,
+        Func<TItem, Element> factory,
+        Func<TItem, TKey> keySelector,
+        Action<Element, TItem>? rebind = null)
+        where TItem : class where TKey : notnull
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var binding = new VirtualizingCollectionBinding<TItem, TKey>(element, items, items as INotifyCollectionChanged,
+            factory, keySelector, null, rebind);
         try { element.Own(binding); }
         catch { binding.Dispose(); throw; }
         return element;
@@ -47,7 +104,7 @@ public static partial class ElementExtensions
     public static T RefreshItems<T>(this T element) where T : ElementList
     {
         ArgumentNullException.ThrowIfNull(element);
-        element.Items.RefreshBinding();
+        element.Items.RefreshBindings();
         return element;
     }
 

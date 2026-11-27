@@ -52,7 +52,8 @@ public sealed class EditorInspectorCompositionTests
         Assert.Throws<ObjectDisposedException>(() => model.Refresh(InspectorFixture.Child));
         Assert.False(second.IsDisposed); Assert.True(test.Owner.Commands.Read().Closed);
         Assert.Equal(1, test.Owner.Authoring.Products[0].Disposals);
-        ui2.Dispose(); Assert.True(second.Properties[address].Input.IsDisposed);
+        var secondText = second.Properties[address].Input;
+        ui2.Dispose(); Assert.True(second.IsDisposed); Assert.True(secondText.IsDisposed);
     }
 
     [Theory]
