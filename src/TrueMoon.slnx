@@ -37,6 +37,7 @@
   <Folder Name="/Benchmarks/">
     <Project Path="Benchmarks/TrueMoon.Cobalt.Benchmarks/TrueMoon.Cobalt.Benchmarks.csproj" />
     <Project Path="Benchmarks/TrueMoon.Enerit.Benchmarks/TrueMoon.Enerit.Benchmarks.csproj" />
+    <Project Path="Benchmarks/TrueMoon.Argentis.Benchmarks/TrueMoon.Argentis.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/Cobalt/">
     <Project Path="TrueMoon.Cobalt.Generator.Tests\TrueMoon.Cobalt.Generator.Tests.csproj" />
