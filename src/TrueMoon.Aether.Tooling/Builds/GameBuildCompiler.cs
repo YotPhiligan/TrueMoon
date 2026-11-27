@@ -304,8 +304,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         var name = project == null ? "prepare" : "graph-" + project.Key + "-prepare";
         var preparation = frozen?.BuildInfo(request.ProjectPath) ?? BuildInfo(request, owned);
         var prepared = Path.Combine(owned.Directory, name + ".json");
-        foreach (var argument in new[] { frozen == null ? "-target:Compile" : "-target:ResolveReferences;Compile", "-property:SkipCompilerExecution=true", "-property:ProvideCommandLineArgs=true",
-            "-getItem:CscCommandLineArgs,ReferenceCopyLocalPaths", "-getProperty:RoslynTargetsPath,CscToolPath,CscToolExe,NETCoreSdkVersion,MSBuildToolsPath,NetCoreTargetingPackRoot,CscEnvironment",
+        foreach (var argument in new[] { "-target:PrepareForBuild;ResolveReferences;PrepareResourceNames;Compile", "-property:SkipCompilerExecution=true", "-property:ProvideCommandLineArgs=true",
+            "-getItem:CscCommandLineArgs,ReferenceCopyLocalPaths,EmbeddedResource", "-getProperty:RoslynTargetsPath,CscToolPath,CscToolExe,NETCoreSdkVersion,MSBuildToolsPath,NetCoreTargetingPackRoot,CscEnvironment",
             "-getResultOutputFile:" + prepared }) preparation.ArgumentList.Add(argument);
         await ProbeAsync(owned, preparation, name, token).ConfigureAwait(false);
         if (new FileInfo(prepared).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("Compiler preparation exceeds its limit.");

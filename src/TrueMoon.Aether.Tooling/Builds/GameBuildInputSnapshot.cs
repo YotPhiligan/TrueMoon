@@ -15,11 +15,12 @@ public sealed class GameBuildInputSnapshot
     internal const long MaximumFileBytes = 64L * 1024 * 1024, MaximumTotalBytes = 256L * 1024 * 1024;
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private GameBuildInputSnapshot(GameBuildRequest request, string evaluation, string project, IReadOnlyList<GameBuildInputFile> files,
-        GameBuildPreparationSnapshot? preparation, string job, bool hasProjectReferences)
+        GameBuildPreparationSnapshot? preparation, string job, bool hasProjectReferences, IReadOnlyList<GameBuildResource> resources)
     {
         Request = request with { Dependencies = Array.AsReadOnly(request.Dependencies?.ToArray() ?? []) };
         EvaluationHash = evaluation; PreprocessedHash = project; Files = files; Preparation = preparation;
         HasProjectReferences = hasProjectReferences;
+        Resources = resources;
         Fingerprint = Hash(JsonSerializer.SerializeToUtf8Bytes(new { Request.ProjectPath, Request.EntryAssembly, Request.EntryType,
             Dependencies = Request.Dependencies?.ToArray() ?? [], EvaluationHash, PreprocessedHash,
             Files = Files.Select(file => file with { Path = file.Path.Replace(job, "$JOB", OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) }),
@@ -27,6 +28,7 @@ public sealed class GameBuildInputSnapshot
     }
     internal GameBuildRequest Request { get; }
     internal bool HasProjectReferences { get; }
+    internal IReadOnlyList<GameBuildResource> Resources { get; }
     /// <summary>Content identity, excluding the caller's compile ticket and owned temporary job paths.</summary>
     public string Fingerprint { get; }
     /// <summary>Canonical evaluated properties/items, retaining item order and ignoring file timestamps.</summary>
@@ -66,6 +68,7 @@ public sealed class GameBuildInputSnapshot
 
         var paths = new HashSet<string>(Paths) { preparation?.CopyPath(request.ProjectPath) ?? System.IO.Path.GetFullPath(request.ProjectPath) };
         var projectDirectory = System.IO.Path.GetDirectoryName(preparation?.CopyPath(request.ProjectPath) ?? request.ProjectPath)!;
+        var resources = new List<GameBuildResource>();
         foreach (var group in items.EnumerateObject())
         {
             token.ThrowIfCancellationRequested();
@@ -86,6 +89,8 @@ public sealed class GameBuildInputSnapshot
                 else path = item.GetProperty("FullPath").GetString();
                 if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("SDK input has no path.");
                 var fullPath = System.IO.Path.GetFullPath(path, projectDirectory);
+                if (group.Name == "EmbeddedResource" && request.CaptureCompilation)
+                    resources.Add(GameBuildResource.Read(item, projectDirectory, prepared: false));
                 // The SDK lists potential ancestor analyzer configs even when they do not exist.
                 // Their paths remain in the evaluation hash; later creation adds a file identity.
                 if (group.Name is "EditorConfigFiles" or "GlobalAnalyzerConfigFiles" && !File.Exists(fullPath)) continue;
@@ -131,7 +136,8 @@ public sealed class GameBuildInputSnapshot
         using (var writer = new Utf8JsonWriter(canonical)) { Write(root, writer); writer.Flush(); }
         token.ThrowIfCancellationRequested();
         return new(request, Hash(canonical.ToArray()), Hash(Encoding.UTF8.GetBytes(Normalize(preprocessed))),
-            Array.AsReadOnly(files.OrderBy(f => f.Path, StringComparer.Ordinal).ToArray()), preparation?.Snapshot, fullJob, preparation?.References.Count > 0);
+            Array.AsReadOnly(files.OrderBy(f => f.Path, StringComparer.Ordinal).ToArray()), preparation?.Snapshot, fullJob,
+            preparation?.References.Count > 0, resources.AsReadOnly());
 
         void Write(JsonElement value, Utf8JsonWriter writer)
         {

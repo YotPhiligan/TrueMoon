@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Player;
+using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -20,8 +21,23 @@ internal static class Program
     {
         if (args is ["--scenario", var scenarioFile, var scenarioBuild, var scenarioScene, var scenarioOutput, .. var flags] &&
             flags.All(flag => flag is "--legacy-scene" or "--headless") && flags.Distinct(StringComparer.Ordinal).Count() == flags.Length)
-            return await PlayerScenarioCommand.RunAsync(scenarioFile, scenarioBuild, scenarioScene, scenarioOutput,
-                flags.Contains("--legacy-scene", StringComparer.Ordinal), flags.Contains("--headless", StringComparer.Ordinal));
+        {
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try
+            {
+                return await PlayerScenarioRunner.RunAsync(scenarioFile, scenarioBuild, scenarioScene, scenarioOutput,
+                    flags.Contains("--legacy-scene", StringComparer.Ordinal),
+                    flags.Contains("--headless", StringComparer.Ordinal) ? null : static () =>
+                        SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
+                        {
+                            ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf")
+                        }),
+                    cancellationToken: cancellation.Token);
+            }
+            finally { Console.CancelKeyPress -= cancel; }
+        }
         if (args is ["--orthographic-route", var artifact, var routeScene, var routeReport])
             return await OrthographicRouteProof.RunAsync(artifact, routeScene, routeReport);
         if (args is ["--outpost-hud", var outpostArtifact, var outpostScene, var outpostReport])

@@ -347,6 +347,91 @@ public sealed class GameBuildPreparationTests
         files.AssertDrained(compiler);
     }
 
+    [Fact]
+    public async Task ProjectGraph_ResourceOnlyChangeInvalidatesCapturedBuild()
+    {
+        using var files = new Files();
+        var shared = files.Library("Shared", """
+            public static class Shared
+            {
+                public static int Value
+                {
+                    get
+                    {
+                        using var input = typeof(Shared).Assembly.GetManifestResourceStream("Shared.value")!;
+                        using var document = System.Text.Json.JsonDocument.Parse(input);
+                        return document.RootElement.GetInt32();
+                    }
+                }
+            }
+            """, """<ItemGroup><EmbeddedResource Include="value.json" LogicalName="Shared.value" WithCulture="false" /></ItemGroup>""");
+        var resource = Path.Combine(Path.GetDirectoryName(shared)!, "value.json");
+        File.WriteAllText(resource, "42");
+        File.WriteAllText(files.Project, files.Xml("""<ItemGroup><ProjectReference Include="../Shared/Shared.csproj" /></ItemGroup>"""));
+        File.WriteAllText(files.Source, "public class Original { public static int Value => Shared.Value; }");
+        var request = files.Request with { CaptureProjectReferences = true, Dependencies = ["Shared.dll"], ReuseArtifact = true };
+        await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, files.Artifacts);
+        var first = await compiler.BuildAsync(request);
+        Assert.Equal(42, files.Value(first));
+        Assert.Contains(Assert.Single(first.Compilation!.Projects).Compilation.Files, file => file.Path == resource);
+        var reused = await compiler.BuildAsync(request with { SourceRevision = 2 });
+        AssertReuse(compiler, true);
+        Assert.Equal(42, files.Value(reused));
+
+        File.WriteAllText(resource, "99");
+        await Assert.ThrowsAsync<GameBuildInputsChangedException>(() => compiler.VerifyInputsAsync(reused.Inputs!, reused.Compilation!));
+        var changed = await compiler.BuildAsync(request with { SourceRevision = 3 });
+        AssertReuse(compiler, false);
+        Assert.NotEqual(first.Inputs!.Fingerprint, changed.Inputs!.Fingerprint);
+        Assert.Equal(99, files.Value(changed));
+        Assert.Equal(42, files.Value(first));
+    }
+
+    [Fact]
+    public async Task FrozenRuntimePackage_UsesSharedContractOnlyWithExactGuard()
+    {
+        using var files = new Files();
+        var request = files.Request with { RuntimeAccess = true };
+        const string references = """
+            <ItemGroup Condition="'$(AetherRuntimePath)' != ''">
+              <Reference Include="TrueMoon.Aether.Runtime"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference>
+            </ItemGroup>
+            """;
+        const string guard = """ Condition="'$(AetherRuntimePath)' == ''" """;
+        string Project(string itemAttributes, string groupAttributes = "", string metadata = "") =>
+            files.Xml($"""<ItemGroup {groupAttributes}><PackageReference Include="TrueMoon.Aether.Runtime" {itemAttributes}>{metadata}</PackageReference></ItemGroup>{references}""");
+        File.WriteAllText(files.Project, Project(guard));
+        File.WriteAllText(files.Source, """
+            public static class Original
+            {
+                public static System.Type Contract => typeof(TrueMoon.Aether.Runtime.Builds.GameBuildArtifact);
+            }
+            """);
+        await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, files.Artifacts);
+        var artifact = await compiler.BuildAsync(request);
+        Assert.Equal("Frozen.dll", Path.GetFileName(Assert.Single(Directory.GetFiles(artifact.DirectoryPath, "*.dll"))));
+        var context = new System.Runtime.Loader.AssemblyLoadContext("RuntimePackageGuard", isCollectible: true);
+        try
+        {
+            using var stream = File.OpenRead(Path.Combine(artifact.DirectoryPath, artifact.EntryAssembly));
+            var entry = context.LoadFromStream(stream).GetType("Original")!;
+            Assert.Same(typeof(GameBuildArtifact), entry.GetProperty("Contract")!.GetValue(null));
+        }
+        finally { context.Unload(); }
+        files.AssertDrained(compiler);
+
+        foreach (var other in new[] { Project(""), Project(""" Condition="'' == '$(AetherRuntimePath)'" """),
+                     Project(guard, """Condition="'$(Configuration)' == 'Release'" """),
+                     Project(guard, metadata: "<PrivateAssets>all</PrivateAssets>") })
+        {
+            File.WriteAllText(files.Project, other);
+            var error = await Assert.ThrowsAsync<NotSupportedException>(() => compiler.BuildAsync(request));
+            Assert.Contains("Frozen PackageReference requires PackageDirectory", error.Message);
+            Assert.False(File.Exists(Path.Combine(compiler.DiagnosticsDirectory!, "before-restore.stdout.log")));
+            files.AssertDrained(compiler);
+        }
+    }
+
     [Theory]
     [InlineData("cycle")] [InlineData("metadata")] [InlineData("condition")] [InlineData("undeclared")]
     [InlineData("duplicate")] [InlineData("limit")] [InlineData("task")] [InlineData("package")] [InlineData("overlap")]

@@ -129,6 +129,7 @@ public sealed class GameBuildInputSnapshotTests
                 Items = new Dictionary<string, object>
                 {
                     ["Compile"] = (sources ?? [Source]).Select(path => new { Identity = path, FullPath = path, ModifiedTime = "timestamp-a" }).ToArray(),
+                    ["EmbeddedResource"] = Array.Empty<object>(),
                     ["Reference"] = reference == null ? Array.Empty<object>() : [new { Identity = "Private", HintPath = reference }],
                     ["PackageReference"] = Rows("PackageReference"), ["ProjectReference"] = Rows("ProjectReference")
                 }

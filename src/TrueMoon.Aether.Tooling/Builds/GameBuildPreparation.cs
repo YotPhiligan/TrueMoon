@@ -443,6 +443,13 @@ internal sealed class GameBuildPreparation : IDisposable
                         }
                         if (kind == "PackageReference")
                         {
+                            // The normal SDK build uses the Runtime package; this capture shares the host's exact binaries.
+                            if (_request.RuntimeAccess && !conditional && !item.HasElements &&
+                                (string?)item.Attribute("Include") == "TrueMoon.Aether.Runtime" &&
+                                item.Attributes().All(attribute => attribute.Name == "Include" || attribute.Name == "Condition") &&
+                                ((string?)item.Attribute("Condition"))?.Replace(" ", "") == "'$(AetherRuntimePath)'==''" &&
+                                !item.Ancestors().Any(parent => parent.Attribute("Condition") != null))
+                            { item.Remove(); continue; }
                             if (_request.PackageDirectory == null || conditional || item.AncestorsAndSelf().Any(parent => parent.Attribute("Condition") != null) ||
                                 item.Attributes().Any(attribute => attribute.Name != "Include" && attribute.Name != "Version") || item.HasElements ||
                                 item.Attribute("Include") == null || item.Attribute("Version") == null)
@@ -455,6 +462,11 @@ internal sealed class GameBuildPreparation : IDisposable
                         if (kind is not ("Reference" or "Compile" or "None" or "Content" or "AdditionalFiles" or "EditorConfigFiles" or "GlobalAnalyzerConfigFiles" or "EmbeddedResource"))
                             throw new NotSupportedException("Unsupported frozen MSBuild item: " + kind);
                         if (item.Descendants().Any(e => e.HasElements)) throw new NotSupportedException("Nested MSBuild item metadata is unsupported.");
+                        if (kind == "EmbeddedResource" &&
+                            (item.Attribute("Include") == null ||
+                             item.Attributes().Any(a => a.Name.LocalName is not ("Include" or "Exclude" or "Condition" or "LogicalName" or "WithCulture")) ||
+                             item.Elements().Any(metadata => metadata.Name.LocalName is not ("LogicalName" or "WithCulture"))))
+                            throw new NotSupportedException("Frozen EmbeddedResource requires declarative Include with only LogicalName or WithCulture metadata.");
                         if (kind == "Reference")
                         {
                             var hint = item.Element("HintPath");

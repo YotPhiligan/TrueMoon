@@ -51,20 +51,41 @@ internal sealed class GameBuildCompilation
         Directory.CreateDirectory(capture._directory);
         foreach (var name in new[] { "csc.dll", "csc.deps.json", "csc.runtimeconfig.json", "Microsoft.CodeAnalysis.dll", "Microsoft.CodeAnalysis.CSharp.dll" })
             await capture.CopyAsync(Path.Combine(compiler, name), token).ConfigureAwait(false);
-        var raw = document.RootElement.GetProperty("Items").GetProperty("CscCommandLineArgs").EnumerateArray()
-            .Select(row => row.GetProperty("Identity").GetString()!).ToArray();
-        if (raw.Length is < 1 or > 8192 || raw.Any(arg => arg.IndexOfAny(['\r', '\n', '\0']) >= 0)) throw new InvalidDataException("Invalid captured compiler arguments.");
+        var items = document.RootElement.GetProperty("Items");
+        var resources = capture.ValidateResources(items.GetProperty("EmbeddedResource"), token);
+        var raw = items.GetProperty("CscCommandLineArgs").EnumerateArray().Select(row => row.GetProperty("Identity").GetString()!).ToArray();
+        if (raw.Length is < 1 or > 8192) throw new InvalidDataException("Invalid captured compiler argument count.");
         var arguments = new List<string>(); var pathMaps = new List<string>(); var sources = 0; var output = false; var library = false;
         foreach (var argument in raw)
         {
             token.ThrowIfCancellationRequested();
+            if (argument.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            {
+                if (argument.StartsWith("/resource:", StringComparison.OrdinalIgnoreCase) || argument.StartsWith("-resource:", StringComparison.OrdinalIgnoreCase))
+                    throw new NotSupportedException("Invalid captured embedded resource argument.");
+                throw new InvalidDataException("Invalid captured compiler argument.");
+            }
             if (argument.StartsWith('@')) throw new NotSupportedException("Nested compiler response files are unsupported by capture.");
             if (!(argument.StartsWith('/') || argument.StartsWith('-')) || Path.IsPathFullyQualified(Unquote(argument)) && File.Exists(Unquote(argument)))
             {
                 arguments.Add(Quote(await capture.CopyAsync(Unquote(argument), token).ConfigureAwait(false))); sources++; continue;
             }
             var split = argument.IndexOf(':'); var name = argument[1..(split < 0 ? argument.Length : split)].TrimEnd('+', '-');
-            var value = split < 0 ? "" : Unquote(argument[(split + 1)..]);
+            var payload = split < 0 ? "" : argument[(split + 1)..];
+            if (name.Equals("resource", StringComparison.OrdinalIgnoreCase))
+            {
+                var resource = GameBuildResource.ParseArgument(payload);
+                var full = Path.GetFullPath(resource.File, capture._projectDirectory);
+                TakeResource(resources, full);
+                var copy = await capture.CopyAsync(full, token).ConfigureAwait(false);
+                // CSC separates resource fields at unquoted commas, including in response files.
+                var rewritten = "/resource:" + Quote(copy);
+                if (resource.Name != null) rewritten += "," + Quote(resource.Name);
+                if (resource.Visibility != null) rewritten += "," + resource.Visibility;
+                arguments.Add(rewritten);
+                continue;
+            }
+            var value = Unquote(payload);
             switch (name.ToLowerInvariant())
             {
                 case "noconfig": break; // This option must be on the command line, outside the response file.
@@ -109,6 +130,7 @@ internal sealed class GameBuildCompilation
                     arguments.Add(argument); break;
             }
         }
+        if (resources.Count != 0) throw new NotSupportedException("The SDK compiler omitted a witnessed embedded resource.");
         if (!output || !library || sources == 0) throw new InvalidDataException("Incomplete C# library invocation.");
         // Preserve CallerFilePath/PDB paths. More-specific user maps precede the root maps.
         if (frozen != null) pathMaps.AddRange(frozen.PathMaps.Select(p => capture.Mirror(p.Key) + "=" + p.Value));
@@ -124,7 +146,7 @@ internal sealed class GameBuildCompilation
         await File.WriteAllLinesAsync(response, arguments, new UTF8Encoding(false), token).ConfigureAwait(false);
         foreach (var name in projectKey == null ? inputs.Request.Dependencies ?? [] : [])
         {
-            var rows = document.RootElement.GetProperty("Items").GetProperty("ReferenceCopyLocalPaths").EnumerateArray()
+            var rows = items.GetProperty("ReferenceCopyLocalPaths").EnumerateArray()
                 .Select(row => row.GetProperty("FullPath").GetString()!).Where(path => Path.GetFileName(path).Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (rows.Length != 1) throw new InvalidDataException("Captured private dependency is missing or ambiguous: " + name);
             var dependency = await capture.CopyAsync(rows[0], token).ConfigureAwait(false);
@@ -137,6 +159,35 @@ internal sealed class GameBuildCompilation
         frozen?.ConfigureCompiler(capture.StartInfo);
         await File.WriteAllTextAsync(projectKey == null ? Path.Combine(job, "capture.json") : Path.Combine(capture._directory, "capture.json"), JsonSerializer.Serialize(capture.Snapshot), token).ConfigureAwait(false);
         return capture;
+    }
+
+    private Dictionary<string, int> ValidateResources(JsonElement rows, CancellationToken token)
+    {
+        var before = new Dictionary<string, int>(Paths);
+        var prepared = new Dictionary<string, int>(Paths);
+        foreach (var resource in _inputs.Resources)
+            before[resource.Path] = before.GetValueOrDefault(resource.Path) + 1;
+        foreach (var row in rows.EnumerateArray())
+        {
+            token.ThrowIfCancellationRequested();
+            var resource = GameBuildResource.Read(row, _projectDirectory, prepared: true);
+            TakeResource(before, resource.Path);
+            var original = _preparation?.Original(resource.Path) ?? resource.Path;
+            if (Inside(original, _job) || _preparation != null &&
+                (!_preparation.Files.ContainsKey(original) || !Paths.Equals(_preparation.CopyPath(original), resource.Path)))
+                throw new NotSupportedException("Embedded resource is not a captured original input: " + resource.Path);
+            prepared[resource.Path] = prepared.GetValueOrDefault(resource.Path) + 1;
+        }
+        if (before.Count != 0) throw new NotSupportedException("SDK preparation omitted a witnessed embedded resource.");
+        return prepared;
+    }
+
+    private static void TakeResource(Dictionary<string, int> census, string path)
+    {
+        if (!census.TryGetValue(path, out var count))
+            throw new NotSupportedException("Unexpected or duplicate captured embedded resource: " + path);
+        if (count == 1) census.Remove(path);
+        else census[path] = count - 1;
     }
 
     private string Mirror(string path)

@@ -3,8 +3,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TrueMoon.Aether.Input;
-using TrueMoon.Aether.Player;
-using TrueMoon.Aether.Player.Scenarios;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Gpu.Surfaces;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -14,9 +12,10 @@ using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
-namespace TrueMoon.ManualTests.PlayerProbe;
+namespace TrueMoon.Aether.Player.Scenarios;
 
-internal static class PlayerScenarioCommand
+/// <summary>Runs a version 1 file scenario against a published Aether Player build.</summary>
+public static class PlayerScenarioRunner
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -27,22 +26,32 @@ internal static class PlayerScenarioCommand
         WriteIndented = true
     };
 
-    internal static async Task<int> RunAsync(string scenarioPath, string build, string scene, string output, bool legacyScene, bool headless)
+    /// <summary>Runs fixed ticks and publishes the scenario report after Player shutdown.</summary>
+    /// <param name="scenarioPath">Path to the scenario JSON.</param>
+    /// <param name="buildDirectory">Path to a published Build for the managed entry assembly.</param>
+    /// <param name="scenePath">Path to the selected scene.</param>
+    /// <param name="outputDirectory">Fresh output directory for reports, diagnostics, and frames.</param>
+    /// <param name="legacyScene">Whether to load a legacy scene snapshot instead of a World scene.</param>
+    /// <param name="createWindowFonts">Window font factory; null selects the headless profile.</param>
+    /// <param name="configureDiagnostics">Optional customization of the scenario diagnostics.</param>
+    /// <param name="cancellationToken">Caller cancellation, reported as exit code 4.</param>
+    /// <returns>The scenario v1 exit code (0, 2, 3, 4, 5, 6, or 7).</returns>
+    public static async Task<int> RunAsync(string scenarioPath, string buildDirectory, string scenePath, string outputDirectory,
+        bool legacyScene, Func<SkiaFontCatalog>? createWindowFonts, Action<DiagnosticPipelineOptions>? configureDiagnostics = null,
+        CancellationToken cancellationToken = default)
     {
-        if (Directory.Exists(output))
+        var headless = createWindowFonts == null;
+        try { outputDirectory = ReserveOutputDirectory(outputDirectory); }
+        catch (Exception failure)
         {
-            Console.Error.WriteLine("Select a fresh scenario output directory.");
+            Console.Error.WriteLine($"Could not reserve scenario output: {failure.Message}");
             return 5;
         }
-        Directory.CreateDirectory(output);
-        using var reservation = new FileStream(Path.Combine(output, ".run"), FileMode.CreateNew, FileAccess.Write,
-            FileShare.None, 1, FileOptions.DeleteOnClose);
 
         var observations = new List<Observation>();
         using var interrupted = new CancellationTokenSource();
         using var timeout = new CancellationTokenSource();
-        using var run = CancellationTokenSource.CreateLinkedTokenSource(interrupted.Token, timeout.Token);
-        Console.CancelKeyPress += OnCancel;
+        using var run = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, interrupted.Token, timeout.Token);
         PlayerStart? start = null;
         Scenario? scenario = null;
         string? scenarioHash = null, error = null, cleanupError = null;
@@ -60,21 +69,19 @@ internal static class PlayerScenarioCommand
             scenario = JsonSerializer.Deserialize<Scenario>(bytes.AsSpan(offset), Json) ?? throw new InvalidDataException("Missing scenario.");
             Validate(scenario);
             timeout.CancelAfter(scenario.TimeoutMs);
-            start = await PlayerStart.CaptureAsync(build, BuildIdentity.HostId, scene, legacyScene, run.Token);
+            start = await PlayerStart.CaptureAsync(buildDirectory, BuildIdentity.HostId, scenePath, legacyScene, run.Token);
             var app = App.Build(context =>
             {
-                context.UseDiagnostics(new DiagnosticPipelineOptions { JsonDirectory = Path.Combine(output, "diagnostics") });
-                if (headless)
+                var diagnosticsOptions = new DiagnosticPipelineOptions { JsonDirectory = Path.Combine(outputDirectory, "diagnostics") };
+                configureDiagnostics?.Invoke(diagnosticsOptions);
+                context.UseDiagnostics(diagnosticsOptions);
+                if (createWindowFonts == null)
                 {
                     context.UseAetherHeadlessPlayer(start);
                 }
                 else
                 {
-                    var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
-                    {
-                        ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf")
-                    });
-                    context.UseAetherPlayer(start, fonts, player =>
+                    context.UseAetherPlayer(start, createWindowFonts(), player =>
                     {
                         player.Width = scenario.Width;
                         player.Height = scenario.Height;
@@ -102,7 +109,7 @@ internal static class PlayerScenarioCommand
                     if (changes.TryGetValue(tick, out var change)) input = change.State;
                     checkpoints.TryGetValue(tick, out var checkpoint);
                     var expected = checkpoint?.ExpectedObservations ?? [];
-                    var step = await player.AdvanceScenarioAsync(input, checkpoint != null, expected.Length != 0, run.Token);
+                    var step = await player.AdvanceScenarioAsync(input, checkpoint != null && player.SupportsFrameCapture, expected.Length != 0, run.Token);
                     input = input with { Yaw = 0, Pitch = 0, InteractPressed = false };
                     if (step.Status.Tick != (ulong)tick) throw new InvalidDataException($"Requested tick {tick}, observed {step.Status.Tick}.");
                     if (checkpoint == null) continue;
@@ -113,7 +120,7 @@ internal static class PlayerScenarioCommand
                     if (frame != null)
                     {
                         file = $"frame-{checkpoint.Id}.png";
-                        await File.WriteAllBytesAsync(Path.Combine(output, file), frame.Png.AsMemory(), run.Token);
+                        await File.WriteAllBytesAsync(Path.Combine(outputDirectory, file), frame.Png.AsMemory(), run.Token);
                         hash = Convert.ToHexString(SHA256.HashData(frame.Png.AsSpan()));
                     }
                     var hudStatus = session.Hud?.Status;
@@ -144,11 +151,10 @@ internal static class PlayerScenarioCommand
         }
         catch (OperationCanceledException) when (run.IsCancellationRequested)
         {
-            result = interrupted.IsCancellationRequested ? 4 : 3;
+            result = cancellationToken.IsCancellationRequested || interrupted.IsCancellationRequested ? 4 : 3;
             error = result == 4 ? "Scenario canceled." : "Scenario timed out.";
         }
         catch (Exception failure) { result = 5; error = failure.ToString(); }
-        finally { Console.CancelKeyPress -= OnCancel; }
 
         var surface = session?.Surface;
         var diagnostics = surface?.Diagnostics;
@@ -172,16 +178,24 @@ internal static class PlayerScenarioCommand
             SceneRevision = start?.World?.Scene.Revision ?? start?.Snapshot?.Revision,
             HostContractId = start?.Artifact.HostContractId, Profile = headless ? "Headless" : "Windowed",
             Backend = headless ? "None" : "Vulkan / OpenGL",
-            Versions = new { Probe = VersionOf(typeof(Program)), Player = VersionOf(typeof(PlayerWindow)), Runtime = VersionOf(typeof(PlayerSession)) },
+            Versions = new { Probe = VersionOf(Assembly.GetEntryAssembly()), Player = VersionOf(typeof(PlayerWindow).Assembly), Runtime = VersionOf(typeof(PlayerSession).Assembly) },
             Checkpoints = observations, State = session?.Status.State.ToString(), WindowClosed = window?.IsClosed,
             SurfaceReleased = surface?.IsReleased, Diagnostics = diagnostics
         };
-        var pending = Path.Combine(output, "report.tmp");
-        await File.WriteAllTextAsync(pending, JsonSerializer.Serialize(report, Json));
-        File.Move(pending, Path.Combine(output, "report.json"));
+        try
+        {
+            var pending = Path.Combine(outputDirectory, "report.tmp");
+            await using (var file = new FileStream(pending, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
+                await JsonSerializer.SerializeAsync(file, report, Json);
+            File.Move(pending, Path.Combine(outputDirectory, "report.json"));
+        }
+        catch (Exception failure)
+        {
+            Console.Error.WriteLine($"Could not publish scenario report: {failure.Message}");
+            if (cleanupError != null) Console.Error.WriteLine(cleanupError);
+            return cleanupError == null ? 5 : 6;
+        }
         return result;
-
-        void OnCancel(object? sender, ConsoleCancelEventArgs args) { args.Cancel = true; interrupted.Cancel(); }
 
         async Task<bool> OnWindowClosing(UiCloseReason reason)
         {
@@ -190,11 +204,28 @@ internal static class PlayerScenarioCommand
         }
     }
 
+    private static string ReserveOutputDirectory(string path)
+    {
+        var output = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        if (Directory.Exists(output)) throw new IOException("Select a fresh scenario output directory.");
+
+        // Move a sibling into place rather than writing a reservation into a directory we may not own.
+        var pending = Path.Combine(Path.GetDirectoryName(output)!, $".aether-scenario-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(pending);
+        try { Directory.Move(pending, output); }
+        catch
+        {
+            Directory.Delete(pending);
+            throw;
+        }
+        return output;
+    }
+
     private static bool Released(GpuSurfaceProducerDiagnostics diagnostics) => diagnostics is { LiveSlots: 0, OpenHandles: 0 } &&
         diagnostics.SlotsCreated == diagnostics.SlotsReleased && diagnostics.SurfacesCreated == diagnostics.SurfacesReleased &&
         diagnostics.DevicesCreated == diagnostics.DevicesReleased;
 
-    private static string? VersionOf(Type type) => type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    private static string? VersionOf(Assembly? assembly) => assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
     private static ObservationCheck Evaluate(ExpectedNumber expected, GameScenarioSnapshot? snapshot)
     {

@@ -28,7 +28,8 @@ foreach ($package in $verification.Packages) {
 $source = Join-Path $evidence 'source'
 [void][IO.Directory]::CreateDirectory($source)
 $paths = @('global.json', 'Directory.Build.props', 'Directory.Packages.props')
-foreach ($projectDirectory in @('TrueMoon.Tales.Build','TrueMoon.Tales.Gameplay')) {
+$paths += 'TrueMoon.Tales.Gameplay/content/scenario/outpost-day1.json'
+foreach ($projectDirectory in @('TrueMoon.Tales.Build','TrueMoon.Tales.Gameplay','TrueMoon.Tales.Sim')) {
     $paths += @(Get-ChildItem -LiteralPath "$game/$projectDirectory" -File |
         Where-Object Extension -in @('.csproj','.cs','.aetherscene') |
         ForEach-Object { "$projectDirectory/$($_.Name)" })
@@ -46,6 +47,7 @@ $sources = foreach ($relative in $paths) {
     [Security.SecurityElement]::Escape($feed) + '"/></packageSources></configuration>')
 
 function Invoke-Recorded([string]$name, [string[]]$arguments, [string]$directory = $source) {
+    if ($arguments[0] -in @('restore','publish')) { $arguments += "-bl:$evidence/$name-{}.binlog" }
     $info = [Diagnostics.ProcessStartInfo]::new('dotnet')
     $info.WorkingDirectory = $directory
     $info.UseShellExecute = $false
@@ -81,20 +83,24 @@ Invoke-Recorded 'publish-tool' @('publish', $tool, '--no-restore', '-c', 'Releas
 $graphs = foreach ($name in @('TrueMoon.Tales.Build','TrueMoon.Tales.Gameplay')) {
     $path = Join-Path $source "$name/obj/project.assets.json"
     $assets = Get-Content -Raw -LiteralPath $path | ConvertFrom-Json -AsHashtable
-    $localProjects = 0
+    $comparer = if ([OperatingSystem]::IsWindows()) { [StringComparer]::OrdinalIgnoreCase } else { [StringComparer]::Ordinal }
+    $localProjects = [Collections.Generic.HashSet[string]]::new($comparer)
+    $expected = @([IO.Path]::GetFullPath("$source/TrueMoon.Tales.Sim/TrueMoon.Tales.Sim.csproj"))
+    if ($name -eq 'TrueMoon.Tales.Build') {
+        $expected += [IO.Path]::GetFullPath("$source/TrueMoon.Tales.Gameplay/TrueMoon.Tales.Gameplay.csproj")
+    }
     foreach ($library in $assets.libraries.GetEnumerator()) {
-        if ($library.Value.type -eq 'project' -and $name -eq 'TrueMoon.Tales.Build' -and
-            $library.Key.StartsWith('TrueMoon.Tales.Gameplay/') -and
-            [IO.Path]::GetFullPath($library.Value.path, "$source/$name") -eq
-                [IO.Path]::GetFullPath("$source/TrueMoon.Tales.Gameplay/TrueMoon.Tales.Gameplay.csproj")) {
-            $localProjects++
+        if ($library.Value.type -eq 'project') {
+            $local = [IO.Path]::GetFullPath($library.Value.path, "$source/$name")
+            if (!$localProjects.Add($local)) { throw "Duplicate local project in $name graph: $local." }
             continue
         }
         if ($library.Value.type -ne 'package' -or ($library.Key -match '^TrueMoon(?:\.|/)' -and !$library.Key.EndsWith("/$version"))) {
             throw "Unexpected library in $name graph: $($library.Key)."
         }
     }
-    @{ Name = $name; ProjectReferences = $localProjects; Sha256 = (Get-FileHash -LiteralPath $path).Hash }
+    if (!$localProjects.SetEquals([string[]]$expected)) { throw "Unexpected local project set in $name graph: $($localProjects -join ', ')." }
+    @{ Name = $name; ProjectReferences = $localProjects.Count; Sha256 = (Get-FileHash -LiteralPath $path).Hash }
 }
 
 $verifiedProbe = Join-Path $verification.RunDirectory 'fresh-published/probe/PlayerProbe.dll'

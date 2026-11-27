@@ -58,11 +58,17 @@ internal static class OrthographicRouteProof
                 $"Unexpected physical capture extent: {before.Width}×{before.Height} → {after.Width}×{after.Height}.");
             Check(after.SurfaceGeneration > before.SurfaceGeneration && after.Ticks >= before.Ticks,
                 "Resize did not present a new current surface generation.");
-            Check(Array.Exists(AppDomain.CurrentDomain.GetAssemblies(), assembly =>
-                    assembly.GetName().Name == "TrueMoon.Tales.Gameplay") &&
-                !Array.Exists(AppDomain.CurrentDomain.GetAssemblies(), assembly =>
-                    assembly.GetName().Name is "TrueMoon.Aether.Tooling" or "TrueMoon.Aether.Editor"),
-                "Unexpected Player assembly graph.");
+            var loaded = AppDomain.CurrentDomain.GetAssemblies();
+            foreach (var name in new[] { "TrueMoon.Tales.Gameplay", "TrueMoon.Tales.Sim" })
+            {
+                var expected = Path.Combine(start.Artifact.DirectoryPath, name + ".dll");
+                Check(Array.Exists(loaded, assembly => assembly.GetName().Name == name &&
+                    string.Equals(assembly.Location, expected, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)),
+                    $"{name} did not load from the selected Build.");
+            }
+            Check(!Array.Exists(loaded, assembly => assembly.GetName().Name is { } name &&
+                (name == "TrueMoon.Aether.Tooling" || name.StartsWith("TrueMoon.Aether.Editor", StringComparison.Ordinal))),
+                "Player loaded Tooling or Editor.");
             for (var i = 0; i < Landmarks.Length; i++)
             {
                 var first = before.Landmarks[i];

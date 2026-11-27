@@ -38,6 +38,12 @@ observation. The headless driver steps the paused session and reports
 `SupportsFrameCapture == false` with a null frame. The App owns the game
 session and releases it on stop.
 
+Use `PlayerScenarioRunner.RunAsync` in a host executable to run the shared
+version 1 JSON scenario and write `report.json` to a fresh directory. Pass a
+font catalog factory for windowed captures or `null` for headless execution.
+Publish the Build for the exact managed entry assembly and pass cancellation
+from the host. The runner drains the App before publishing the report.
+
 Local runtime types now reside in the separate Runtime assembly; Player has no
 workflow Aether dependency. Expanded
 combined-exe/replace/crash/release matrix is ENG7b.3.

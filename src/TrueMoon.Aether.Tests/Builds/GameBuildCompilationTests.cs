@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
+using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json;
 using TrueMoon.Aether.Runtime.Builds;
@@ -54,6 +55,7 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
     }
 
     [Theory] [InlineData("@opaque.rsp")] [InlineData("/lib:ambient")] [InlineData("/resource:unknown.bin")]
+    [InlineData("/linkresource:unknown.bin")]
     [InlineData("/analyzer:custom.dll")] [InlineData("/keyfile:key.snk")]
     public async Task OpaqueCompilerInputs_FailClosed(string option)
     {
@@ -113,6 +115,91 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
         Assert.Equal(File.ReadAllBytes(Path.Combine(first.DirectoryPath, first.EntryAssembly)), File.ReadAllBytes(Path.Combine(second.DirectoryPath, second.EntryAssembly)));
         Assert.Null(new GameBuildResult(GameBuildArtifact.Open(first.DirectoryPath, GameBuildFixture.Hash)).Compilation);
         Assert.Equal(0, compiler.RetentionStatus!.SkippedDirectories); Assert.Equal(1, compiler.RetentionStatus.RetainedJobs);
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task SdkCapturedBuild_PreservesEmbeddedNamesAndBytes(bool freezePreparation)
+    {
+        using var f = new Files();
+        var project = f.SdkProject();
+        var nested = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(project)!, "content")).FullName;
+        var ordinary = Path.Combine(nested, "day.json");
+        var named = Path.Combine(nested, "bytes with spaces.bin");
+        File.WriteAllText(ordinary, """{"day":1}""");
+        File.WriteAllBytes(named, [0, 255, 192, 10, 13, 26]);
+        File.WriteAllText(project, """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup><TargetFramework>net11.0</TargetFramework></PropertyGroup>
+              <ItemGroup>
+                <EmbeddedResource Include="content/*.json" />
+                <EmbeddedResource Include="content/bytes with spaces.bin" LogicalName="Game.Stable" WithCulture="false" />
+              </ItemGroup>
+            </Project>
+            """);
+        var sdkOutput = Path.Combine(f.Job, "sdk");
+        var sdk = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(project)!, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[] { "build", project, "-c", "Release", "-o", sdkOutput, "-bl:" + Path.Combine(f.Job, "{}.binlog"), "-v:q" })
+            sdk.ArgumentList.Add(argument);
+        await Compile(sdk);
+
+        await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, Path.Combine(f.Job, "artifacts"));
+        var artifact = await compiler.BuildAsync(new(project, "Frozen.dll", "Frozen", 1)
+        { TrackInputs = true, CaptureCompilation = true, CapturePreparation = freezePreparation });
+        var normal = Resources(Path.Combine(sdkOutput, "Frozen.dll"));
+        var captured = Resources(Path.Combine(artifact.DirectoryPath, artifact.EntryAssembly));
+        Assert.Equal(new[] { "Frozen.content.day.json", "Game.Stable" }, normal.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(normal.Keys.Order(StringComparer.Ordinal), captured.Keys.Order(StringComparer.Ordinal));
+        foreach (var resource in normal) Assert.Equal(resource.Value, captured[resource.Key]);
+        Assert.Equal(File.ReadAllBytes(ordinary), captured["Frozen.content.day.json"]);
+        Assert.Equal(File.ReadAllBytes(named), captured["Game.Stable"]);
+        Assert.Contains(artifact.Compilation!.Files, file => file.Path == named &&
+            file.Sha256 == Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(captured["Game.Stable"])));
+        await compiler.VerifyInputsAsync(artifact.Inputs!, artifact.Compilation);
+
+        static Dictionary<string, byte[]> Resources(string path)
+        {
+            var context = new AssemblyLoadContext("EmbeddedResources", isCollectible: true);
+            try
+            {
+                using var file = File.OpenRead(path);
+                var assembly = context.LoadFromStream(file);
+                return assembly.GetManifestResourceNames().ToDictionary(name => name, name =>
+                {
+                    using var stream = assembly.GetManifestResourceStream(name)!;
+                    using var bytes = new MemoryStream();
+                    stream.CopyTo(bytes);
+                    return bytes.ToArray();
+                });
+            }
+            finally { context.Unload(); }
+        }
+    }
+
+    [Theory]
+    [InlineData(false, "data.resx", "")]
+    [InlineData(true, "data.resx", "")]
+    [InlineData(false, "data.fr-FR.json", "")]
+    [InlineData(true, "data.json", "WithCulture=\"true\"")]
+    public async Task SdkCapturedBuild_RejectsUnsupportedResourceWithoutPublishing(bool freezePreparation, string resource, string metadata)
+    {
+        using var f = new Files();
+        var project = f.SdkProject();
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(project)!, resource), "{}");
+        File.WriteAllText(project, $"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup><TargetFramework>net11.0</TargetFramework><EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems></PropertyGroup>
+              <ItemGroup><EmbeddedResource Include="{resource}" {metadata} /></ItemGroup>
+            </Project>
+            """);
+        var output = Path.Combine(f.Job, "artifacts");
+        await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, output);
+        await Assert.ThrowsAsync<NotSupportedException>(() => compiler.BuildAsync(new(project, "Frozen.dll", "Frozen", 1)
+        { TrackInputs = true, CaptureCompilation = true, CapturePreparation = freezePreparation }));
+        Assert.Empty(Directory.EnumerateFiles(output, GameBuildArtifact.ManifestFile, SearchOption.AllDirectories));
+        Assert.Null(compiler.ProcessId);
+        foreach (var name in new[] { "preparation", "capture", "work", "output" })
+            Assert.False(Directory.Exists(Path.Combine(compiler.DiagnosticsDirectory!, name)));
+        Assert.True(compiler.ReadDiagnostics(1, 0).Single().ResourcesReleased);
     }
 
     [Fact]
@@ -237,9 +324,18 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
             Directory.CreateDirectory(Root); File.WriteAllText(Project, "<Project/>");
             File.WriteAllText(Source, "public static class Frozen { public const string Value = \"before\"; public static string Path() => At(); private static string At([System.Runtime.CompilerServices.CallerFilePath] string path = \"\") => path; }"); File.Copy(typeof(object).Assembly.Location, Reference);
         }
+        public string SdkProject()
+        {
+            var directory = Directory.CreateDirectory(Path.Combine(Root, "project")).FullName;
+            Directory.CreateDirectory(Job);
+            File.WriteAllText(Path.Combine(Root, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
+            File.WriteAllText(Path.Combine(directory, "Frozen.cs"), "public class Frozen { }");
+            return Path.Combine(directory, "Frozen.csproj");
+        }
+
         public GameBuildInputSnapshot Inputs() => GameBuildInputSnapshot.Create(new(Project, "Frozen.dll", "Frozen", 1), JsonSerializer.Serialize(new
         {
-            Properties = new { TargetFramework = GameBuildProfile.TargetFramework }, Items = new { Compile = new[] { new { FullPath = Source } }, Reference = Array.Empty<object>(), ProjectReference = Array.Empty<object>(), PackageReference = Array.Empty<object>() }
+            Properties = new { TargetFramework = GameBuildProfile.TargetFramework }, Items = new { Compile = new[] { new { FullPath = Source } }, EmbeddedResource = Array.Empty<object>(), Reference = Array.Empty<object>(), ProjectReference = Array.Empty<object>(), PackageReference = Array.Empty<object>() }
         }), "project", Job);
         public string Preparation(params string[] extra)
         {
@@ -248,7 +344,7 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
             return JsonSerializer.Serialize(new
             {
                 Properties = new { CscToolPath = "", CscToolExe = "", CscEnvironment = "", MSBuildToolsPath = sdk, RoslynTargetsPath = Path.Combine(sdk, "Roslyn"), NetCoreTargetingPackRoot = Path.Combine(dotnetRoot, "packs"), NETCoreSdkVersion = Path.GetFileName(sdk) },
-                Items = new { CscCommandLineArgs = new[] { "/noconfig", "/nostdlib+", "/reference:" + Reference, "/target:library", "/out:Frozen.dll", Source }.Concat(extra).Select(value => new { Identity = value }).ToArray(), ReferenceCopyLocalPaths = Array.Empty<object>() }
+                Items = new { CscCommandLineArgs = new[] { "/noconfig", "/nostdlib+", "/reference:" + Reference, "/target:library", "/out:Frozen.dll", Source }.Concat(extra).Select(value => new { Identity = value }).ToArray(), ReferenceCopyLocalPaths = Array.Empty<object>(), EmbeddedResource = Array.Empty<object>() }
             });
         }
         public string CopyCompiler()
