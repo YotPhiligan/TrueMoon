@@ -142,6 +142,68 @@ public sealed class ConvertedBindingTests
     }
 
     [Fact]
+    public void ConvertedTwoWay_RejectThenRecovery_RestoresConsumerErrorState()
+    {
+        var model = new Model();
+        var box = new TextBox().BindTwoWay(TextBox.ValueProperty, model, m => m.Number, new NumberText());
+        box.Set(UiProperties.HasError, true);
+        box.Set(UiProperties.ErrorMessage, "чужая ошибка");
+        using var ui = Create(box);
+        ui.Update();
+        ui.Focus(box);
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        ui.HandleInput(new UiInput(InputKind.Text, Text: "abc"));
+        Assert.True(box.HasError);
+        Assert.Equal("Введите число", box.ErrorMessage);
+        Assert.Equal(0d, model.Number);
+
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        ui.HandleInput(new UiInput(InputKind.Text, Text: "7"));
+        Assert.Equal(7d, model.Number);
+        Assert.True(box.HasError);
+        Assert.Equal("чужая ошибка", box.ErrorMessage);
+    }
+
+    [Fact]
+    public void ConvertedTwoWay_ContextReplacementAfterReject_ClearsOwnError()
+    {
+        var context = new BindingContext { DataContext = new Model() };
+        var box = new TextBox().BindTwoWay(TextBox.ValueProperty, context, m => m.Number, new NumberText());
+        using var ui = Create(box);
+        ui.Update();
+        ui.Focus(box);
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        ui.HandleInput(new UiInput(InputKind.Text, Text: "abc"));
+        Assert.True(box.HasError);
+        Assert.Equal("Введите число", box.ErrorMessage);
+
+        context.DataContext = new Model { Number = 4.5d };
+        ui.Update();
+        Assert.Equal("4.5", box.Value);
+        Assert.False(box.HasError);
+        Assert.Equal("", box.ErrorMessage);
+    }
+
+    [Fact]
+    public void ConvertedTwoWay_ConsumerMessageDuringFailure_IsNeverRewritten()
+    {
+        var model = new Model();
+        var box = new TextBox().BindTwoWay(TextBox.ValueProperty, model, m => m.Number, new NumberText());
+        using var ui = Create(box);
+        ui.Update();
+        ui.Focus(box);
+        ui.HandleInput(new UiInput(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        ui.HandleInput(new UiInput(InputKind.Text, Text: "abc"));
+        box.Set(UiProperties.ErrorMessage, "другая ошибка");
+
+        model.Publish(6d);
+        ui.Update();
+        Assert.Equal("6", box.Value);
+        Assert.True(box.HasError);
+        Assert.Equal("другая ошибка", box.ErrorMessage);
+    }
+
+    [Fact]
     public void ConvertedTwoWay_SourcePropertyWithoutPublicSetter_ThrowsArgumentException()
     {
         var model = new Model();

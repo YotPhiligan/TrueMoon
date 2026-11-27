@@ -223,10 +223,12 @@ editor.BindTwoWay(TextBox.ValueProperty, setting, x => x.Celsius, new CelsiusTex
 ```
 
 A rejected back conversion keeps the user's draft in the control, never writes the source and
-reports the reason through `UiProperties.HasError` and `UiProperties.ErrorMessage`; a later source
-change reprojects the canonical value and clears only the error state this binding set itself, never
-an error set by someone else. A throwing `Convert` leaves the UI value unchanged and surfaces the
-exception through the owning update. The selector stays a direct public readable/writable property —
+reports the reason through `UiProperties.HasError` and `UiProperties.ErrorMessage`. Ownership of that
+error state is recorded per binding, so it survives a reconnect or a context replacement: recovery
+restores exactly the error state the element had before the failure, and a message a consumer wrote
+while the failure was visible is left to its owner. A throwing `Convert` leaves the UI value unchanged
+and surfaces the exception through the owning update.
+The selector stays a direct public readable/writable property —
 for a two-way binding, of exactly the converter's source type and without an `init`-only setter.
 
 Separate appearance into `IViewStyle<TView>.Configure(IViewStyleBuilder<TView>)`.

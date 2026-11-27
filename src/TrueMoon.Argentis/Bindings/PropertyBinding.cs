@@ -20,6 +20,12 @@ internal sealed class PropertyBinding<TSource, TSourceValue, TValue> : IDisposab
     private bool _observingContext;
     private bool _disposed;
 
+    // The error state is element-wide and outlives a reconnect, so ownership is recorded on the binding.
+    private bool _conversionFailed;
+    private bool _priorHasError;
+    private string _priorMessage = "";
+    private string? _reportedMessage;
+
     internal PropertyBinding(Element element, UiProperty<TValue> property, TSource? source,
         Expression<Func<TSource, TSourceValue>> selector, bool twoWay = false,
         Func<TSourceValue, TValue>? convert = null,
@@ -126,13 +132,41 @@ internal sealed class PropertyBinding<TSource, TSourceValue, TValue> : IDisposab
         Disconnect();
     }
 
+    private void ReportConversionFailure(string? error)
+    {
+        var message = error is { Length: > 0 } ? error : "Значение не принято";
+        if (!_conversionFailed)
+        {
+            _priorHasError = _element.Get(UiProperties.HasError);
+            _priorMessage = _element.Get(UiProperties.ErrorMessage);
+            _conversionFailed = true;
+        }
+
+        _reportedMessage = message;
+        _element.Set(UiProperties.HasError, true);
+        _element.Set(UiProperties.ErrorMessage, message);
+    }
+
+    private void ClearConversionFailure()
+    {
+        if (!_conversionFailed) return;
+        _conversionFailed = false;
+        // Only what this failure still wrote is undone; a message a consumer set since then stays owned by it.
+        if (_element.Get(UiProperties.HasError) && _element.Get(UiProperties.ErrorMessage) == _reportedMessage)
+        {
+            _element.Set(UiProperties.HasError, _priorHasError);
+            _element.Set(UiProperties.ErrorMessage, _priorMessage);
+        }
+
+        _reportedMessage = null;
+    }
+
     private sealed class Connection(PropertyBinding<TSource, TSourceValue, TValue> binding, TSource source) : IDisposable
     {
         private int _active = 1;
         private int _pending;
         private bool _subscribed;
         private bool _busy;
-        private bool _conversionFailed;
         private bool _writingSource;
         private readonly int _ownerThread = Environment.CurrentManagedThreadId;
         private readonly Action<Action> _dispatch = binding._element.CaptureAttachmentDispatcher();
@@ -162,7 +196,7 @@ internal sealed class PropertyBinding<TSource, TSourceValue, TValue> : IDisposab
             if (!Current) return;
             var value = binding._convert(binding._read(Source));
             if (Current) binding._element.Set(binding._property, value);
-            ClearConversionFailure();
+            binding.ClearConversionFailure();
         }
 
         private void UiChanged(Element element, object property)
@@ -189,7 +223,7 @@ internal sealed class PropertyBinding<TSource, TSourceValue, TValue> : IDisposab
                         else
                         {
                             // The draft stays in the control; the source is untouched.
-                            ReportConversionFailure(element, error);
+                            binding.ReportConversionFailure(error);
                             return;
                         }
                     }
@@ -207,21 +241,6 @@ internal sealed class PropertyBinding<TSource, TSourceValue, TValue> : IDisposab
             _writingSource = true;
             try { binding._write!(Source, value); }
             finally { _writingSource = false; }
-        }
-
-        private void ReportConversionFailure(Element element, string? error)
-        {
-            _conversionFailed = true;
-            element.Set(UiProperties.HasError, true);
-            element.Set(UiProperties.ErrorMessage, error is { Length: > 0 } ? error : "Значение не принято");
-        }
-
-        private void ClearConversionFailure()
-        {
-            if (!_conversionFailed) return; // someone else's error state is never cleared here
-            _conversionFailed = false;
-            binding._element.Set(UiProperties.HasError, false);
-            binding._element.Set(UiProperties.ErrorMessage, "");
         }
 
         private void Changed(object? sender, PropertyChangedEventArgs args)

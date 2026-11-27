@@ -193,7 +193,7 @@ public static partial class ElementExtensions
     /// <param name="selector">A direct public readable/writable property of exactly the converter's source type; init-only setters are unsupported.</param>
     /// <param name="converter">Projects the source value onto the UI value and accepts the UI value back.</param>
     /// <returns>The configured element.</returns>
-    /// <remarks>Attached UI changes convert back before the source is written. A rejected value keeps the user's draft in the control, leaves the source untouched, and sets UiProperties.HasError with UiProperties.ErrorMessage; the binding clears only that error state, never an error set by someone else. A source change reprojects the canonical value and clears the failure.</remarks>
+    /// <remarks>Attached UI changes convert back before the source is written. A rejected value keeps the user's draft in the control, leaves the source untouched, and sets UiProperties.HasError with UiProperties.ErrorMessage; recovery restores the error state the element had before this binding failed, and a message a consumer wrote in the meantime is left to its owner. Detach disconnects both directions.</remarks>
     public static T BindTwoWay<T, TSource, TSourceValue, TValue>(this T element, UiProperty<TValue> property, TSource source,
         Expression<Func<TSource, TSourceValue>> selector, ITwoWayValueConverter<TSourceValue, TValue> converter)
         where T : Element where TSource : class, INotifyPropertyChanged
@@ -229,7 +229,7 @@ public static partial class ElementExtensions
         BindContext(element, property, context, selector, twoWay: false, convert);
 
     /// <summary>Binds a UI property in both directions through a converter over the current data context.</summary>
-    /// <remarks>Only the current source receives edits. A rejected back conversion keeps the draft and reports the error on the element. Detach and context replacement disconnect the old source and fence its queued notifications.</remarks>
+    /// <remarks>Only the current source receives edits. A rejected back conversion keeps the draft, reports the error on the element and restores that state once the context or the source recovers. Detach and context replacement disconnect the old source and fence its queued notifications.</remarks>
     public static T BindTwoWay<T, TData, TSourceValue, TValue>(this T element, UiProperty<TValue> property,
         IDataContext<TData> context, Expression<Func<TData, TSourceValue>> selector, ITwoWayValueConverter<TSourceValue, TValue> converter)
         where T : Element where TData : class, INotifyPropertyChanged =>
