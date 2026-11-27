@@ -19,7 +19,7 @@ internal sealed record CaseDescriptor(string Group, string Method, Func<int, IUi
 /// <summary>The permanent UIA4.2 case set. Every group also measures <c>NoOp</c> as its harness floor.</summary>
 internal static class Cases
 {
-    internal static readonly string[] Groups = ["node-cost", "property-access", "property-store", "collection-binding", "keyed-binding", "virtualized-binding", "property-binding", "conditional-slot"];
+    internal static readonly string[] Groups = ["node-cost", "property-access", "property-store", "collection-binding", "keyed-binding", "virtualized-binding", "property-binding", "conditional-slot", "tree-sync"];
 
     /// <summary>Scene sizes per group: rows for the scene and binding groups, nodes for <c>property-store</c>, binding
     /// count for <c>property-binding</c>.</summary>
@@ -40,6 +40,7 @@ internal static class Cases
         "virtualized-binding" => [.. VirtualizedBinding(), new CaseDescriptor("virtualized-binding", "NoOp", static _ => new NullCase())],
         "property-binding" => [.. PropertyBinding(), new CaseDescriptor("property-binding", "NoOp", static _ => new NullCase())],
         "conditional-slot" => [.. ConditionalSlot(), new CaseDescriptor("conditional-slot", "NoOp", static _ => new NullCase())],
+        "tree-sync" => [.. TreeSync(), new CaseDescriptor("tree-sync", "NoOp", static _ => new NullCase())],
         _ => throw new ArgumentOutOfRangeException(nameof(group)),
     };
 
@@ -119,6 +120,13 @@ internal static class Cases
         yield return new("conditional-slot", "SlotSameState", size => new SlotSameState(size));
         yield return new("conditional-slot", "SlotCloseAndReopen", size => new SlotCloseAndReopen(size));
         yield return new("conditional-slot", "SlotFreshEqualToken", size => new SlotFreshEqualToken(size));
+    }
+
+    // Sizes are rows: every row contributes one model notification, and the structural pass reconciles them once.
+    private static IEnumerable<CaseDescriptor> TreeSync()
+    {
+        yield return new("tree-sync", "ManualMaskQueue", size => new ManualMaskQueue(size));
+        yield return new("tree-sync", "DeferredTreeSyncQueue", size => new DeferredTreeSyncQueue(size));
     }
 }
 
@@ -723,5 +731,125 @@ internal sealed class UiEditWritesSource(int count) : PropertyBindingCase(count)
         _alternate = !_alternate;
         Editor.Value = _alternate ? TypedA : TypedB;
         Session.Update();
+    }
+}
+
+/// <summary>
+/// One structural window over the same inspector-shaped scene: N model notifications must produce exactly one
+/// reconcile of the keyed rows, and the containers stay blocked only while that window is open.
+/// </summary>
+internal abstract class TreeSyncCase(int rows) : IUiCase
+{
+    [Flags] protected enum Work { None = 0, Rows = 1, Choices = 2, Removed = 4 }
+
+    protected readonly int Rows = rows;
+    protected VStack Sections = null!, Choices = null!, Removed = null!;
+    protected UiSession Session = null!;
+    private readonly RowModel _model = new(-1);
+    private RowModel[] _entries = null!;
+    private readonly List<RowModel> _presented = [];
+
+    /// <summary>Reconciles performed so far; the queue owes exactly one per measured operation.</summary>
+    internal int Passes { get; set; }
+    internal bool InputBlocked => Sections.IsInputBlocked || Choices.IsInputBlocked || Removed.IsInputBlocked;
+    internal int RowCount => Sections.Items.Count;
+
+    /// <summary>A row without property bindings: the reconcile, not a binding, writes what the row shows.</summary>
+    protected static Element SectionRow(RowModel model) => new HStack().WithChildren(new Text(model.Name), new SizedElement());
+    protected static void RebindRow(Element row, RowModel model) => ((Text)((HStack)row).Items[0]).Value = model.Name;
+
+    public virtual void Setup()
+    {
+        _entries = new RowModel[Rows];
+        for (var index = 0; index < Rows; index++) _entries[index] = new RowModel(index);
+        _presented.AddRange(_entries);
+        var root = new VStack();
+        root.Add(Sections = new VStack().BindItems(_presented, SectionRow, static model => model.Id, RebindRow));
+        root.Add(Choices = new VStack());
+        root.Add(Removed = new VStack());
+        Session = Scene.Session(root);
+        Session.Update();
+        if (Sections.Items.Count != Rows) throw new InvalidOperationException("Initial keyed synchronization is incomplete.");
+        _model.PropertyChanged += (_, _) => Request(Work.Rows);
+    }
+
+    public void Run()
+    {
+        Notify();
+        Flush();
+    }
+
+    /// <summary>The model reports one change per presented row.</summary>
+    internal void Notify()
+    {
+        for (var index = 0; index < Rows; index++) _model.NotifySilently();
+    }
+
+    /// <summary>Runs the queued structural pass.</summary>
+    internal void Flush() => Session.Update();
+
+    /// <summary>Rebuilds the mirror the keyed binding reads and reconciles the live rows.</summary>
+    protected void Reconcile()
+    {
+        Passes++;
+        _presented.Clear();
+        _presented.AddRange(_entries);
+        Sections.RefreshItems();
+    }
+
+    public void Cleanup() => Session.Dispose();
+
+    protected abstract void Request(Work work);
+}
+
+/// <summary>The application pattern before UIA4.10: a mask field, one hand-written dispatch and manual blocking of
+/// the three dynamic containers.</summary>
+internal sealed class ManualMaskQueue(int rows) : TreeSyncCase(rows)
+{
+    private Work _mask;
+    private bool _blocked;
+
+    protected override void Request(Work work)
+    {
+        var alreadyQueued = _mask != Work.None;
+        _mask |= work;
+        if (alreadyQueued) return;
+        Block(true);
+        Sections.Dispatch(() =>
+        {
+            var pending = _mask;
+            _mask = Work.None;
+            if (pending != Work.None) Reconcile();
+            Block(false);
+        });
+    }
+
+    private void Block(bool blocked)
+    {
+        if (_blocked == blocked) return;
+        _blocked = blocked;
+        Sections.IsInputBlocked = blocked;
+        Choices.IsInputBlocked = blocked;
+        Removed.IsInputBlocked = blocked;
+    }
+}
+
+/// <summary>The UIA4.10 path: the same window requested through <see cref="DeferredTreeSync{TRequest}"/>.</summary>
+internal sealed class DeferredTreeSyncQueue(int rows) : TreeSyncCase(rows)
+{
+    private DeferredTreeSync<Work> _queue = null!;
+
+    public override void Setup()
+    {
+        base.Setup();
+        _queue = new DeferredTreeSync<Work>(Sections, Work.None, static (left, right) => left | right, _ => Reconcile())
+            .BlocksInput(Sections, Choices, Removed);
+    }
+
+    protected override void Request(Work work)
+    {
+        // The screen blocks once when the window opens and folds further notifications into the request.
+        if (!_queue.IsPending) _queue.BlockInput();
+        _queue.Request(work);
     }
 }

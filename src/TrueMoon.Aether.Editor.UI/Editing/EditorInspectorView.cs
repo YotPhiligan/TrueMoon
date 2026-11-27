@@ -70,10 +70,9 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     /// <summary>Generic numeric, Boolean and string rows projected from the field rows the bindings retain.</summary>
     public IReadOnlyDictionary<(ComponentId, string), PropertyEditorRow> GenericEditors =>
         PropertyRows().ToDictionary(row => row.Address, row => row.Editor);
-    private InspectorUpdate _pendingUpdate;
-    private long _contextVersion;
     private long _presentationGeneration;
-    private bool _dynamicInputBlocked;
+    /// <summary>Engine queue: model notifications fold into one structural pass, and its open window blocks input on the dynamic parts.</summary>
+    private readonly DeferredTreeSync<InspectorUpdate> _tree;
     /// <summary>Retained per-component details disclosures for provenance and inheritance resets.</summary>
     public IReadOnlyDictionary<ComponentId, IconButton> DetailsButtons =>
         Sections().ToDictionary(section => section.Address, section => section.Details);
@@ -146,6 +145,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     private EditorInspectorView(IEditorInspectorViewModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
+        _tree = new(this, InspectorUpdate.None, static (left, right) => left | right, Synchronize);
         SemanticId = "editor.inspector";
         Content(model, ui => ui.ScrollViewer().Named("ScrollPart").Content(
             ui.VStack(
@@ -208,18 +208,19 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         PrepareTextures();
         PrepareMeshes();
         AttachmentChanged += Attachment;
+        _tree.BlocksInput(this.ComponentListPart, this.AddChoicesPart, this.RemovedPart,
+            MaterialsPart, TexturesPart, MeshesPart);
         SynchronizeContext();
         this.ObservePropertyChanged(this, (_, change) => ModelChanged(change), SynchronizeContext);
     }
 
     private void SynchronizeContext()
     {
-        _contextVersion++;
-        _pendingUpdate = InspectorUpdate.None;
         // Attachment notifications run inside a tree change, so the replacement happens in the UI queue.
+        // The pass releases the block when it ends, including when it throws.
         if (IsAttached && !ReferenceEquals(_presentedContext, DataContext))
-            BlockDynamicInput(true);
-        QueueSynchronization(InspectorUpdate.All | InspectorUpdate.CloseHint);
+            _tree.BlockInput();
+        _tree.Request(InspectorUpdate.All | InspectorUpdate.CloseHint);
     }
 
     private void ModelChanged(PropertyChangedEventArgs change)
@@ -239,36 +240,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
             nameof(IEditorInspectorViewModel.HasSelection) => InspectorUpdate.CloseHint,
             _ => InspectorUpdate.None
         };
-        if (update != InspectorUpdate.None) QueueSynchronization(update);
-    }
-
-    private void QueueSynchronization(InspectorUpdate update)
-    {
-        var alreadyQueued = _pendingUpdate != InspectorUpdate.None;
-        _pendingUpdate |= update;
-        if (alreadyQueued) return;
-
-        var contextVersion = _contextVersion;
-        Dispatch(() =>
-        {
-            if (contextVersion != _contextVersion) return;
-            var pending = _pendingUpdate;
-            _pendingUpdate = InspectorUpdate.None;
-            Synchronize(pending);
-            if (contextVersion == _contextVersion) BlockDynamicInput(false);
-        });
-    }
-
-    private void BlockDynamicInput(bool blocked)
-    {
-        if (_dynamicInputBlocked == blocked) return;
-        _dynamicInputBlocked = blocked;
-        this.ComponentListPart.IsInputBlocked = blocked;
-        this.AddChoicesPart.IsInputBlocked = blocked;
-        this.RemovedPart.IsInputBlocked = blocked;
-        MaterialsPart.IsInputBlocked = blocked;
-        TexturesPart.IsInputBlocked = blocked;
-        MeshesPart.IsInputBlocked = blocked;
+        _tree.Request(update);
     }
 
     private void Synchronize(InspectorUpdate update)

@@ -3,6 +3,56 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+<a id="uia410-deferred-tree-sync-2026-11-28"></a>
+28.11.2026 — UIA4.10 (отложенная очередь структурных изменений в движке): в Argentis лежит
+`DeferredTreeSync<TRequest>` (`Argentis/DeferredTreeSync.cs:18`) — окно структурной синхронизации одного
+элемента. `Request(request)` (`:76-89`) игнорирует значение, равное `none`, иначе сворачивает запросы в
+`_pending` переданной `combine` и ставит `Run` через `Element.Dispatch` (`Element.cs:321-329`), то есть в
+attach-пост сессии: `post == null` (владелец без сессии) даёт inline-вызов, иначе действие исполняется
+только пока элемент жив, подключён и номер attach не изменился (`_attachmentVersion`, `Element.cs:325-328`).
+Отказ постановки откатывает окно, чтобы следующий запрос открыл его заново (`DeferredTreeSync.cs:88`).
+`Run` (`:92-102`) закрывает окно до колбэка, поэтому синхронизация может открыть следующее окно, не потеряв
+запрос. `UiSession.Update` вызывает `_posted.Drain()` раньше `ClearDetachedInput`, `AdvanceParticipants` и
+layout (`Alloy/Runtime/UiSession.cs:351-355`), так что проход попадает в безопасную точку: `VerifyTreeAccess`
+запрещает структурные правки только внутри tree change (`Element.cs:372-377`), в drain они разрешены.
+`Request` дополнительно требует поток владельца (`_owner.VerifyAccess()`, `:79`) — строже, чем `Dispatch`,
+потому что свёртка состояния происходит вне очереди.
+Блокировка ввода: `BlocksInput(params Element[])` (`:52-59`) задаёт набор поддеревьев, `BlockInput()`
+(`:61-70`) поднимает её при открытии окна, `Run` снимает в `finally` — в том числе когда синхронизация
+бросила, — а `AttachmentChanged` вызывает `EndWindow` (`:104-110`), который закрывает окно, выбрасывает
+запрос и снимает блокировку. Отсоединение больше не оставляет поддеревья заблокированными.
+
+Editor перешёл на неё: из `Editing/EditorInspectorView.cs` убраны `_pendingUpdate`, `_contextVersion`,
+`_dynamicInputBlocked`, `QueueSynchronization` и `BlockDynamicInput`; остались `_tree` (`:75`), создание в
+конструкторе (`:148`), `_tree.BlocksInput(ComponentListPart, AddChoicesPart, RemovedPart, MaterialsPart,
+TexturesPart, MeshesPart)` (`:211-212`), `_tree.BlockInput()` при отличающемся контексте плюс
+`_tree.Request(All | CloseHint)` в `SynchronizeContext` (`:217-224`) и `_tree.Request(update)` в
+`ModelChanged` (`:243`). Тело `Synchronize` и `_presentationGeneration` не менялись — очереди нужен только
+свёрнутый набор флагов `InspectorUpdate`; ручная проверка `_contextVersion` исчезла, её делает `Dispatch`.
+
+Фикстуры — `TrueMoon.Alloy.Tests/DeferredTreeSyncTests.cs` (8 фактов) и
+`TrueMoon.Aether.Editor.Tests/Inspector/InspectorDeferredTreeSyncTests.cs` (2 факта). Движок: N запросов до
+`Update` дают один проход с объединённым запросом; detach до `Update` снимает проход и не создаёт узлов;
+повторный attach не воспроизводит снятый проход; отсоединённый владелец синхронизируется inline без окна;
+пустой запрос окно не открывает; запрос внутри синхронизации открывает второе окно; окно блокировки
+исключает поддерево из маршрутизации ввода до прохода; бросок синхронизации снимает блокировку и приходит
+из `Update`. Инспектор: считаются фабрики секций и строк — три замены контекста до `Update` дают ровно одну
+сборку, для текущего контекста; detach при стоящем проходе не строит узлов, а после attach перерисовка
+возвращает текущий контекст.
+
+Прогоны (28.11.2026, Release/net11.0): `TrueMoon.Alloy.Tests` — 1331 пройдено, 0 не пройдено (до среза
+1323); `TrueMoon.Aether.Editor.Tests` — 1654 пройдено, 0 не пройдено (до среза 1652);
+`TrueMoon.Alloy.Hosting.Tests` — 224 пройдено, 0 не пройдено, срез их не касался.
+`TrueMoon.Argentis.Benchmarks --verify` — `VIEW_BASELINE_VERIFIED`, в проверке нагрузки новая группа
+`tree-sync`: у обеих реализаций один проход на N уведомлений, окно блокировки открыто до `Update` и снято
+после. Пара «ручная маска против примитива» — в [базе стоимости]
+(PERFORMANCE_BASELINE.md#uia410-deferred-tree-sync-2026-11-28).
+
+Остаток UIA4.4 (`ElementScope` на каждый View и обязательный слой `ContentControl`), UIA4.7, UIA4.8 и
+UIA4.11 остаются открыты; известный регресс `KeyedRebuildSameKeys` (231/243 µs при 2496 строках) этот срез
+не лечит — очередь сворачивает уведомления, а не снимает черновик привязки по адресу. Следующий шаг —
+UIA4.8 (явный выбор DI-конструктора) в одном генераторном контуре с UIA4.7.
+
 <a id="uia49-view-activation-registry"></a>
 28.11.2026 — UIA4.9 (делегаты активации View в реестре вкладов): `ViewActivation<T>` больше не держит
 единственное изменяемое статическое поле с first-writer-wins (`Alloy.Hosting/Generation/ViewActivation.cs:11-20`
@@ -339,9 +389,10 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 байт на узел вместо 550, 160 байт на отсоединение с освобождением вместо 395, второе локальное значение стоит
 24 байта ([замер](PERFORMANCE_BASELINE.md#uia44-detach-and-store-2026-11-27)). Пункт `Get<T>` при промахе
 закрыт числом: чтение на цепочке 2 496 узлов стоит 0 µs и 0 байт, код не менялся. Закрыто 28.11.2026 —
-объект `TreeChange` и делегат на ребёнка в `Dispose` (запись выше). Следующий шаг — остаток UIA4.4
-(`ElementScope` на каждый View и обязательный слой `ContentControl`) и UIA4.5 (декларативный условный слот
-контента).
+объект `TreeChange` и делегат на ребёнка в `Dispose` (запись выше); закрыта 28.11.2026 и UIA4.10 —
+отложенная очередь структурных изменений в движке (`DeferredTreeSync`, запись в начале раздела). Следующий
+шаг — остаток UIA4.4 (`ElementScope` на каждый View и обязательный слой `ContentControl`) и генераторный
+контур UIA4.7 плюс UIA4.8; UIA4.11 вне ближайшей очереди.
 
 [Миграция Aether View](../engine/PLAN.md#aether-view-authoring-migration)
 проверена на свежих NuGet: оба хоста Editor и независимый Player на обоих

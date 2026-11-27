@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$RunDirectory,
+    [string[]]$Groups,
     [ValidateRange(10, 100000)][int]$Samples = 200,
     [ValidateRange(1, 1000)][int]$WarmupSamples = 20,
     [ValidateRange(0, 60000)][int]$WarmupMilliseconds = 250,
@@ -29,13 +30,22 @@ $sizesByGroup = [ordered]@{
     'virtualized-binding' = @(39, 312, 2496)
     'property-binding' = @(1, 64, 512)
     'conditional-slot' = @(39, 312, 2496)
+    'tree-sync' = @(39, 312, 2496)
 }
-$methodsByGroup = @{ 'node-cost' = 7; 'property-access' = 7; 'property-store' = 4; 'collection-binding' = 7; 'keyed-binding' = 7; 'virtualized-binding' = 8; 'property-binding' = 6; 'conditional-slot' = 6 }
+$methodsByGroup = @{ 'node-cost' = 7; 'property-access' = 7; 'property-store' = 4; 'collection-binding' = 7; 'keyed-binding' = 7; 'virtualized-binding' = 8; 'property-binding' = 6; 'conditional-slot' = 6; 'tree-sync' = 3 }
 
+# A focused measurement runs the selected groups in the same process shape as the full baseline.
+if ($Groups) {
+    $unknown = @($Groups | Where-Object { -not $sizesByGroup.Contains($_) })
+    if ($unknown.Count) { throw "Unknown groups: $($unknown -join ', ')" }
+    $selected = [ordered]@{}
+    foreach ($key in $sizesByGroup.Keys) { if ($Groups -contains $key) { $selected[$key] = $sizesByGroup[$key] } }
+    $sizesByGroup = $selected
+}
 $summary = [ordered]@{
     Completed = $false; Scene = 'inspector-v1'; Samples = $Samples; WarmupSamples = $WarmupSamples
     WarmupMilliseconds = $WarmupMilliseconds; Passes = $Passes; StartedUtc = [DateTime]::UtcNow.ToString('O')
-    Commands = @(); Probes = @(); Results = @()
+    Groups = @($sizesByGroup.Keys); Commands = @(); Probes = @(); Results = @()
 }
 
 function Invoke-DotNet([string]$name, [string[]]$commandArguments, [int]$timeoutSeconds = 900) {

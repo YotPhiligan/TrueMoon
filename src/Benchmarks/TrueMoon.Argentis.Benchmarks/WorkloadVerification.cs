@@ -25,6 +25,7 @@ internal static class WorkloadVerification
         VirtualizedBinding();
         PropertyBinding();
         ConditionalSlot();
+        TreeSync();
     }
 
     private static void NodeLifecycle()
@@ -237,5 +238,35 @@ internal static class WorkloadVerification
         Check(firstBlock!.IsDisposed, "replaced property block is released");
         session.Dispose();
         Check(host.IsDisposed && slot.IsDisposed, "conditional slot dispose");
+    }
+
+    private static void TreeSync()
+    {
+        const int rows = 39;
+        var manual = new ManualMaskQueue(rows);
+        manual.Setup();
+        manual.Notify();
+        Check(manual.InputBlocked, "manual window blocks input while it is open");
+        Check(manual.RowCount == rows, "manual rows before the pass");
+        manual.Flush();
+        Check(manual.Passes == 1, "manual mask folds N notifications into one pass");
+        Check(!manual.InputBlocked, "manual pass releases input blocking");
+        Check(manual.RowCount == rows, "manual reconcile keeps the rows");
+        manual.Run();
+        Check(manual.Passes == 2, "manual window reopens for the next operation");
+        manual.Cleanup();
+
+        var deferred = new DeferredTreeSyncQueue(rows);
+        deferred.Setup();
+        deferred.Notify();
+        Check(deferred.InputBlocked, "engine window blocks input while it is open");
+        Check(deferred.RowCount == rows, "engine rows before the pass");
+        deferred.Flush();
+        Check(deferred.Passes == 1, "engine queue folds N notifications into one pass");
+        Check(!deferred.InputBlocked, "engine pass releases input blocking");
+        Check(deferred.RowCount == rows, "engine reconcile keeps the rows");
+        deferred.Run();
+        Check(deferred.Passes == 2, "engine window reopens for the next operation");
+        deferred.Cleanup();
     }
 }
