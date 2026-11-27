@@ -1,13 +1,17 @@
 # TrueMoon.Kton: состояние и следующий шаг
 
 <a id="phys6-aether-auto-step-2026-11-27"></a>
-**2026-11-27 — PHYS6: автошаг в Aether проверен на исходниках, `1.2611.27.11-alpha`.**
-Release/net11.0: 128/128. На обоих профилях `CharacterV2` с opt-in поднимается
-на 0,25 м и публикует позу и верхнюю опору в одном тике. V1, v2 без opt-in
-и уступ 0,30 м блокируют подъём. In-process Pause/Step/Replace на Cobalt и
-Microsoft DI восстанавливает опору в новом мире. Replace освобождает старый мир, Stop — новый.
-Пакетная приёмка, native Player и переход движения Tales остаются отдельными.
-[Прогон и границы](HISTORY.md#phys6-aether-auto-step-2026-11-27) ·
+<a id="phys6-aether-package-auto-step-2026-11-27"></a>
+**2026-11-27 — PHYS6: автошаг в Aether принят через закрытый NuGet feed, `1.2611.27.11-alpha`.**
+Чистый source Release/net11.0: 128/128. Независимый consumer: по 104/104
+в source Debug/published Release и fresh NuGet Debug/published Release.
+На обоих DI и профилях v2 с opt-in берёт 0,25 м с верхней опорой в том же тике;
+v1, v2 без opt-in и уступ 0,30 м блокируют подъём. Проверены SHA 14 пакетов,
+семь загруженных DLL в каждом fresh-профиле и освобождение всех владельцев.
+Pause/Step/Replace проверен отдельно на исходниках. Native Player, T3 и
+переход движения Tales остаются отдельными.
+[Пакетная проверка](HISTORY.md#phys6-aether-package-auto-step-2026-11-27) ·
+[Исходная проверка](HISTORY.md#phys6-aether-auto-step-2026-11-27) ·
 [План](PLAN.md#phys6-aether-auto-step).
 
 <a id="phys6-headless-corpus-2026-11-27"></a>

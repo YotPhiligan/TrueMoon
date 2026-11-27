@@ -2,6 +2,44 @@
 
 [План](PLAN.md), [текущий статус](STATUS.md).
 
+<a id="phys6-aether-package-auto-step-2026-11-27"></a>
+## PHYS6 — пакетный автошаг Aether, 2026-11-27
+
+`1.2611.27.11-alpha`, исходный SHA `1e956858e8a031d621326753a8773d8926666fd9`,
+Windows x64, SDK `11.0.100`, `net11.0`, BEPU `2.5.0-beta.33`. Чистый `ovnfs`
+checkout этой ревизии; production-входы между проверками не менялись. Из `src`
+с новым абсолютным каталогом `$R` под `%TEMP%`:
+
+```powershell
+dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj -c Release --framework net11.0 `
+  --artifacts-path "$R/source-artifacts" `
+  --filter 'FullyQualifiedName~PhysicsCharacterSceneTests|FullyQualifiedName~PhysicsRegistrationTests|FullyQualifiedName~ProviderCharacter' `
+  "-bl:$R/source-{}.binlog" --results-directory "$R" --logger 'trx;LogFileName=source.trx'
+pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory (Join-Path $R 'delivery')
+```
+
+- Исходники: 128 passed, 0 failed, 0 skipped, два binlog. В TRX сверены все
+  шесть классов, восемь вариантов шага, Pause/Step/Replace на обоих DI,
+  `invalid: 5` и `invalid: 6`.
+- Независимый consumer: `source-debug`, `source-published`, `fresh-Debug`
+  и `fresh-Release` прошли по 104 проверки; по шесть владельцев с нулём
+  опубликованных миров, активных owners и оставшихся pool bytes в каждом.
+- Cobalt и Microsoft DI × `Baseline60` и `FastLinear60`: v1 и v2 без opt-in
+  блокируются у 0,25 м; v2 с opt-in проходит 0,25 м, публикуя позу и верхнюю
+  опору в одном тике, но блокируется у 0,30 м.
+- Закрытый feed: 14 собственных и 10 внешних архивов с SHA256; три записи
+  `licenses/characters/` сверены с исходниками. Изолированный package-only
+  graph содержит 20 библиотек. Для семи DLL в каждом fresh-профиле SHA
+  загруженного файла совпало с runtime asset в cache и в архиве.
+- Локальные артефакты: `%TEMP%/kton-phys6-package-ab03540c912d4e5cadbb1969c14e5142`;
+  `source.trx`, `source.json`, `delivery/verification.json`,
+  `delivery/delivery-audit.json`, `delivery/run/feed`. У каждого из 21
+  MSBuild-шагов — непустой binlog; у вычисления профиля — отдельный.
+  SHA256 `verification.json`: `11CD93C3C125DFFE626647FDFB95EA0B1E7CE2D8A9AC9AD7E3F68EAC3EA19B86`.
+
+Приёмка ограничена headless ECS/CPU. Pause/Step/Replace проверен только на
+исходниках. Native Player, T3, доставка и переключение движения Tales не проверялись.
+
 <a id="phys6-aether-auto-step-2026-11-27"></a>
 ## PHYS6 — автошаг в ECS и сессии Aether, 2026-11-27
 

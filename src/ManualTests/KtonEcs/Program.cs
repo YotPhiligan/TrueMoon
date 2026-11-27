@@ -34,7 +34,13 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         if (args.Length != 1) throw new ArgumentException("KtonEcsProbe <report.json>");
-        foreach (var microsoft in new[] { false, true }) await Run(microsoft);
+        foreach (var microsoft in new[] { false, true })
+        {
+            await Run(microsoft);
+            await RunAutoStep(microsoft, PhysicsQualityProfile.Baseline60);
+            await RunAutoStep(microsoft, PhysicsQualityProfile.FastLinear60);
+        }
+        _provider = "Microsoft";
         var neutral = typeof(PhysicsBody).Assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray();
         Check("neutral-sdk-no-runtime-provider", !neutral.Any(name => name != null && (name.StartsWith("TrueMoon.Aether.Runtime", StringComparison.Ordinal) || name.Contains("Bepu") || name.Contains("Tooling") || name.Contains("Alloy"))));
         var runtime = typeof(PhysicsSceneSubsystem).Assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray();
@@ -46,13 +52,16 @@ internal static class Program
         await File.WriteAllTextAsync(output, JsonSerializer.Serialize(new { Completed = true, Stage = "PHYS6", CheckCount = Checks.Count, Checks, Owners, Assemblies = assemblies, NativeRendering = false }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
-    private static async Task Run(bool microsoft)
-    {
-        _provider = microsoft ? "Microsoft" : "Cobalt";
-        var witnesses = new List<Observer>();
-        await using var app = App.Builder(context => { if (microsoft) context.UseDI(); }).Setup(context =>
+    private const float StepCapsuleHalfHeight = .60f;
+
+    private static IApp BuildApp(bool microsoft, PhysicsQualityProfile quality, List<Observer> witnesses) =>
+        App.Builder(context => { if (microsoft) context.UseDI(); }).Setup(context =>
         {
-            context.UseBepuPhysics(options => options.DefaultWorld = new() { Limits = new() { MaxBodies = 16, MaxShapes = 32, MaxContactEvents = 128 } });
+            context.UseBepuPhysics(options => options.DefaultWorld = new()
+            {
+                Quality = quality,
+                Limits = new() { MaxBodies = 16, MaxShapes = 32, MaxContactEvents = 128 }
+            });
             context.UseAetherEcs().UseAetherPrimitiveEcs().UseAetherKton(options => options.MaximumContactEvents = 64);
             context.UseAetherSceneLoading(_ => PhysicsComponentRegistry.Register(PrimitiveEcsComponents.Register(new())).Build());
             context.Services(services =>
@@ -67,6 +76,12 @@ internal static class Program
             });
             context.UseAetherSceneSubsystems(subsystems => subsystems.AddKtonPhysics().Add<Observer>("proof.gameplay"));
         }).Build();
+
+    private static async Task Run(bool microsoft)
+    {
+        _provider = microsoft ? "Microsoft" : "Cobalt";
+        var witnesses = new List<Observer>();
+        await using var app = BuildApp(microsoft, PhysicsQualityProfile.Baseline60, witnesses);
         var host = app.Services.Resolve<BepuPhysicsHost>()!;
         Check("build-opens-no-world", host.Resources.ActiveResourceOwners == 0);
         await app.StartAsync(); var games = app.Services.Resolve<IFactory<PrimitiveGameSession>>()!;
@@ -135,10 +150,133 @@ internal static class Program
             Check("character-teleport-loses-support", !world.GetComponent<PhysicsCharacterState>(character).IsSupported && world.GetComponent<LocalTransform>(character).Position.Y > 3.9f);
         }
         await app.StopAsync();
-        var resources = host.Resources;
-        Check("final-owners-pools-zero", host.IsReleased && resources.PublishedWorlds == 0 && resources.ActiveResourceOwners == 0 && resources.MaximumPoolBytesAfterCleanup == 0 && !resources.PendingFailedCreationCleanup);
-        Owners.Add(new { Provider = _provider, Resources = resources });
+        RecordCleanup(host, "legacy", "final-owners-pools-zero");
     }
+
+    private static void RecordCleanup(BepuPhysicsHost host, string profile, string check)
+    {
+        var resources = host.Resources;
+        Check(check, host.IsReleased && resources.PublishedWorlds == 0 && resources.ActiveResourceOwners == 0 && resources.MaximumPoolBytesAfterCleanup == 0 && !resources.PendingFailedCreationCleanup);
+        Owners.Add(new { Provider = _provider, Profile = profile, Resources = resources });
+    }
+
+    private static async Task RunAutoStep(bool microsoft, PhysicsQualityProfile profile)
+    {
+        _provider = microsoft ? "Microsoft" : "Cobalt";
+        var witnesses = new List<Observer>();
+        await using var app = BuildApp(microsoft, profile, witnesses);
+        var host = app.Services.Resolve<BepuPhysicsHost>()!;
+        await app.StartAsync();
+        var games = app.Services.Resolve<IFactory<PrimitiveGameSession>>()!;
+        var legacy = new ComponentSchema(PhysicsComponentSchemas.CharacterId, 1,
+            [DefaultNumber("speed", 6), DefaultNumber("slope", MathF.PI / 4), DefaultNumber("horizontalForce", 1000),
+                DefaultNumber("verticalForce", 1000), DefaultNumber("jumpSpeed", 5)],
+            requiredTypes: [PhysicsComponentSchemas.BodyId]);
+        var current = PhysicsComponentSchemas.CharacterV2;
+        (string Name, ComponentSchema Schema, bool OptIn, float Rise)[] cases =
+        [
+            ("legacy-v1", legacy, false, .25f), ("default-v2", current, false, .25f),
+            ("enabled-v2", current, true, .25f), ("tall-v2", current, true, .30f)
+        ];
+
+        foreach (var (name, schema, optIn, rise) in cases)
+        {
+            var prefix = $"auto-step-{profile}-{name}";
+            var document = StepDocument(schema, optIn, rise);
+            using var game = games.Create() ?? throw new InvalidOperationException("Null game factory result.");
+            game.LoadSceneWorld(new(document));
+            var scene = game.ActiveScene!;
+            var world = scene.World;
+            var character = scene.Entities[document.Entities[0].Id];
+            var floor = scene.Entities[document.Entities[1].Id];
+            var tread = scene.Entities[document.Entities[2].Id];
+            var settings = world.GetComponent<PhysicsCharacter>(character);
+            Check(prefix + "-settings", settings.MaximumStepHeight == (optIn ? .25f : 0f) && settings.MinimumTreadDepth == .30f);
+
+            for (var i = 0; i < 60; i++) game.Tick();
+            var feet = ReadFeet();
+            var support = world.GetComponent<PhysicsCharacterState>(character);
+            CheckSample("settled", MathF.Abs(feet.Y) <= .02f && SupportedBy(floor));
+
+            var shouldStep = optIn && rise == .25f;
+            var lifted = false;
+            world.SetComponent(character, new PhysicsCharacterInput(new(0, -2.4f)));
+            for (var i = 0; i < 50; i++)
+            {
+                game.Tick();
+                feet = ReadFeet();
+                support = world.GetComponent<PhysicsCharacterState>(character);
+                if (shouldStep)
+                {
+                    if (!lifted && feet.Y > .15f)
+                    {
+                        if (!(feet.Z < 0 && OnTread())) throw Failure("first rise did not publish upward tread support");
+                        lifted = true;
+                    }
+                }
+                else if (!(MathF.Abs(feet.Y) <= .02f && feet.Z >= 0))
+                    throw Failure("crossed or rose at a blocked riser");
+            }
+
+            if (shouldStep)
+                CheckSample("outcome", lifted && feet.Z < -.50f && OnTread());
+            else
+            {
+                var velocityZ = world.GetComponent<PhysicsVelocity>(character).Linear.Z;
+                CheckSample("outcome", feet.Z is >= .24f and <= .36f && MathF.Abs(velocityZ) <= .10f && SupportedBy(floor));
+            }
+
+            Vector3 ReadFeet() => world.GetComponent<LocalTransform>(character).Position - Vector3.UnitY * StepCapsuleHalfHeight;
+            bool SupportedBy(EntityHandle entity) => support.IsSupported && support.SupportEntity == entity && support.SupportNormal.Y > .99f;
+            bool OnTread() => feet.Y is >= .23f and <= .27f && SupportedBy(tread);
+            InvalidOperationException Failure(string reason) =>
+                new($"{_provider}: {prefix}: {reason}, tick {game.TickNumber}, feet={feet}, support={support}");
+            void CheckSample(string suffix, bool valid)
+            {
+                if (!valid) throw Failure(suffix);
+                Check($"{prefix}-{suffix}", valid);
+            }
+        }
+
+        await app.StopAsync();
+        RecordCleanup(host, profile.ToString(), $"auto-step-{profile}-cleanup");
+
+        static ComponentPropertySchema DefaultNumber(string key, double value) =>
+            new(key, PropertyValueKind.Number, PropertyValue.From(value));
+    }
+
+    private static SceneDocument StepDocument(ComponentSchema schema, bool optIn, float rise)
+    {
+        var character = new EntityDefinitionId(Guid.NewGuid());
+        var floor = new EntityDefinitionId(Guid.NewGuid());
+        var tread = new EntityDefinitionId(Guid.NewGuid());
+        return new(new(Guid.NewGuid()), 1,
+            [new(new(Guid.NewGuid()), character), new(new(Guid.NewGuid()), floor), new(new(Guid.NewGuid()), tread)],
+            [
+                Definition(character, new(0, StepCapsuleHalfHeight, 1), new(.30f, StepCapsuleHalfHeight, 0), capsule: true),
+                Definition(floor, new(0, -.5f, 1.5f), new(4, 1, 3)),
+                Definition(tread, new(0, (rise - 1) / 2, -1.5f), new(4, 1 + rise, 3))
+            ],
+            BuiltInComponents.Schemas.Concat([PhysicsComponentSchemas.Body, schema]));
+
+        EntityDefinition Definition(EntityDefinitionId id, Vector3 position, Vector3 size, bool capsule = false)
+        {
+            List<ComponentData> components =
+            [
+                new(new(Guid.NewGuid()), BuiltInComponents.TransformId, 1, [Number("y", position.Y), Number("z", position.Z)]),
+                new(new(Guid.NewGuid()), BuiltInComponents.AppearanceId, 1),
+                new(new(Guid.NewGuid()), PhysicsComponentSchemas.BodyId, 1,
+                    [Integer("motion", (long)(capsule ? PhysicsBodyMotion.Dynamic : PhysicsBodyMotion.Static)),
+                        Integer("shape", (long)(capsule ? PhysicsColliderShape.Capsule : PhysicsColliderShape.Box)),
+                        Number("x", size.X), Number("y", size.Y), Number("z", size.Z), Number("mass", capsule ? 1 : 0)])
+            ];
+            if (capsule)
+                components.Add(new(new(Guid.NewGuid()), schema.TypeId, schema.Version,
+                    optIn ? [Number("maximumStepHeight", .25), Number("minimumTreadDepth", .30)] : []));
+            return new(id, new(components));
+        }
+    }
+
     private static SceneDocument Document(double scale = 1)
     {
         var ground = new EntityDefinitionId(Guid.NewGuid()); var falling = new EntityDefinitionId(Guid.NewGuid()); var moving = new EntityDefinitionId(Guid.NewGuid());

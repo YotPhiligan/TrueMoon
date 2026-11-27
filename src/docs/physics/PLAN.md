@@ -27,7 +27,8 @@ Kul ARCH1h.2a завершён в nonspatial scope; [PHYS6 завершён](#ph
 
 [PHYS6: opt-in шаг](#phys6-auto-step), [headless-корпус](#phys6-headless-corpus)
 и [сессия Aether](#phys6-aether-auto-step) проверены на исходниках.
-Пакетная приёмка и интеграция в игру остаются отдельными этапами.
+[Пакетная приёмка автошага](STATUS.md#phys6-aether-package-auto-step-2026-11-27)
+прошла отдельно; интеграция в игру остаётся открытой.
 
 Подробные задачи физики, включая ECS bridge, ведутся **только здесь**.
 [ARCH1i](../engine/PLAN.md#arch1i-physics) — ссылка из engine-направления.
@@ -430,7 +431,9 @@ opt-in и отказ на 0,30 м. На `Baseline60`, на обоих DI, in-pro
 ручной Step и Replace подтверждают восстановление опоры в новом мире,
 повторный подъём и освобождение старого мира при Replace, нового — при Stop.
 [Контракт](CHARACTERS.md#сессия-aether) · [Проверки](STATUS.md#phys6-aether-auto-step-2026-11-27).
-Пакетная поставка, native Player и переход кинематики Tales не проверялись.
+Пакетная CPU/headless поставка `1.2611.27.11-alpha` принята
+[независимым consumer](HISTORY.md#phys6-aether-package-auto-step-2026-11-27).
+Native Player и переход кинематики Tales не проверялись.
 
 <a id="phys7"></a>
 ### PHYS7 — необязательный простой ragdoll
