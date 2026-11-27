@@ -94,7 +94,7 @@ reports. Published proof отдельно выполняется из копии
 камеры до поверхности. Повторное нажатие возвращает authored color. Ближайшая
 opaque geometry блокирует цель, даже если Interaction отключён. Удержание E
 не повторяет действие. Camera/tick и полный набор per-object switches переживают
-Pause/Replace в TMCK2. Geometry/authoring data не редактируются.
+Pause/Replace в TMCK3. Geometry/authoring data не редактируются.
 
 `--interaction-proof <fresh-directory>` или runner `-IncludeInteraction` проверяет
 10сценариев и9PNG на configuration: вне reach/подход, только nearest target,
@@ -102,7 +102,7 @@ Pause/Replace в TMCK2. Geometry/authoring data не редактируются.
 заслонённую и отключённую цели. Четыре owned children, core/sync validation и
 полный cleanup проверяются в Debug apphost/published Release. Отдельный прежний
 input proof проходит через настоящий Silk keyboard callback; это не физический OS input.
-Control3/Frame1/Snapshot2 требуют совместного rebuild; TMCK1 отклоняется.
+Control4/Frame2/Snapshot3 требуют совместного rebuild; TMCK1/2 отклоняются.
 
 ## ENG5c.1: authoring-комната и несколько примитивов
 
@@ -113,12 +113,12 @@ dotnet run --project ManualTests/EngineSessionProbe/EngineSessionProbe.csproj --
 Editor строит `RoomScene` через SceneDocument/SceneResolver/PrimitiveSceneAdapter;
 отдельный child загружает `Game.Logic.RoomGame`. Семь кубов образуют пол, три стены
 и три цветных объекта. Синий объект наследует rotation/scale группы. World-матрицы
-и материалы передаются через control v3, а GPU frame transport остаётся прежним.
+и материалы передаются через control v4.
 Play и click в viewport включают WASD/mouse; Escape освобождает capture.
-Это статичная геометрия в рамках scene revision; TMCK2 сохраняет camera/tick/
+Это статичная геометрия в рамках scene revision; TMCK3 сохраняет camera/tick/
 interaction и object switches, геометрия повторно загружается при Replace.
 Collisions и игровой HUD — следующие этапы.
-Control v1/v2 отклоняются, rebuild Editor/Runtime/Aether/Game.Logic обязателен.
+Несовпадающие версии отклоняются, rebuild Editor/Runtime/Aether/Game.Logic обязателен.
 
 `--room-proof <fresh-directory>` проверяет три независимых center/material samples,
 границы pixel counts, пол/стену/occlusion, fixed-tick camera, resize/suspend/resume,
@@ -154,7 +154,7 @@ Start/Play/Pause/Step/Stop/Build/Replace/Refresh/Cancel используют о�
 для нового capture нужен click. Camera/interaction переживают checkpoint Replace.
 Reference ProbeGame/CPU examples сохраняют прежнее поведение.
 
-Control protocol v3, Frame1/TMCK2; host/game пересобираются совместно.
+Control protocol v4, Frame2/TMCK3; host/game пересобираются совместно.
 Input watchdog —12fixed ticks (200ms при непрерывных60Hz), не wall-clock
 timeout в Paused. Unsupported input capability возвращается отдельно от mode.
 

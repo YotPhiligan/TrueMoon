@@ -1,10 +1,11 @@
+using System.Text;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
 
 namespace TrueMoon.Aether.Checkpoints;
 
 
-/// <summary>Finite camera position and Euler rotation in radians for the version-one demo checkpoint.</summary>
+/// <summary>Finite checkpoint camera position and Euler rotation in radians.</summary>
 /// <param name="X">World X.</param><param name="Y">World Y.</param><param name="Z">World Z.</param>
 /// <param name="Pitch">Pitch radians.</param><param name="Yaw">Yaw radians.</param><param name="Roll">Roll radians.</param>
 public readonly record struct CameraTransform(float X, float Y, float Z, float Pitch, float Yaw, float Roll)
@@ -18,21 +19,41 @@ public readonly record struct CameraTransform(float X, float Y, float Z, float P
 }
 
 
-/// <summary>Immutable minimal state captured at a paused tick boundary.</summary>
+/// <summary>Immutable game state captured at a paused tick boundary.</summary>
 /// <param name="Tick">Exact UInt64 simulation tick.</param><param name="Camera">Camera pose.</param>
 /// <param name="Interaction">Demo interaction flag.</param>
 public sealed record GameCheckpointState(ulong Tick, CameraTransform Camera, bool Interaction)
 {
-    /// <summary>Complete game-defined per-entity switch states in schema v2; empty for legacy demo games.</summary>
+    /// <summary>Maximum UTF-8 size, in bytes, of the optional game payload.</summary>
+    public const int MaxPayloadUtf8Bytes = 24 * 1024;
+    private static readonly UTF8Encoding Utf8 = new(false, true);
+
+    /// <summary>Complete game-defined per-entity switch states; empty for games without switches.</summary>
     public GameObjectStates Objects { get; init; } = GameObjectStates.Empty;
+    /// <summary>Optional game-defined checkpoint data. Null means absent; an empty string is invalid.</summary>
+    public string? Payload { get; init; }
     /// <summary>Validates all state before restore.</summary>
-    public void Validate() { Camera.Validate(); if (Objects == null) throw new InvalidDataException("Missing game object states."); }
+    public void Validate()
+    {
+        Camera.Validate();
+        if (Objects == null) throw new InvalidDataException("Missing game object states.");
+        if (Payload is not { } payload) return;
+        if (payload.Length is 0 or > MaxPayloadUtf8Bytes)
+            throw new InvalidDataException("Invalid checkpoint game payload length.");
+        try
+        {
+            if (Utf8.GetByteCount(payload) > MaxPayloadUtf8Bytes)
+                throw new InvalidDataException("Invalid checkpoint game payload length.");
+        }
+        catch (EncoderFallbackException error) { throw new InvalidDataException("Invalid checkpoint game payload UTF-8.", error); }
+    }
 }
 
 
 /// <summary>Optional checkpoint capability. Existing IGameSession implementations remain valid without it.</summary>
 /// <remarks>Capture must be observational. Restore validates first and commits atomically, or throws
-/// CheckpointRejectedException without mutation. Unexpected callback failures have an unknown outcome.</remarks>
+/// CheckpointRejectedException without mutation, including when the game does not support the supplied payload.
+/// Unexpected callback failures have an unknown outcome.</remarks>
 public interface ICheckpointGameSession : IGameSession
 {
     /// <summary>Captures state without advancing or changing the paused game.</summary>
@@ -42,11 +63,11 @@ public interface ICheckpointGameSession : IGameSession
 }
 
 
-/// <summary>Version-two portable envelope. Source build is provenance; a compatible new build may restore it.</summary>
+/// <summary>Version-three portable envelope. Source build is provenance; a compatible new build may restore it.</summary>
 public sealed class GameCheckpoint
 {
-    /// <summary>The current minimal snapshot schema.</summary>
-    public const int CurrentVersion = 2;
+    /// <summary>The current snapshot schema.</summary>
+    public const int CurrentVersion = 3;
     /// <summary>Gets the snapshot schema.</summary>
     public int Version => CurrentVersion;
     /// <summary>Gets the compatible host contract SHA256.</summary>
@@ -59,7 +80,7 @@ public sealed class GameCheckpoint
     public long SceneRevision { get; }
     /// <summary>Gets immutable game state.</summary>
     public GameCheckpointState State { get; }
-    /// <summary>Validates and freezes a version-two envelope.</summary>
+    /// <summary>Validates and freezes a checkpoint envelope.</summary>
     public GameCheckpoint(string hostContractId, string sourceGameBuildId, string sceneId, long sceneRevision, GameCheckpointState state)
     {
         if (!IsHash(hostContractId) || !IsHash(sourceGameBuildId)) throw new InvalidDataException("Checkpoint requires SHA256 host/build identity.");

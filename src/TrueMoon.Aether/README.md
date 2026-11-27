@@ -566,13 +566,11 @@ floats и RGB. `Rendering.RenderPrimitive` — immutable world-space cube.
 фон. Старый constructor `(camera, rotation, color)` сохраняет куб в (0,1,0).
 Renderer выполняет draws в одном depth-tested pass на slot-owned surface.
 
-**Миграция control v2 → v3:** Editor/Runtime/Aether/game DLL пересобираются совместно;
-v1/v2 control identity отклоняется, wire fallback отсутствует. Текущий профиль —
-Control4/Frame2/Snapshot2 (TMCK2). Комната имеет статичную geometry в пределах scene
-revision: checkpoint содержит camera/tick/interaction и per-object switches,
-геометрия повторно загружается из того же SceneSnapshot. При изменении
-scene data или её definitions требуется новая scene revision; полный runtime world
-snapshot и live edits ещё не реализованы. Поле SnapshotVersion относится к TMCK.
+Editor, Runtime и контракты игры используют matching binaries; автоматического
+wire fallback нет. Текущий профиль — Control4/Frame2/Snapshot3 (TMCK3).
+Геометрия комнаты статична в пределах scene revision: Replace заново загружает
+тот же SceneSnapshot, затем восстанавливает camera/tick/interaction и переключатели.
+При изменении scene data или definitions требуется новая scene revision.
 
 Пример `ManualTests/EngineSessionProbe --room` строит authoring room с полом,
 стенами, тремя объектами и transformed parent, загружает отдельный `Game.Logic.RoomGame`
@@ -592,14 +590,15 @@ input, затем один E pulse переключает только найд�
 объект жёлтый; следующий pulse возвращает authored RGB. Другие объекты независимы,
 editor authoring snapshot не меняется. Удержание E не создаёт повторные pulses.
 
-**TMCK1 → TMCK2:** encoder/decoder и SessionIdentity.SnapshotVersion теперь2;
-формат1/future versions отклоняются. Matching binaries пересобираются вместе.
+TMCK3 отклоняет прежние и будущие версии. `SnapshotVersion` относится к
+транспортному формату, не к схеме пользовательских сохранений игры.
 `GameCheckpointState.Objects` — immutable `GameObjectStates`, до64unique valid
 entity IDs, ordinal sorted, с Boolean Active и value equality. Codec переносит
-полный набор: count(UInt16), для каждого UTF8length(UInt16)/ID/flag(byte), затем
-общий SHA256. Base offsets camera/tick сохранены, FixedBytes149. Invalid count,
-UTF8/order/duplicates/flags/trailing data отклоняются. Поле Interaction в RoomGame
-равно Any(Active); старые ProbeGame/CameraGame используют empty Objects.
+полный набор: count(UInt16), для каждого UTF8length(UInt16)/ID/flag(byte).
+Затем идут UInt16-длина необязательного `GameCheckpointState.Payload` (0 = null),
+до 24 КиБ strict UTF-8 и общий SHA-256. Неверные count/UTF-8/order/duplicates/
+flags/trailing data отклоняются. Игра сама версионирует и валидирует свой payload;
+демо без собственного payload отклоняют такую запись до мутации.
 
 Room restore проверяет exact loaded eligible-ID set и aggregate flag до commit
 camera/tick/objects; несовпадение даёт RestoreRejected без mutation. Runtime держит

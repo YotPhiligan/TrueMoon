@@ -1,9 +1,11 @@
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using System.Text;
 using Game.Logic;
 using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Runtime.Checkpoints;
+using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Generated.TrueMoon.Aether;
@@ -21,10 +23,11 @@ public sealed class CheckpointCodecTests
     public void Codec_RoundTripsUnsignedTicksExactFloatsAndDetachedState(ulong tick)
     {
         var original = Snapshot(tick); var bytes = GameCheckpointCodec.Encode(original);
-        Assert.Equal("TMCK", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
-        Assert.Equal(2, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4)));
+        Assert.Equal("TMCK", Encoding.ASCII.GetString(bytes, 0, 4));
+        Assert.Equal(3, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4)));
         Assert.Equal(tick, BinaryPrimitives.ReadUInt64LittleEndian(bytes.AsSpan(82)));
         var decoded = GameCheckpointCodec.Decode(bytes);
+        Assert.Null(decoded.State.Payload);
         Assert.Equal(original.State, decoded.State); Assert.Equal(original.HostContractId, decoded.HostContractId);
         Assert.Equal(original.SourceGameBuildId, decoded.SourceGameBuildId); Assert.Equal(original.SceneId, decoded.SceneId);
         Assert.Equal(original.SceneRevision, decoded.SceneRevision); Assert.Equal(bytes, GameCheckpointCodec.Encode(decoded));
@@ -39,6 +42,67 @@ public sealed class CheckpointCodecTests
         Assert.Equal(scene, restored.SceneId); Assert.Equal(GameCheckpointCodec.FixedBytes + length * 3, bytes.Length);
         Assert.False(restored.State.Interaction); Assert.Equal(0, restored.SceneRevision);
     }
+    [Fact]
+    public void Codec_RoundTripsUnicodeGamePayloadWithExactBytesAndValueEquality()
+    {
+        const string text = "界🐉e\u0301\0";
+        var original = WithPayload(text);
+        var bytes = GameCheckpointCodec.Encode(original);
+        var utf8 = Encoding.UTF8.GetBytes(text);
+        Assert.Equal(GameCheckpointCodec.FixedBytes + 4 + utf8.Length, bytes.Length);
+        const int lengthOffset = 115 + 4 + 2;
+        Assert.Equal(utf8.Length, BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(lengthOffset)));
+        Assert.Equal(utf8, bytes[(lengthOffset + 2)..^32]);
+
+        var decoded = GameCheckpointCodec.Decode(bytes);
+        Assert.Equal(text, decoded.State.Payload);
+        Assert.NotSame(text, decoded.State.Payload);
+        Assert.Equal(original.State, decoded.State);
+        Assert.Equal(original.State.GetHashCode(), decoded.State.GetHashCode());
+        Assert.NotEqual(original.State, decoded.State with { Payload = text.Normalize() });
+        Assert.Equal(bytes, GameCheckpointCodec.Encode(decoded));
+    }
+
+    [Fact]
+    public void GamePayload_EnforcesUtf8ByteBoundAndRejectsEmptyAndMalformedUnicode()
+    {
+        var maximum = new string('界', GameCheckpointState.MaxPayloadUtf8Bytes / 3);
+        var boundary = WithPayload(maximum);
+        Assert.Equal(maximum, GameCheckpointCodec.Decode(GameCheckpointCodec.Encode(boundary)).State.Payload);
+        Assert.Throws<InvalidDataException>(() => WithPayload(maximum + "a"));
+        Assert.Throws<InvalidDataException>(() => WithPayload(""));
+        Assert.Throws<InvalidDataException>(() => WithPayload("\ud800"));
+    }
+
+    [Theory]
+    [InlineData("shorter-length")] [InlineData("longer-length")] [InlineData("zero-length")]
+    [InlineData("trailing")] [InlineData("oversized")] [InlineData("utf8")] [InlineData("checksum")]
+    public void Codec_RejectsInvalidGamePayloadSectionsEvenWithRecomputedHash(string invalid)
+    {
+        var bytes = GameCheckpointCodec.Encode(WithPayload("界"));
+        const int lengthOffset = 115 + 4 + 2, payloadOffset = lengthOffset + 2;
+        switch (invalid)
+        {
+            case "shorter-length": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(lengthOffset), 2); break;
+            case "longer-length": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(lengthOffset), 4); break;
+            case "zero-length": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(lengthOffset), 0); break;
+            case "trailing": Array.Resize(ref bytes, bytes.Length + 1); break;
+            case "oversized":
+                const int overLimit = GameCheckpointState.MaxPayloadUtf8Bytes + 1;
+                Array.Resize(ref bytes, payloadOffset + overLimit + 32);
+                BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(lengthOffset), overLimit);
+                bytes.AsSpan(payloadOffset, overLimit).Fill((byte)'a');
+                break;
+            case "utf8": bytes[payloadOffset] = 0xff; break;
+            case "checksum": bytes[payloadOffset + 2] ^= 1; break; // Still valid UTF-8, but different from the hashed bytes.
+        }
+        if (invalid != "checksum") SHA256.HashData(bytes.AsSpan(0, bytes.Length - 32), bytes.AsSpan(bytes.Length - 32));
+        Assert.Throws<InvalidDataException>(() => GameCheckpointCodec.Decode(bytes));
+    }
+
+    private static GameCheckpoint WithPayload(string payload) =>
+        new(Hash, Hash, "room", 7, Snapshot().State with { Payload = payload });
+
     [Theory]
     [InlineData("magic")] [InlineData("version")] [InlineData("checksum")]
     [InlineData("flag")] [InlineData("nan")] [InlineData("infinity")]
@@ -85,21 +149,35 @@ public sealed class CheckpointCodecTests
         Assert.Equal(before, game.CaptureCheckpoint()); Assert.Equal(3ul, game.TickNumber);
         var invalid = before with { Tick = 99, Camera = before.Camera with { Roll = float.NaN } };
         Assert.Throws<InvalidDataException>(() => game.RestoreCheckpoint(invalid)); Assert.Equal(before, game.CaptureCheckpoint());
+        var unsupported = Snapshot(99).State with { Payload = "game-state" };
+        var rejected = Assert.Throws<CheckpointRejectedException>(() => game.RestoreCheckpoint(unsupported));
+        Assert.Equal(CheckpointOutcome.RestoreRejected, rejected.Outcome);
+        Assert.Equal(before, game.CaptureCheckpoint());
         var restored = Snapshot(71).State; game.RestoreCheckpoint(restored);
         Assert.Equal(restored, game.CaptureCheckpoint()); Assert.Equal(7, game.Revision);
     }
     [Fact]
-    public void GeneratedWire_RoundTripsCheckpointBytesOutcomeAndUnsignedTickBits()
+    public void GeneratedWire_RoundTripsMaximumGamePayloadAndObjectSectionWithinControlBudget()
     {
-        var payload = GameCheckpointCodec.Encode(Snapshot(ulong.MaxValue));
-        var request = ControlRequest.Create(new(Guid.NewGuid(), 1, Hash, Hash, Hash), 17, CommandKind.RestoreCheckpoint); request.Checkpoint = payload;
+        var identity = new SessionIdentity(Guid.NewGuid(), 1, Hash, Hash, Hash);
+        var objects = new GameObjectStates(Enumerable.Range(0, GameObjectStates.MaximumCount)
+            .Select(i => new GameObjectState((char)('一' + i) + new string('界', 127), i % 2 == 0)));
+        var state = Snapshot(ulong.MaxValue).State with { Objects = objects, Payload = new string('界', GameCheckpointState.MaxPayloadUtf8Bytes / 3) };
+        var payload = GameCheckpointCodec.Encode(new(Hash, Hash, new string('界', 128), 7, state));
+        Assert.Equal(GameCheckpointCodec.FixedBytes + 384 + 64 * (3 + 384) + 24 * 1024, payload.Length);
+        var request = ControlRequest.Create(identity, 17, CommandKind.RestoreCheckpoint); request.Checkpoint = payload;
         var writer = new ArrayBufferWriter<byte>(); request.Serialize(writer); var offset = 0;
+        Assert.True(writer.WrittenCount < BoundedControlClient.PayloadLimit);
         var decoded = new ControlRequest().Deserialize(writer.WrittenSpan, ref offset);
         Assert.Equal(writer.WrittenCount, offset); Assert.Equal(payload, decoded.Checkpoint); Assert.Equal(request.Identity(), decoded.Identity());
-        var reply = new ControlReply { Stamp = request, Phase = "Paused", Tick = -1, CheckpointOutcome = (int)CheckpointOutcome.Captured, Checkpoint = payload };
+        var reply = new ControlReply
+        {
+            Stamp = ControlRequest.Create(identity, 18, CommandKind.CaptureCheckpoint), Phase = "Paused", Tick = -1,
+            CheckpointOutcome = (int)CheckpointOutcome.Captured, Checkpoint = payload
+        };
         writer = new(); reply.Serialize(writer); offset = 0; var roundtrip = new ControlReply().Deserialize(writer.WrittenSpan, ref offset);
         Assert.Equal(writer.WrittenCount, offset); Assert.Equal((int)CheckpointOutcome.Captured, roundtrip.CheckpointOutcome);
-        Assert.Equal(ulong.MaxValue, GameCheckpointCodec.Decode(roundtrip.Checkpoint!).State.Tick); Assert.Equal(-1, roundtrip.Tick);
-        Assert.True(writer.WrittenCount < 64 * 1024);
+        Assert.Equal(state, GameCheckpointCodec.Decode(roundtrip.Checkpoint!).State); Assert.Equal(-1, roundtrip.Tick);
+        Assert.True(writer.WrittenCount < BoundedControlClient.PayloadLimit);
     }
 }

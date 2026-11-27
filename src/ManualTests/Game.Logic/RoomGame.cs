@@ -50,7 +50,8 @@ public sealed class RoomGame : ICheckpointGameSession, IRenderGameSession, IInpu
     public void RestoreCheckpoint(GameCheckpointState state)
     {
         RequireScene(); ArgumentNullException.ThrowIfNull(state); state.Validate();
-        if (!state.Objects.Entries.Select(entry => entry.EntityId).SequenceEqual(_objects.Entries.Select(entry => entry.EntityId)) ||
+        if (state.Payload != null ||
+            !state.Objects.Entries.Select(entry => entry.EntityId).SequenceEqual(_objects.Entries.Select(entry => entry.EntityId)) ||
             state.Interaction != state.Objects.Entries.Any(entry => entry.Active))
             throw new CheckpointRejectedException(CheckpointOutcome.RestoreRejected);
         TickNumber = state.Tick; _camera = state.Camera; _objects = state.Objects;

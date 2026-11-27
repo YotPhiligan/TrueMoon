@@ -86,11 +86,12 @@ public sealed class SceneWorldProtocolTests
         Assert.Equal(("Paused", source.Revision, 1), (activated.Phase, activated.Revision, fixture.Imports));
         await AssertNotReady(fixture);
 
-        var state = new GameCheckpointState(13, default, false);
+        var state = new GameCheckpointState(13, default, false) { Payload = "状態🐉" };
         var id = source.Id.Value.ToString("D");
         var rejected = await Restore(new(Hash, Hash, id, source.Revision - 1, state));
         Assert.Equal((int)CheckpointOutcome.RestoreRejected, rejected.CheckpointOutcome);
         Assert.Equal(0UL, fixture.Game.TickNumber);
+        Assert.Null(((ICheckpointGameSession)fixture.Game).CaptureCheckpoint().Payload);
         await AssertNotReady(fixture);
 
         var restored = await Restore(new(Hash, Hash, id, source.Revision, state));
@@ -558,8 +559,13 @@ public sealed class SceneWorldProtocolTests
     }
     private sealed class CheckpointGame(SceneWorldLoader loader) : TestGame(loader), ICheckpointGameSession
     {
-        public GameCheckpointState CaptureCheckpoint() => new(TickNumber, default, false);
-        public void RestoreCheckpoint(GameCheckpointState state) => RestoreSceneTick(state.Tick);
+        private string? _payload;
+        public GameCheckpointState CaptureCheckpoint() => new(TickNumber, default, false) { Payload = _payload };
+        public void RestoreCheckpoint(GameCheckpointState state)
+        {
+            RestoreSceneTick(state.Tick);
+            _payload = state.Payload;
+        }
     }
     private sealed class LegacyGame : IGameSession
     {

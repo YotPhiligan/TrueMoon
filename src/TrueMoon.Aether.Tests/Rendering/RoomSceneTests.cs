@@ -89,16 +89,23 @@ public sealed class RoomSceneTests
         var state = game.CaptureCheckpoint(); Assert.Equal(1UL, state.Tick); Assert.Equal(.05f, state.Camera.X, 5); Assert.False(state.Interaction);
         Assert.Equal(2, state.Objects.Entries.Length); Assert.All(state.Objects.Entries, entry => Assert.False(entry.Active));
         var capture = await runtime.SendAsync(ControlRequest.Create(id, 5, CommandKind.CaptureCheckpoint));
-        var checkpoint = GameCheckpointCodec.Decode(capture.Checkpoint!); Assert.Equal(state, checkpoint.State); Assert.Equal(2, checkpoint.Version);
+        var checkpoint = GameCheckpointCodec.Decode(capture.Checkpoint!); Assert.Equal(state, checkpoint.State); Assert.Equal(3, checkpoint.Version);
         var replacementId = id with { Generation = 2, GameBuildId = new('D', 64) };
         using var replacementGame = new RoomGame(); var replacement = new RuntimeProtocol(replacementId, replacementGame, 12, requireRestore: true);
         await Load(replacement, replacementId, scene);
         Assert.Throws<InvalidOperationException>(() => replacement.CaptureRenderFrame());
-        var restore = ControlRequest.Create(replacementId, 3, CommandKind.RestoreCheckpoint); restore.Checkpoint = capture.Checkpoint;
+        var initialState = replacementGame.CaptureCheckpoint();
+        var unsupported = ControlRequest.Create(replacementId, 3, CommandKind.RestoreCheckpoint);
+        unsupported.Checkpoint = GameCheckpointCodec.Encode(new(id.HostContractId, id.GameBuildId, scene.Id, scene.Revision, state with { Payload = "not a room checkpoint" }));
+        var rejected = await replacement.SendAsync(unsupported);
+        Assert.Equal((int)CheckpointOutcome.RestoreRejected, rejected.CheckpointOutcome);
+        Assert.Equal(initialState, replacementGame.CaptureCheckpoint());
+        Assert.Throws<InvalidOperationException>(() => replacement.CaptureRenderFrame());
+        var restore = ControlRequest.Create(replacementId, 4, CommandKind.RestoreCheckpoint); restore.Checkpoint = capture.Checkpoint;
         var restored = await replacement.SendAsync(restore); Assert.Equal((int)CheckpointOutcome.Restored, restored.CheckpointOutcome);
         Assert.Equal(state, replacementGame.CaptureCheckpoint());
         Assert.Equal(initial.Scene.Primitives.AsEnumerable(), replacement.CaptureRenderFrame().Scene.Primitives.AsEnumerable());
-        await replacement.SendAsync(ControlRequest.Create(replacementId, 4, CommandKind.Step));
+        await replacement.SendAsync(ControlRequest.Create(replacementId, 5, CommandKind.Step));
         Assert.Equal(state.Camera, replacementGame.CaptureCheckpoint().Camera); // staged held input is not checkpoint state
     }
 

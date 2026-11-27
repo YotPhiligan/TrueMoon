@@ -78,6 +78,7 @@ internal static class SceneGameSource
                 public void RestoreCheckpoint(GameCheckpointState state)
                 {
                     state.Validate();
+                    if (state.Payload != null) throw new CheckpointRejectedException(CheckpointOutcome.RestoreRejected);
                     if (RestoreGate is { } gate)
                     {
                         File.WriteAllText(gate + ".entered", Environment.ProcessId.ToString());

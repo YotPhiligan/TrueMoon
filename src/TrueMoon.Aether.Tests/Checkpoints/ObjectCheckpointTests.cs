@@ -42,9 +42,10 @@ public sealed class ObjectCheckpointTests
         var entries = Enumerable.Range(0, count).Select(i => new GameObjectState(i.ToString("D3") + new string('界', 125), i % 2 == 0));
         if (count == 65) { Assert.Throws<InvalidDataException>(() => new GameObjectStates(entries)); return; }
         var original = Checkpoint(new(entries)); var bytes = GameCheckpointCodec.Encode(original); var restored = GameCheckpointCodec.Decode(bytes);
-        Assert.Equal(2, restored.Version); Assert.Equal(original.State, restored.State); Assert.Equal(count, restored.State.Objects.Entries.Length);
+        Assert.Equal(3, restored.Version); Assert.Equal(original.State, restored.State); Assert.Equal(count, restored.State.Objects.Entries.Length);
         Assert.Equal(bytes, GameCheckpointCodec.Encode(restored)); Assert.True(bytes.Length < GameCheckpointCodec.MaxPayloadBytes);
-        bytes[^1] ^= 1; Assert.Equal(original.State, restored.State); Assert.NotSame(original.State.Objects, restored.State.Objects);
+        bytes[^1] ^= 1; Assert.Equal(original.State, restored.State);
+        if (count != 0) Assert.NotSame(original.State.Objects, restored.State.Objects);
     }
 
     [Theory]
@@ -64,7 +65,7 @@ public sealed class ObjectCheckpointTests
     [Theory]
     [InlineData("count")] [InlineData("count-zero")] [InlineData("length-zero")] [InlineData("length-large")] [InlineData("flag")]
     [InlineData("utf8")] [InlineData("duplicate")] [InlineData("order")] [InlineData("truncated")]
-    [InlineData("trailing")] [InlineData("v1")] [InlineData("future")]
+    [InlineData("trailing")] [InlineData("v1")] [InlineData("v2")] [InlineData("future")]
     public void RehashedMalformedObjectSectionsAndOldSchemas_AreRejected(string invalid)
     {
         var bytes = GameCheckpointCodec.Encode(Checkpoint(new([new("a", false), new("b", true)])));
@@ -82,17 +83,23 @@ public sealed class ObjectCheckpointTests
             case "truncated": bytes = bytes[..^33].Concat(new byte[32]).ToArray(); break;
             case "trailing": bytes = bytes[..^32].Concat(new byte[33]).ToArray(); break;
             case "v1": BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 1); break;
-            case "future": BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 3); break;
+            case "v2":
+                bytes = bytes[..^34].Concat(new byte[32]).ToArray(); // TMCK v2 did not have the two-byte payload length.
+                BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 2);
+                break;
+            case "future": BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 4); break;
         }
         SHA256.HashData(bytes.AsSpan(0, bytes.Length - 32), bytes.AsSpan(bytes.Length - 32));
         Assert.Throws<InvalidDataException>(() => GameCheckpointCodec.Decode(bytes));
     }
 
     [Fact]
-    public void SnapshotNegotiation_RequiresV2WhileControlAndFrameRemainCurrent()
+    public void SnapshotNegotiation_RequiresV3WhileControlAndFrameRemainCurrent()
     {
         var identity = new SessionIdentity(Guid.NewGuid(), 1, CheckpointCodecTests.Hash, CheckpointCodecTests.Hash, CheckpointCodecTests.Hash);
-        identity.Validate(); Assert.Equal(2, identity.SnapshotVersion); Assert.Equal(4, identity.ControlVersion); Assert.Equal(2, identity.FrameVersion);
+        identity.Validate(); Assert.Equal(3, identity.SnapshotVersion); Assert.Equal(4, identity.ControlVersion); Assert.Equal(2, identity.FrameVersion);
         Assert.Throws<InvalidDataException>(() => (identity with { SnapshotVersion = 1 }).Validate());
+        Assert.Throws<InvalidDataException>(() => (identity with { SnapshotVersion = 2 }).Validate());
+        Assert.Throws<InvalidDataException>(() => (identity with { SnapshotVersion = 4 }).Validate());
     }
 }
