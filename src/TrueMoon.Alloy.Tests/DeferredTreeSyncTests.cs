@@ -196,6 +196,49 @@ public sealed class DeferredTreeSyncTests
         Assert.False(owner.IsInputBlocked);
     }
 
+    [Fact]
+    public void RejectedDispatch_ReleasesBlockingAndLetsTheNextRequestOpenAWindow()
+    {
+        var clicks = 0;
+        const string id = "test.deferred-retry";
+        var action = new Button("Action").SemanticId(id).OnClick(() => clicks++);
+        var container = new Panel().Fill().WithChildren(action);
+        var owner = new VStack(); owner.Add(container);
+        using var root = new VStack(); root.Add(owner);
+        using var ui = new UiSession(root, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 2 });
+        ui.Update();
+        var bounds = action.Bounds;
+        var x = bounds.X + bounds.Width / 2;
+        var y = bounds.Y + bounds.Height / 2;
+
+        var passes = 0;
+        var queue = new DeferredTreeSync<Work>(owner, Work.None, static (a, b) => a | b, _ => passes++);
+        queue.BlocksInput(container);
+        root.Dispatch(() => { });
+        root.Dispatch(() => { });
+        queue.BlockInput();
+
+        var error = Assert.Throws<InvalidOperationException>(() => queue.Request(Work.Structure));
+        Assert.Contains("capacity", error.Message, StringComparison.Ordinal);
+        Assert.Equal(0, passes);
+        Assert.False(queue.IsPending);
+        // No queued pass exists to release the block, so the rejection itself must.
+        Assert.False(container.IsInputBlocked);
+        Assert.Equal(UiSemanticTargetStatus.Ready, ui.FindSemanticTarget(ui.CaptureSemantics(), id).Status);
+        Assert.True(ui.HandleInput(new(InputKind.PointerDown, x, y)).PointerCaptured);
+        ui.HandleInput(new(InputKind.PointerUp, x, y));
+        Assert.Equal(1, clicks);
+
+        ui.Update();
+        queue.Request(Work.Structure);
+        Assert.True(queue.IsPending);
+        ui.Update();
+        Assert.Equal(1, passes);
+        Assert.False(queue.IsPending);
+        Assert.False(container.IsInputBlocked);
+    }
+
     private sealed class HeadlessSurface : IUiRenderSurface
     {
         public int Renders { get; private set; }

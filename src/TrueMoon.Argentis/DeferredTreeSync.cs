@@ -24,6 +24,7 @@ public sealed class DeferredTreeSync<TRequest>
     private readonly IEqualityComparer<TRequest> _equals = EqualityComparer<TRequest>.Default;
     private Element[] _blocked = [];
     private TRequest _pending;
+    private int _window;
     private bool _open, _armed, _blocking;
 
     /// <summary>Creates the queue for one owner element.</summary>
@@ -71,8 +72,8 @@ public sealed class DeferredTreeSync<TRequest>
 
     /// <summary>Requests one coalesced pass covering <paramref name="request"/>; opens the window when none is open.</summary>
     /// <param name="request">The work requested. A value equal to <c>none</c> is ignored.</param>
-    /// <remarks>A rejected dispatch (queue capacity) rolls the window back and propagates the error, so the next
-    /// request can open it again.</remarks>
+    /// <remarks>A rejected dispatch (queue capacity, or a closed session) rolls the window back and releases the
+    /// input blocking armed for it, so the next request can open the window again.</remarks>
     public void Request(TRequest request)
     {
         if (_owner.IsDisposed || _equals.Equals(request, _none)) return;
@@ -85,8 +86,22 @@ public sealed class DeferredTreeSync<TRequest>
 
         _pending = request;
         _open = true;
+        var window = ++_window;
         try { _owner.Dispatch(Run); }
-        catch { _open = false; _pending = _none; throw; }
+        catch
+        {
+            // No pass will run to close the window and release the blocking armed for it, so undo both here —
+            // unless a reentrant request already opened a newer window that owns them.
+            if (window == _window)
+            {
+                _open = false;
+                _pending = _none;
+                _armed = false;
+                if (_blocking) ReleaseBlocking();
+            }
+
+            throw;
+        }
     }
 
     private void Run()
