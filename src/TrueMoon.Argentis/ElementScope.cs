@@ -3,7 +3,8 @@ using TrueMoon.Argentis.Views;
 
 namespace TrueMoon.Argentis;
 
-// A scope indexes its root and descendants, up to (but not including) the next scope root.
+// A scope indexes its root and descendants up to the next scope root: a child scope root is indexed by
+// its own name, but its descendants stay private to that scope.
 internal sealed class ElementScope(Element root)
 {
     private Dictionary<string, Element>? _parts;
@@ -28,14 +29,17 @@ internal sealed class ElementScope(Element root)
 
         void Validate(Element node)
         {
-            if (node.OwnedScope != null) return;
             if (node.PartName is { } name)
             {
+                // A child scope root may share this scope's root name; the scope root always wins lookup,
+                // so the shadowed entry simply stays out of the index.
+                if (node.OwnedScope != null && string.Equals(root.PartName, name, StringComparison.Ordinal)) return;
                 if (!(names ??= new(StringComparer.Ordinal)).Add(name) || string.Equals(root.PartName, name, StringComparison.Ordinal))
                     throw Duplicate(name);
                 if (_parts?.GetValueOrDefault(name) is { } existing && !WillBeRemoved(existing, removed))
                     throw Duplicate(name);
             }
+            if (node.OwnedScope != null) return;
             var children = node.Children;
             for (var i = 0; i < children.Count; i++) Validate(children[i]);
         }
@@ -55,12 +59,13 @@ internal sealed class ElementScope(Element root)
 
     internal void CommitPartChange(Element node, bool added)
     {
-        if (node.OwnedScope != null || (!added && _parts == null)) return;
-        if (node.PartName is { } name)
+        if (!added && _parts == null) return;
+        if (node.PartName is { } name && (node.OwnedScope == null || !string.Equals(root.PartName, name, StringComparison.Ordinal)))
         {
             if (added) (_parts ??= new(StringComparer.Ordinal)).Add(name, node);
             else _parts!.Remove(name);
         }
+        if (node.OwnedScope != null) return;
         var children = node.Children;
         for (var i = 0; i < children.Count; i++) CommitPartChange(children[i], added);
     }

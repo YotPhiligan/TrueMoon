@@ -37,20 +37,20 @@ public sealed class CameraProjectionInspectorTests
         Enter("near", "0.5");
         Enter("far", "25");
         Assert.Same(original, fixture.Owner.Document.Read().Content);
-        Assert.True(view.Apply.IsEnabled);
-        Click(view.Apply);
+        Assert.True(view.ApplyPart.IsEnabled);
+        Click(view.ApplyPart);
         Assert.Equal(original.UndoCount + 1, fixture.Owner.Document.Read().Content!.UndoCount);
         Assert.Equal(Math.PI / 2, Read(fixture, "fov").Value.GetNumber());
         Assert.Equal(0.5, Read(fixture, "near").Value.GetNumber());
         Assert.Equal(25d, Read(fixture, "far").Value.GetNumber());
         Assert.Equal("90", angle.Value);
 
-        Click(view.Undo);
+        Click(view.UndoPart);
         Assert.Equal(Math.PI / 3, Read(fixture, "fov").Value.GetNumber());
         Assert.Equal(0.1, Read(fixture, "near").Value.GetNumber());
         Assert.Equal(2d, Read(fixture, "far").Value.GetNumber());
         Assert.Equal("60", angle.Value);
-        Click(view.Redo);
+        Click(view.RedoPart);
         Assert.Equal(Math.PI / 2, Read(fixture, "fov").Value.GetNumber());
         Assert.Equal(0.5, Read(fixture, "near").Value.GetNumber());
         Assert.Equal(25d, Read(fixture, "far").Value.GetNumber());
@@ -59,7 +59,7 @@ public sealed class CameraProjectionInspectorTests
         void Enter(string key, string value)
         {
             var input = view.Properties[(Camera, key)].Input;
-            view.Scroll.BringIntoView(input.Bounds);
+            view.ScrollPart.BringIntoView(input.Bounds);
             Drain();
             ui.Focus(input);
             ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
@@ -69,7 +69,7 @@ public sealed class CameraProjectionInspectorTests
 
         void Click(Button button)
         {
-            view.Scroll.BringIntoView(button.Bounds);
+            view.ScrollPart.BringIntoView(button.Bounds);
             Drain();
             DocumentUiFixture.Click(ui, button);
             Drain();
@@ -166,7 +166,7 @@ public sealed class CameraProjectionInspectorTests
         Assert.False(fixture.Owner.Document.Read().IsDirty);
         Assert.Equal(0, original.UndoCount);
         Assert.True(fixture.Model.HasDraft);
-        Assert.True(view.Apply.IsEnabled);
+        Assert.True(view.ApplyPart.IsEnabled);
 
         Click(ui, view, view.DetailsButtons[Camera]);
         var reset = view.Properties[(Camera, "near")].Reset;
@@ -174,7 +174,7 @@ public sealed class CameraProjectionInspectorTests
         Click(ui, view, reset);
         Assert.True(fixture.Property(Camera, "near").IsReset);
         Enter(ui, view, height, "5");
-        Click(ui, view, view.Apply);
+        Click(ui, view, view.ApplyPart);
 
         var applied = fixture.Owner.Document.Read().Content!;
         var child = applied.Resolved.Entities[DocumentData.Child];
@@ -196,7 +196,7 @@ public sealed class CameraProjectionInspectorTests
         Assert.Equal(PropertyValue.From(.75), sibling.Properties["near"].Value);
         Assert.Same(Assert.Single(original.Document.Definitions), Assert.Single(applied.Document.Definitions));
 
-        Click(ui, view, view.Undo);
+        Click(ui, view, view.UndoPart);
         var undone = fixture.Owner.Document.Read().Content!;
         var restored = GameCamera(undone.Resolved.Entities[DocumentData.Child]);
         Assert.Equal(Camera, restored.Id);
@@ -206,7 +206,7 @@ public sealed class CameraProjectionInspectorTests
         Assert.Equal(DocumentData.Child, restored.Properties["near"].Source.EntityId);
         Assert.DoesNotContain(undone.Document.Schemas, schema => schema.TypeId == MeshRenderingComponents.OrthographicCameraId);
 
-        Click(ui, view, view.Redo);
+        Click(ui, view, view.RedoPart);
         var redone = fixture.Owner.Document.Read().Content!;
         var redoneCamera = GameCamera(redone.Resolved.Entities[DocumentData.Child]);
         Assert.Equal(replacement.Id, redoneCamera.Id);
@@ -262,14 +262,14 @@ public sealed class CameraProjectionInspectorTests
         Assert.True(editor.HasError);
         Assert.NotEmpty(field.Error);
         Assert.Contains(field.Error, fixture.Model.DiagnosticsText);
-        Assert.False(view.Apply.IsEnabled);
+        Assert.False(view.ApplyPart.IsEnabled);
         fixture.Model.Apply();
         Assert.Same(original, fixture.Owner.Document.Read().Content);
 
         Enter(ui, view, editor, corrected);
         Assert.False(field.HasError);
-        Assert.True(view.Apply.IsEnabled);
-        Click(ui, view, view.Apply);
+        Assert.True(view.ApplyPart.IsEnabled);
+        Click(ui, view, view.ApplyPart);
         Assert.Equal(PropertyValue.From(5d), Read(fixture, key).Value);
         Assert.Equal(original.UndoCount + 1, fixture.Owner.Document.Read().Content!.UndoCount);
     }
@@ -347,7 +347,7 @@ public sealed class CameraProjectionInspectorTests
         inheritedTransform.Value = "3.5";
         fixture.Property(Camera, "far").Value = "12.5";
 
-        Click(ui, view, view.Apply);
+        Click(ui, view, view.ApplyPart);
         var applied = fixture.Owner.Document.Read().Content!;
         var perspective = GameCamera(applied.Resolved.Entities[DocumentData.Child]);
         Assert.Equal(MeshRenderingComponents.CameraId, perspective.TypeId);
@@ -361,7 +361,7 @@ public sealed class CameraProjectionInspectorTests
         Assert.Equal(original.UndoCount + 1, applied.UndoCount);
         Assert.Contains(applied.Document.Schemas, schema => schema.TypeId == MeshRenderingComponents.CameraId && schema.Version == 1);
 
-        Click(ui, view, view.Undo);
+        Click(ui, view, view.UndoPart);
         var undone = fixture.Owner.Document.Read().Content!;
         var orthographic = GameCamera(undone.Resolved.Entities[DocumentData.Child]);
         Assert.Equal(Camera, orthographic.Id);
@@ -380,8 +380,8 @@ public sealed class CameraProjectionInspectorTests
             Drain(ui);
             var original = empty.Owner.Document.Read().Content!;
             Assert.DoesNotContain(original.Document.Schemas, schema => schema.TypeId == MeshRenderingComponents.OrthographicCameraId);
-            Click(ui, addView, addView.AddComponent);
-            Assert.True(addView.AddChoices.IsVisible);
+            Click(ui, addView, addView.AddComponentPart);
+            Assert.True(addView.AddChoicesPart.IsVisible);
             var addOrthographic = addView.AddButtons[(MeshRenderingComponents.OrthographicCameraId, 1)];
             Assert.True(addOrthographic.IsEnabled);
             Click(ui, addView, addOrthographic);
@@ -391,7 +391,7 @@ public sealed class CameraProjectionInspectorTests
             Assert.Equal(PropertyValue.From(10d), camera.Properties["verticalSize"].Value);
             Assert.Contains(added.Document.Schemas, schema => schema.TypeId == camera.TypeId && schema.Version == 1);
             Assert.Equal(original.UndoCount + 1, added.UndoCount);
-            Click(ui, addView, addView.AddComponent);
+            Click(ui, addView, addView.AddComponentPart);
             Assert.False(addView.AddButtons[(MeshRenderingComponents.CameraId, 1)].IsEnabled);
             empty.Model.AddComponent(MeshRenderingComponents.CameraId, 1);
             Assert.Same(added, empty.Owner.Document.Read().Content);
@@ -402,7 +402,7 @@ public sealed class CameraProjectionInspectorTests
         using var inheritedUi = InspectorFixture.Ui(view);
         Drain(inheritedUi);
         Click(inheritedUi, view, ProjectionButton(view, Camera, "orthographic"));
-        Click(inheritedUi, view, view.Apply);
+        Click(inheritedUi, view, view.ApplyPart);
         var switched = inherited.Owner.Document.Read().Content!;
         Assert.True(inherited.Model.CanChangeComponents);
         var removed = Assert.Single(inherited.Model.RemovedComponents, component => component.Id == Camera);
@@ -464,7 +464,7 @@ public sealed class CameraProjectionInspectorTests
         Click(ui, view, blocked);
         fixture.Model.SelectCameraProjection(Camera, InspectorCameraProjection.Orthographic);
         Assert.False(fixture.Model.HasDraft);
-        Assert.False(view.Apply.IsEnabled);
+        Assert.False(view.ApplyPart.IsEnabled);
         Assert.Contains((Camera, "fov"), view.Properties.Keys);
         Assert.DoesNotContain((Camera, "verticalSize"), view.Properties.Keys);
         Assert.Same(original, fixture.Owner.Document.Read().Content);
@@ -476,7 +476,7 @@ public sealed class CameraProjectionInspectorTests
 
     private static void Click(UiSession ui, EditorInspectorView view, Button button)
     {
-        view.Scroll.BringIntoView(button.Bounds);
+        view.ScrollPart.BringIntoView(button.Bounds);
         Drain(ui);
         DocumentUiFixture.Click(ui, button);
         Drain(ui);
@@ -484,7 +484,7 @@ public sealed class CameraProjectionInspectorTests
 
     private static void Enter(UiSession ui, EditorInspectorView view, TextBox input, string value)
     {
-        view.Scroll.BringIntoView(input.Bounds);
+        view.ScrollPart.BringIntoView(input.Bounds);
         Drain(ui);
         ui.Focus(input);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));

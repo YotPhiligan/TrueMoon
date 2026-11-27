@@ -73,7 +73,7 @@ public sealed class EditorSemanticSnapshotTests(ITestOutputHelper output)
         Assert.Equal(Targets(initial), Targets(resized));
         Assert.Equal(searchId, Assert.Single(resized.Nodes.Where(node => node.IsFocused)).Id);
 
-        inspector.Scroll.BringIntoView(Node(resized, xId).Bounds);
+        inspector.ScrollPart.BringIntoView(Node(resized, xId).Bounds);
         ui.Update();
         Click(ui, Node(ui.CaptureSemantics(), xId).VisibleBounds);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
@@ -86,7 +86,7 @@ public sealed class EditorSemanticSnapshotTests(ITestOutputHelper output)
         Assert.False(Node(initial, applyId).IsEnabled);
         Assert.Equal(Targets(initial), Targets(editing));
 
-        inspector.Scroll.BringIntoView(Node(editing, applyId).Bounds);
+        inspector.ScrollPart.BringIntoView(Node(editing, applyId).Bounds);
         ui.Update();
         Click(ui, Node(ui.CaptureSemantics(), applyId).VisibleBounds);
         ui.Update();

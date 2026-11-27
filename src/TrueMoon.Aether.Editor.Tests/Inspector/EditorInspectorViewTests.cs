@@ -26,11 +26,11 @@ public sealed class EditorInspectorViewTests
 
         var address = (DocumentData.Transform, "x");
         var previousInput = Assert.IsType<TextBox>(view.Properties[address].Input);
-        var apply = view.Apply;
-        var scroll = view.Scroll;
+        var apply = view.ApplyPart;
+        var scroll = view.ScrollPart;
         Assert.Same(apply, view.ApplyPart);
         Assert.Same(scroll, view.ScrollPart);
-        ui.Focus(view.AddComponent);
+        ui.Focus(view.AddComponentPart);
         previous.Property(DocumentData.Transform, "x").Value = "99";
 
         view.DataContext = current.Model;
@@ -44,9 +44,9 @@ public sealed class EditorInspectorViewTests
         Assert.Equal("4", currentInput.Value);
         Assert.False(apply.IsEnabled);
         Assert.Equal(ControlTone.Accent, apply.Tone);
-        Assert.Same(apply, view.Apply);
-        Assert.Same(scroll, view.Scroll);
-        Assert.True(view.AddComponent.IsFocused);
+        Assert.Same(apply, view.ApplyPart);
+        Assert.Same(scroll, view.ScrollPart);
+        Assert.True(view.AddComponentPart.IsFocused);
 
         Enter(ui, view, currentInput, "53");
         Assert.True(currentInput.IsFocused);
@@ -63,7 +63,7 @@ public sealed class EditorInspectorViewTests
         ui.Update();
         Assert.True(currentInput.IsDisposed);
         Assert.Empty(view.Properties);
-        Assert.Same(apply, view.Apply);
+        Assert.Same(apply, view.ApplyPart);
         current.Refresh();
         ui.Update();
         Assert.Equal("53", Assert.IsType<TextBox>(view.Properties[address].Input).Value);
@@ -71,8 +71,8 @@ public sealed class EditorInspectorViewTests
         view.DataContext = null;
         ui.Update();
         Assert.Empty(view.Properties);
-        Assert.All(view.Actions.Children, action => Assert.False(action.IsEnabled));
-        Assert.True(view.Empty.IsVisible);
+        Assert.All(view.ActionsPart.Children, action => Assert.False(action.IsEnabled));
+        Assert.True(view.EmptyPart.IsVisible);
     }
 
     [Fact]
@@ -123,14 +123,14 @@ public sealed class EditorInspectorViewTests
         Assert.Equal(12f, view.Properties[(DocumentData.Custom, "number")].Input.FontSize);
         Assert.Equal(new Thickness(4, 2, 4, 2), view.Properties[(DocumentData.Custom, "number")].Input.Padding);
         Assert.Equal(26f, view.Properties[(DocumentData.Custom, "number")].Input.Height);
-        Assert.Equal(ControlTone.Accent, view.Apply.Tone);
+        Assert.Equal(ControlTone.Accent, view.ApplyPart.Tone);
         var text = Assert.IsType<RichTextEditor>(view.Properties[(DocumentData.Custom, "text")].Input);
         Assert.NotSame(text, view.Properties[(DocumentData.Local, "text")].Input);
         Assert.Equal(DocumentData.Text, text.Text); Assert.False(text.Options.IsReadOnly);
         var nullable = view.Properties[(DocumentData.Custom, "nullable")];
         Assert.True(nullable.Null!.IsChecked); Assert.False(nullable.Input.IsEnabled);
         Assert.Null(view.Properties[(DocumentData.Custom, "text")].Null);
-        Assert.False(view.Apply.IsEnabled);
+        Assert.False(view.ApplyPart.IsEnabled);
         var interaction = view.Properties[(DocumentData.Interaction, "enabled")].Input;
 
         test.Model.Refresh(InspectorFixture.Parent); ui.Update();
@@ -140,9 +140,9 @@ public sealed class EditorInspectorViewTests
         Assert.True(view.RestoreButtons.ContainsKey(DocumentData.Appearance));
         Assert.True(view.RestoreButtons.ContainsKey(DocumentData.Interaction));
         test.Model.Refresh(null); ui.Update();
-        Assert.Empty(view.Components); Assert.Empty(view.Properties); Assert.True(view.Empty.IsVisible);
-        Assert.Equal("Сущность не выбрана", view.Empty.Value);
-        Assert.False(view.Apply.IsEnabled); Assert.False(view.AddComponent.IsEnabled);
+        Assert.Empty(view.Components); Assert.Empty(view.Properties); Assert.True(view.EmptyPart.IsVisible);
+        Assert.Equal("Сущность не выбрана", view.EmptyPart.Value);
+        Assert.False(view.ApplyPart.IsEnabled); Assert.False(view.AddComponentPart.IsEnabled);
     }
 
     [Fact]
@@ -159,16 +159,16 @@ public sealed class EditorInspectorViewTests
         Enter(ui, view, view.Properties[(DocumentData.Custom, "integer")].Input, "-9223372036854775808");
         const string edited = "UI text\nМир 🛰️";
         Enter(ui, view, view.Properties[(DocumentData.Custom, "text")].Input, edited);
-        Assert.True(view.Apply.IsEnabled); Assert.False(view.AddComponent.IsEnabled);
-        Click(ui, view, view.Apply); ui.Update();
+        Assert.True(view.ApplyPart.IsEnabled); Assert.False(view.AddComponentPart.IsEnabled);
+        Click(ui, view, view.ApplyPart); ui.Update();
 
         var state = test.Owner.Document.Read().Content!; var custom = state.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom];
         Assert.True(custom.Properties["flag"].Value.GetBoolean()); Assert.Equal(long.MinValue, custom.Properties["integer"].Value.GetInteger());
         Assert.Equal("", custom.Properties["nullable"].Value.GetString()); Assert.Equal(edited, custom.Properties["text"].Value.GetString());
-        Assert.Equal(1, state.UndoCount); Assert.False(test.Model.HasDraft); Assert.True(view.Undo.IsEnabled);
-        Click(ui, view, view.Undo); ui.Update();
+        Assert.Equal(1, state.UndoCount); Assert.False(test.Model.HasDraft); Assert.True(view.UndoPart.IsEnabled);
+        Click(ui, view, view.UndoPart); ui.Update();
         Assert.False(boolean.IsChecked); Assert.True(nullable.Null!.IsChecked); Assert.False(test.Owner.Document.Read().IsDirty);
-        Click(ui, view, view.Redo); ui.Update();
+        Click(ui, view, view.RedoPart); ui.Update();
         Assert.Equal(edited, Assert.IsType<RichTextEditor>(view.Properties[(DocumentData.Custom, "text")].Input).Text);
         Assert.True(boolean.IsChecked); Assert.False(nullable.Null!.IsChecked);
     }
@@ -182,14 +182,14 @@ public sealed class EditorInspectorViewTests
         var address = (DocumentData.Custom, "text"); var input = Assert.IsType<RichTextEditor>(view.Properties[address].Input);
         Enter(ui, view, input, "retained draft\nМир");
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
-        var selection = input.SelectionLength; var offset = view.Scroll.Offset;
+        var selection = input.SelectionLength; var offset = view.ScrollPart.Offset;
         var tree = DocumentUiFixture.Tree(view).ToArray(); var row = view.Properties[address].Row;
         test.Refresh(); ui.Update(); ui.SetTheme(Theme.Light); view.WithViewStyle(new EditorInspectorViewStyle()); ui.Update();
         Assert.Same(input, view.Properties[address].Input); Assert.Same(row, view.Properties[address].Row);
         Assert.Equal(tree, DocumentUiFixture.Tree(view)); Assert.True(input.IsFocused);
         Assert.Equal(selection, input.SelectionLength); Assert.Equal("retained draft\nМир", input.Text);
-        Assert.Equal(offset, view.Scroll.Offset); Assert.True(test.Model.HasDraft); Assert.True(view.Apply.IsEnabled);
-        Assert.Equal(Theme.Light.Error, view.Error.Foreground);
+        Assert.Equal(offset, view.ScrollPart.Offset); Assert.True(test.Model.HasDraft); Assert.True(view.ApplyPart.IsEnabled);
+        Assert.Equal(Theme.Light.Error, view.ErrorPart.Foreground);
         test.Refresh(); Assert.False(ui.Update());
     }
 
@@ -215,7 +215,7 @@ public sealed class EditorInspectorViewTests
         Assert.Equal("committed text", test.Property(DocumentData.Custom, "text").Value);
         ui.Update(); ui.Update();
         Assert.Equal("committed text", input.Text); Assert.False(test.Model.HasDraft);
-        ui.Focus(view.Undo); Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Z, Control: true))); ui.Update(); ui.Update();
+        ui.Focus(view.UndoPart); Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Z, Control: true))); ui.Update(); ui.Update();
         Assert.Equal(DocumentData.Text, input.Text); Assert.False(test.Owner.Document.Read().IsDirty);
         Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Y, Control: true))); ui.Update(); ui.Update();
         Assert.Equal("committed text", input.Text); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
@@ -232,10 +232,10 @@ public sealed class EditorInspectorViewTests
         var field = test.Property(DocumentData.Custom, "number");
         var error = view.Properties[(DocumentData.Custom, "number")].Input;
         Assert.True(error.HasError); Assert.Equal(field.Error, error.ErrorMessage); Assert.True(error.ValidationIconBounds.Width > 0);
-        Assert.Contains(field.Error, view.Error.Text);
-        Assert.False(view.Apply.IsEnabled); Assert.True(view.Cancel.IsEnabled);
-        Click(ui, view, view.Apply); Assert.Equal(0, test.Owner.Document.Read().Content!.UndoCount);
-        Click(ui, view, view.Cancel); ui.Update();
+        Assert.Contains(field.Error, view.ErrorPart.Text);
+        Assert.False(view.ApplyPart.IsEnabled); Assert.True(view.CancelPart.IsEnabled);
+        Click(ui, view, view.ApplyPart); Assert.Equal(0, test.Owner.Document.Read().Content!.UndoCount);
+        Click(ui, view, view.CancelPart); ui.Update();
         Assert.Equal("1", Assert.IsType<TextBox>(view.Properties[(DocumentData.Custom, "number")].Input).Value);
         Assert.Equal(DocumentData.Text, Assert.IsType<RichTextEditor>(view.Properties[(DocumentData.Custom, "text")].Input).Text);
         Assert.False(error.HasError); Assert.Empty(error.ErrorMessage); Assert.Equal(default, error.ValidationIconBounds);
@@ -256,7 +256,7 @@ public sealed class EditorInspectorViewTests
         Assert.DoesNotContain(DocumentData.Local, view.Components.Keys); Assert.True(localInput.IsDisposed);
         Assert.Same(unchanged, view.Properties[(DocumentData.Custom, "text")].Input); Assert.False(unchanged.IsDisposed);
         Assert.False(view.Components[DocumentData.Custom].Body.IsVisible);
-        Click(ui, view, view.Undo); ui.Update();
+        Click(ui, view, view.UndoPart); ui.Update();
         Assert.Contains(DocumentData.Local, view.Components.Keys); Assert.NotSame(localInput, view.Properties[(DocumentData.Local, "text")].Input);
         Assert.Same(unchanged, view.Properties[(DocumentData.Custom, "text")].Input); Assert.False(view.Components[DocumentData.Custom].Body.IsVisible);
         Assert.False(test.Owner.Document.Read().IsDirty);
@@ -272,7 +272,7 @@ public sealed class EditorInspectorViewTests
         Assert.False(reset.IsVisible);
         Click(ui, view, view.DetailsButtons[DocumentData.Custom]); Assert.True(reset.IsVisible);
         Click(ui, view, reset); ui.Update(); Assert.True(test.Property(DocumentData.Custom, "nullable").IsReset);
-        Click(ui, view, view.Apply); ui.Update();
+        Click(ui, view, view.ApplyPart); ui.Update();
         Assert.Equal("inherited", Assert.IsType<RichTextEditor>(view.Properties[(DocumentData.Custom, "nullable")].Input).Text);
         Assert.False(reset.IsEnabled);
         test.Model.Refresh(InspectorFixture.Parent); ui.Update();
@@ -289,12 +289,12 @@ public sealed class EditorInspectorViewTests
         using var test = new InspectorFixture();
         var view = new EditorInspectorView(test.Model, new EditorInspectorViewStyle());
         using var ui = InspectorFixture.Ui(view); ui.Update();
-        var before = view.Components.Keys.ToHashSet(); Assert.False(view.AddChoices.IsVisible);
-        Click(ui, view, view.AddComponent); Assert.True(view.AddChoices.IsVisible);
+        var before = view.Components.Keys.ToHashSet(); Assert.False(view.AddChoicesPart.IsVisible);
+        Click(ui, view, view.AddComponentPart); Assert.True(view.AddChoicesPart.IsVisible);
         Assert.False(view.AddButtons[(BuiltInComponents.TransformId, 1)].IsEnabled);
         var choice = view.AddButtons[(DocumentData.CustomType, 2)]; Assert.True(choice.IsEnabled);
         Click(ui, view, choice); ui.Update();
-        Assert.False(view.AddChoices.IsVisible); Assert.Equal(6, view.Components.Count);
+        Assert.False(view.AddChoicesPart.IsVisible); Assert.Equal(6, view.Components.Count);
         var added = Assert.Single(view.Components.Keys, id => !before.Contains(id));
         var state = test.Owner.Document.Read().Content!;
         Assert.Equal(DocumentData.CustomType, state.Resolved.Entities[DocumentData.Child].Components[added].TypeId);
@@ -336,8 +336,8 @@ public sealed class EditorInspectorViewTests
         var resource = new Resource(cleanupFailure ? cleanup : null);
         using var draft = new EditorInspectorView(test.Model, new FailingStyle(view =>
         {
-            unpublished = [view.Form, view.Scroll, view.ComponentList];
-            view.Form.Own(resource);
+            unpublished = [view.FormPart, view.ScrollPart, view.ComponentListPart];
+            view.FormPart.Own(resource);
         }, failure));
         var error = Record.Exception(() => InspectorFixture.Ui(draft));
         if (cleanupFailure) Assert.Collection(Assert.IsType<AggregateException>(error).Flatten().InnerExceptions, item => Assert.Same(failure, item), item => Assert.Same(cleanup, item));
@@ -364,12 +364,12 @@ public sealed class EditorInspectorViewTests
         test.Refresh(InspectorFixture.Child);
         ui.Update();
         var id = DocumentData.Child.Value.ToString("D");
-        Assert.Equal(id[..8] + "…" + id[^8..], view.Empty.Value);
+        Assert.Equal(id[..8] + "…" + id[^8..], view.EmptyPart.Value);
 
         test.Model.Refresh(null);
         ui.Update();
-        Assert.True(view.Empty.IsVisible);
-        Assert.Equal("Сущность не выбрана", view.Empty.Value);
+        Assert.True(view.EmptyPart.IsVisible);
+        Assert.Equal("Сущность не выбрана", view.EmptyPart.Value);
     }
 
     [Fact]
@@ -378,12 +378,12 @@ public sealed class EditorInspectorViewTests
 
     private static void Click(UiSession ui, EditorInspectorView view, Button button)
     {
-        ui.Update(); view.Scroll.BringIntoView(button.Bounds); ui.Update();
+        ui.Update(); view.ScrollPart.BringIntoView(button.Bounds); ui.Update();
         DocumentUiFixture.Click(ui, button); ui.Update();
     }
     private static void Enter(UiSession ui, EditorInspectorView view, Element input, string value)
     {
-        ui.Update(); view.Scroll.BringIntoView(input.Bounds); ui.Update(); ui.Focus(input);
+        ui.Update(); view.ScrollPart.BringIntoView(input.Bounds); ui.Update(); ui.Focus(input);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
         if (value.Length == 0) ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Backspace));
         else if (input is RichTextEditor)
@@ -410,7 +410,7 @@ public sealed class EditorInspectorViewTests
     }
 
     private sealed class FailingStyle(Action<EditorInspectorView> capture, Exception failure) : IViewStyle<EditorInspectorView>
-    { public void Configure(IViewStyleBuilder<EditorInspectorView> styles) { styles.Part(view => { capture(view); return view.Error; }).FontSize(13); throw failure; } }
+    { public void Configure(IViewStyleBuilder<EditorInspectorView> styles) { styles.Part(view => { capture(view); return view.ErrorPart; }).FontSize(13); throw failure; } }
     private sealed class Resource(Exception? failure) : IDisposable
     { public int Disposals; public void Dispose() { Disposals++; if (failure != null) throw failure; } }
 }

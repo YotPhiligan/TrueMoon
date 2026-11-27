@@ -16,3 +16,8 @@ ARG012 | Argentis.Generation | Error | Incompatible inferred view role types
 ARG013 | Argentis.Generation | Error | Unsupported inferred view role
 ARG020 | Argentis.Generation | Error | Unsupported generated view activation
 ARG021 | Argentis.Generation | Error | Runtime View argument type must match exactly one constructor parameter
+ARG022 | Argentis.Generation | Error | Unsupported view content declaration
+ARG023 | Argentis.Generation | Warning | Manual view part lookup
+ARG024 | Argentis.Generation | Error | Ambiguous view constructor
+ARG025 | Argentis.Generation | Error | Missing child View registration
+ARG026 | Argentis.Generation | Error | Missing service registration

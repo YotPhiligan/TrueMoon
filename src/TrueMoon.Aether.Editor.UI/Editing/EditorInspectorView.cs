@@ -55,7 +55,6 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     public static ViewStyleRole<Text> ErrorRole { get; } = new("InspectorError");
 
     private IEditorInspectorViewModel? _presentedContext;
-    private NamedControls _parts = null!;
     /// <summary>Stable mirror the component binding reads: a section survives while its occurrence id is presented.</summary>
     private readonly List<InspectorComponent> _componentRows = [];
     private InspectorRenderAssetSelection? _shownRenderAssets;
@@ -97,32 +96,6 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     public IReadOnlyDictionary<ComponentId, Button> RestoreButtons => IsDisposed
         ? new Dictionary<ComponentId, Button>()
         : this.RemovedPart.Items.OfType<RestoreRow>().ToDictionary(row => row.Address, row => (Button)row.Restore);
-    /// <summary>Gets the complete inspector layout.</summary>
-    public VStack Form => _parts.Form;
-    /// <summary>Gets the dynamic component host.</summary>
-    public VStack ComponentList => _parts.ComponentList;
-    /// <summary>Gets scrolling for the whole inspector.</summary>
-    public ScrollViewer Scroll => _parts.Scroll;
-    /// <summary>Gets the empty-selection guidance.</summary>
-    public Text Empty => _parts.Empty;
-    /// <summary>Gets Apply.</summary>
-    public Button Apply => _parts.Apply;
-    /// <summary>Gets Cancel.</summary>
-    public Button Cancel => _parts.Cancel;
-    /// <summary>Gets shared Undo.</summary>
-    public Button Undo => _parts.Undo;
-    /// <summary>Gets shared Redo.</summary>
-    public Button Redo => _parts.Redo;
-    /// <summary>Gets the schema-choice disclosure.</summary>
-    public Button AddComponent => _parts.AddComponent;
-    /// <summary>Gets the retained schema choices.</summary>
-    public VStack AddChoices => _parts.AddChoices;
-    /// <summary>Gets hidden component choices.</summary>
-    public VStack Removed => _parts.Removed;
-    /// <summary>Gets complete selectable mutation diagnostics.</summary>
-    public RichTextEditor Error => _parts.Error;
-    /// <summary>Compact primary actions; each icon has a semantic name and delayed hover hint.</summary>
-    public HStack Actions => _parts.Actions;
     /// <inheritdoc />
     public bool NeedsFrame => _requestMaterialFocus || _hint.IsPending || _hint.Target != null && !HintIsCurrent();
 
@@ -190,8 +163,6 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     /// <inheritdoc />
     protected override void OnContentPrepared()
     {
-        _parts = new(this.ScrollPart, this.FormPart, this.EmptyPart, this.ActionsPart, this.ApplyPart, this.CancelPart,
-            this.UndoPart, this.RedoPart, this.AddComponentPart, this.AddChoicesPart, this.ErrorPart, this.ComponentListPart, this.RemovedPart);
         // Section keys carry the presentation generation: every draft record and captured closure belongs to one view model,
         // so a replaced context rebuilds the sections, while a model refresh inside one context reuses them.
         this.ComponentListPart.BindItems(_componentRows, CreateComponentSection,
@@ -209,7 +180,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         PrepareMeshes();
         AttachmentChanged += Attachment;
         _tree.BlocksInput(this.ComponentListPart, this.AddChoicesPart, this.RemovedPart,
-            MaterialsPart, TexturesPart, MeshesPart);
+            this.MaterialsPanel, this.TexturesPanel, this.MeshesPanel);
         SynchronizeContext();
         this.ObservePropertyChanged(this, (_, change) => ModelChanged(change), SynchronizeContext);
     }
@@ -958,9 +929,6 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     /// <summary>One requested choice list: the field and slot it belongs to plus the asset snapshot it was opened against.</summary>
     internal sealed record RenderChoicesState(ComponentId Component, string PropertyKey, Guid? SlotId, int SnapshotVersion);
 
-    private sealed record NamedControls(ScrollViewer Scroll, VStack Form, Text Empty, HStack Actions,
-        Button Apply, Button Cancel, Button Undo, Button Redo, Button AddComponent, VStack AddChoices,
-        RichTextEditor Error, VStack ComponentList, VStack Removed);
 
     private sealed class ComponentLine : HStack
     {

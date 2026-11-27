@@ -1,4 +1,4 @@
-﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Styling;
@@ -46,7 +46,7 @@ public sealed class EditorInspectorShellTests
         test.Property(DocumentData.Custom, "text").Value = "pending ECS"; hierarchy.Refresh();
         Assert.False(hierarchy.CanMove); Assert.False(hierarchy.Move(InspectorFixture.Child, null));
         Assert.Equal(DocumentData.Parent, test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].ParentId);
-        ui.Update(); ui.Focus(inspector.Apply);
+        ui.Update(); ui.Focus(inspector.ApplyPart);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true)); Refresh();
         Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         Assert.Equal("pending ECS", test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["text"].Value.GetString());

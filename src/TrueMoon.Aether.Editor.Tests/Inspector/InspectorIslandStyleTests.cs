@@ -1,4 +1,4 @@
-﻿using TrueMoon.Argentis.Layout;
+using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tooling;
@@ -47,7 +47,7 @@ public sealed class InspectorIslandStyleTests
         Assert.False(view.ViewportTitle.IsVisible);
         var viewport = view.ViewportFrame.Bounds;
         field.Property.Value = "15";
-        inspector.Scroll.Offset = 35; Drain(); var offset = inspector.Scroll.Offset;
+        inspector.ScrollPart.Offset = 35; Drain(); var offset = inspector.ScrollPart.Offset;
         Assert.True(offset > 0); ui.Focus(input);
         var fallback = (light ? Theme.Dark : Theme.Light) with { PanelBackdrop = null };
         ui.SetTheme(fallback); Drain();
@@ -57,7 +57,7 @@ public sealed class InspectorIslandStyleTests
         Assert.Same(input, inspector.Properties[(DocumentData.Transform, "x")].Input);
         Assert.Same(section, inspector.Components[DocumentData.Transform].Section);
         Assert.True(input.IsFocused); Assert.Equal("15", field.Property.Value); Assert.True(test.Model.HasDraft);
-        Assert.Equal(offset, inspector.Scroll.Offset); Assert.Equal(viewport, view.ViewportFrame.Bounds);
+        Assert.Equal(offset, inspector.ScrollPart.Offset); Assert.Equal(viewport, view.ViewportFrame.Bounds);
         Assert.Null(surface.Backdrop); Assert.Null(view.Hierarchy.Backdrop);
         Assert.Equal(fallback.Surface, surface.Background); Assert.Equal(fallback.Surface, view.Hierarchy.Background);
         Assert.Equal(Color.Transparent, section.Background); Assert.Equal(255, input.Background.A);

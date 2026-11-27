@@ -1484,12 +1484,12 @@ internal static class EditorModelBuildSmoke
                     {
                         await EnterLayer(renderer, invalid);
                         await EditorHeaderSmoke.UntilAsync(ui, () => inspector.Properties[(renderer, "layers")].Input is TextBox box &&
-                            box.Value == invalid && box.HasError && !inspector.Apply.IsEnabled, token);
+                            box.Value == invalid && box.HasError && !inspector.ApplyPart.IsEnabled, token);
                         Check(ReferenceEquals(visibilityApplied, document.Read().Content), "An invalid layer mask changed the document.");
                     }
                     await EnterLayer(renderer, "0");
                     await ExpectRenderer(false, 0, draft: true);
-                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.Apply.IsEnabled, token);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.ApplyPart.IsEnabled, token);
                     await EnterLayer(renderer, matchingMask.ToString(CultureInfo.InvariantCulture));
                     await ExpectRenderer(false, matchingMask, draft: true);
                     Check(ReferenceEquals(visibilityApplied, document.Read().Content), "Layer input committed before Apply.");
@@ -1515,7 +1515,7 @@ internal static class EditorModelBuildSmoke
                         ExpectDocument(enabled, mask, matchingMask);
                     }
 
-                    Task Apply() => ClickInspector(() => inspector.Apply);
+                    Task Apply() => ClickInspector(() => inspector.ApplyPart);
                     Task ExpectRenderer(bool enabled, long mask, bool draft) => EditorHeaderSmoke.UntilAsync(ui, () =>
                         inspector.DataContext?.HasDraft == draft &&
                         inspector.Properties.TryGetValue((renderer, "enabled"), out var field) &&
@@ -1617,13 +1617,13 @@ internal static class EditorModelBuildSmoke
                     await Enter("near", "40");
                     await Enter("far", "30");
                     await Expect("fov", "80", "40", "30", draft: true);
-                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.Apply.IsEnabled &&
+                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.ApplyPart.IsEnabled &&
                         inspector.Properties[(component, "far")].Property.HasError, token);
                     Check(ReferenceEquals(document.Read().Content, unedited), "Projection input modified the committed document.");
 
                     await Enter("near", "0.25");
                     await Expect("fov", "80", "0.25", "30", draft: true);
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     var applied = document.Read().Content!;
                     Check(applied.UndoCount == unedited.UndoCount + 1, "The projection edits must be a single history operation.");
                     var changed = await CaptureAndStop("camera-wide", wider);
@@ -1647,13 +1647,13 @@ internal static class EditorModelBuildSmoke
                     await ClickInspector(() => Descendants(inspector).SingleOrDefault(element =>
                         element.SemanticId == $"editor.inspector.camera.{component.Value:N}.orthographic"));
                     await Expect("verticalSize", "10", "0.25", "30", draft: true);
-                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.Apply.IsEnabled, token);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.ApplyPart.IsEnabled, token);
                     await Enter("verticalSize", "0");
-                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.Apply.IsEnabled &&
+                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.ApplyPart.IsEnabled &&
                         inspector.Properties[(component, "verticalSize")].Property.HasError, token);
                     Check(ReferenceEquals(document.Read().Content, redone), "The invalid orthographic draft changed committed content.");
                     await Enter("verticalSize", "5");
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     var switched = document.Read().Content!;
                     var replacement = CameraOccurrence();
                     var retainedTransform = CameraTransform();
@@ -1793,9 +1793,9 @@ internal static class EditorModelBuildSmoke
                     await EditorHeaderSmoke.UntilAsync(ui, () => Selection() is { Meshes.Count: 3, Enabled: true } selection &&
                         selection.Mesh == mesh.AssetId && selection.MeshesWithMaterialTransfer.Count == 0, token);
                     await ChooseSlot("left", white);
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     await ChooseSlot("right", red);
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     await EditorHeaderSmoke.UntilAsync(ui, () => Selection() is { } selection &&
                         selection.MeshesWithMaterialTransfer.SequenceEqual([destination.AssetId]), token);
 
@@ -1804,12 +1804,12 @@ internal static class EditorModelBuildSmoke
                     await ChooseMesh(destination.AssetId, transfer: false);
                     await Expect(destination, destination.Slots[0].MaterialId, destination.Slots[1].MaterialId, draft: true);
                     Check(ReferenceEquals(document.Read().Content, original), "The ordinary mesh choice committed its draft.");
-                    await ClickInspector(() => inspector.Cancel);
+                    await ClickInspector(() => inspector.CancelPart);
                     await Expect(mesh, white, red, draft: false);
                     await ChooseMesh(destination.AssetId, transfer: true);
                     await Expect(destination, white, red, draft: true);
                     Check(ReferenceEquals(document.Read().Content, original), "Transfer escaped the inspector draft.");
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     var edit = document.Read().Content!;
                     Check(edit.UndoCount == original.UndoCount + 1, "Transfer must commit the mesh and binding as one edit.");
                     var transferred = await BuildTransferFrame(destination, "materials-transferred");
@@ -1829,12 +1829,12 @@ internal static class EditorModelBuildSmoke
                     await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
                     await Expect(mesh, white, red, draft: false);
                     await ChooseSlot("right", mesh.Slots[1].MaterialId);
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     await EditorHeaderSmoke.UntilAsync(ui, () => Selection() is { } selection &&
                         selection.MeshesWithMaterialTransfer.Contains(partial.AssetId), token);
                     await ChooseMesh(partial.AssetId, transfer: true);
                     await Expect(partial, partial.Slots[0].MaterialId, white, draft: true);
-                    await ClickInspector(() => inspector.Cancel);
+                    await ClickInspector(() => inspector.CancelPart);
 
                     await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-material-transfer.json"), JsonSerializer.Serialize(new
                     {
@@ -1987,7 +1987,7 @@ internal static class EditorModelBuildSmoke
                         await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
                             draft.Slots.Count == 2 && draft.Slots[0].Material == expectedLeft && draft.Slots[1].Material == expectedRight, token);
                         Check(ReferenceEquals(document.Read().Content, previous), "Slot selection leaked from the draft before Apply.");
-                        await ClickInspector(() => inspector.Apply);
+                        await ClickInspector(() => inspector.ApplyPart);
                         Check(document.Read().Content!.UndoCount == previous.UndoCount + 1, "Apply did not create exactly one history entry.");
                     }
 
@@ -2117,7 +2117,7 @@ internal static class EditorModelBuildSmoke
                 await Choose("bindings", "Материал", redMesh.MaterialId);
                 await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.CanApply &&
                     inspector.DataContext.RenderAssets?.Material == redMesh.MaterialId, token);
-                await ClickInspector(() => inspector.Apply);
+                await ClickInspector(() => inspector.ApplyPart);
                 var edit = document.Read().Content!;
                 var rendererEdit = edit.Resolved.Entities[target].Components[renderer.Id];
                 var binding = Id(rendererEdit, "bindings");
@@ -2149,13 +2149,13 @@ internal static class EditorModelBuildSmoke
                     var original = ProveMaterial(changed, binding, redMesh.MaterialId);
                     var resetButton = inspector.Properties[(renderer.Id, "bindings")].Reset;
                     await StageRestore();
-                    await ClickInspector(() => inspector.Cancel);
+                    await ClickInspector(() => inspector.CancelPart);
                     await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { HasDraft: false, RenderAssets.Material: { } material }
                         && material == redMesh.MaterialId, token);
                     Check(ReferenceEquals(document.Read().Content, edit), "Cancel changed the committed material override.");
 
                     await StageRestore();
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     var reset = document.Read().Content!;
                     Check(reset.UndoCount == edit.UndoCount + 1, "Restoring the material created more than one history entry.");
                     var resetFrame = ProveMaterial(await BuildAndShow("inspector-material-reset"), greenMesh.BindingSetId, greenMesh.MaterialId);
@@ -2245,7 +2245,7 @@ internal static class EditorModelBuildSmoke
                     await Choose("bindings", "Материал", greenMesh.MaterialId);
                     await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets.Material: { } material } &&
                         material == greenMesh.MaterialId, token);
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     var committed = document.Read().Content!;
                     var binding = Id(committed.Resolved.Entities[target].Components[renderer.Id], "bindings");
                     Check(binding != redMesh.BindingSetId, "The scene did not acquire a material override.");
@@ -2278,7 +2278,7 @@ internal static class EditorModelBuildSmoke
                     async Task<string> ExpectBlocked(string diagnostic)
                     {
                         await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.DiagnosticsText.Contains(diagnostic, StringComparison.Ordinal) &&
-                            inspector.Error.IsVisible && inspector.Error.Text.Contains(diagnostic, StringComparison.Ordinal) &&
+                            inspector.ErrorPart.IsVisible && inspector.ErrorPart.Text.Contains(diagnostic, StringComparison.Ordinal) &&
                             view.DataContext!.CanBuild, token);
                         await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
                         await playback.Pending.WaitAsync(token);
@@ -2320,7 +2320,7 @@ internal static class EditorModelBuildSmoke
                         draft.Slots[0].Material == white && draft.Slots[1].Material == right.MaterialId &&
                         FindSlotButton("Материал слота right") is { IsEnabled: true }, token);
                     Check(ReferenceEquals(document.Read().Content, saved), "Choosing the slot material committed it before Apply.");
-                    await ClickInspector(() => inspector.Apply);
+                    await ClickInspector(() => inspector.ApplyPart);
                     var edited = document.Read().Content!;
                     var variant = Id(edited.Resolved.Entities[target].Components[renderer.Id], "bindings");
                     Check(edited.UndoCount == saved.UndoCount + 1 && variant != mesh.BindingSetId, "Apply did not commit exactly one binding change.");
@@ -2445,7 +2445,7 @@ internal static class EditorModelBuildSmoke
             Task ClickInspector(Func<Element?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
             {
                 if (find() is not { IsEffectivelyEnabled: true, Bounds.Width: > 0, Bounds.Height: > 0 } element) return false;
-                var scroll = view.Inspector!.Scroll;
+                var scroll = view.Inspector!.ScrollPart;
                 scroll.BringIntoView(element.Bounds);
                 if (ui.NeedsUpdate || !scroll.ChildClipBounds.Contains(element.Bounds.X + element.Bounds.Width / 2,
                     element.Bounds.Y + element.Bounds.Height / 2)) return false;

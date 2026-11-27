@@ -77,7 +77,7 @@ public sealed class CompactInspectorTests
         var state = test.Owner.Document.Read();
         Assert.Null(state.Content); Assert.IsType<InvalidDataException>(state.Error);
         Assert.Empty(view.TransformEditors); Assert.Empty(view.Properties); Assert.Empty(view.Components);
-        Assert.False(test.Model.HasSelection); Assert.True(view.Empty.IsVisible); Assert.False(view.Apply.IsEnabled);
+        Assert.False(test.Model.HasSelection); Assert.True(view.EmptyPart.IsVisible); Assert.False(view.ApplyPart.IsEnabled);
         Assert.False(test.Owner.Commands.Read().Closed); Assert.Empty(test.Owner.Authoring.Products);
     }
 
@@ -124,20 +124,20 @@ public sealed class CompactInspectorTests
         Assert.Equal(parts.Property.Error, input.ErrorMessage);
         Assert.True(input.ValidationIconBounds.Width > 0);
         Assert.DoesNotContain(DocumentUiFixture.Tree(parts.Row).OfType<Text>(), text => text.Value == "Ошибка");
-        Assert.True(view.Error.IsVisible); Assert.True(view.Error.Options.IsReadOnly); Assert.True(view.Error.Options.WordWrap);
-        Assert.Contains(parts.Property.Error, view.Error.Text); Assert.Contains(parts.Property.Label, view.Error.Text);
-        Assert.True(scale.Property.HasError); Assert.Contains(scale.Property.Error, view.Error.Text);
-        Assert.Equal("Transform · X: Введите конечное число с точкой\nTransform · Scale X: Масштаб должен быть > 0", view.Error.Text);
-        Assert.Equal(test.Model.DiagnosticsText, view.Error.Text); Assert.True(test.Model.HasDiagnostics); Assert.False(test.Model.HasError); Assert.Equal("", test.Model.ErrorText);
+        Assert.True(view.ErrorPart.IsVisible); Assert.True(view.ErrorPart.Options.IsReadOnly); Assert.True(view.ErrorPart.Options.WordWrap);
+        Assert.Contains(parts.Property.Error, view.ErrorPart.Text); Assert.Contains(parts.Property.Label, view.ErrorPart.Text);
+        Assert.True(scale.Property.HasError); Assert.Contains(scale.Property.Error, view.ErrorPart.Text);
+        Assert.Equal("Transform · X: Введите конечное число с точкой\nTransform · Scale X: Масштаб должен быть > 0", view.ErrorPart.Text);
+        Assert.Equal(test.Model.DiagnosticsText, view.ErrorPart.Text); Assert.True(test.Model.HasDiagnostics); Assert.False(test.Model.HasError); Assert.Equal("", test.Model.ErrorText);
         Assert.False(parts.Source.IsVisible); Assert.False(parts.Reset.IsVisible); Assert.False(view.Components[DocumentData.Transform].Metadata.IsVisible);
-        Assert.False(view.Apply.IsEnabled); Assert.True(view.Cancel.IsEnabled);
+        Assert.False(view.ApplyPart.IsEnabled); Assert.True(view.CancelPart.IsEnabled);
         Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true))); ui.Update();
         Assert.Same(before, test.Owner.Document.Read().Content); Assert.Equal(0, before!.UndoCount);
         Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Escape))); Drain(ui);
         Assert.Equal("4", input.Value); Assert.False(input.HasError); Assert.False(input.IsModified);
         Assert.Equal("", input.ErrorMessage); Assert.Equal(default, input.ValidationIconBounds);
         Assert.Equal("1", Assert.IsType<TextBox>(scale.Input).Value); Assert.False(scale.Input.IsModified); Assert.False(scale.Input.HasError);
-        Assert.False(view.Error.IsVisible); Assert.False(test.Model.HasDiagnostics); Assert.False(test.Model.HasDraft);
+        Assert.False(view.ErrorPart.IsVisible); Assert.False(test.Model.HasDiagnostics); Assert.False(test.Model.HasDraft);
         Assert.Same(input, view.TransformEditors[DocumentData.Transform].Position.First.Editor);
     }
 
@@ -157,12 +157,12 @@ public sealed class CompactInspectorTests
         Assert.Equal(selection, scale.SelectionStart); Assert.Equal(length, scale.SelectionLength); Assert.Equal("2.5", scale.Value);
         Assert.Equal(Theme.Light.AxisZ, transform.Scale.Third.Prefix.Foreground);
         Assert.True(transform.Position.Label.Bounds.Y + transform.Position.Label.Bounds.Height < transform.Position.FirstCell.Bounds.Y);
-        Assert.True(view.Apply.IsEnabled); Assert.False(test.Owner.Document.Read().IsDirty);
+        Assert.True(view.ApplyPart.IsEnabled); Assert.False(test.Owner.Document.Read().IsDirty);
         Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true))); Drain(ui);
         var state = test.Owner.Document.Read().Content!; var committed = state.Resolved.Entities[DocumentData.Child].Components[DocumentData.Transform];
         Assert.Equal(12.5, committed.Properties["x"].Value.GetNumber()); Assert.Equal(.25, committed.Properties["yaw"].Value.GetNumber()); Assert.Equal(2.5, committed.Properties["sz"].Value.GetNumber());
         Assert.Equal(1, state.UndoCount); Assert.False(test.Model.HasDraft); Assert.False(x.IsModified); Assert.True(scale.IsFocused);
-        ui.Focus(view.Undo); Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Z, Control: true))); Drain(ui);
+        ui.Focus(view.UndoPart); Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Z, Control: true))); Drain(ui);
         Assert.Equal("4", x.Value); Assert.Equal("0", rotation.Value); Assert.Equal("1", scale.Value); Assert.False(test.Owner.Document.Read().IsDirty);
         Assert.True(view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Y, Control: true))); Drain(ui);
         Assert.Equal("12.5", x.Value); Assert.Equal("0.25", rotation.Value); Assert.Equal("2.5", scale.Value); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
@@ -192,12 +192,12 @@ public sealed class CompactInspectorTests
 
     private static void Enter(UiSession ui, EditorInspectorView view, TextBox input, string value)
     {
-        Drain(ui); view.Scroll.BringIntoView(input.Bounds); Drain(ui); ui.Focus(input);
+        Drain(ui); view.ScrollPart.BringIntoView(input.Bounds); Drain(ui); ui.Focus(input);
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
         ui.HandleInput(value.Length == 0 ? new(InputKind.KeyDown, Key: UiKey.Backspace) : new(InputKind.Text, Text: value)); Drain(ui);
     }
     private static void Click(UiSession ui, EditorInspectorView view, Button button)
-    { Drain(ui); view.Scroll.BringIntoView(button.Bounds); Drain(ui); DocumentUiFixture.Click(ui, button); Drain(ui); }
+    { Drain(ui); view.ScrollPart.BringIntoView(button.Bounds); Drain(ui); DocumentUiFixture.Click(ui, button); Drain(ui); }
     private static void Drain(UiSession ui) { ui.Update(); ui.Update(); }
     private static SceneDocument TransformLikeScene(ComponentTypeId type, int version)
     {

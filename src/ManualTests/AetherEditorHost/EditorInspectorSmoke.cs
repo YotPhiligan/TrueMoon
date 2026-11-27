@@ -5,6 +5,7 @@ using TrueMoon.Argentis.Styling;
 using TrueMoon.Argentis.Windows;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Editor.Tooling;
 using System.Text.Json;
 using SkiaSharp;
@@ -58,15 +59,15 @@ internal static class EditorInspectorSmoke
             var visibleWidth = view.Canvas.Bounds.Width;
             await ui.InvokeAsync(() =>
             {
-                Require(view.InspectorPanel.IsVisible && panel.Actions.Children.All(button => button is IconButton { Width: 26, Height: 26, Value.Length: 0 }),
+                Require(view.InspectorPanel.IsVisible && panel.ActionsPart.Children.All(button => button is IconButton { Width: 26, Height: 26, Value.Length: 0 }),
                     "Inspector actions are not compact icon-only buttons.");
-                EditorHeaderSmoke.Move(ui, panel.Apply);
+                EditorHeaderSmoke.Move(ui, panel.ApplyPart);
             }).WaitAsync(token);
             await EditorHeaderSmoke.UntilAsync(ui, () => ReferenceEquals(view.Overlays.PopupOwner, panel) && !ui.NeedsUpdate, token,
-                () => EditorHeaderSmoke.Move(ui, panel.Apply));
+                () => EditorHeaderSmoke.Move(ui, panel.ApplyPart));
             await ui.InvokeAsync(() =>
             {
-                Require(view.Overlays.Popup is Border { Child: Text hint } && hint.Value.Contains(panel.Apply.AccessibleName) &&
+                Require(view.Overlays.Popup is Border { Child: Text hint } && hint.Value.Contains(panel.ApplyPart.AccessibleName) &&
                     hint.Value.Contains("недоступно"), "Disabled icon did not expose its action Tooltip.");
             }).WaitAsync(token);
             await Capture("inspector-tooltip.png");
@@ -95,22 +96,27 @@ internal static class EditorInspectorSmoke
                 Require(!panel.Components[transform].Metadata.IsVisible && !panel.Properties[(transform, "x")].Source.IsVisible,
                     "Inspector metadata is not collapsed by default.");
             }).WaitAsync(token);
-            var text = panel.Properties[(custom, "text")].Input;
-            Require(text is RichTextEditor && panel.Properties[(custom, "flag")].Input is CheckBox &&
-                panel.Properties[(custom, "count")].Input is TextBox, "Schema kinds did not choose actual editor controls.");
+            Element text = null!;
+            await ui.InvokeAsync(() =>
+            {
+                text = panel.Properties[(custom, "text")].Input;
+                Require(text is RichTextEditor && panel.Properties[(custom, "flag")].Input is CheckBox &&
+                    panel.Properties[(custom, "count")].Input is TextBox, "Schema kinds did not choose actual editor controls.");
+            }).WaitAsync(token);
             await Capture("inspector-components-dark.png");
-            await Click(panel.Components[transform].Header);
-            await Click(panel.Components[appearance].Header);
-            await Set(panel.Properties[(custom, "count")].Input, long.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            await Set(panel.Properties[(custom, "measure")].Input, "2.5");
-            await Click(panel.Properties[(custom, "flag")].Input);
-            await Click(panel.Properties[(custom, "maybe")].Null!);
-            await Set(panel.Properties[(custom, "maybe")].Input, "");
+            await ClickLazy(() => panel.Components[transform].Header);
+            await ClickLazy(() => panel.Components[appearance].Header);
+            await SetLazy(() => panel.Properties[(custom, "count")].Input, long.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            await SetLazy(() => panel.Properties[(custom, "measure")].Input, "2.5");
+            await ClickLazy(() => panel.Properties[(custom, "flag")].Input);
+            await ClickLazy(() => panel.Properties[(custom, "maybe")].Null!);
+            await SetLazy(() => panel.Properties[(custom, "maybe")].Input, "");
             await Set(text, "Edited line\nUnicode: Привет 🙂");
             await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = panel.Theme.FontFamily })).WaitAsync(token);
             await Until(() => !ui.NeedsUpdate);
-            Require(ReferenceEquals(text, panel.Properties[(custom, "text")].Input) && model.HasDraft && ((RichTextEditor)text).Text.Contains("Привет"),
-                "Theme recreated an editor or lost its multiline draft.");
+            await ui.InvokeAsync(() => Require(
+                ReferenceEquals(text, panel.Properties[(custom, "text")].Input) && model.HasDraft && ((RichTextEditor)text).Text.Contains("Привет"),
+                "Theme recreated an editor or lost its multiline draft.")).WaitAsync(token);
             await Capture("inspector-draft-light.png");
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true))).WaitAsync(token);
             await Until(() => !model.HasDraft && document.Read().Content!.UndoCount == 1);
@@ -118,33 +124,34 @@ internal static class EditorInspectorSmoke
             Require(properties["count"].Value.GetInteger() == long.MaxValue && !properties["flag"].Value.GetBoolean() &&
                 properties["measure"].Value.GetNumber() == 2.5 && properties["maybe"].Value == PropertyValue.From("") &&
                 properties["text"].Value.GetString() == "Edited line\nUnicode: Привет 🙂", "Typed Apply lost scalar kind, Int64, null distinction or multiline text.");
-            await Click(panel.Undo); await Until(() => !document.Read().IsDirty);
-            await Click(panel.Redo); await Until(() => document.Read().IsDirty);
-            await Click(panel.DetailsButtons[custom]);
-            await Click(panel.Properties[(custom, "count")].Reset);
-            await Click(panel.Apply); await Until(() => !model.HasDraft);
+            await ClickLazy(() => panel.UndoPart); await Until(() => !document.Read().IsDirty);
+            await ClickLazy(() => panel.RedoPart); await Until(() => document.Read().IsDirty);
+            await ClickLazy(() => panel.DetailsButtons[custom]);
+            await ClickLazy(() => panel.Properties[(custom, "count")].Reset);
+            await ClickLazy(() => panel.ApplyPart); await Until(() => !model.HasDraft);
             Require(document.Read().Content!.Resolved.Entities[cube].Components[custom].Properties["count"].Value.GetInteger() == 7,
                 "Reset did not restore the schema default of a local occurrence.");
             var unchanged = document.Read().Content;
-            await Click(panel.Components[transform].Remove);
+            await ClickLazy(() => panel.Components[transform].Remove);
             await Until(() => model.ErrorText.Length != 0);
             Require(ReferenceEquals(unchanged, document.Read().Content), "Dependency rejection mutated the scene/history.");
             await Capture("inspector-dependency-error.png");
-            await Click(panel.Components[appearance].Remove);
+            await ClickLazy(() => panel.Components[appearance].Remove);
             await Until(() => !panel.Components.ContainsKey(appearance) && panel.RestoreButtons.ContainsKey(appearance));
-            Require(ReferenceEquals(text, panel.Properties[(custom, "text")].Input), "Removing a different component rebuilt scalar controls.");
-            await Click(panel.RestoreButtons[appearance]);
+            await ui.InvokeAsync(() => Require(ReferenceEquals(text, panel.Properties[(custom, "text")].Input),
+                "Removing a different component rebuilt scalar controls.")).WaitAsync(token);
+            await ClickLazy(() => panel.RestoreButtons[appearance]);
             await Until(() => panel.Components.ContainsKey(appearance) && !panel.RestoreButtons.ContainsKey(appearance));
             await EditorHierarchySmoke.ClickItemAsync(ui, view, empty, token);
             await Until(() => model.HasSelection && panel.Components.Count == 0 && panel.Properties.Count == 0);
-            await Click(panel.AddComponent); await Until(() => panel.AddChoices.IsVisible);
-            await Click(panel.AddButtons[(customType, 1)]);
+            await ClickLazy(() => panel.AddComponentPart); await Until(() => panel.AddChoicesPart.IsVisible);
+            await ClickLazy(() => panel.AddButtons[(customType, 1)]);
             await Until(() => panel.Components.Count == 1 && panel.Properties.Count == 5);
             Require(model.Components.Single().TypeId == customType && model.CanEditProperties && !model.CanEdit,
                 "An entity without Transform did not expose only its actual custom component.");
             var added = model.Components.Single().Id;
-            await Click(panel.Undo); await Until(() => panel.Components.Count == 0);
-            await Click(panel.Redo); await Until(() => panel.Components.ContainsKey(added));
+            await ClickLazy(() => panel.UndoPart); await Until(() => panel.Components.Count == 0);
+            await ClickLazy(() => panel.RedoPart); await Until(() => panel.Components.ContainsKey(added));
             await Capture("inspector-empty-entity-component.png");
             await EditorHierarchySmoke.ClickItemAsync(ui, view, cube.Value.ToString("D"), token);
             await Until(() => panel.Components.Count == 3);
@@ -168,7 +175,9 @@ internal static class EditorInspectorSmoke
             });
             await Until(() => preview.Read() is { Busy: false, Presented: { } stamp } && stamp.Revision == document.Read().Content!.Document.Revision);
             await Capture("inspector-preview.png", true);
-            var viewport = view.Canvas.Bounds; var retainedText = panel.Properties[(custom, "text")].Input;
+            var viewport = view.Canvas.Bounds;
+            Element retainedText = null!;
+            await ui.InvokeAsync(() => retainedText = panel.Properties[(custom, "text")].Input).WaitAsync(token);
             foreach (var (theme, name) in new[]
             {
                 (Theme.Dark, "islands-preview-dark.png"),
@@ -178,7 +187,7 @@ internal static class EditorInspectorSmoke
             {
                 await ui.InvokeAsync(() =>
                 {
-                    panel.Scroll.Offset = 0;
+                    panel.ScrollPart.Offset = 0;
                     ui.SetTheme(theme with { FontFamily = panel.Theme.FontFamily });
                     EditorHeaderSmoke.Move(ui, view.Canvas);
                 }).WaitAsync(token);
@@ -260,12 +269,25 @@ internal static class EditorInspectorSmoke
             await commands.Pending.WaitAsync(token); Require(commands.Read().Error == null, "Document command failed: " + commands.Read().Error);
             await Until(() => !commands.Read().Busy && ReferenceEquals(documentModel.Document?.Content?.Document, document.Read().Content?.Document));
         }
+        // Inspector collections are live projections: resolve them on the UI owner thread, then act on the element.
+        async Task ClickLazy(Func<Element> resolve)
+        {
+            Element element = null!;
+            await ui.InvokeAsync(() => element = resolve()).WaitAsync(token);
+            await Click(element);
+        }
+        async Task SetLazy(Func<Element> resolve, string value)
+        {
+            Element element = null!;
+            await ui.InvokeAsync(() => element = resolve()).WaitAsync(token);
+            await Set(element, value);
+        }
         async Task Click(Element element)
         {
             await ui.InvokeAsync(() =>
             {
                 Trace("Click " + (element is Text label ? label.Value : element.AccessibleName) + " " + element.GetType().Name);
-                panel.Scroll.BringIntoView(element.Bounds);
+                panel.ScrollPart.BringIntoView(element.Bounds);
             }).WaitAsync(token);
             await Until(() => !ui.NeedsUpdate);
             await Until(() => element.IsEffectivelyEnabled && element.Bounds.Width > 0);

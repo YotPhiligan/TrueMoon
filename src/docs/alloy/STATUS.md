@@ -3,6 +3,45 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+<a id="uia47-generated-view-parts-2026-11-28"></a>
+28.11.2026 — UIA4.7 (объявление контента во всех точках и типизированные View-части): для тестов
+генератора в репозитории отдельный проект `TrueMoon.Argentis.Generator.Tests` (36 тестов; `TestHelper`
+компилирует исходники с генератором, `AssertDiagnostic` проверяет код и строку диагностики).
+`ReadContentFactories` (`Argentis.Generator/ViewPartsGenerator.cs:95-146`) признаёт точки объявления
+контента View: инлайн-`Content(...)` в конструкторе, `DeclareContent(...)`, метод владельца в один шаг
+(`IsFrameworkContent`, `:122-129`) и `SetContent` в `OnContentPrepared` (`:146`). Найденный, но
+нераспознанный `Content` даёт ошибку ARG022 (`:27`) вместо тихой потери свойств; ручной
+`GetRequiredPart`/`TryGetPart` на месте сгенерированного свойства — предупреждение ARG023 (`:31`,
+поиск `:301-303`). Дочерние View-части больше не исключены: часть с типом, выводимым от `View`,
+получает типизированное свойство, а `ElementScope` индексирует и имя корня дочерней области — поиск
+имени внутри остаётся за самой дочерней областью (`Argentis/ElementScope.cs:31-36`, движковые
+`ViewPartScopeTests`). Инспектор переведён на генерацию: из `EditorInspectorView` удалены
+`NamedControls _parts = null!` и 13 ручных пробросов, partial-панели (Materials/Textures/Meshes)
+объявляют инлайн-ключи `Named(...)` с суффиксом `…Part`, внешние потребители (тесты, ManualTests)
+обращаются через сгенерированные свойства; `EditorInspectorPartIdentityTests` проверяет, что свойства
+видят живой контрол и после пересоздания строки.
+На нативном smoke `--smoke-inspector` всплыла подмена шрифта в Skia: системный face
+`Segoe UI Variable Text` на текущем OS не содержит U+FFFD, и explicit catalog бросал
+исключение при раскладке rich text с emoji; теперь подмена деградирует в `.notdef`,
+раскладка и ввод не падают (`SkiaRichTextLayout.cs:182-196`, формулировка контракта —
+`RICH_TEXT_EDITOR.md` и PACKAGE пакета рендеринга).
+
+<a id="uia48-view-registration-contract-2026-11-28"></a>
+28.11.2026 — UIA4.8 (контракт регистраций View): выбор конструктора закрытой `.View<TView>()`
+регистрации явный. `[ViewConstructor]` (`Alloy.Hosting/ViewConstructorAttribute.cs:6`) отмечает
+активирующий конструктор; `ConstructorActivation.SelectedConstructor`
+(`CodeGeneration/ConstructorActivation.cs:36-61`) принимает отмеченный (только публичный, ровно один —
+иначе ARG020 с причиной) или единственный самый длинный публичный; ничья без отметки — ARG024
+(`ViewRegistrationGenerator.cs:24-27`). Генерируемая активация оборачивается в
+`ViewConstructor.Construct` (`ViewConstructorAttribute.cs:9,41-58`) — дети, созданные фабриками и не
+взятые в дерево, отслеживаются и утилизируются при сбое конструкции или раньше родителя. Второй
+`SyntaxProvider` собирает явные регистрации компиляции (`services.View<>()`, `Singleton<>()`,
+`Transient<>()`, `Instance<>()`), и генерация проверяет замкнутость графа: не зарегистрированный
+дочерний View конструктора — ARG025, незарегистрированный сервис — ARG026
+(`ViewRegistrationGenerator.cs:28-35`, отчёт `:234-238`); раньше такие дефекты всплывали только
+исключением при создании окна. `ViewConstructorChoiceTests` и `RegistrationGraphTests` прогоняют
+контракт и по фактическим регистрациям Player/Editor.
+
 <a id="uia410-deferred-tree-sync-2026-11-28"></a>
 28.11.2026 — UIA4.10 (отложенная очередь структурных изменений в движке): в Argentis лежит
 `DeferredTreeSync<TRequest>` (`Argentis/DeferredTreeSync.cs:18`) — окно структурной синхронизации одного
@@ -395,9 +434,11 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 24 байта ([замер](PERFORMANCE_BASELINE.md#uia44-detach-and-store-2026-11-27)). Пункт `Get<T>` при промахе
 закрыт числом: чтение на цепочке 2 496 узлов стоит 0 µs и 0 байт, код не менялся. Закрыто 28.11.2026 —
 объект `TreeChange` и делегат на ребёнка в `Dispose` (запись выше); закрыта 28.11.2026 и UIA4.10 —
-отложенная очередь структурных изменений в движке (`DeferredTreeSync`, запись в начале раздела). Следующий
-шаг — остаток UIA4.4 (`ElementScope` на каждый View и обязательный слой `ContentControl`) и генераторный
-контур UIA4.7 плюс UIA4.8; UIA4.11 вне ближайшей очереди.
+отложенная очередь структурных изменений в движке (`DeferredTreeSync`, запись в начале раздела);
+закрыты 28.11.2026 UIA4.7 (точки объявления контента, дочерние View-части, кат-овер инспектора на
+сгенерированные свойства) и UIA4.8 (`[ViewConstructor]`, ARG024–ARG026, замкнутость графа регистраций),
+записи в начале раздела. Следующий шаг — остаток UIA4.4 (`ElementScope` на каждый View и обязательный
+слой `ContentControl`) и UIA4.3.1 (виртуализация `ElementList`); UIA4.11 вне ближайшей очереди.
 
 [Миграция Aether View](../engine/PLAN.md#aether-view-authoring-migration)
 проверена на свежих NuGet: оба хоста Editor и независимый Player на обоих

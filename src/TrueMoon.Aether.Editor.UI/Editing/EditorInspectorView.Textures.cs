@@ -20,9 +20,6 @@ public sealed partial class EditorInspectorView
     private long _textureRowGeneration;
     private IEditorTexturesModel? _shownTextureModel;
     private InspectorTexture? _shownProjectTexture;
-    private Border TexturesPart => GetRequiredPart<Border>("TexturesPanel");
-    private RichTextEditor TextureName => GetRequiredPart<RichTextEditor>("TextureName");
-    private RichTextEditor TexturePath => GetRequiredPart<RichTextEditor>("TexturePath");
     internal static ViewStyleRole<RichTextEditor> TextureMetadataRole { get; } = new("InspectorTextureMetadata");
 
     private Element BuildTextures(IUiBuildContext<IEditorInspectorViewModel> ui) => ui.Border(ui.VStack(
@@ -44,9 +41,9 @@ public sealed partial class EditorInspectorView
                 ui.RichTextEditor(TextureReadOnly).Named("TextureMetadata").SemanticId(TexturePrefix + ".metadata")
                     .WithRole(TextureMetadataRole).Configure(ConfigureTextureText),
                 ui.Text("Имя").WithRole(MetadataRole),
-                TextureInput(ui, "TextureName", "name", "Имя текстуры", model => model.Name),
+                TextureInput(ui, "name", "Имя текстуры", model => model.Name).Named("TextureNamePart"),
                 ui.Text("Путь к PNG от корня проекта").WithRole(MetadataRole),
-                TextureInput(ui, "TexturePath", "path", "Путь к исходному PNG", model => model.SourcePath),
+                TextureInput(ui, "path", "Путь к исходному PNG", model => model.SourcePath).Named("TexturePathPart"),
                 TextureCommand(ui, "Импортировать PNG", "import", model => model.CanImport, model => model.Import()),
                 TextureCommand(ui, "Переименовать текстуру", "rename", model => model.CanRename, model => model.Rename()),
                 TextureCommand(ui, "Заменить источник PNG", "replace", model => model.CanReplace, model => model.ReplaceSource()),
@@ -62,8 +59,8 @@ public sealed partial class EditorInspectorView
             .OnClick(() => { if (CurrentTextures is { } model) action(model); });
 
     private UiControl<RichTextEditor, IEditorInspectorViewModel> TextureInput(IUiBuildContext<IEditorInspectorViewModel> ui,
-        string part, string suffix, string label, Expression<Func<IEditorTexturesModel, string>> value) =>
-        ui.RichTextEditor(TextureReadOnly).Named(part).WithRole(MaterialNameRole).SemanticId(TexturePrefix + "." + suffix)
+        string suffix, string label, Expression<Func<IEditorTexturesModel, string>> value) =>
+        ui.RichTextEditor(TextureReadOnly).WithRole(MaterialNameRole).SemanticId(TexturePrefix + "." + suffix)
             .Configure(input => { ConfigureTextureText(input); input.AccessibleName = label; input.ColorRole = EditorColorRole.Text; })
             .BindTwoWay(RichTextEditor.TextProperty, _textureContext, value);
 
@@ -74,10 +71,10 @@ public sealed partial class EditorInspectorView
 
     private void PrepareTextures()
     {
-        GetRequiredPart<VStack>("TexturesItems").BindItems(_projectTextureRows, CreateProjectTextureRow,
+        this.TexturesItems.BindItems(_projectTextureRows, CreateProjectTextureRow,
             item => (item.Id, _textureRowGeneration),
             (row, item) => ((TextureActionRow)row).Present(item, item.Id == _shownProjectTexture?.Id));
-        TexturesPart.ObservePropertyChanged(_textureContext, (_, change) =>
+        this.TexturesPanel.ObservePropertyChanged(_textureContext, (_, change) =>
         {
             if (change.PropertyName is null or "" or nameof(IEditorTexturesModel.IsAvailable) or nameof(IEditorTexturesModel.IsOpen) or
                 nameof(IEditorTexturesModel.Selected) or nameof(IEditorTexturesModel.Items) or nameof(IEditorTexturesModel.StatusText) or
@@ -99,14 +96,14 @@ public sealed partial class EditorInspectorView
     private void SynchronizeTextures()
     {
         var model = _textureContext.DataContext;
-        TexturesPart.IsVisible = model?.IsAvailable == true;
-        GetRequiredPart<ComponentHeader>("TexturesHeader").Expanded = model?.IsOpen == true;
-        var status = GetRequiredPart<RichTextEditor>("TexturesStatus");
+        this.TexturesPanel.IsVisible = model?.IsAvailable == true;
+        this.TexturesHeader.Expanded = model?.IsOpen == true;
+        var status = this.TexturesStatus;
         status.Text = model?.StatusText.ReplaceLineEndings("\n") ?? "";
         status.IsVisible = status.Text.Length != 0;
         var items = model?.Items;
         var selected = model?.Selected;
-        var rows = GetRequiredPart<VStack>("TexturesItems");
+        var rows = this.TexturesItems;
         var refreshRows = _shownTextureGeneration != _presentationGeneration || !ReferenceEquals(_shownTextureModel, model);
         if (refreshRows) _textureRowGeneration++;
         _shownTextureGeneration = _presentationGeneration;
@@ -129,18 +126,19 @@ public sealed partial class EditorInspectorView
                 var row = (TextureActionRow)rows.Items[i];
                 row.Highlight(row.Id == selected?.Id);
             }
-        GetRequiredPart<Text>("TexturesEmpty").IsVisible = _projectTextureRows.Count == 0 && status.Text.Length == 0;
-        GetRequiredPart<ScrollViewer>("TexturesList").IsVisible = _projectTextureRows.Count != 0;
-        var metadata = GetRequiredPart<RichTextEditor>("TextureMetadata");
+        this.TexturesEmpty.IsVisible = _projectTextureRows.Count == 0 && status.Text.Length == 0;
+        this.TexturesList.IsVisible = _projectTextureRows.Count != 0;
+        var metadata = this.TextureMetadata;
         metadata.IsVisible = selected != null;
         if (metadataChanged)
             metadata.Text = selected == null ? "" :
                 $"{selected.Width} × {selected.Height} · sRGB\nID: {selected.Id:D}\nИсточник: {selected.SourcePath}\nРевизия: {selected.Revision}";
-        TextureName.Options = model?.CanEditName == true ? TextureEditable : TextureReadOnly;
-        TexturePath.Options = model?.CanEditSource == true ? TextureEditable : TextureReadOnly;
+        this.TextureNamePart.Options = model?.CanEditName == true ? TextureEditable : TextureReadOnly;
+        this.TexturePathPart.Options = model?.CanEditSource == true ? TextureEditable : TextureReadOnly;
     }
 
-    private bool TextureTextHasFocus() => IsAttached && TexturesPart.IsVisible && (TextureName.IsFocused || TexturePath.IsFocused);
+    private bool TextureTextHasFocus() => IsAttached && this.TexturesPanel.IsVisible &&
+        (this.TextureNamePart.IsFocused || this.TexturePathPart.IsFocused);
 
     private sealed class TextureContext : IDataContext<IEditorTexturesModel>
     {

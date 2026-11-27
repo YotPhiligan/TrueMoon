@@ -64,8 +64,8 @@ public sealed class InspectorReorderTests(ITestOutputHelper output)
                 draw[i] = frame.Render.Last.TotalMicroseconds;
                 bytes[i] = allocatedInFrame;
             }
-            Assert.Same(view.Components[order[0].Id].Section, view.ComponentList.Children[0]);
-            Assert.Same(view.Components[order[1].Id].Section, view.ComponentList.Children[1]);
+            Assert.Same(view.Components[order[0].Id].Section, view.ComponentListPart.Children[0]);
+            Assert.Same(view.Components[order[1].Id].Section, view.ComponentListPart.Children[1]);
             Assert.Equal(originalRows.Count, view.Properties.Count);
             foreach (var (key, row) in originalRows) Assert.Same(row, view.Properties[key].Row);
         }

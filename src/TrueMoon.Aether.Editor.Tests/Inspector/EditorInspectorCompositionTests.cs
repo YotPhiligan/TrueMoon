@@ -1,4 +1,4 @@
-﻿using TrueMoon.Argentis.Editors;
+using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Styling;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
@@ -47,7 +47,7 @@ public sealed class EditorInspectorCompositionTests
         Assert.Equal("shared draft", Assert.IsType<RichTextEditor>(second.Properties[address].Input).Text);
         ui1.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed); Assert.False(test.Owner.Commands.Read().Closed);
         model.Apply(); Assert.True(model.CanUndo, $"HasDraft={model.HasDraft}; Error={model.ErrorText}");
-        ui2.Update(); ui2.Update(); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount); Assert.True(second.Undo.IsEnabled);
+        ui2.Update(); ui2.Update(); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount); Assert.True(second.UndoPart.IsEnabled);
         app.Dispose();
         Assert.Throws<ObjectDisposedException>(() => model.Refresh(InspectorFixture.Child));
         Assert.False(second.IsDisposed); Assert.True(test.Owner.Commands.Read().Closed);

@@ -3,6 +3,15 @@ using Microsoft.CodeAnalysis;
 
 namespace TrueMoon.CodeGeneration;
 
+internal enum ActivationConstructorFailure
+{
+    None,
+    NoPublicConstructor,
+    AmbiguousLongest,
+    MultipleMarkedConstructors,
+    MarkedConstructorNotPublic,
+}
+
 // Shared by Cobalt service generation and provider-neutral Argentis factory generation.
 internal static class ConstructorActivation
 {
@@ -21,6 +30,37 @@ internal static class ConstructorActivation
             else if (constructor.Parameters.Length == longest.Parameters.Length) ties++;
         }
         return longest;
+    }
+
+    // [ViewConstructor] overrides the longest-public heuristic; a tie without it is ambiguous.
+    internal static IMethodSymbol? SelectedConstructor(INamedTypeSymbol type, out ActivationConstructorFailure failure)
+    {
+        failure = ActivationConstructorFailure.None;
+        IMethodSymbol? marked = null;
+        foreach (var constructor in type.InstanceConstructors)
+        {
+            if (!constructor.GetAttributes().Any(attribute =>
+                    attribute.AttributeClass?.ToDisplayString() == "TrueMoon.Alloy.Hosting.ViewConstructorAttribute")) continue;
+            if (marked is not null)
+            {
+                failure = ActivationConstructorFailure.MultipleMarkedConstructors;
+                return null;
+            }
+            marked = constructor;
+        }
+
+        if (marked is null)
+        {
+            var longest = LongestPublicConstructor(type, out var ties);
+            if (longest is null) failure = ActivationConstructorFailure.NoPublicConstructor;
+            else if (ties != 1) failure = ActivationConstructorFailure.AmbiguousLongest;
+            else return longest;
+            return null;
+        }
+
+        if (marked.DeclaredAccessibility != Accessibility.Public) failure = ActivationConstructorFailure.MarkedConstructorNotPublic;
+        else return marked;
+        return null;
     }
 
     internal static bool SetsRequiredMembers(IMethodSymbol constructor) =>

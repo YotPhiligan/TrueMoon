@@ -52,7 +52,7 @@ internal static class EditorTransformSmoke
             var fields = panel.Properties.Values.Where(p => p.Property is TransformField)
                 .ToDictionary(p => p.Property.Key, p => (TextBox)p.Input);
             var original = document.Read().Content!; var selected = workspace.SelectedId;
-            var input = fields["x"]; var root = panel.Form;
+            var input = fields["x"]; var root = panel.FormPart;
             var compact = panel.TransformEditors.Values.Single();
             var resetX = X();
             await Click(compact.Degrees); await Until(() => model.AnglesInDegrees && compact.Rotation.First.Step == 1);
@@ -60,47 +60,47 @@ internal static class EditorTransformSmoke
                 compact.Rotation.Label.Value == "Поворот, °", "Unit-only switch created a draft/history or lost its display units.");
             await Click(compact.Degrees); await Until(() => !model.AnglesInDegrees && compact.Rotation.First.Step == .01);
             await Set(input, "NaN");
-            await Until(() => !panel.Apply.IsEnabled && model.Fields[0].Error.Length != 0);
+            await Until(() => !panel.ApplyPart.IsEnabled && model.Fields[0].Error.Length != 0);
             Require(document.Read().Content!.Document.Revision == original.Document.Revision && !document.Read().IsDirty, "Invalid draft committed.");
             await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = panel.Theme.FontFamily, FontSize = panel.Theme.FontSize, FontWeight = panel.Theme.FontWeight, FontItalic = panel.Theme.FontItalic })).WaitAsync(token);
             await Until(() => panel.Theme.Surface == Theme.Light.Surface);
-            Require(ReferenceEquals(input, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(root, panel.Form) && input.Value == "NaN", "Theme rebuilt fields or discarded draft.");
-            await Click(panel.Cancel); await Until(() => input.Value == "-1.5");
+            Require(ReferenceEquals(input, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(root, panel.FormPart) && input.Value == "NaN", "Theme rebuilt fields or discarded draft.");
+            await Click(panel.CancelPart); await Until(() => input.Value == "-1.5");
             await Set(input, "1.5");
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true))).WaitAsync(token);
-            await Until(() => document.Read().IsDirty && panel.Undo.IsEnabled);
+            await Until(() => document.Read().IsDirty && panel.UndoPart.IsEnabled);
             Require(document.Read().Content!.UndoCount == 1 && X() == 1.5, "Gesture did not use one authoring history transaction.");
             await PreviewAction(start: true); await Preview(); await Capture("transform-edited.png", 1.5f);
-            await Click(panel.Undo); await Until(() => !document.Read().IsDirty); await Preview(); await Capture("transform-undo.png", -1.5f);
-            await Click(panel.Redo); await Until(() => document.Read().IsDirty); await Preview(); await Capture("transform-redo.png", 1.5f);
-            Require(ReferenceEquals(input, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(root, panel.Form) && workspace.SelectedId == selected, "Committed refresh rebuilt the editable tree or selection.");
+            await Click(panel.UndoPart); await Until(() => !document.Read().IsDirty); await Preview(); await Capture("transform-undo.png", -1.5f);
+            await Click(panel.RedoPart); await Until(() => document.Read().IsDirty); await Preview(); await Capture("transform-redo.png", 1.5f);
+            Require(ReferenceEquals(input, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(root, panel.FormPart) && workspace.SelectedId == selected, "Committed refresh rebuilt the editable tree or selection.");
 
             // Group reset is a draft action. Invalid rotation and linked scale can be recovered without committing.
             var beforeGroups = document.Read().Content!;
             await Set(fields["pitch"], "-"); await Click(compact.ResetRotation);
             await Until(() => model.Fields[3].IsReset && !model.Fields[3].HasError);
             Require(ReferenceEquals(beforeGroups, document.Read().Content), "Rotation reset committed before Apply.");
-            await Click(panel.Cancel);
+            await Click(panel.CancelPart);
             await Click(compact.LinkScale); await Set(fields["sy"], "-"); await Set(fields["sx"], "8");
-            await Until(() => model.HasDiagnostics && !panel.Apply.IsEnabled);
-            await Click(compact.ResetScale); await Until(() => !model.HasDiagnostics && panel.Apply.IsEnabled);
+            await Until(() => model.HasDiagnostics && !panel.ApplyPart.IsEnabled);
+            await Click(compact.ResetScale); await Until(() => !model.HasDiagnostics && panel.ApplyPart.IsEnabled);
             Require(model.ScaleLinked && model.Fields[6].IsReset && model.Fields[7].IsReset &&
                 ReferenceEquals(beforeGroups, document.Read().Content), "Linked Scale reset propagated values or committed early.");
             await Capture("transform-group-scale-staged.png", 1.5f);
-            await Click(panel.Cancel);
+            await Click(panel.CancelPart);
             await ui.InvokeAsync(() =>
             {
-                panel.Scroll.BringIntoView(compact.ResetPosition.Bounds); ui.Focus(compact.ResetPosition);
+                panel.ScrollPart.BringIntoView(compact.ResetPosition.Bounds); ui.Focus(compact.ResetPosition);
                 ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Space)); ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Space));
             }).WaitAsync(token);
             await Until(() => model.Fields[0].IsReset && !compact.ResetPosition.IsEnabled);
             Require(ReferenceEquals(beforeGroups, document.Read().Content), "Position reset committed before Apply.");
-            await Click(panel.Apply);
+            await Click(panel.ApplyPart);
             await Until(() => !model.HasDraft && document.Read().Content!.UndoCount == beforeGroups.UndoCount + 1);
             Require(X() == resetX && !model.Fields[0].CanReset, "Group reset did not restore inherited Position.");
             await Preview(); await Capture("transform-group-reset.png", (float)resetX);
-            await Click(panel.Undo); await Until(() => X() == 1.5); await Preview(); await Capture("transform-group-undo.png", 1.5f);
-            await Click(panel.Redo); await Until(() => X() == resetX); await Preview(); await Capture("transform-group-redo.png", (float)resetX);
+            await Click(panel.UndoPart); await Until(() => X() == 1.5); await Preview(); await Capture("transform-group-undo.png", 1.5f);
+            await Click(panel.RedoPart); await Until(() => X() == resetX); await Preview(); await Capture("transform-group-redo.png", (float)resetX);
             Require(ReferenceEquals(compact, panel.TransformEditors.Values.Single()) && ReferenceEquals(input, compact.Position.First.Editor) &&
                 model.ScaleLinked && workspace.SelectedId == selected, "Group reset/history rebuilt controls or lost presentation state.");
 
@@ -110,18 +110,18 @@ internal static class EditorTransformSmoke
             await Set(fields["pitch"], "-"); await Until(() => !compact.Degrees.IsEnabled && model.Fields[3].HasError);
             Require(model.AnglesInDegrees && fields["pitch"].Value == "-", "Invalid angle changed units or lost its text.");
             await Capture("transform-angle-invalid.png", (float)resetX);
-            await Click(panel.Cancel); await Until(() => compact.Degrees.IsEnabled && model.AnglesInDegrees);
+            await Click(panel.CancelPart); await Until(() => compact.Degrees.IsEnabled && model.AnglesInDegrees);
             await Set(fields["yaw"], "9.000e1");
             await Click(compact.Degrees); await Until(() => !model.AnglesInDegrees);
             Require(model.Fields[4].Value == fields["yaw"].Value && Rotation() == 0, "Display switch committed or did not expose radians.");
             await Click(compact.Degrees); await Until(() => model.AnglesInDegrees && fields["yaw"].Value == "9.000e1");
             Require(ReferenceEquals(beforeAngle, document.Read().Content) && ReferenceEquals(fields["yaw"], compact.Rotation.Second.Editor),
                 "Unit round trip committed or replaced a retained angle editor.");
-            await Click(panel.Apply); await Until(() => !model.HasDraft && document.Read().Content!.UndoCount == beforeAngle.UndoCount + 1);
+            await Click(panel.ApplyPart); await Until(() => !model.HasDraft && document.Read().Content!.UndoCount == beforeAngle.UndoCount + 1);
             Require(Rotation() == Math.PI / 2, "Degree edit was not committed as canonical radians.");
             await Preview(); await Capture("transform-angle-edited.png", (float)resetX, rotated: true);
-            await Click(panel.Undo); await Until(() => Rotation() == 0); await Preview(); await Capture("transform-angle-undo.png", (float)resetX);
-            await Click(panel.Redo); await Until(() => Rotation() == Math.PI / 2); await Preview(); await Capture("transform-angle-redo.png", (float)resetX, rotated: true);
+            await Click(panel.UndoPart); await Until(() => Rotation() == 0); await Preview(); await Capture("transform-angle-undo.png", (float)resetX);
+            await Click(panel.RedoPart); await Until(() => Rotation() == Math.PI / 2); await Preview(); await Capture("transform-angle-redo.png", (float)resetX, rotated: true);
             await Doc(DocumentCommand.SaveAs, "Edited.aetherscene");
             var currentSource = await File.ReadAllBytesAsync(source, token);
             Require(!document.Read().IsDirty && sourceBytes.SequenceEqual(currentSource), "Save changed source fixture or lost checkpoint.");

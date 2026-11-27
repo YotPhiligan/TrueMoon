@@ -189,8 +189,6 @@ internal sealed class SkiaRichTextFontMapper(SkiaFontCatalog? catalog) : FontMap
             var missing = font.GetGlyphs(value).Any(glyph => glyph == 0);
             if (missing)
             {
-                if (font.GetGlyphs("\uFFFD").Any(glyph => glyph == 0))
-                    throw new InvalidOperationException("An explicit rich-text font must contain the replacement glyph U+FFFD.");
                 result ??= new System.Text.StringBuilder(text[..offset]);
                 result.Append('\uFFFD');
             }

@@ -89,7 +89,7 @@ public sealed class InspectorSelectionVisibilityTests
             new Factory<EditorInspectorView>(() => new(test.Model, new EditorInspectorViewStyle())));
         var clock = new HeaderClock();
         using var ui = InspectorFixture.Ui(view, clock); Drain();
-        var inspector = view.Inspector!; var form = inspector.Form; var scroll = inspector.Scroll; var apply = inspector.Apply;
+        var inspector = view.Inspector!; var form = inspector.FormPart; var scroll = inspector.ScrollPart; var apply = inspector.ApplyPart;
         var input = inspector.Properties[(DocumentData.Custom, "text")].Input;
         ui.Focus(input); test.Property(DocumentData.Custom, "text").Value = "uncommitted draft"; Drain();
         var document = test.Owner.Document.Read().Content; var viewport = view.ViewportFrame.Bounds;
@@ -106,7 +106,7 @@ public sealed class InspectorSelectionVisibilityTests
         Assert.Same(document, test.Owner.Document.Read().Content); Assert.False(test.Owner.Document.Read().IsDirty);
         ui.SetTheme(Theme.Light); Drain(); model.Select(InspectorFixture.Child); Drain(); clock.Advance(160); Drain();
         Assert.True(view.InspectorPanel.IsVisible); Assert.Equal(viewport, view.ViewportFrame.Bounds);
-        Assert.Same(inspector, view.Inspector); Assert.Same(form, inspector.Form); Assert.Same(scroll, inspector.Scroll); Assert.Same(apply, inspector.Apply);
+        Assert.Same(inspector, view.Inspector); Assert.Same(form, inspector.FormPart); Assert.Same(scroll, inspector.ScrollPart); Assert.Same(apply, inspector.ApplyPart);
         Assert.False(inspector.IsDisposed); Assert.False(apply.IsDisposed);
         Assert.Equal(DocumentData.Text, Assert.IsType<RichTextEditor>(inspector.Properties[(DocumentData.Custom, "text")].Input).Text);
         Assert.False(inspector.Properties[(DocumentData.Custom, "text")].Input.IsFocused);

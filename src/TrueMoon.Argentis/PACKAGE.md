@@ -94,6 +94,14 @@ instead of NuGet still attach the generator as a project analyzer.
 `NamedOptional("Part")` generates a nullable property for a part that is not
 present in every composition. `Named("Part")` still requires the named part.
 
+Named parts come from every recognized content declaration: an inline `Content(...)` tree in a
+constructor, `DeclareContent(...)`, an owner method that returns the content in one step, and
+`SetContent(...)` inside `OnContentPrepared`. A `Content`-shaped call the generator cannot read is
+reported as ARG022 instead of silently yielding no parts. A part whose type derives from `View`
+gets a generated typed property too; within that child subtree the child view's own scope keeps
+name lookup. Reading a generated part through `GetRequiredPart`/`TryGetPart` warns as ARG023 —
+screens use the generated properties.
+
 Use `ui.Adopt(control)` inside deferred `Content(...)` when a host needs a
 specific control before attachment. The control must be live, detached and
 unparented; the build takes ownership and applies the same tree and rollback

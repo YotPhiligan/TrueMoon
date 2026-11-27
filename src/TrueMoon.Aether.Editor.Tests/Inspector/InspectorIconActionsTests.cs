@@ -1,4 +1,4 @@
-﻿using TrueMoon.Argentis.Input;
+using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Menus;
 using TrueMoon.Argentis.Painting;
@@ -35,9 +35,9 @@ public sealed class InspectorIconActionsTests
     {
         using var test = new IconsFixture();
         var view = test.View;
-        Assert.Equal(new[] { view.Apply, view.Cancel, view.Undo, view.Redo, view.AddComponent }, view.Actions.Children);
-        AssertIcon(view.Apply, UiSymbol.Check); AssertIcon(view.Cancel, UiSymbol.Close);
-        AssertIcon(view.Undo, UiSymbol.Undo); AssertIcon(view.Redo, UiSymbol.Redo); AssertIcon(view.AddComponent, UiSymbol.Add);
+        Assert.Equal(new[] { view.ApplyPart, view.CancelPart, view.UndoPart, view.RedoPart, view.AddComponentPart }, view.ActionsPart.Children);
+        AssertIcon(view.ApplyPart, UiSymbol.Check); AssertIcon(view.CancelPart, UiSymbol.Close);
+        AssertIcon(view.UndoPart, UiSymbol.Undo); AssertIcon(view.RedoPart, UiSymbol.Redo); AssertIcon(view.AddComponentPart, UiSymbol.Add);
         foreach (var section in view.Components.Values)
         {
             AssertIcon(section.Remove, UiSymbol.Delete);
@@ -47,7 +47,7 @@ public sealed class InspectorIconActionsTests
         Assert.All(view.Properties.Values, property => Assert.False(property.Reset.IsVisible));
         foreach (var details in view.DetailsButtons.Values)
         {
-            view.Scroll.BringIntoView(details.Bounds); test.Drain(); DocumentUiFixture.Click(test.Ui, details); test.Drain();
+            view.ScrollPart.BringIntoView(details.Bounds); test.Drain(); DocumentUiFixture.Click(test.Ui, details); test.Drain();
         }
         foreach (var property in view.Properties.Values) { Assert.True(property.Reset.IsVisible); AssertIcon(property.Reset, UiSymbol.Undo, 24); }
         Assert.All(view.AddButtons.Values, button => { Assert.IsNotType<IconButton>(button); Assert.NotEmpty(button.Value); });
@@ -59,9 +59,9 @@ public sealed class InspectorIconActionsTests
             var restore = view.RestoreButtons[removed.Id]; AssertIcon(restore, UiSymbol.Redo);
             Assert.Contains(restore.Parent!.Children.OfType<Text>(), label => label.Value == removed.Title && label.IsVisible);
         }
-        var apply = view.Apply; var tree = DocumentUiFixture.Tree(view).ToArray();
+        var apply = view.ApplyPart; var tree = DocumentUiFixture.Tree(view).ToArray();
         test.Ui.SetTheme(Theme.Light); view.WithViewStyle(new EditorInspectorViewStyle()); test.Drain();
-        Assert.Same(apply, view.Apply); Assert.Equal(tree, DocumentUiFixture.Tree(view));
+        Assert.Same(apply, view.ApplyPart); Assert.Equal(tree, DocumentUiFixture.Tree(view));
         AssertIcon(view.Properties[(DocumentData.Custom, "text")].Reset, UiSymbol.Undo, 24);
     }
 
@@ -69,13 +69,13 @@ public sealed class InspectorIconActionsTests
     public void Tooltip_DisabledIconAppearsAtExact500MillisecondsWithoutStealingFocusOrKeepingIdleFrames()
     {
         using var test = new IconsFixture(); var view = test.View; var input = view.Properties[(DocumentData.Transform, "x")].Input;
-        test.Ui.Focus(input); test.Hover(view.Apply);
-        Assert.False(view.Apply.IsEnabled); Assert.True(view.NeedsFrame);
+        test.Ui.Focus(input); test.Hover(view.ApplyPart);
+        Assert.False(view.ApplyPart.IsEnabled); Assert.True(view.NeedsFrame);
         test.Clock.Advance(499); test.Drain();
         Assert.Null(test.Host.Popup); Assert.True(input.IsFocused); Assert.True(view.NeedsFrame);
         test.Clock.Advance(1); test.Drain();
         var popup = Assert.IsAssignableFrom<Element>(test.Host.Popup);
-        Assert.Equal(view.Apply.AccessibleName + " · сейчас недоступно", Assert.Single(DocumentUiFixture.Tree(popup).OfType<Text>()).Value);
+        Assert.Equal(view.ApplyPart.AccessibleName + " · сейчас недоступно", Assert.Single(DocumentUiFixture.Tree(popup).OfType<Text>()).Value);
         Assert.Same(view, test.Host.PopupOwner); Assert.True(input.IsFocused);
         Assert.False(view.NeedsFrame); Assert.False(test.Ui.Update());
         Assert.Equal(0, test.Owner.Owner.Document.Read().Content!.UndoCount); Assert.False(test.Owner.Model.HasDraft);
@@ -85,12 +85,12 @@ public sealed class InspectorIconActionsTests
     public void Tooltip_TargetChangeRestartsDelayAndOnlyCurrentIconCanOwnTheHint()
     {
         using var test = new IconsFixture();
-        test.Hover(test.View.Apply); test.Clock.Advance(499); test.Drain();
-        test.Hover(test.View.Cancel); test.Clock.Advance(1); test.Drain();
+        test.Hover(test.View.ApplyPart); test.Clock.Advance(499); test.Drain();
+        test.Hover(test.View.CancelPart); test.Clock.Advance(1); test.Drain();
         Assert.Null(test.Host.Popup); Assert.True(test.View.NeedsFrame);
         test.Clock.Advance(498); test.Drain(); Assert.Null(test.Host.Popup);
         test.Clock.Advance(1); test.Drain();
-        Assert.Equal(test.View.Cancel.AccessibleName + " · сейчас недоступно",
+        Assert.Equal(test.View.CancelPart.AccessibleName + " · сейчас недоступно",
             Assert.Single(DocumentUiFixture.Tree(test.Host.Popup!).OfType<Text>()).Value);
         Assert.Same(test.View, test.Host.PopupOwner);
     }
@@ -101,7 +101,7 @@ public sealed class InspectorIconActionsTests
     public void Tooltip_UsesOpaqueThemeControlSurfaceAndUpdatesExistingPopupOnThemeChange(bool light)
     {
         using var test = new IconsFixture(); var initial = light ? Theme.Light : Theme.Dark;
-        test.Ui.SetTheme(initial); test.Drain(); test.ShowHint(test.View.AddComponent);
+        test.Ui.SetTheme(initial); test.Drain(); test.ShowHint(test.View.AddComponentPart);
         var popup = test.Host.Popup!;
         Assert.Equal(initial.Control, popup.Background); Assert.Equal(255, popup.Background.A);
         var next = light ? Theme.Dark : Theme.Light; test.Ui.SetTheme(next); test.Drain();
@@ -115,7 +115,7 @@ public sealed class InspectorIconActionsTests
         using var owner = new InspectorFixture(); var clock = new HeaderClock();
         var view = new EditorInspectorView(owner.Model, new EditorInspectorViewStyle());
         using var ui = InspectorFixture.Ui(view, clock); ui.Update(); ui.Update();
-        var bounds = view.Apply.Bounds; var before = owner.Owner.Document.Read().Content;
+        var bounds = view.ApplyPart.Bounds; var before = owner.Owner.Document.Read().Content;
         ui.HandleInput(new(InputKind.PointerMove, bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
         clock.Advance(1000); ui.Update(); ui.Update();
         Assert.False(view.NeedsFrame); Assert.Same(view, ui.Root); Assert.Same(before, owner.Owner.Document.Read().Content);
@@ -134,8 +134,8 @@ public sealed class InspectorIconActionsTests
     public void Tooltip_InputOrContextChangeDisposesOwnedHintWithoutPublishingAnEdit(string change)
     {
         using var test = new IconsFixture();
-        if (change == "scroll") { test.Ui.Resize(new(1280, 200)); test.Drain(); Assert.True(test.View.Scroll.Extent > test.View.Scroll.Bounds.Height); }
-        test.ShowHint(test.View.Apply); var initialOffset = test.View.Scroll.Offset;
+        if (change == "scroll") { test.Ui.Resize(new(1280, 200)); test.Drain(); Assert.True(test.View.ScrollPart.Extent > test.View.ScrollPart.Bounds.Height); }
+        test.ShowHint(test.View.ApplyPart); var initialOffset = test.View.ScrollPart.Offset;
         var popup = test.Host.Popup!; var before = test.Owner.Owner.Document.Read().Content;
         switch (change)
         {
@@ -146,30 +146,30 @@ public sealed class InspectorIconActionsTests
             case "wheel": test.Ui.HandleInput(new(InputKind.Wheel, 10, 10, WheelDelta: -1)); break;
             case "selection": test.Owner.Model.Refresh(InspectorFixture.Parent); break;
             case "hide": test.View.IsVisible = false; break;
-            case "scroll": test.View.Scroll.Offset = 50; break;
+            case "scroll": test.View.ScrollPart.Offset = 50; break;
         }
         test.Drain(); test.Clock.Advance(1000); test.Drain();
-        if (change == "scroll") Assert.True(test.View.Scroll.Offset > initialOffset);
+        if (change == "scroll") Assert.True(test.View.ScrollPart.Offset > initialOffset);
         Assert.Null(test.Host.Popup); Assert.True(popup.IsDisposed); Assert.False(test.View.NeedsFrame);
         Assert.Same(before, test.Owner.Owner.Document.Read().Content); Assert.False(test.Owner.Model.HasDraft);
         Assert.False(test.Host.IsDisposed);
         if (change == "hide")
         {
-            test.View.IsVisible = true; test.Drain(); test.ShowHint(test.View.Apply);
-            Assert.Equal(test.View.Apply.AccessibleName + " · сейчас недоступно", Assert.Single(DocumentUiFixture.Tree(test.Host.Popup!).OfType<Text>()).Value);
+            test.View.IsVisible = true; test.Drain(); test.ShowHint(test.View.ApplyPart);
+            Assert.Equal(test.View.ApplyPart.AccessibleName + " · сейчас недоступно", Assert.Single(DocumentUiFixture.Tree(test.Host.Popup!).OfType<Text>()).Value);
         }
     }
 
     [Fact]
     public void Tooltip_DetachClosesPopupAndReattachmentRequiresFreshHoverWithoutOwningHostOrModel()
     {
-        using var test = new IconsFixture(); test.ShowHint(test.View.AddComponent);
+        using var test = new IconsFixture(); test.ShowHint(test.View.AddComponentPart);
         var popup = test.Host.Popup!; test.Content.Items.Remove(test.View); test.Drain();
         Assert.Null(test.Host.Popup); Assert.True(popup.IsDisposed); Assert.False(test.View.IsDisposed); Assert.False(test.Host.IsDisposed);
         test.Content.Add(test.View); test.Drain(); test.Clock.Advance(1000); test.Drain();
         Assert.Null(test.Host.Popup); Assert.False(test.View.NeedsFrame);
-        test.ShowHint(test.View.AddComponent);
-        Assert.Equal(test.View.AddComponent.AccessibleName, Assert.Single(DocumentUiFixture.Tree(test.Host.Popup!).OfType<Text>()).Value);
+        test.ShowHint(test.View.AddComponentPart);
+        Assert.Equal(test.View.AddComponentPart.AccessibleName, Assert.Single(DocumentUiFixture.Tree(test.Host.Popup!).OfType<Text>()).Value);
         test.Content.Items.Remove(test.View); test.Drain(); test.View.Dispose();
         Assert.False(test.Host.IsDisposed); Assert.False(test.Owner.Owner.Commands.Read().Closed);
         test.Owner.Property(DocumentData.Custom, "text").Value = "model survives"; test.Owner.Model.Apply();
@@ -181,7 +181,7 @@ public sealed class InspectorIconActionsTests
     {
         using var test = new IconsFixture(); var foreignOwner = test.Content; var popup = new Text("foreign popup");
         test.Host.Open(foreignOwner, popup, new(500, 10, 10, 10), test.Ui, tooltip: true); test.Drain();
-        test.Hover(test.View.Apply); test.Clock.Advance(600); test.Drain();
+        test.Hover(test.View.ApplyPart); test.Clock.Advance(600); test.Drain();
         Assert.Same(popup, test.Host.Popup); Assert.Same(foreignOwner, test.Host.PopupOwner); Assert.False(test.View.NeedsFrame);
         test.Content.Items.Remove(test.View); test.View.Dispose(); test.Drain();
         Assert.Same(popup, test.Host.Popup); Assert.False(popup.IsDisposed); Assert.False(test.Host.IsDisposed);
@@ -211,7 +211,7 @@ public sealed class InspectorIconActionsTests
         public void Drain() { Ui.Update(); Ui.Update(); }
         public void Hover(Button button)
         {
-            View.Scroll.BringIntoView(button.Bounds); Drain();
+            View.ScrollPart.BringIntoView(button.Bounds); Drain();
             var bounds = button.Bounds; Ui.HandleInput(new(InputKind.PointerMove, bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
         }
         public void ShowHint(Button button) { Hover(button); Clock.Advance(500); Drain(); Assert.NotNull(Host.Popup); }

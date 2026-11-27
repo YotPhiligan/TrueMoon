@@ -27,6 +27,15 @@ the child with `.View<TChild>()` or supply its factory explicitly. Unadopted
 children are disposed if construction fails or the parent is disposed first.
 Use an explicit factory parameter for lazy or repeated creation.
 
+Closed registrations choose the activating constructor at build time: the single longest
+public constructor, or the one marked `[ViewConstructor]`. More than one longest without the
+mark is ARG024 rather than a silent pick, and a marked constructor that is not public or is
+duplicated fails with ARG020. The same build checks the registration graph of the
+compilation: every concrete `View` constructor parameter needs its own `.View<TChild>()`
+(ARG025), and every service parameter needs `Singleton<>()`, `Transient<>()` or
+`Instance<>()` (ARG026). Missing registrations surface as compile errors instead of a
+runtime exception at window creation.
+
 Both overloads apply a DI-registered `IViewStyle<MyView>`
 if present; the second registers a default singleton style if not already registered.
 An error resolving the style fails creation before the view constructor runs.

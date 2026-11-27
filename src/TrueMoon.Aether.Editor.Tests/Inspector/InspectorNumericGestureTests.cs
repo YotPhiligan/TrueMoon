@@ -130,7 +130,7 @@ public sealed class InspectorNumericGestureTests
         }
         test.Drain(); test.AssertScales(operation == "step" ? 2.01 : 4, operation == "step" ? 3.015 : 6, operation == "step" ? 5.025 : 10);
         if (operation == "step") Assert.Equal(new[] { "2.01", "3.015", "5.025" }, test.Fields.Select(item => item.Value));
-        Assert.Same(before, test.Owner.Owner.Document.Read().Content); Assert.Equal(0, before!.UndoCount); Assert.True(test.View.Apply.IsEnabled);
+        Assert.Same(before, test.Owner.Owner.Document.Read().Content); Assert.Equal(0, before!.UndoCount); Assert.True(test.View.ApplyPart.IsEnabled);
         Assert.True(test.Ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true)).Handled); test.Drain();
         Assert.Equal(1, test.Owner.Owner.Document.Read().Content!.UndoCount); Assert.False(test.Owner.Model.HasDraft); Assert.False(box.IsDragging);
     }
@@ -262,12 +262,12 @@ public sealed class InspectorNumericGestureTests
             var values = Fields.Select(field => double.Parse(field.Value, CultureInfo.InvariantCulture)).ToArray();
             Assert.Equal(x, values[0], 6); Assert.Equal(y, values[1], 6); Assert.Equal(z, values[2], 6);
         }
-        public void Click(Button button) { Drain(); View.Scroll.BringIntoView(button.Bounds); Drain(); DocumentUiFixture.Click(Ui, button); Drain(); }
+        public void Click(Button button) { Drain(); View.ScrollPart.BringIntoView(button.Bounds); Drain(); DocumentUiFixture.Click(Ui, button); Drain(); }
         public void Enter(TextBox input, string value)
-        { Drain(); View.Scroll.BringIntoView(input.Bounds); Drain(); Ui.Focus(input); Ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true)); Ui.HandleInput(new(InputKind.Text, Text: value)); Drain(); }
+        { Drain(); View.ScrollPart.BringIntoView(input.Bounds); Drain(); Ui.Focus(input); Ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true)); Ui.HandleInput(new(InputKind.Text, Text: value)); Drain(); }
         public (float X, float Y) Start(NumberBox box)
         {
-            Drain(); View.Scroll.BringIntoView(box.Bounds); Drain(); var bounds = box.DragBounds;
+            Drain(); View.ScrollPart.BringIntoView(box.Bounds); Drain(); var bounds = box.DragBounds;
             var point = (X: bounds.X + bounds.Width / 2, Y: bounds.Y + bounds.Height / 2);
             Assert.True(Ui.HandleInput(new(InputKind.PointerDown, point.X, point.Y)).PointerCaptured); Assert.True(box.IsDragging); return point;
         }

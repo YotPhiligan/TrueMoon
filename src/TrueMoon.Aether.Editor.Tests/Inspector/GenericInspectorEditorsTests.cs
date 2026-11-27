@@ -47,8 +47,8 @@ public sealed class GenericInspectorEditorsTests
         var before = test.Owner.Document.Read().Content; var initial = input.Value;
         Enter(ui, view, input, draft); Enter(ui, view, view.Properties[(DocumentData.Local, "text")].Input, "another draft");
         Assert.Same(input, wrapper.Editor); Assert.Equal(draft, input.Value); Assert.Equal(draft, parts.Property.Value);
-        Assert.True(input.IsModified); Assert.True(input.HasError); Assert.False(view.Apply.IsEnabled); Assert.True(view.Error.IsVisible);
-        Assert.Contains(parts.Property.Error, view.Error.Text); Assert.False(parts.Source.IsVisible);
+        Assert.True(input.IsModified); Assert.True(input.HasError); Assert.False(view.ApplyPart.IsEnabled); Assert.True(view.ErrorPart.IsVisible);
+        Assert.Contains(parts.Property.Error, view.ErrorPart.Text); Assert.False(parts.Source.IsVisible);
         view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true)); Drain(ui);
         Assert.Same(before, test.Owner.Document.Read().Content); Assert.Equal(0, before!.UndoCount);
         view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Escape)); Drain(ui);
@@ -69,8 +69,8 @@ public sealed class GenericInspectorEditorsTests
         var state = test.Owner.Document.Read().Content!;
         Assert.Equal(committed, InspectorProperty.Format(state.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties[key].Value));
         Assert.Equal(committed, input.Value); Assert.Equal(1, state.UndoCount); Assert.False(input.IsModified);
-        Click(ui, view, view.Undo); Assert.Equal(initial, input.Value); Assert.False(test.Owner.Document.Read().IsDirty);
-        Click(ui, view, view.Redo); Assert.Equal(committed, input.Value); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
+        Click(ui, view, view.UndoPart); Assert.Equal(initial, input.Value); Assert.False(test.Owner.Document.Read().IsDirty);
+        Click(ui, view, view.RedoPart); Assert.Equal(committed, input.Value); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         Assert.Same(input, view.Properties[(DocumentData.Custom, key)].Input);
     }
 
@@ -110,12 +110,12 @@ public sealed class GenericInspectorEditorsTests
         Assert.True(nullable.IsChecked); Assert.True(row.Empty.IsVisible); Assert.False(input.IsVisible); Assert.Equal(stored, input.Text);
         Assert.True(row.Empty.IsModified); Assert.True(nullable.IsModified); Assert.Equal(26, row.Bounds.Height);
         Click(ui, view, nullable); Assert.Equal(stored, input.Text); Assert.False(row.Empty.IsVisible); Assert.True(input.IsVisible);
-        Click(ui, view, view.Apply); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
+        Click(ui, view, view.ApplyPart); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         Assert.Equal(stored, test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["nullable"].Value.GetString());
         Assert.False(nullable.IsModified); Assert.False(input.IsModified);
-        Click(ui, view, view.Undo); Assert.True(nullable.IsChecked); Assert.True(row.Empty.IsVisible); Assert.Equal(26, row.Bounds.Height);
-        Click(ui, view, view.Redo); Assert.False(nullable.IsChecked); Assert.Equal(stored, input.Text); Assert.Same(input, row.Editor);
-        Enter(ui, view, input, ""); Click(ui, view, view.Apply);
+        Click(ui, view, view.UndoPart); Assert.True(nullable.IsChecked); Assert.True(row.Empty.IsVisible); Assert.Equal(26, row.Bounds.Height);
+        Click(ui, view, view.RedoPart); Assert.False(nullable.IsChecked); Assert.Equal(stored, input.Text); Assert.Same(input, row.Editor);
+        Enter(ui, view, input, ""); Click(ui, view, view.ApplyPart);
         Assert.False(nullable.IsChecked); Assert.False(row.Empty.IsVisible); Assert.Equal("", input.Text);
         Assert.Equal("", test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["nullable"].Value.GetString());
         Assert.Equal(2, test.Owner.Document.Read().Content!.UndoCount);
@@ -132,14 +132,14 @@ public sealed class GenericInspectorEditorsTests
         Click(ui, view, boolean); Assert.Equal("Да", boolean.Value); Assert.True(boolean.IsModified); Assert.False(test.Owner.Document.Read().IsDirty);
         ui.Focus(boolean); ui.SetTheme(Theme.Light); view.WithViewStyle(new EditorInspectorViewStyle()); Drain(ui);
         Assert.True(boolean.IsFocused); Assert.Equal("Да", boolean.Value); Assert.Same(boolean, row.Editor); Assert.Same(number, view.Properties[(DocumentData.Custom, "number")].Input);
-        Click(ui, view, view.Apply); Assert.False(boolean.IsModified); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
-        Click(ui, view, view.Undo); Assert.Equal("Нет", boolean.Value); Assert.False(boolean.IsChecked);
-        Click(ui, view, view.Redo); Assert.Equal("Да", boolean.Value); Assert.True(boolean.IsChecked);
+        Click(ui, view, view.ApplyPart); Assert.False(boolean.IsModified); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
+        Click(ui, view, view.UndoPart); Assert.Equal("Нет", boolean.Value); Assert.False(boolean.IsChecked);
+        Click(ui, view, view.RedoPart); Assert.Equal("Да", boolean.Value); Assert.True(boolean.IsChecked);
         Assert.False(parts.Source.Parent!.IsVisible); Click(ui, view, view.DetailsButtons[DocumentData.Custom]);
         Assert.True(parts.Source.IsVisible); Assert.True(parts.Source.Parent.IsVisible); Assert.Equal(parts.Row.Bounds.Width, parts.Source.Parent.Bounds.Width);
         var nullable = view.Properties[(DocumentData.Custom, "nullable")]; var nullRow = view.GenericEditors[(DocumentData.Custom, "nullable")];
         Click(ui, view, nullable.Reset); Assert.True(nullable.Property.IsReset); Assert.True(nullRow.Empty.IsModified);
-        Click(ui, view, view.Apply); Assert.Equal("inherited", Assert.IsType<RichTextEditor>(nullable.Input).Text);
+        Click(ui, view, view.ApplyPart); Assert.Equal("inherited", Assert.IsType<RichTextEditor>(nullable.Input).Text);
         Assert.False(nullRow.Empty.IsVisible); Assert.True(nullable.Input.IsVisible); Assert.Equal(2, test.Owner.Document.Read().Content!.UndoCount);
         Assert.Same(boolean, parts.Input); Assert.Same(row, view.GenericEditors[(DocumentData.Custom, "flag")]);
     }
@@ -178,13 +178,13 @@ public sealed class GenericInspectorEditorsTests
         Click(ui, view, nullable); Assert.False(parts.Property.IsNull); Assert.True(content.IsVisible);
         if (kind == PropertyValueKind.Boolean) Click(ui, view, Assert.IsType<CheckBox>(input));
         else { Assert.IsType<TextBox>(input); Enter(ui, view, input, value); }
-        Assert.Equal(value, parts.Property.Value); Assert.True(input.IsModified); Assert.True(view.Apply.IsEnabled);
+        Assert.Equal(value, parts.Property.Value); Assert.True(input.IsModified); Assert.True(view.ApplyPart.IsEnabled);
         Click(ui, view, nullable); Assert.True(parts.Property.IsNull); Assert.True(row.Empty.IsVisible); Assert.Equal(value, parts.Property.Value);
         Click(ui, view, nullable); Assert.False(parts.Property.IsNull); Assert.Equal(value, parts.Property.Value); Assert.Same(input, parts.Input); Assert.Same(content, row.Editor);
-        Click(ui, view, view.Apply); var state = test.Owner.Document.Read().Content!;
+        Click(ui, view, view.ApplyPart); var state = test.Owner.Document.Read().Content!;
         var stored = state.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["value"].Value;
         Assert.Equal(kind, stored.Kind); Assert.Equal(value, InspectorProperty.Format(stored)); Assert.Equal(1, state.UndoCount); Assert.False(input.IsModified);
-        Click(ui, view, view.Undo); Assert.True(parts.Property.IsNull); Assert.True(row.Empty.IsVisible); Assert.False(content.IsVisible);
+        Click(ui, view, view.UndoPart); Assert.True(parts.Property.IsNull); Assert.True(row.Empty.IsVisible); Assert.False(content.IsVisible);
         Assert.Equal(PropertyValueKind.Null, test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["value"].Value.Kind);
         Assert.False(test.Owner.Document.Read().IsDirty); Assert.Same(input, view.Properties[(DocumentData.Custom, "value")].Input); Assert.Same(row, view.GenericEditors[(DocumentData.Custom, "value")]);
     }
@@ -200,16 +200,16 @@ public sealed class GenericInspectorEditorsTests
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Left, Shift: true)); var caret = number.CaretIndex; var selection = number.SelectionLength;
         var before = test.Owner.Document.Read().Content; var tree = DocumentUiFixture.Tree(view).ToArray();
         test.Owner.RuntimeIdle = false; test.Refresh(); Drain(ui);
-        Assert.False(number.IsEnabled); Assert.False(nullable.Input.IsEnabled); Assert.False(nullAction.IsEnabled); Assert.False(view.Apply.IsEnabled);
+        Assert.False(number.IsEnabled); Assert.False(nullable.Input.IsEnabled); Assert.False(nullAction.IsEnabled); Assert.False(view.ApplyPart.IsEnabled);
         Assert.False(nullable.Property.IsNull); Assert.False(nullable.Property.IsReset); Assert.Equal("stored nullable", nullable.Property.Value);
         Assert.Equal("12.5", number.Value); Assert.True(number.IsModified); Assert.True(test.Model.HasDraft); Assert.False(number.IsFocused);
         Assert.Equal(caret, number.CaretIndex); Assert.Equal(selection, number.SelectionLength);
         DocumentUiFixture.Click(ui, nullAction); view.HandleShortcut(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true)); Drain(ui);
         Assert.False(nullable.Property.IsNull); Assert.Equal("stored nullable", nullable.Property.Value); Assert.Same(before, test.Owner.Document.Read().Content); Assert.Equal(0, before!.UndoCount);
         test.Owner.RuntimeIdle = true; test.Refresh(); Drain(ui);
-        Assert.True(number.IsEnabled); Assert.True(nullable.Input.IsEnabled); Assert.True(nullAction.IsEnabled); Assert.True(view.Apply.IsEnabled);
+        Assert.True(number.IsEnabled); Assert.True(nullable.Input.IsEnabled); Assert.True(nullAction.IsEnabled); Assert.True(view.ApplyPart.IsEnabled);
         Assert.Equal(tree, DocumentUiFixture.Tree(view)); Assert.Equal("12.5", number.Value); Assert.Equal("stored nullable", nullable.Property.Value); Assert.False(nullable.Property.IsReset);
-        Click(ui, view, view.Apply); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
+        Click(ui, view, view.ApplyPart); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         Assert.Equal(12.5, test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["number"].Value.GetNumber());
         Assert.Equal("stored nullable", test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Components[DocumentData.Custom].Properties["nullable"].Value.GetString());
         Assert.False(test.Model.HasDraft);
@@ -217,7 +217,7 @@ public sealed class GenericInspectorEditorsTests
 
     private static void Enter(UiSession ui, EditorInspectorView view, Element input, string value)
     {
-        Drain(ui); view.Scroll.BringIntoView(input.Bounds); Drain(ui); ui.Focus(input);
+        Drain(ui); view.ScrollPart.BringIntoView(input.Bounds); Drain(ui); ui.Focus(input);
         if (input is RichTextEditor rich) { rich.SelectAll(); rich.InsertText(value); }
         else
         {
@@ -227,6 +227,6 @@ public sealed class GenericInspectorEditorsTests
         Drain(ui);
     }
     private static void Click(UiSession ui, EditorInspectorView view, Button button)
-    { Drain(ui); view.Scroll.BringIntoView(button.Bounds); Drain(ui); DocumentUiFixture.Click(ui, button); Drain(ui); }
+    { Drain(ui); view.ScrollPart.BringIntoView(button.Bounds); Drain(ui); DocumentUiFixture.Click(ui, button); Drain(ui); }
     private static void Drain(UiSession ui) { ui.Update(); ui.Update(); }
 }

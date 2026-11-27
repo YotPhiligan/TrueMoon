@@ -140,7 +140,8 @@ synthetic bold/italic поверх Regular не обещаются. Existing Ski
 сохраняет прежний API. Files/license доставляет приложение; catalog хранит snapshots.
 
 При explicit catalog missing glyph рисуется как U+FFFD с сохранением code-point
-mapping; font должен содержать replacement glyph. Системный glyph fallback для
+mapping; если сам face не содержит U+FFFD (встречается у системных faces), позиция
+рисуется как .notdef, а раскладка и ввод не падают. Системный glyph fallback для
 такого rich run не используется. Emoji appearance зависит от выбранных fonts;
 grapheme editing не означает поддержку каждого emoji glyph/sequence.
 

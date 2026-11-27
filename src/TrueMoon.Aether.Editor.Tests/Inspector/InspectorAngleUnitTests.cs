@@ -286,7 +286,7 @@ public sealed class InspectorAngleUnitTests
         { Owner = new(scene ?? Scene()); View = new(Owner.Model, new EditorInspectorViewStyle()); Ui = InspectorFixture.Ui(View, width: width); Drain(); }
         public void Drain() { Ui.Update(); Ui.Update(); }
         public void Enter(TextBox input, string value)
-        { View.Scroll.BringIntoView(input.Bounds); Drain(); Ui.Focus(input); Ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true)); Ui.HandleInput(new(InputKind.Text, Text: value)); Drain(); }
+        { View.ScrollPart.BringIntoView(input.Bounds); Drain(); Ui.Focus(input); Ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true)); Ui.HandleInput(new(InputKind.Text, Text: value)); Drain(); }
         public void Dispose() { Ui.Dispose(); Owner.Dispose(); }
     }
 }

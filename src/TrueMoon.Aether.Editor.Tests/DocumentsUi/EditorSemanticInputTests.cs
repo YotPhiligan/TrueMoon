@@ -90,20 +90,20 @@ public sealed class EditorSemanticInputTests
         Assert.Equal(UiSemanticTargetStatus.Disabled, disabled.Status);
         Assert.Equal(UiSemanticTargetStatus.Disabled, ui.HandleSemanticInput(initial, apply, At(InputKind.PointerUp, disabled.Node!.VisibleBounds)).Status);
 
-        view.Scroll.BringIntoView(Ready(ui, initial, x).Bounds);
+        view.ScrollPart.BringIntoView(Ready(ui, initial, x).Bounds);
         ui.Update();
         Click(ui, x);
         var focused = ui.CaptureSemantics();
         AssertRouted(ui.HandleSemanticInput(focused, x, new(InputKind.KeyDown, Key: UiKey.A, Control: true)), x);
         AssertRouted(ui.HandleSemanticInput(focused, x, new(InputKind.Text, Text: "9")), x);
         ui.Update();
-        view.Scroll.BringIntoView(Ready(ui, ui.CaptureSemantics(), apply).Bounds);
+        view.ScrollPart.BringIntoView(Ready(ui, ui.CaptureSemantics(), apply).Bounds);
         ui.Update();
 
         var coverClicks = 0;
         var targetBounds = Ready(ui, ui.CaptureSemantics(), apply).VisibleBounds;
         var popup = new Button("Cover").Width(120).Height(36).SemanticId(blocker).OnClick(() => coverClicks++);
-        host.Open(view.Apply, popup, new(targetBounds.X, targetBounds.Y, 0, 0), ui);
+        host.Open(view.ApplyPart, popup, new(targetBounds.X, targetBounds.Y, 0, 0), ui);
         ui.Update();
         var covered = ui.CaptureSemantics();
         Assert.True(Ready(ui, covered, blocker).IsActivePopup);
@@ -150,13 +150,13 @@ public sealed class EditorSemanticInputTests
         Assert.Equal(x, Ready(ui, ui.CaptureSemantics(), x).Id);
         Assert.False(fixture.Model.HasDraft);
 
-        view.Scroll.Offset = 0;
+        view.ScrollPart.Offset = 0;
         ui.Update();
         var wheelSnapshot = ui.CaptureSemantics();
         var wheelPoint = Ready(ui, wheelSnapshot, x).VisibleBounds;
         var scrolled = ui.HandleSemanticInput(wheelSnapshot, "editor.inspector", At(InputKind.Wheel, wheelPoint) with { WheelDelta = -2 });
         AssertRouted(scrolled, x);
-        Assert.True(view.Scroll.Offset > 0);
+        Assert.True(view.ScrollPart.Offset > 0);
     }
 
     [Fact]

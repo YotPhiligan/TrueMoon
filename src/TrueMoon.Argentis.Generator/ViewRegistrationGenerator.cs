@@ -21,6 +21,18 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
         "ARG021", "Unsupported runtime view argument",
         "Cannot generate View activation for '{0}' with argument '{1}': {2}",
         "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor AmbiguousConstructor = new(
+        "ARG024", "Ambiguous view constructor",
+        "View '{0}' has more than one longest public constructor; mark exactly one with [ViewConstructor] or register an explicit factory",
+        "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor MissingChildRegistration = new(
+        "ARG025", "Missing child View registration",
+        "Cannot generate View activation for '{0}': child View '{1}' is never registered with services.View<>() in this compilation",
+        "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor MissingServiceRegistration = new(
+        "ARG026", "Missing service registration",
+        "Cannot generate View activation for '{0}': dependency '{1}' is never registered with services.Singleton<>(), Transient<>(), Instance<>() or View<>() in this compilation",
+        "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -34,8 +46,41 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
                 _ => false
             }),
             static (input, cancellation) => ReadRegistration(input, cancellation)).Collect();
-        context.RegisterSourceOutput(registrations, static (output, input) => Generate(output, input));
+        var declared = context.SyntaxProvider.CreateSyntaxProvider(
+            static (node, _) => node is InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax },
+            static (input, cancellation) => ReadServiceRegistration(input, cancellation)).Collect();
+        context.RegisterSourceOutput(registrations.Combine(declared), static (output, input) => Generate(output, input.Left, input.Right));
     }
+
+    private static ImmutableArray<string> ReadServiceRegistration(GeneratorSyntaxContext input, CancellationToken cancellation)
+    {
+        if (input.SemanticModel.GetOperation(input.Node, cancellation) is not IInvocationOperation { TargetMethod: var method }) return [];
+        var definition = method.OriginalDefinition;
+        var containing = definition.ContainingType;
+        var typeArguments = method.ReducedFrom is { TypeArguments.Length: > 0 } reduced ? reduced.TypeArguments : method.TypeArguments;
+        if (typeArguments.Length == 0) return [];
+        var ns = containing.ContainingNamespace?.ToDisplayString();
+        if (ns == "TrueMoon.Alloy.Hosting" && containing.Name == "ViewRegistrationExtensions")
+        {
+            var registered = ImmutableArray.Create(ConstructorActivation.TypeName(typeArguments[0]));
+            var factoryArguments = method.Name == "ViewWithArgs" ? typeArguments : ImmutableArray.Create(typeArguments[0]);
+            return registered.Add(FactoryName(factoryArguments));
+        }
+        if (ns == "TrueMoon.Services" && containing.Name == "IServicesRegistrationContext" &&
+            definition.Name is "Singleton" or "Transient" or "Instance")
+        {
+            if (typeArguments[0] is INamedTypeSymbol { TypeArguments.Length: > 0 } factory &&
+                factory.OriginalDefinition.Name == "IFactory" &&
+                factory.OriginalDefinition.ContainingNamespace?.ToDisplayString() is "TrueMoon" or "TrueMoon.Services" &&
+                IsConcreteView(factory.TypeArguments[0], input.SemanticModel.Compilation.GetTypeByMetadataName(ViewType)))
+                return [ConstructorActivation.TypeName(factory), ConstructorActivation.TypeName(factory.TypeArguments[0])];
+            return [ConstructorActivation.TypeName(typeArguments[0])];
+        }
+        return [];
+    }
+
+    private static string FactoryName(ImmutableArray<ITypeSymbol> arguments) =>
+        "global::TrueMoon.IFactory<" + string.Join(", ", arguments.Select(static argument => ConstructorActivation.TypeName(argument))) + ">";
 
     private static bool IsRegistration(GenericNameSyntax name) => name.Identifier.ValueText is "View" or "ViewWithArgs";
 
@@ -58,12 +103,22 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
             var activationType = name;
             string? error;
             string? factory = null;
+            var children = ImmutableArray.CreateBuilder<string>();
+            var services = ImmutableArray.CreateBuilder<(string Name, string? View)>();
             if (type is not INamedTypeSymbol { TypeKind: TypeKind.Class, IsAbstract: false } concrete || !IsUsable(compilation, type))
                 error = "use an accessible, closed, non-abstract class";
-            else if (ConstructorActivation.LongestPublicConstructor(concrete, out var ties) is not { } constructor)
-                error = "no public instance constructor";
-            else if (ties != 1)
-                error = "more than one longest public constructor";
+            else if (ConstructorActivation.SelectedConstructor(concrete, out var failure) is not { } constructor)
+            {
+                activations.Add(new(activationType, null, failure == ActivationConstructorFailure.AmbiguousLongest
+                    ? Diagnostic.Create(AmbiguousConstructor, location, name)
+                    : Diagnostic.Create(InvalidActivation, location, name, failure switch
+                    {
+                        ActivationConstructorFailure.NoPublicConstructor => "no public instance constructor",
+                        ActivationConstructorFailure.MultipleMarkedConstructors => "more than one constructor is marked with ViewConstructor",
+                        _ => "the ViewConstructor-marked constructor must be public",
+                    })));
+                continue;
+            }
             else if (constructor.Parameters.FirstOrDefault(parameter => parameter.RefKind != RefKind.None ||
                      !IsUsable(compilation, parameter.Type)) is { } invalid)
                 error = $"dependency '{invalid.Name}' must be an accessible managed value passed by value";
@@ -85,8 +140,18 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
                 }
                 error = null;
                 factory = RenderFactory(name, constructor, i == 0 ? viewType : null, argumentIndex);
+                var childViewType = i == 0 ? viewType : null;
+                foreach (var parameter in constructor.Parameters)
+                {
+                    if (parameter.Ordinal == argumentIndex || parameter.HasExplicitDefaultValue ||
+                        parameter.NullableAnnotation == NullableAnnotation.Annotated) continue;
+                    if (childViewType is not null && IsConcreteView(parameter.Type, childViewType))
+                        children.Add(ConstructorActivation.TypeName(parameter.Type));
+                    else services.Add((ConstructorActivation.TypeName(parameter.Type), null));
+                }
             }
-            activations.Add(new(activationType, factory, error is null ? null : Diagnostic.Create(InvalidActivation, location, name, error)));
+            activations.Add(new(activationType, factory, error is null ? null : Diagnostic.Create(InvalidActivation, location, name, error),
+                location, children.ToImmutable(), services.ToImmutable()));
         }
         return activations.MoveToImmutable();
     }
@@ -149,15 +214,30 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
         _ => false
     };
 
-    private static void Generate(SourceProductionContext output, ImmutableArray<ImmutableArray<Activation>> registrations)
+    private static void Generate(SourceProductionContext output, ImmutableArray<ImmutableArray<Activation>> registrations,
+        ImmutableArray<ImmutableArray<string>> declared)
     {
+        var registered = declared.SelectMany(static types => types)
+            .ToImmutableHashSet(StringComparer.Ordinal);
         var constructors = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var registration in registrations)
         {
             foreach (var activation in registration)
             {
-                if (activation.Error is { } error) output.ReportDiagnostic(error);
-                else constructors.TryAdd(activation.Type, activation.Factory!);
+                if (activation.Error is { } error)
+                {
+                    output.ReportDiagnostic(error);
+                    continue;
+                }
+                foreach (var child in activation.Children)
+                    if (!registered.Contains(child))
+                        output.ReportDiagnostic(Diagnostic.Create(MissingChildRegistration, activation.Location,
+                            activation.Type, Display(child)));
+                foreach (var (service, view) in activation.Services)
+                    if (!registered.Contains(service) && (view is null || !registered.Contains(view)))
+                        output.ReportDiagnostic(Diagnostic.Create(MissingServiceRegistration, activation.Location,
+                            activation.Type, Display(service)));
+                constructors.TryAdd(activation.Type, activation.Factory!);
             }
         }
         if (constructors.Count == 0) return;
@@ -180,5 +260,9 @@ public sealed class ViewRegistrationGenerator : IIncrementalGenerator
         output.AddSource("ViewRegistrations.g.cs", source.ToString());
     }
 
-    private sealed record Activation(string Type, string? Factory, Diagnostic? Error);
+    private static string Display(string type) => type.StartsWith("global::", StringComparison.Ordinal) ? type[8..] : type;
+
+    private sealed record Activation(string Type, string? Factory, Diagnostic? Error, Location? Location = null,
+        ImmutableArray<string> Children = default, ImmutableArray<(string Name, string? View)> Services = default);
 }
+

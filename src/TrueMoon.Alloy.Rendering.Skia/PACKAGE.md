@@ -63,7 +63,9 @@ their normal face until they implement the styled overloads.
 Variable named instances are supported through system matching. Arbitrary variation
 axes and automatic `opsz` adjustment with font size are not exposed by this API.
 The family chain does not add per-glyph shaping/emoji fallback to plain text;
-file/custom rich-text catalogs retain replacement-glyph behavior. Explicitly
+file/custom rich-text catalogs retain replacement-glyph behavior: a missing glyph
+becomes U+FFFD, and if the chosen face itself lacks U+FFFD the position draws as
+.notdef without failing layout. Explicitly
 passing `SystemDefault` preserves the parameterless RichTextKit glyph fallback.
 Hinting and
 antialiasing policy are independent of this family selection.

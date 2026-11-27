@@ -23,6 +23,14 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
         "ARG008", "Generated view part name conflict",
         "View '{0}' cannot generate '{1}' because that name already exists",
         "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor UnsupportedFactory = new(
+        "ARG022", "Unsupported view content declaration",
+        "View '{0}' declares content the generator cannot analyze; use an inline lambda, a method of this view, or a call to a method of this view",
+        "Argentis.Generation", DiagnosticSeverity.Error, isEnabledByDefault: true);
+    private static readonly DiagnosticDescriptor ManualPartLookup = new(
+        "ARG023", "Manual view part lookup",
+        "View '{0}' looks up part '{1}' by name; the generated property '{2}' replaces it",
+        "Argentis.Generation", DiagnosticSeverity.Warning, isEnabledByDefault: true);
 
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -39,15 +47,23 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
         });
     }
 
-    private static bool IsCandidate(TypeDeclarationSyntax type) => type.Members.OfType<ConstructorDeclarationSyntax>()
-        .Any(static constructor => Calls(constructor).Any(IsContentCall));
+    private static bool IsCandidate(TypeDeclarationSyntax type) => type.Members.Any(static member =>
+        Calls(member).Any(static call => IsContentCall(call) || IsSetContentCall(call)));
 
     private static bool IsContentCall(InvocationExpressionSyntax call) => call.Expression switch
     {
-        IdentifierNameSyntax name => name.Identifier.ValueText == "Content",
+        IdentifierNameSyntax or GenericNameSyntax => ((SimpleNameSyntax)call.Expression).Identifier.ValueText is "Content" or "DeclareContent",
         MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax or BaseExpressionSyntax } member =>
-            member.Name.Identifier.ValueText == "Content",
-        _ => false
+            member.Name.Identifier.ValueText is "Content" or "DeclareContent",
+        _ => false,
+    };
+
+    private static bool IsSetContentCall(InvocationExpressionSyntax call) => call.Expression switch
+    {
+        IdentifierNameSyntax name => name.Identifier.ValueText == "SetContent",
+        MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax } member =>
+            member.Name.Identifier.ValueText == "SetContent",
+        _ => false,
     };
 
     private static IEnumerable<InvocationExpressionSyntax> Calls(SyntaxNode root) => root
@@ -68,21 +84,35 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
         var first = declarations.First(IsCandidate);
         if (first.SyntaxTree != declaration.SyntaxTree || first.SpanStart != declaration.SpanStart)
             return null;
-        var constructors = declarations.SelectMany(type => type.Members.OfType<ConstructorDeclarationSyntax>());
-        var factories = ReadContentFactories(compilation, view, constructors, cancellation).ToArray();
-        return factories.Length > 0 ? ReadContent(owner, view, compilation, factories, declaration.GetLocation(), cancellation) : null;
+        var (factories, factoryDiagnostics) = ReadContentFactories(compilation, view, owner, declarations, cancellation);
+        if (factories.Length == 0)
+            return factoryDiagnostics.IsEmpty ? null : new GeneratedView(owner.ToDisplayString(), null, null, factoryDiagnostics);
+        return ReadContent(owner, view, compilation, factories, factoryDiagnostics, declaration.GetLocation(), cancellation);
     }
 
-    private static IEnumerable<SyntaxNode> ReadContentFactories(Compilation compilation, INamedTypeSymbol view,
-        IEnumerable<ConstructorDeclarationSyntax> constructors, CancellationToken cancellation)
+    // Recognized content positions: an inline lambda, a method of this view, SetContent arguments in this
+    // view's code, and one step into calls of this view's methods made from those positions.
+    private static (ImmutableArray<SyntaxNode> Roots, ImmutableArray<Diagnostic> Diagnostics) ReadContentFactories(
+        Compilation compilation, INamedTypeSymbol view, INamedTypeSymbol owner,
+        IReadOnlyList<TypeDeclarationSyntax> declarations, CancellationToken cancellation)
     {
         var typedView = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.View`1");
         var typedWindow = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Windows.Window`1");
+        var contentControl = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Layout.ContentControl");
+        var roots = ImmutableArray.CreateBuilder<SyntaxNode>();
+        var seen = new HashSet<SyntaxNode>();
+        var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
-        foreach (var constructor in constructors)
+        void AddRoot(SyntaxNode? node)
         {
-            var model = compilation.GetSemanticModel(constructor.SyntaxTree);
-            foreach (var call in Calls(constructor).Where(IsContentCall))
+            if (node is null || !seen.Add(node)) return;
+            roots.Add(node);
+        }
+
+        foreach (var declaration in declarations)
+        {
+            var model = compilation.GetSemanticModel(declaration.SyntaxTree);
+            foreach (var call in declaration.Members.OfType<ConstructorDeclarationSyntax>().SelectMany(Calls).Where(IsContentCall))
             {
                 // The body can already reference generated parts and roles that do not exist yet.
                 var symbol = model.GetSymbolInfo(call, cancellation);
@@ -104,9 +134,31 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
                 if (argument.NameColon is { Name.Identifier.ValueText: not "factory" }) continue;
                 var expression = argument.Expression;
                 while (expression is ParenthesizedExpressionSyntax grouping) expression = grouping.Expression;
-                if (expression is AnonymousFunctionExpressionSyntax factory) yield return factory.Body;
+                if (expression is AnonymousFunctionExpressionSyntax factory) AddRoot(factory.Body);
+                else if (OwnerMethod(model, expression, owner, cancellation) is { } named) AddRoot(MethodBody(named, cancellation));
+                else diagnostics.Add(Diagnostic.Create(UnsupportedFactory, call.GetLocation(), owner.Name));
             }
+
+            if (contentControl is not null)
+                foreach (var call in declaration.Members.SelectMany(Calls).Where(IsSetContentCall))
+                {
+                    if (model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol setting ||
+                        !SymbolEqualityComparer.Default.Equals(setting.ContainingType, contentControl)) continue;
+                    if (call.ArgumentList.Arguments is [{ Expression: var content }] && content is not LiteralExpressionSyntax)
+                        AddRoot(content);
+                }
         }
+
+        var declaredCount = roots.Count;
+        for (var index = 0; index < declaredCount; index++)
+        {
+            var root = roots[index];
+            var model = compilation.GetSemanticModel(root.SyntaxTree);
+            foreach (var call in Calls(root))
+                if (OwnerMethod(model, call.Expression, owner, cancellation) is { } callee)
+                    AddRoot(MethodBody(callee, cancellation));
+        }
+        return (roots.ToImmutable(), diagnostics.ToImmutable());
 
         bool IsFrameworkContent(IMethodSymbol method, int arguments)
         {
@@ -118,6 +170,34 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
         }
     }
 
+    private static IMethodSymbol? OwnerMethod(SemanticModel model, ExpressionSyntax expression, INamedTypeSymbol owner,
+        CancellationToken cancellation)
+    {
+        var info = model.GetSymbolInfo(expression, cancellation);
+        foreach (var candidate in info.Symbol is null ? info.CandidateSymbols : ImmutableArray.Create(info.Symbol))
+            if (candidate is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.LocalFunction } method &&
+                SymbolEqualityComparer.Default.Equals(method.ContainingType, owner))
+                return method;
+        return null;
+    }
+
+    private static SyntaxNode? MethodBody(IMethodSymbol method, CancellationToken cancellation)
+    {
+        foreach (var reference in method.DeclaringSyntaxReferences)
+            switch (reference.GetSyntax(cancellation))
+            {
+                case MethodDeclarationSyntax declaration:
+                    if (declaration.Body is not null) return declaration.Body;
+                    if (declaration.ExpressionBody is { } arrow) return arrow.Expression;
+                    break;
+                case LocalFunctionStatementSyntax local:
+                    if (local.Body is not null) return local.Body;
+                    if (local.ExpressionBody is { } localArrow) return localArrow.Expression;
+                    break;
+            }
+        return null;
+    }
+
     private static bool SupportsExtensions(INamedTypeSymbol owner) => owner is
     {
         ContainingType: null, IsGenericType: false, IsFileLocal: false,
@@ -125,13 +205,15 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
     };
 
     private static GeneratedView ReadContent(INamedTypeSymbol owner, INamedTypeSymbol view, Compilation compilation,
-        IEnumerable<SyntaxNode> declarations, Location location, CancellationToken cancellation)
+        IEnumerable<SyntaxNode> declarations, ImmutableArray<Diagnostic> factoryDiagnostics, Location location,
+        CancellationToken cancellation)
     {
         var elementExtensions = compilation.GetTypeByMetadataName("TrueMoon.Argentis.ElementExtensions");
         var buildExtensions = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.UiBuildExtensions");
         var wrapped = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.UiControl`2");
         var extensionType = owner.Name + "Parts";
-        var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+        var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>(factoryDiagnostics.Length);
+        diagnostics.AddRange(factoryDiagnostics);
         var parts = new Dictionary<string, (INamedTypeSymbol Type, Accessibility Accessibility, bool IsOptional)>(StringComparer.Ordinal);
         var canGenerateParts = elementExtensions is not null;
         if (canGenerateParts && owner.ContainingNamespace.GetTypeMembers(extensionType).Any(type => type.Arity == 0))
@@ -173,7 +255,6 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
                     partType = returnType;
                 else
                     continue;
-                if (partType is not null && DerivesFrom(partType, view)) continue;
 
                 var accessibility = GetPartAccessibility(partType, compilation);
                 if (call.ArgumentList.Arguments is not [{ Expression: var argument }] ||
@@ -192,8 +273,40 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
             }
         }
 
+        if (canGenerateParts && parts.Count != 0)
+            ReadManualLookups(owner, view, compilation, parts, diagnostics, cancellation);
+
         var source = parts.Count == 0 ? null : Render(owner, extensionType, parts);
         return new(owner.ToDisplayString(), source, roleInference.Render(), diagnostics.ToImmutable());
+    }
+
+    // A view consumes its generated parts; a manual lookup by name hides the generated property.
+    private static void ReadManualLookups(INamedTypeSymbol owner, INamedTypeSymbol view, Compilation compilation,
+        Dictionary<string, (INamedTypeSymbol Type, Accessibility Accessibility, bool IsOptional)> parts,
+        ImmutableArray<Diagnostic>.Builder diagnostics, CancellationToken cancellation)
+    {
+        foreach (var reference in owner.DeclaringSyntaxReferences)
+            if (reference.GetSyntax(cancellation) is TypeDeclarationSyntax declaration)
+                foreach (var member in declaration.Members)
+                {
+                    var model = compilation.GetSemanticModel(member.SyntaxTree);
+                    foreach (var call in Calls(member))
+                    {
+                        var lookup = call.Expression switch
+                        {
+                            IdentifierNameSyntax or GenericNameSyntax => ((SimpleNameSyntax)call.Expression).Identifier.ValueText,
+                            MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax } accessor => accessor.Name.Identifier.ValueText,
+                            _ => null,
+                        };
+                        if (lookup is not ("GetRequiredPart" or "TryGetPart")) continue;
+                        if (model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol method ||
+                            !SymbolEqualityComparer.Default.Equals((method.ReducedFrom ?? method).ContainingType, view)) continue;
+                        if (call.ArgumentList.Arguments is not [{ Expression: var argument }, ..] ||
+                            model.GetConstantValue(argument, cancellation) is not { HasValue: true, Value: string name } ||
+                            !parts.ContainsKey(name)) continue;
+                        diagnostics.Add(Diagnostic.Create(ManualPartLookup, call.GetLocation(), owner.Name, name, name));
+                    }
+                }
     }
 
     private static Accessibility GetPartAccessibility(INamedTypeSymbol? type, Compilation compilation)

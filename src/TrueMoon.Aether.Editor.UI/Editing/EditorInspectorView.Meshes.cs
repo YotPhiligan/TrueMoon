@@ -18,8 +18,6 @@ public sealed partial class EditorInspectorView
     private IEditorMeshesModel? _shownMeshModel;
     private InspectorMesh? _shownMesh;
     private long _shownMeshGeneration, _meshRowGeneration;
-    private Border MeshesPart => GetRequiredPart<Border>("MeshesPanel");
-    private RichTextEditor MeshName => GetRequiredPart<RichTextEditor>("MeshName");
     private IEditorMeshesModel? CurrentMeshes => ReferenceEquals(DataContext, _presentedContext) &&
         _meshContext.DataContext is { IsAvailable: true } model && ReferenceEquals(DataContext?.Meshes, model) ? model : null;
 
@@ -70,14 +68,14 @@ public sealed partial class EditorInspectorView
 
     private void PrepareMeshes()
     {
-        _meshItems.Bind(GetRequiredPart<VStack>("MeshesItems"), row => row.Id,
+        _meshItems.Bind(this.MeshesItems, row => row.Id,
             row => $"{row.Name} · {row.Id.ToString("N")[..8]}", () => _meshRowGeneration,
             row => { if (CurrentMeshes is { CanSelect: true } model) model.Select(row.Id); });
-        _meshSources.Bind(GetRequiredPart<VStack>("MeshSources"), row => row.Id, row => row.Label, () => _meshRowGeneration,
+        _meshSources.Bind(this.MeshSources, row => row.Id, row => row.Label, () => _meshRowGeneration,
             row => { if (CurrentMeshes is { CanEditGeometry: true } model) model.SelectSource(row); });
-        _meshGeometries.Bind(GetRequiredPart<VStack>("MeshGeometries"), row => row.Id, row => row.Label, () => _meshRowGeneration,
+        _meshGeometries.Bind(this.MeshGeometries, row => row.Id, row => row.Label, () => _meshRowGeneration,
             row => { if (CurrentMeshes is { CanEditGeometry: true } model) model.SelectGeometry(row); });
-        MeshesPart.ObservePropertyChanged(_meshContext, (_, change) =>
+        this.MeshesPanel.ObservePropertyChanged(_meshContext, (_, change) =>
         {
             if (change.PropertyName is null or "" or nameof(IEditorMeshesModel.IsAvailable) or nameof(IEditorMeshesModel.IsOpen) or
                 nameof(IEditorMeshesModel.Items) or nameof(IEditorMeshesModel.Sources) or nameof(IEditorMeshesModel.Geometries) or
@@ -95,24 +93,24 @@ public sealed partial class EditorInspectorView
         if (replaced) _meshRowGeneration++;
         _shownMeshGeneration = _presentationGeneration;
         _shownMeshModel = model;
-        MeshesPart.IsVisible = model?.IsAvailable == true;
-        GetRequiredPart<ComponentHeader>("MeshesHeader").Expanded = model?.IsOpen == true;
-        var status = GetRequiredPart<RichTextEditor>("MeshesStatus");
+        this.MeshesPanel.IsVisible = model?.IsAvailable == true;
+        this.MeshesHeader.Expanded = model?.IsOpen == true;
+        var status = this.MeshesStatus;
         status.Text = model?.StatusText.ReplaceLineEndings("\n") ?? "";
         status.IsVisible = status.Text.Length != 0;
-        MeshName.Options = model?.CanEditName == true ? TextureEditable : TextureReadOnly;
+        this.MeshName.Options = model?.CanEditName == true ? TextureEditable : TextureReadOnly;
         _meshItems.Update(model?.Items, model?.Selected?.Id, model?.CanSelect == true, replaced);
         _meshSources.Update(model?.Sources, model?.SelectedSource, model?.CanEditGeometry == true, replaced);
         _meshGeometries.Update(model?.Geometries, model?.SelectedGeometry, model?.CanEditGeometry == true, replaced);
-        GetRequiredPart<VStack>("MeshGeometryEditor").IsVisible = model?.IsGeometryAvailable == true;
-        GetRequiredPart<Text>("MeshesEmpty").IsVisible = model?.Items.Count == 0 && !status.IsVisible;
-        GetRequiredPart<Text>("MeshSourcesEmpty").IsVisible = model?.Sources.Count == 0 && !status.IsVisible;
-        GetRequiredPart<Text>("MeshGeometriesEmpty").IsVisible = model?.Geometries.Count == 0 && !status.IsVisible;
-        GetRequiredPart<ScrollViewer>("MeshesList").IsVisible = model?.Items.Count > 0;
-        GetRequiredPart<ScrollViewer>("MeshSourcesList").IsVisible = model?.Sources.Count > 0;
-        GetRequiredPart<ScrollViewer>("MeshGeometriesList").IsVisible = model?.Geometries.Count > 0;
+        this.MeshGeometryEditor.IsVisible = model?.IsGeometryAvailable == true;
+        this.MeshesEmpty.IsVisible = model?.Items.Count == 0 && !status.IsVisible;
+        this.MeshSourcesEmpty.IsVisible = model?.Sources.Count == 0 && !status.IsVisible;
+        this.MeshGeometriesEmpty.IsVisible = model?.Geometries.Count == 0 && !status.IsVisible;
+        this.MeshesList.IsVisible = model?.Items.Count > 0;
+        this.MeshSourcesList.IsVisible = model?.Sources.Count > 0;
+        this.MeshGeometriesList.IsVisible = model?.Geometries.Count > 0;
         var row = model?.Selected;
-        var metadata = GetRequiredPart<RichTextEditor>("MeshMetadata");
+        var metadata = this.MeshMetadata;
         metadata.IsVisible = row != null;
         if (!ReferenceEquals(row, _shownMesh))
         {
@@ -123,7 +121,7 @@ public sealed partial class EditorInspectorView
         }
     }
 
-    private bool MeshTextHasFocus() => IsAttached && MeshesPart.IsVisible && MeshName.IsFocused;
+    private bool MeshTextHasFocus() => IsAttached && this.MeshesPanel.IsVisible && this.MeshName.IsFocused;
 
     private sealed class MeshContext : IDataContext<IEditorMeshesModel>
     {

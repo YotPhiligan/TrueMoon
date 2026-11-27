@@ -30,9 +30,6 @@ public sealed partial class EditorInspectorView
     private static readonly RichTextEditorOptions MaterialNameEditable = new() { WordWrap = true };
     private static readonly RichTextEditorOptions MaterialNameReadOnly = new() { WordWrap = true, IsReadOnly = true };
 
-    private Border MaterialsPart => GetRequiredPart<Border>("MaterialsPanel");
-    private ComponentHeader MaterialHeader => GetRequiredPart<ComponentHeader>("MaterialsHeader");
-    private RichTextEditor MaterialName => GetRequiredPart<RichTextEditor>("MaterialName");
 
     private Element BuildMaterials(IUiBuildContext<IEditorInspectorViewModel> ui) => ui.Border(ui.VStack(
         ui.Create(MaterialHeaderFactory.Instance).Named("MaterialsHeader")
@@ -61,9 +58,9 @@ public sealed partial class EditorInspectorView
                     .BindTwoWay(RichTextEditor.TextProperty, _materialContext.Strings, text => text.Name),
                 ui.Text("Модель: Unlit · цвет sRGB (0–1)").WithRole(MetadataRole),
                 ui.HStack(
-                    MaterialNumber(ui, "R", "MaterialRed", "r", model => model.Red).Fill(),
-                    MaterialNumber(ui, "G", "MaterialGreen", "g", model => model.Green).Fill(),
-                    MaterialNumber(ui, "B", "MaterialBlue", "b", model => model.Blue).Fill()).WithRole(RowRole),
+                    MaterialNumber(ui, "R", "r", model => model.Red).Named("MaterialRed").Fill(),
+                    MaterialNumber(ui, "G", "g", model => model.Green).Named("MaterialGreen").Fill(),
+                    MaterialNumber(ui, "B", "b", model => model.Blue).Named("MaterialBlue").Fill()).WithRole(RowRole),
                 ui.Text("Текстура").WithRole(MetadataRole),
                 ui.Button().Named("MaterialTexture").WithRole(ActionRole).SemanticId(MaterialPrefix + ".texture")
                     .Bind(UiProperties.Enabled, _materialContext, model => model.CanEditFields).OnClick(ToggleMaterialTextures),
@@ -91,8 +88,8 @@ public sealed partial class EditorInspectorView
             .OnClick(() => { if (CurrentMaterials is { } model) action(model); });
 
     private UiControl<NumberBox, IEditorInspectorViewModel> MaterialNumber(IUiBuildContext<IEditorInspectorViewModel> ui,
-        string prefix, string name, string suffix, Expression<Func<IEditorMaterialsModel, string>> value) =>
-        ui.Create(MaterialNumberFactory.Instance, prefix).Named(name).Configure(box =>
+        string prefix, string suffix, Expression<Func<IEditorMaterialsModel, string>> value) =>
+        ui.Create(MaterialNumberFactory.Instance, prefix).Configure(box =>
         {
             box.Editor.WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, _materialContext, value);
             box.Editor.SemanticId = MaterialPrefix + "." + suffix;
@@ -108,9 +105,9 @@ public sealed partial class EditorInspectorView
     {
         _materialFields =
         [
-            new(GetRequiredPart<NumberBox>("MaterialRed").Editor),
-            new(GetRequiredPart<NumberBox>("MaterialGreen").Editor),
-            new(GetRequiredPart<NumberBox>("MaterialBlue").Editor)
+            new(this.MaterialRed.Editor),
+            new(this.MaterialGreen.Editor),
+            new(this.MaterialBlue.Editor)
         ];
         foreach (var field in _materialFields)
             field.Editor.PropertyChanged += (_, key) =>
@@ -123,11 +120,11 @@ public sealed partial class EditorInspectorView
                 }
                 else if (!field.IsReplaying) field.Clear();
             };
-        GetRequiredPart<VStack>("MaterialsItems").BindItems(_materialRows, CreateMaterialRow, static item => item.Id,
+        this.MaterialsItems.BindItems(_materialRows, CreateMaterialRow, static item => item.Id,
             (row, item) => ((MaterialActionRow)row).Present(MaterialDisplayName(item), item.Id == _shownMaterialId));
-        GetRequiredPart<VStack>("MaterialTextureItems").BindItems(_textureRows, CreateTextureRow, static item => item.Id,
+        this.MaterialTextureItems.BindItems(_textureRows, CreateTextureRow, static item => item.Id,
             static (row, item) => ((MaterialActionRow)row).Present(item.Name, false));
-        MaterialsPart.ObservePropertyChanged(_materialContext, (_, change) =>
+        this.MaterialsPanel.ObservePropertyChanged(_materialContext, (_, change) =>
         {
             if (change.PropertyName is null or "" or nameof(IEditorMaterialsModel.Name) or nameof(IEditorMaterialsModel.StatusText))
                 _materialContext.Strings.Notify(change);
@@ -156,9 +153,9 @@ public sealed partial class EditorInspectorView
     private void SynchronizeMaterials()
     {
         var model = _materialContext.DataContext;
-        MaterialsPart.IsVisible = model?.IsAvailable == true;
-        MaterialHeader.Expanded = model?.IsOpen == true;
-        GetRequiredPart<RichTextEditor>("MaterialsStatus").IsVisible = !string.IsNullOrEmpty(model?.StatusText);
+        this.MaterialsPanel.IsVisible = model?.IsAvailable == true;
+        this.MaterialsHeader.Expanded = model?.IsOpen == true;
+        this.MaterialsStatus.IsVisible = !string.IsNullOrEmpty(model?.StatusText);
         var items = model?.Items;
         var refreshRows = !ReferenceEquals(_shownMaterialRows, items);
         if (refreshRows)
@@ -173,9 +170,9 @@ public sealed partial class EditorInspectorView
             foreach (var field in _materialFields) field.Clear();
             refreshRows = true;
         }
-        if (refreshRows) GetRequiredPart<VStack>("MaterialsItems").RefreshItems();
-        GetRequiredPart<Text>("MaterialsEmpty").IsVisible = _materialRows.Count == 0 && string.IsNullOrEmpty(model?.StatusText);
-        GetRequiredPart<ScrollViewer>("MaterialsList").IsVisible = _materialRows.Count != 0;
+        if (refreshRows) this.MaterialsItems.RefreshItems();
+        this.MaterialsEmpty.IsVisible = _materialRows.Count == 0 && string.IsNullOrEmpty(model?.StatusText);
+        this.MaterialsList.IsVisible = _materialRows.Count != 0;
 
         var textures = model?.Textures;
         if (!ReferenceEquals(_shownTextureRows, textures))
@@ -183,17 +180,17 @@ public sealed partial class EditorInspectorView
             _shownTextureRows = textures;
             _textureRows.Clear();
             if (textures != null) _textureRows.AddRange(textures);
-            GetRequiredPart<VStack>("MaterialTextureItems").RefreshItems();
+            this.MaterialTextureItems.RefreshItems();
         }
         var readOnly = model?.CanEditFields != true;
-        MaterialName.Options = readOnly ? MaterialNameReadOnly : MaterialNameEditable;
+        this.MaterialName.Options = readOnly ? MaterialNameReadOnly : MaterialNameEditable;
         foreach (var field in _materialFields) field.Editor.IsReadOnly = readOnly;
-        var texture = GetRequiredPart<Button>("MaterialTexture");
+        var texture = this.MaterialTexture;
         texture.Value = model?.TextureId is { } id
             ? _textureRows.Find(item => item.Id == id)?.Name ?? $"Недоступная текстура · {id:D}"
             : "Без текстуры";
         texture.AccessibleName = "Текстура · " + texture.Value;
-        if (readOnly || model?.IsOpen != true) GetRequiredPart<ScrollViewer>("MaterialTextureList").IsVisible = false;
+        if (readOnly || model?.IsOpen != true) this.MaterialTextureList.IsVisible = false;
     }
 
     private void OpenMaterial(Guid id)
@@ -207,7 +204,7 @@ public sealed partial class EditorInspectorView
     private void ToggleMaterialTextures()
     {
         if (CurrentMaterials is not { CanEditFields: true }) return;
-        var list = GetRequiredPart<ScrollViewer>("MaterialTextureList");
+        var list = this.MaterialTextureList;
         list.IsVisible = !list.IsVisible;
     }
 
@@ -215,7 +212,7 @@ public sealed partial class EditorInspectorView
     {
         if (CurrentMaterials is not { CanEditFields: true } model) return;
         model.TextureId = id;
-        GetRequiredPart<ScrollViewer>("MaterialTextureList").IsVisible = false;
+        this.MaterialTextureList.IsVisible = false;
     }
 
     private void AddMaterialSlotActions(VStack rows, IEditorInspectorViewModel inspector, InspectorRenderAssetSelection selection,
@@ -262,12 +259,12 @@ public sealed partial class EditorInspectorView
         _focusMaterialModel = null;
         if (model == null || !ReferenceEquals(CurrentMaterials, model) || !model.IsOpen || !model.HasDocument ||
             model.SelectedMaterialId != _focusMaterialId) return;
-        input.TryFocus(model.IsReadOnly ? MaterialHeader : MaterialName);
+        input.TryFocus(model.IsReadOnly ? this.MaterialsHeader : this.MaterialName);
     }
 
     private bool MaterialTextHasFocus()
     {
-        if (MaterialsPart.IsVisible && MaterialName.IsFocused) return true;
+        if (this.MaterialsPanel.IsVisible && this.MaterialName.IsFocused) return true;
         foreach (var field in _materialFields)
             if (field.Editor.IsFocused) return true;
         return false;

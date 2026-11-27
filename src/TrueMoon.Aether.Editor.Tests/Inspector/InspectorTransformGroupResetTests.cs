@@ -225,7 +225,7 @@ public sealed class InspectorTransformGroupResetTests
         ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Space)); ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Space)); ui.Update();
         Assert.All(test.Model.Fields.Skip(3).Take(3), field => Assert.True(field.IsReset));
         test.Model.Cancel(); ui.Update(); ui.Update();
-        view.Scroll.BringIntoView(transform.ResetScale.Bounds); ui.Update();
+        view.ScrollPart.BringIntoView(transform.ResetScale.Bounds); ui.Update();
         DocumentUiFixture.Click(ui, transform.ResetScale); ui.Update(); ui.Update();
         Assert.All(test.Model.Fields.Skip(6), field => Assert.True(field.IsReset));
     }

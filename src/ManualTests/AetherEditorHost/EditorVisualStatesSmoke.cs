@@ -111,7 +111,7 @@ internal static class EditorVisualStatesSmoke
                 x = $"editor.inspector.transform.{component.Value:N}.x";
                 y = $"editor.inspector.transform.{component.Value:N}.y";
                 RejectApply(ui);
-                Require(!inspector.Error.IsVisible, "A clean inspector exposed an error.");
+                Require(!inspector.ErrorPart.IsVisible, "A clean inspector exposed an error.");
             });
             await Step("focused-x", () => { Click(ui, x); Type(ui, x, "7"); }, pixels =>
             {
@@ -142,7 +142,7 @@ internal static class EditorVisualStatesSmoke
                 var node = Target(ui, y).Node!;
                 Require(node.IsFocused && node.HasError && Y().Value == "-", "The invalid Y draft lost focus or validation state.");
                 RejectApply(ui);
-                var diagnostic = inspector.Error;
+                var diagnostic = inspector.ErrorPart;
                 Require(diagnostic.IsVisible && diagnostic.Text.Contains(Invalid, StringComparison.Ordinal) && !diagnostic.Text.Contains('\n'),
                     "The inspector did not present the expected single-paragraph error.");
                 Require(FocusInk(pixels, Y()) > 0, "Validation hid the focused Y outline.");
@@ -158,7 +158,7 @@ internal static class EditorVisualStatesSmoke
             });
             await Step("canceled", () => Click(ui, Cancel), _ =>
             {
-                Require(!Y().HasError && !inspector.Error.IsVisible && !inspector.DataContext!.HasDraft, "Cancel did not clear the invalid draft.");
+                Require(!Y().HasError && !inspector.ErrorPart.IsVisible && !inspector.DataContext!.HasDraft, "Cancel did not clear the invalid draft.");
                 RejectApply(ui);
             });
         }
@@ -191,7 +191,7 @@ internal static class EditorVisualStatesSmoke
             checkpoints.Add(new(id, Path.GetFileName(path), Convert.ToHexString(SHA256.HashData(input)), snapshot.Viewport,
                 snapshot.Nodes.SingleOrDefault(node => node.IsFocused)?.Id,
                 snapshot.Nodes.Where(node => node.Id == x || node.Id == y || node.Id is Apply or Cancel).ToArray(),
-                inspector.Error.IsVisible ? inspector.Error.Text : null));
+                inspector.ErrorPart.IsVisible ? inspector.ErrorPart.Text : null));
         });
     }
 
