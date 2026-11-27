@@ -44,6 +44,18 @@ TestResults/InspectorSmoke-20261128-ui44/Documents.aetherproj --smoke …/out` �
 живёт на собственном слоте контента View. Прежняя фикстура `InspectorSmoke-20261128` не переиспользована —
 свежая копия с чистым `Scenes/Inspector.aetherscene`.
 
+Хост запускается прямо (`bin/Release/net11.0/AetherEditorHost.exe` после `dotnet build -c Release`):
+`dotnet run --project … -c Release -- <аргументы>` даёт «Invalid editor arguments» при любом порядке флагов,
+а старый `bin/Release/net10.0` несёт прежние сборки рендеринга и воспроизводит уже исправленные дефекты.
+
+Пакетная приёмка профиля `view-composition`: `ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1
+-ViewCompositionOnly -RunDirectory TestResults/AlloyPackages/uia44-view-scope` на версии
+`1.2611.27.12-alpha.ui.20261127181900433` (SDK 11.0.100, Debug, растр+OpenGL) — `completed: true`,
+`failure: null`, девять упакованных пакетов, шесть сценариев потребителя (`generated` с Cobalt и без него,
+`di-only`, каждый на растре и OpenGL) без падений. `TrueMoon.Argentis.dll` в пакете (`lib/net11.0`) побайтово
+совпал с продьюсером `bin/Release/net11.0` — SHA-256 `F815586F…`; HEAD до и после прогона `7c9f5b9`,
+сборка продьюсера выполнена после коммита среза.
+
 <a id="uia47-generated-view-parts-2026-11-28"></a>
 28.11.2026 — UIA4.7 (объявление контента во всех точках и типизированные View-части): для тестов
 генератора в репозитории отдельный проект `TrueMoon.Argentis.Generator.Tests` (36 тестов; `TestHelper`
