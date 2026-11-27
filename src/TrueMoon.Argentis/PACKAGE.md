@@ -279,6 +279,16 @@ When initial synchronization mutates children, pass `UiSynchronization.AfterTree
 (`TrueMoon.Argentis.Bindings`) to queue it for the current attachment. The default
 is still inline. Queued synchronization does not run for a replaced context.
 
+`DeferredTreeSync<TRequest>` owns one deferred structural pass for an owner element. `Request(request)`
+ignores a value equal to `none`, otherwise folds requests through `combine`; the first one posts a single
+run through the owner's attachment dispatcher, so the pass runs at the session's queue drain.
+`BlocksInput(subtrees)` declares the subtrees that `BlockInput()` blocks while the window is open; the pass
+releases the block in `finally`, and a rejected dispatch (queue capacity, closed session) rolls the window back
+and releases it too, so a screen never keeps input blocked for a pass that will not run. Any attachment change
+closes the window, drops the queued work and releases the block; a detached owner synchronizes inline, which
+is what lets a view present its first context during content preparation. The callback runs outside a tree
+change, so structural edits there are allowed.
+
 `WindowTitleBar.SetHeader` validates a candidate before replacing the old
 tree. Attachment observers see the committed header; observer failures
 propagate without rolling back the replacement. A detached old header is
