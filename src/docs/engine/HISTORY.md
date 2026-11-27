@@ -1,3 +1,32 @@
+<a id="ed5a-mesh-picking-2026-11-27"></a>
+## 2026-11-27 — выбор меша кликом в Edit Preview
+
+`1.2611.27.7-alpha`, SDK 11.0.100. Из `src` выполнены два адресных
+`dotnet test -c Release` с TRX и уникальными binlog:
+
+| Проект | Классы и число пройденных случаев | Падений / пропусков |
+| --- | --- | --- |
+| `TrueMoon.Aether.Tests` | `Ray3Tests` 17, `PreviewPickSnapshotTests` 20, `ScenePreviewViewTests` 19 | 0 / 0 |
+| `TrueMoon.Aether.Editor.Tests` | `EditorRenderPreviewTests` 9, `EditorViewportAdmissionTests` 16, `EditorViewportControllerTests` 24, `TranslationTargetTests` 3 | 0 / 0 |
+
+TRX подтверждают все новые случаи. Первый запуск геометрии остановился
+до тестов по `CS2012` (занят `TrueMoon.Argentis.dll` в `obj`); повтор
+прошёл без правок. Действующие проверки Play и инструментов кубов не менялись.
+
+`ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderAuthoringAssets`
+с локальным `VK_LAYER_KHRONOS_validation` завершился на source Release/Cobalt
+под Windows x64. Шесть кликов через `UiSession`: `mixed-A` — меш → фон → передний
+куб → фон; `geometry-B` — тот же меш → фон на месте прежней геометрии.
+Совпали дерево, инспектор и `ContentId` соответствующего readback; при
+выборе меша проверен экземпляр `MeshRenderer`. Reopen не добавлял кликов.
+Сохранены 13 PNG и 12 завершившихся дочерних процессов (9 EditPreview,
+3 Game), 0 ошибок и предупреждений Vulkan, 0 ресурсов и handles после выхода.
+Это проверка реального Vulkan → OpenGL с маршрутизируемым `UiSession` вводом,
+не проверка физических Win32-сообщений, пакетов или других платформ.
+
+Артефакты: `src/TestResults/MeshPicking-eebe48cc17a348c59e29ce0159bdecdb`
+(`geometry.trx`, `editor.trx`, `native/verification.json`, уникальные binlog).
+
 <a id="ed4i-authoring-assets-2026-11-27"></a>
 ## 2026-11-27 — ED4i: Texture, Mesh и committed Edit Preview
 

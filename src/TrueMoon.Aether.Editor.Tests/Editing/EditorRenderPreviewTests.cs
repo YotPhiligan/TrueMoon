@@ -7,7 +7,9 @@ using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Preview;
 using Xunit;
@@ -70,11 +72,21 @@ public sealed partial class EditorRenderPreviewTests
         Assert.Same(textured.Receipt, lane.Complete().Receipt);
         assets.WritePng("same.png", PreviewAssets.PaletteA); lane.Refresh();
         Assert.Same(textured.Receipt, lane.Complete().Receipt); // Editing the source file does not commit pixels.
+        Ray3 ray = new(new(1.5f, .25f, 6), -Vector3.UnitZ, 10);
+        var texturedPicks = ScenePreview.CaptureRenderPicks(textured.Source.Render!);
+        Assert.Equal(PreviewPickKind.Miss, texturedPicks.Pick(ray).Kind);
 
         assets.ReplaceMesh(); lane.Refresh();
         var geometry = lane.Complete();
         Assert.NotEqual(textured.Context.ContentId, geometry.Context.ContentId);
         Assert.NotEqual(textured.Source.Digest, geometry.Source.Digest);
+        var geometryPicks = ScenePreview.CaptureRenderPicks(geometry.Source.Render!);
+        var hit = geometryPicks.Pick(ray);
+        Assert.Equal(PreviewPickKind.Hit, hit.Kind);
+        Assert.Equal(new EntityId(DocumentData.Id(200)), hit.Entity);
+        Assert.Equal(6d, hit.Distance);
+        Assert.Equal(texturedPicks.Revision, geometryPicks.Revision);
+        Assert.Equal(PreviewPickKind.Miss, texturedPicks.Pick(ray).Kind);
         Assert.Equal(6, lane.Starts.Count);
         Assert.All(lane.Starts, entry =>
         {
@@ -153,26 +165,21 @@ public sealed partial class EditorRenderPreviewTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void UnsupportedMeshPickDoesNotClearHierarchySelection(bool meshEnabled)
+    [InlineData(true, 1u)]
+    [InlineData(false, 1u)]
+    [InlineData(true, 0u)]
+    public void Click_SelectsVisibleMeshAndPreservesCubeAndBackgroundRouting(bool enabled, uint layers)
     {
-        using var t = new ViewportInputFixture(wrap: true, meshEnabled: meshEnabled);
+        using var t = new ViewportInputFixture(wrap: true, meshEnabled: enabled, meshLayers: layers);
         t.Start();
         var receipt = t.Preview.PresentedView!;
         Assert.NotEqual(t.Workspace.ContentToken, receipt.State.Context.ContentId);
-        var parent = DocumentData.Parent.Value.ToString("D");
-        t.Model.Select(parent);
-        var selection = t.Workspace.SelectionRevision;
-        var point = t.Point(DocumentData.Child);
-        var pick = receipt.Picks.Pick(receipt.Projection, receipt.ImageBounds, point.X, point.Y);
-        Assert.Equal(meshEnabled ? PreviewPickKind.Unavailable : PreviewPickKind.Hit, pick.Kind);
-        Assert.Equal(meshEnabled ? PreviewPickUnavailableReason.UnsupportedGeometry : PreviewPickUnavailableReason.None, pick.UnavailableReason);
-        Assert.True(t.Input(InputKind.PointerDown, point.X, point.Y).PointerCaptured);
-        Assert.False(t.Input(InputKind.PointerUp, point.X, point.Y).PointerCaptured);
-        Assert.Equal(meshEnabled ? parent : DocumentData.Child.Value.ToString("D"), t.Workspace.SelectedId);
-        if (meshEnabled) Assert.Equal(selection, t.Workspace.SelectionRevision);
+        t.Model.Select(DocumentData.Parent.Value.ToString("D"));
+        ClickAndCheck(t.Point(new Vector3(0, 1.2f, 0)), enabled && layers != 0 ? ViewportInputFixture.MeshEntity : null);
+        ClickAndCheck(t.Point(DocumentData.Child), DocumentData.Child);
+        ClickAndCheck(t.Point(new Vector3(0, 2, 0)), null);
         Assert.Equal(0, t.Content.UndoCount);
+        Assert.False(t.Owner.Document.Read().IsDirty);
 
         var foreign = new PreviewViewState(receipt.State.Context with { ContentId = Guid.NewGuid() }, receipt.State.Camera);
         Assert.False(t.Controller.MatchesPreview(foreign.Stamp));
@@ -183,6 +190,41 @@ public sealed partial class EditorRenderPreviewTests
         Assert.False(t.Controller.IsActive);
         Assert.Null(t.Coordinator.Read().Presented);
         Assert.True(Assert.Single(t.Runtime.Leases).ResourcesReleased);
+
+        void ClickAndCheck((float X, float Y) point, EntityId? expected)
+        {
+            Assert.True(t.Input(InputKind.PointerDown, point.X, point.Y).PointerCaptured);
+            var release = t.Input(InputKind.PointerUp, point.X, point.Y);
+            Assert.True(release.Handled);
+            Assert.False(release.PointerCaptured);
+            Assert.Equal(expected?.Value.ToString("D"), t.Workspace.SelectedId);
+            Assert.Equal(expected, t.Inspector.Selection.EntityId);
+        }
+    }
+
+    [Fact]
+    public void Click_MeshCannotPublishAfterPresentedContentBecomesStale()
+    {
+        using var t = new ViewportInputFixture(wrap: true, meshEnabled: true);
+        t.Start();
+        var receipt = t.Preview.PresentedView!;
+        var point = t.Point(new Vector3(0, 1, 0));
+        var pick = receipt.Picks.Pick(receipt.Projection, receipt.ImageBounds, point.X, point.Y);
+        Assert.Equal(PreviewPickKind.Hit, pick.Kind);
+        Assert.Equal(ViewportInputFixture.MeshEntity, pick.Entity);
+        var parent = DocumentData.Parent.Value.ToString("D");
+        t.Model.Select(parent);
+        var selection = t.Workspace.SelectionRevision;
+
+        Assert.True(t.Input(InputKind.PointerDown, point.X, point.Y).PointerCaptured);
+        Assert.True(t.Controller.IsGesturing);
+        Assert.True(t.State.SetDesiredSource(receipt.State.Context with { ContentId = Guid.NewGuid() }));
+        Assert.False(t.Input(InputKind.PointerUp, point.X, point.Y).PointerCaptured);
+        Assert.False(t.Controller.IsGesturing);
+        Assert.Same(receipt, t.Preview.PresentedView);
+        Assert.Equal(parent, t.Workspace.SelectedId);
+        Assert.Equal(DocumentData.Parent, t.Inspector.Selection.EntityId);
+        Assert.Equal(selection, t.Workspace.SelectionRevision);
     }
 
     [Fact]

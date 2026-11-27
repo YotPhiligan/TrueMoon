@@ -693,9 +693,10 @@ Default GPU coordinator использует actual OpeningId, exclusive ViewId 
 сохраняет legacy Show API и собственную presentation policy.
 
 В Edit Preview: RMB drag — orbit, MMB drag — pan, wheel — dolly; F на focused canvas
-кадрирует выбранный opaque cube. В primitive-only кадре LMB выбирает куб,
-фон очищает выбор. При активном MeshRenderer точный picking недоступен:
-клик не очищает выбор, дерево и инспектор остаются доступными.
+кадрирует выбранный opaque cube. LMB выбирает ближайшую видимую поверхность
+меша или куба на актуальном показанном кадре; дерево и инспектор получают тот же
+выбор. Клик по фону очищает выбор. Устаревший кадр и неизвестная геометрия не
+меняют его. F, контур выбора и манипулятор перемещения остаются только для кубов.
 Camera-only не меняет document/history/invalid draft; wheel не забирает focus.
 Esc/focus loss/capture cancellation откатывает pose с новой camera revision.
 Overlays, chrome, letterbox, pending camera и Play блокируют picking/navigation.

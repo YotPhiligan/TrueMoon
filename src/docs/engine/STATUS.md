@@ -1,5 +1,13 @@
 # Aether / Editor: состояние и точка продолжения
 
+27.11.2026 — `1.2611.27.7-alpha`: [выбор мешей в Edit Preview](EDITOR_PLAN.md#ed5a-mesh-picking)
+использует точные треугольники и кубы показанного содержимого. LMB синхронизирует
+дерево и инспектор, клик по фону очищает выбор. Смена committed геометрии
+аннулирует старый `ContentId`, даже если ревизия сцены не изменилась.
+Release: 56 тестов Aether и 52 Editor прошли без падений и пропусков;
+Windows x64/Cobalt подтвердил шесть кликов на Vulkan → OpenGL.
+[Команды и результаты](HISTORY.md#ed5a-mesh-picking-2026-11-27).
+
 <a id="ed4i-authoring-assets-status"></a>
 27.11.2026 — [ED4i: авторские ассеты](EDITOR_PLAN.md#ed4i-authoring-assets).
 Texture и Mesh добавлены рядом с Material. Их локальные каталоги не меняют

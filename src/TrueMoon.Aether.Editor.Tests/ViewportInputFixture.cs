@@ -52,7 +52,8 @@ internal sealed class ViewportInputFixture : IDisposable
     internal readonly UiPresenters Presenters = UiPresenters.Create(EditorPresenters.Register);
     private ulong _frame;
     internal static readonly TimeSpan Deadline=TimeSpan.FromSeconds(5);
-    internal ViewportInputFixture(bool wrap=false, bool? meshEnabled=null)
+    internal static readonly EntityId MeshEntity = new(DocumentData.Id(200));
+    internal ViewportInputFixture(bool wrap=false, bool? meshEnabled=null, uint meshLayers=uint.MaxValue)
     {
         var source=DocumentData.Scene();
         EntityInstance Entity(EntityId id,double x)=>new(id,DocumentData.Base,new(propertyOverrides:
@@ -66,10 +67,13 @@ internal sealed class ViewportInputFixture : IDisposable
                 (RenderContentProfile.CubeAssetId, RenderContentProfile.CubeBindingSetAssetId.ToString("D")));
             var instance = Assert.Single(mesh.Entities);
             var renderer = Assert.Single(instance.Changes.AddedComponents, component => component.TypeId == MeshRenderingComponents.MeshRendererId);
-            entities.Add(new(instance.Id, instance.DefinitionId, new(addedComponents:
-                [.. instance.Changes.AddedComponents.Where(component => component != renderer),
-                 new(renderer.Id, renderer.TypeId, renderer.SchemaVersion,
-                    [.. renderer.Properties, KeyValuePair.Create("enabled", PropertyValue.From(enabled))])])));
+            var transform = Assert.Single(instance.Changes.AddedComponents, component => component.TypeId == BuiltInComponents.TransformId);
+            entities.Add(new(MeshEntity, instance.DefinitionId, new(addedComponents:
+                [transform, new(renderer.Id, renderer.TypeId, renderer.SchemaVersion,
+                    [.. renderer.Properties.Where(property => property.Key is not ("enabled" or "layers")),
+                     KeyValuePair.Create("enabled", PropertyValue.From(enabled)),
+                     KeyValuePair.Create("layers", PropertyValue.From((long)meshLayers))])],
+                propertyOverrides: [new(transform.Id, "y", PropertyValue.From(1d))])));
             definitions = [.. definitions, .. mesh.Definitions];
             schemas = [.. schemas, MeshRenderingComponents.MeshRendererSchema];
             Runtime.RenderPreview = true;
@@ -135,8 +139,13 @@ internal sealed class ViewportInputFixture : IDisposable
     }
     internal (float X,float Y) Point(EntityId entity)
     {
-        var receipt=Preview.PresentedView!;var primitive=receipt.Picks.Primitives.Single(p=>p.Entity==entity);
-        Assert.True(receipt.Projection.TryProject(primitive.World.Translation,out var p));var b=receipt.ImageBounds;
+        var primitive=Preview.PresentedView!.Picks.Primitives.Single(p=>p.Entity==entity);
+        return Point(primitive.World.Translation);
+    }
+    internal (float X,float Y) Point(System.Numerics.Vector3 worldPoint)
+    {
+        var receipt=Preview.PresentedView!;
+        Assert.True(receipt.Projection.TryProject(worldPoint,out var p));var b=receipt.ImageBounds;
         return ((float)(b.Left+(p.X+1)*b.Width/2),(float)(b.Top+(p.Y+1)*b.Height/2));
     }
     internal (float X,float Y) Center {get {var b=View.Canvas.ImageBounds;return(b.X+b.Width/2,b.Y+b.Height/2);}}

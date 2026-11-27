@@ -1,3 +1,4 @@
+using System.Numerics;
 using TrueMoon.Argentis.Input;
 using TrueMoon.Argentis.Menus;
 using TrueMoon.Argentis.Views;
@@ -24,10 +25,10 @@ public sealed class EditorViewportAdmissionTests
         Assert.Equal(DocumentData.Child.Value.ToString("D"),t.Workspace.SelectedId);Assert.Equal(0,t.Content.UndoCount);
     }
 
-    [Theory] [InlineData(false)] [InlineData(true)]
-    public void Camera_ControlAckAndUploadedDrawCannotAdmitPickingBeforeActualPresentation(bool upload)
+    [Theory] [InlineData(false, false)] [InlineData(true, false)] [InlineData(false, true)] [InlineData(true, true)]
+    public void Camera_ControlAckAndUploadedDrawCannotAdmitPickingBeforeActualPresentation(bool upload, bool mesh)
     {
-        using var t=new ViewportInputFixture();t.Start();var before=t.Preview.PresentedView!;var selected=t.Workspace.SelectedId;
+        using var t=new ViewportInputFixture(meshEnabled:mesh ? true : null);t.Start();var before=t.Preview.PresentedView!;var selected=t.Workspace.SelectedId;
         Assert.True(EditorCameraNavigation.TryDolly(t.State.Camera,1,out var camera));Assert.True(t.State.Queue(t.Controller.ViewId,before.State.Context,camera));
         ViewportInputFixture.WaitUntil(()=>t.Runtime.LastView?.Camera==camera);
         if(upload)
@@ -36,9 +37,11 @@ public sealed class EditorViewportAdmissionTests
             Assert.False(t.DrawAndAck(ticket,acknowledge:false));Assert.Same(ticket,t.View.Canvas.DrawnFrame);
         }
         Assert.False(t.Preview.IsCurrent(before));Assert.False(t.Preview.CameraUpdates.IsCompleted);
-        var point=t.Point(DocumentData.Child);t.Click(point.X,point.Y);Assert.Equal(selected,t.Workspace.SelectedId);
-        t.Present();Assert.True(t.Preview.IsCurrent(t.Preview.PresentedView!));point=t.Point(DocumentData.Child);t.Click(point.X,point.Y);
-        Assert.Equal(DocumentData.Child.Value.ToString("D"),t.Workspace.SelectedId);Assert.Single(t.Runtime.Leases);
+        var expected=mesh ? ViewportInputFixture.MeshEntity : DocumentData.Child;
+        (float X,float Y) Point()=>mesh ? t.Point(new Vector3(0,1,0)) : t.Point(expected);
+        var point=Point();t.Click(point.X,point.Y);Assert.Equal(selected,t.Workspace.SelectedId);
+        t.Present();Assert.True(t.Preview.IsCurrent(t.Preview.PresentedView!));point=Point();t.Click(point.X,point.Y);
+        Assert.Equal(expected.Value.ToString("D"),t.Workspace.SelectedId);Assert.Equal(expected,t.Inspector.Selection.EntityId);Assert.Single(t.Runtime.Leases);
     }
 
     [Theory] [InlineData("opening")] [InlineData("project")] [InlineData("stop")] [InlineData("play")] [InlineData("delete")] [InlineData("surface")]

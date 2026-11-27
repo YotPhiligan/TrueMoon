@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Preview;
@@ -102,14 +103,27 @@ namespace TrueMoon.Aether.Tooling.Preview
         internal static PreviewPickSnapshot CaptureRenderPicks(PreviewRenderPayload payload)
         {
             var cubes = ImmutableArray.CreateBuilder<PreviewPickPrimitive>();
-            var hasVisibleMesh = false;
+            ImmutableArray<PreviewPickMesh>.Builder? meshes = null;
+            Dictionary<Guid, MeshDefinition>? geometryById = null;
             for (var i = 0; i < payload.Rows.Length; i++)
             {
                 var row = payload.Rows[i];
-                if (row.IsMesh) hasVisibleMesh |= row.Enabled && row.Layers != 0;
-                else cubes.Add(new(row.Entity, i, row.World));
+                if (!row.IsMesh) cubes.Add(new(row.Entity, i, row.World));
+                else if (row.Enabled && row.Layers != 0)
+                {
+                    if (geometryById == null)
+                    {
+                        geometryById = new();
+                        foreach (var entry in payload.Content.Entries)
+                            if (entry.Key.KindId == RenderContentProfile.MeshKindId && entry.Definition is MeshDefinition mesh)
+                                geometryById.Add(entry.Key.AssetId, mesh);
+                    }
+                    if (!geometryById.TryGetValue(row.MeshId, out var geometry))
+                        throw new InvalidDataException($"Preview pick row {row.Entity} lacks its exact mesh {row.MeshId:D}.");
+                    (meshes ??= ImmutableArray.CreateBuilder<PreviewPickMesh>()).Add(new(row.Entity, row.World, geometry));
+                }
             }
-            return PreviewPickSnapshot.CaptureRender(payload.SceneId, payload.Revision, cubes.ToImmutable(), hasVisibleMesh);
+            return PreviewPickSnapshot.CaptureRender(payload.SceneId, payload.Revision, cubes.ToImmutable(), meshes?.ToImmutable() ?? []);
         }
 
         private int ValidatePreflight(int width, int height)

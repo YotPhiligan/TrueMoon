@@ -103,8 +103,19 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                     $null -eq $proof.Save.ReplacementSource -or
                     $proof.Save.ReplacementSource.ReorderedGeneration -ne ($proof.Save.ReplacementSource.ImportedGeneration + 1) -or
                     $proof.Save.Frames.Count -ne 11 -or $proof.Reopened.Frames.Count -ne 2 -or
+                    $proof.Save.Clicks.Count -ne 6 -or $proof.Reopened.Clicks.Count -ne 0 -or
                     $proof.Save.Children.Count -ne 9 -or $proof.Reopened.Children.Count -ne 3) {
                     throw "Incomplete authoring-assets native evidence for $name-$provider"
+                }
+                $expectedClicks = @('mixed-A/first-right', 'mixed-A/clear', 'mixed-A/front-cube', 'mixed-A/clear',
+                    'geometry-B/first-right', 'geometry-B/first-footprint-left')
+                for ($i = 0; $i -lt $expectedClicks.Count; $i++) {
+                    $click = $proof.Save.Clicks[$i]
+                    $frame = @($proof.Save.Frames | Where-Object Name -CEQ $click.Frame)
+                    if ("$($click.Frame)/$($click.Region)" -cne $expectedClicks[$i] -or $frame.Count -ne 1 -or
+                        $click.ContentId -ne $frame[0].PreviewStamp.ContentId -or $click.FrameId -eq 0) {
+                        throw "Invalid authoring-assets click evidence at index ${i}: $($expectedClicks[$i])"
+                    }
                 }
                 $children = @()
                 $images = @()

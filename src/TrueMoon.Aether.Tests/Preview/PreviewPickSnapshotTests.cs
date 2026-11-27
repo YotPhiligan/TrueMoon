@@ -55,6 +55,72 @@ public sealed class PreviewPickSnapshotTests
     }
 
     [Fact]
+    public void Pick_MeshTriangleBeatsCubeButItsBoundsDoNot()
+    {
+        PreviewPickPrimitive cube = new(new(Second), 0, Matrix4x4.CreateScale(4, 4, 1));
+        PreviewPickMesh mesh = new(new(First), Matrix4x4.CreateTranslation(0, 0, 1), Triangle([0, 1, 2]));
+        var snapshot = PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [cube], [mesh]);
+        AssertHit(snapshot.Pick(new Ray3(new(.25f, .25f, 6), -Vector3.UnitZ, 10)), First, 5);
+        Ray3 outsideTriangle = new(new(1.5f, 1.5f, 6), -Vector3.UnitZ, 10);
+        AssertHit(snapshot.Pick(outsideTriangle), Second, 5.5);
+        var miss = PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [], [mesh]).Pick(outsideTriangle);
+        Assert.Equal(PreviewPickKind.Miss, miss.Kind);
+        Assert.Null(miss.Entity);
+        Assert.Null(miss.Distance);
+    }
+
+    [Fact]
+    public void Pick_MixedTiesFollowCubeThenMeshDrawOrder()
+    {
+        var triangle = Triangle([0, 1, 2]);
+        var world = Matrix4x4.CreateTranslation(0, 0, .5f);
+        PreviewPickMesh firstMesh = new(new(First), world, triangle);
+        PreviewPickMesh secondMesh = new(new(Second), world, triangle);
+        Ray3 ray = new(new(.25f, .25f, 6), -Vector3.UnitZ, 10);
+
+        AssertHit(PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [new(new(First), 0, Matrix4x4.Identity)], [secondMesh]).Pick(ray), First, 5.5);
+        AssertHit(PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [new(new(Second), 1, Matrix4x4.Identity)], [firstMesh]).Pick(ray), Second, 5.5);
+        AssertHit(PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [], [firstMesh, secondMesh]).Pick(ray), First, 5.5);
+        AssertHit(PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [new(new(Second), 1, Matrix4x4.Identity)],
+            [new(new(First), Matrix4x4.Identity, triangle)]).Pick(ray), Second, 5.5);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Pick_MeshUsesWorldDistanceAndBothWindingsUnderAffineTransform(bool reverseWinding)
+    {
+        Matrix4x4 world = new(2, 0, 0, 0, .5f, 3, 0, 0, 1, 0, -4, 0, 10, 20, 30, 1);
+        var mesh = new PreviewPickMesh(new(First), world, Triangle(reverseWinding ? [0, 2, 1] : [0, 1, 2]));
+        var snapshot = PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [], [mesh]);
+        Vector3 origin = new(10.625f, 20.75f, 36);
+        Assert.Equal(PreviewPickKind.Miss, snapshot.Pick(new Ray3(origin, -Vector3.UnitZ, 5.999)).Kind);
+        AssertHit(snapshot.Pick(new Ray3(origin, -Vector3.UnitZ, 6)), First, 6);
+    }
+
+    [Fact]
+    public void Pick_SkipsDegenerateTriangleAndFindsSurfaceFromInsideBounds()
+    {
+        var triangle = Triangle([0, 0, 1, 0, 1, 2], new(new(0, 0, -1), new(2, 2, 1)));
+        var snapshot = PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [], [new(new(First), Matrix4x4.Identity, triangle)]);
+        Vector3 origin = new(.25f, .25f, .5f);
+        AssertHit(snapshot.Pick(new Ray3(origin, -Vector3.UnitZ, 10)), First, .5);
+        Assert.Equal(PreviewPickKind.Miss, snapshot.Pick(new Ray3(origin, Vector3.UnitZ, 10)).Kind);
+    }
+
+    [Fact]
+    public void Pick_InvalidVisibleMeshTransformDoesNotSelectCubeBehindIt()
+    {
+        var snapshot = PreviewPickSnapshot.CaptureRender(new(SceneGuid), 7, [new(new(Second), 0, Matrix4x4.Identity)],
+            [new(new(First), Matrix4x4.CreateScale(1, 1, 0) * Matrix4x4.CreateTranslation(0, 0, 1), Triangle([0, 1, 2]))]);
+        var result = snapshot.Pick(new Ray3(new(.25f, .25f, 6), -Vector3.UnitZ, 10));
+        Assert.Equal(PreviewPickKind.Unavailable, result.Kind);
+        Assert.Equal(PreviewPickUnavailableReason.InvalidMath, result.UnavailableReason);
+        Assert.Null(result.Entity);
+        Assert.Null(result.Distance);
+    }
+
+    [Fact]
     public void Pick_EmptyOrBackgroundIsMissButInvalidRayIsUnavailable()
     {
         foreach (var source in new[] { Scene(), Scene(Cube(First, Matrix4x4.CreateTranslation(20, 0, 0))) })
@@ -71,6 +137,7 @@ public sealed class PreviewPickSnapshotTests
 
     [Theory]
     [InlineData("mesh/1")] [InlineData("")] [InlineData("EDITOR.OPAQUE-CUBES/1")]
+    [InlineData(PreviewPickSnapshot.MeshAndCubeGeometryProfile)]
     public void Pick_UnknownVisibleProfileNeverSelectsCubeBehindUnsupportedOccluder(string profile)
     {
         var snapshot = PreviewPickSnapshot.Capture(Scene(Cube(First, Matrix4x4.Identity)), profile);
@@ -156,6 +223,17 @@ public sealed class PreviewPickSnapshotTests
         Assert.Equal(63, snapshot.Primitives[63].DrawOrder);
         Assert.Equal(snapshot.Primitives[63].Entity, snapshot.Pick(Ray).Entity);
         Assert.Equal(5.5, snapshot.Pick(Ray).Distance);
+    }
+
+    private static MeshDefinition Triangle(uint[] indices, RenderBounds? bounds = null) =>
+        new([Vector3.Zero, new(2, 0, 0), new(0, 2, 0)], indices, [new(SceneGuid, 0, (uint)indices.Length)],
+            bounds ?? new(Vector3.Zero, new(2, 2, 0)));
+
+    private static void AssertHit(PreviewPickResult result, Guid entity, double distance)
+    {
+        Assert.Equal(PreviewPickKind.Hit, result.Kind);
+        Assert.Equal(new EntityId(entity), result.Entity);
+        Assert.Equal(distance, result.Distance!.Value, 10);
     }
 
     private static SceneEntity Cube(Guid id, Matrix4x4 world) => new() { Id = id.ToString("D"), Primitive = ScenePrimitive.FromPrimitive(new(world, Vector3.One)) };

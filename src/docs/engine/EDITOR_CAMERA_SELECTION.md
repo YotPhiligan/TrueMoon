@@ -27,10 +27,10 @@ GPU ID buffer, live World edits, gameplay navigation, multi-selection, gizmos и
 и не запрещает выбор видимого куба в Editor. Authoring может содержать больше64
 entities, но это не снимает текущий bounded preview limit.
 
-Новый mesh renderer остаётся [ARCH1f.3/4](PLAN.md#arch1f-rendering). Контракт внешней
-камеры следует [camera/extraction v1](RENDERING_CONTRACTS.md#camera); миграция mesh
-preview/picking требует отдельного exact-geometry profile, а не пропуска неизвестных
-occluders при выборе лежащего за ними куба.
+Камера следует [camera/extraction v1](RENDERING_CONTRACTS.md#camera).
+Committed Edit Preview с [точными ассетами ED4i](EDITOR_PLAN.md#ed4i-authoring-assets)
+поддерживает `editor.meshes-and-cubes/1` на frozen render payload. Неизвестные
+видимые occluders по-прежнему запрещают выбор.
 
 ## Камера и проекция
 
@@ -158,26 +158,30 @@ Input приходит в logical coordinates Argentis. Сначала штат�
    разделить на finite nonzero w. Origin=near point, direction=normalized(far−near),
    допустимый world t от0 до длины near→far segment. Invalid inverse/points — Unavailable.
 
-Первый picker — geometry ray query для opaque origin-centered cube `[-0.5,+0.5]³`.
-World AABB допустим только как broad phase. Ray переводится inverse world matrix:
+Для opaque origin-centered cube `[-0.5,+0.5]³` используется slab test.
+Ray переводится inverse world matrix:
 point с w1, direction с w0. **Local direction не нормализуется**: параметр t должен
 сохранить world distance при nonuniform scale/shear. Slab test учитывает parallel
 axes. Если near origin внутри cube, берётся положительный exit surface, а не hit0;
 пересечение вне near/far segment отвергается. Некорректный inverse не пропускается
 как пустое место с выбором скрытого объекта за ним.
 
-Выбирается ближайшая допустимая поверхность. Exact ties сохраняют frozen draw order
-(текущий primitive payload — hierarchy/projection order; depth Less), затем stable
-primitive order. GUID sorting не заменяет фактический draw order. Это CPU geometry
-picking по pixel-center ray, не обещание raster/ID-buffer equivalence на границах
-треугольников, coverage и при quantized depth. Для v1 отдельные edge/overlap cases
-проверяются; pixel-perfect GPU picking требует отдельного профиля.
+У включённого `MeshRenderer` с ненулевой маской слоёв локальный `Bounds`
+только отбрасывает экземпляры вне луча. Попадание определяется по точным
+индексированным треугольникам из того же frozen payload, с обеих сторон,
+без поправки на цвет или текстуру opaque материала.
+
+Выбирается ближайшая допустимая поверхность. При равном world t выигрывает
+первая в порядке renderer: legacy cubes, затем экземпляры мешей в порядке
+захвата. GUID sorting не заменяет draw order. Это CPU geometry picking по
+pixel-center ray, не обещание raster/ID-buffer equivalence на границах
+треугольников, coverage и при quantized depth.
 
 Результат различает `Hit(EntityId, world distance, context)`, `Miss(context)` и
 `Unavailable(reason)`. Последний включает stale/unsupported/suspended/invalid math;
 он никогда не превращается в Miss/Clear. Snapshot содержит только supported exact
-geometry. Наличие неизвестного видимого occluder запрещает объявлять весь кадр
-pickable; mesh picking добавляется вместе с соответствующим render profile/leases.
+geometry. Неизвестная видимая геометрия или невалидная инверсия любого
+видимого экземпляра делают весь ray query недоступным.
 
 ## Selection и stale admission
 

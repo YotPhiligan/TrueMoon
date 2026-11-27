@@ -1626,6 +1626,16 @@ readonly/snapshot transaction contracts ARCH1c, а не прямые измен�
 reference — [камера/selection v1](EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1).
 Детальные этапы реализации ведутся здесь; ED5a.1–4 завершены в bounded Windows x64 scope ниже. Hardware/platform gates сохранены явно.
 
+<a id="ed5a-mesh-picking"></a>
+**Выбор мешей в committed Edit Preview (2026-11-27).** LMB проверяет ближайшую
+поверхность opaque меша или legacy куба из frozen render payload; при равном
+расстоянии — сначала кубы, затем меши в порядке отрисовки. Выбор публикуется в
+дерево и инспектор только по актуальному фактически показанному кадру. F,
+перемещение и контуры остаются за legacy кубами; Play не меняется.
+Приёмка: фильтры `Ray3Tests`, `PreviewPickSnapshotTests`, `ScenePreviewViewTests`,
+`EditorRenderPreviewTests`, `EditorViewportAdmissionTests`, `EditorViewportControllerTests`,
+`TranslationTargetTests` и шесть routed кликов в Release `-RenderAuthoringAssets`.
+
 <a id="ed5a0-contract"></a>
 **ED5a.0 — решения до кода, завершено2026-11-08.**
 

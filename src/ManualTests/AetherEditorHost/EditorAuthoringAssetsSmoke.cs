@@ -53,6 +53,7 @@ internal static class EditorAuthoringAssetsSmoke
         var pinned = Path.Combine(scenes, "pinned-A.aetherscene");
         var prior = Path.Combine(root, "import-saved", "editor-authoring-assets-save.json");
         var frames = new List<FrameProof>();
+        var clicks = new List<ClickProof>();
         var children = new List<ChildProof>();
         var processes = new Dictionary<ulong, Process>();
         var noBuildBeforePreview = false;
@@ -172,6 +173,10 @@ internal static class EditorAuthoringAssetsSmoke
             SameColors(cubes, mixed, "front-cube", "control-cube");
             Require(Color(mixed, "front-cube") != Color(mixed, "texture-0") && Color(mixed, "control-cube") != Color(mixed, "clear"),
                 "Mixed rendering did not retain the covering and control cube pixels.");
+            await ClickRegion(mixed, "first-right", FixtureId(1, 1));
+            await ClickRegion(mixed, "clear", null);
+            await ClickRegion(mixed, "front-cube", FixtureId(3, 1));
+            await ClickRegion(mixed, "clear", null);
             noBuildBeforePreview = engine.Editor.Status.Candidate == null && !Directory.EnumerateFileSystemEntries(compiler).Any();
             Require(noBuildBeforePreview, "A Build existed before native Edit Preview was drawn.");
             var builtA = await Build(a);
@@ -205,6 +210,8 @@ internal static class EditorAuthoringAssetsSmoke
                 b.First.Right == c.First.Right && b.Second.Right == c.Second.Right && Revised(b.First.Binding, c.First.Binding) &&
                 Revised(b.Second.Binding, c.Second.Binding), "Geometry replacement lost effective slot materials or changed persistent keys.");
             SameColors(textureFrame, geometryFrame, "texture-0", "texture-1", "texture-2", "texture-3", "first-right", "second-left", "second-right");
+            await ClickRegion(geometryFrame, "first-right", FixtureId(1, 1));
+            await ClickRegion(geometryFrame, "first-footprint-left", null);
 
             await OnUi(() => { materials.IsOpen = true; materials.Open(solid); materials.Red = "0"; materials.Save(); });
             await Until(() => materials.CanUndo && !materials.HasDraft);
@@ -374,6 +381,32 @@ internal static class EditorAuthoringAssetsSmoke
             await OnUi(inspector.ShowPreview);
             return await Capture(name, keys, palette, solid, replaced);
         }
+        Task ClickRegion(FrameProof frame, string region, Guid? expected)
+        {
+            var sample = frame.Regions.Single(item => item.Name == region);
+            var x = (sample.X + .5f) / frame.Scale;
+            var y = (sample.Y + .5f) / frame.Scale;
+            return Until(() =>
+            {
+                var receipt = editor.ReadPresentedView(view);
+                if (receipt == null || receipt.State.Stamp != frame.PreviewStamp ||
+                    receipt.Frame.Presentation.Surface.Generation != frame.Surface || receipt.LayoutRevision != frame.Layout)
+                    return false;
+
+                var target = $"{frame.Name}/{region}";
+                Require(ui.HandleInput(new(InputKind.PointerDown, x, y)).PointerCaptured, $"{target}: click did not capture.");
+                var release = ui.HandleInput(new(InputKind.PointerUp, x, y));
+                Require(release.Handled && !release.PointerCaptured, $"{target}: click did not release.");
+                var selected = inspector.Selection.EntityId?.Value;
+                Require(view.Hierarchy!.DataContext.SelectedId == expected?.ToString("D") && selected == expected,
+                    $"{target}: expected selection {expected?.ToString("D") ?? "none"}, inspector has {selected?.ToString("D") ?? "none"}.");
+                if (expected == FixtureId(1, 1))
+                    Require(inspector.Components.Any(row => row.TypeId == MeshRenderingComponents.MeshRendererId && row.Id.Value == FixtureId(1, 4)),
+                        $"{target}: the selected mesh occurrence is missing from the inspector.");
+                clicks.Add(new(frame.Name, region, selected, receipt.State.Stamp.ContentId, receipt.Frame.Metadata.FrameId));
+                return true;
+            });
+        }
         async Task StopPreview()
         {
             var stop = await ReadUi(inspector.StopPreviewAsync);
@@ -502,7 +535,7 @@ internal static class EditorAuthoringAssetsSmoke
         }
         PassProof Proof(Guid mesh, Guid left, Guid right, Guid texture, Guid textured, Guid solid) => new(Environment.ProcessId,
             FileHash(scenePath), FileHash(pinned), mesh, left, right, texture, textured, solid, noBuildBeforePreview, withheldDrained,
-            sourceOrder, frames.ToArray(), children.ToArray());
+            sourceOrder, frames.ToArray(), clicks.ToArray(), children.ToArray());
         Task Write(string file, object proof) => File.WriteAllTextAsync(Path.Combine(output, file),
             JsonSerializer.Serialize(proof, new JsonSerializerOptions { WriteIndented = true }), token);
     }
@@ -652,10 +685,11 @@ internal static class EditorAuthoringAssetsSmoke
     private sealed record Region(string Name, int X, int Y, string Rgba, string Sha256);
     private sealed record FrameProof(string Name, string? BuildId, int Pid, ulong Runtime, ulong Surface, ulong Frame, ulong Tick, ulong Layout,
         int Width, int Height, float Scale, PreviewFrameStamp? PreviewStamp, RenderSnapshotStamp? GameStamp, string PngSha256, ExactKeys? Keys, Region[] Regions);
+    private sealed record ClickProof(string Frame, string Region, Guid? SelectedEntity, Guid ContentId, ulong FrameId);
     private sealed record ChildProof(ulong Generation, int Pid, string Role, string? BuildId, int ExitCode, bool Reaped, bool Released);
     private sealed record SourceOrderProof(Guid SourceId, Guid PublishedMeshId, string InputRevision, long ImportedGeneration, long ReorderedGeneration,
         string ImportedCandidateRevision, string ReorderedCandidateRevision, string[] ImportedSlots, string[] ReorderedSlots);
     private sealed record PassProof(int EditorPid, string SceneSha256, string PinnedSha256, Guid Mesh, Guid Left, Guid Right, Guid Texture,
         Guid Textured, Guid Solid, bool NoBuildBeforePreview, bool WithheldPresentDrained, SourceOrderProof? ReplacementSource,
-        FrameProof[] Frames, ChildProof[] Children);
+        FrameProof[] Frames, ClickProof[] Clicks, ChildProof[] Children);
 }
