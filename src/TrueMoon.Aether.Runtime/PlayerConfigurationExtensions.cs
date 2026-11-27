@@ -32,7 +32,8 @@ public static class PlayerConfigurationExtensions
             if(!services.Exist<GpuResourceHost>())services.Singleton<GpuResourceHost>(_=>new());
             services.Singleton<IFactory<GpuLocalSurfaceSession,GpuLocalSurfaceRequest>>(resolver=>new Factory<GpuLocalSurfaceSession,GpuLocalSurfaceRequest>(resolver.Resolve<GpuResourceHost>().CreateLocalSurface));
             services.Singleton<IFactory<RuntimeProtocol,(SessionIdentity,IGameSession)>>(resolver=>new Factory<RuntimeProtocol,(SessionIdentity,IGameSession)>(arguments=>
-                new(arguments.Item1,arguments.Item2,Environment.ProcessId,sceneWorldCodec:EcsSceneLoadingConfigurationExtensions.CreateNeutralCodec(resolver))));
+                new(arguments.Item1,arguments.Item2,Environment.ProcessId,requireRestore:start.Checkpoint!=null,
+                    sceneWorldCodec:EcsSceneLoadingConfigurationExtensions.CreateNeutralCodec(resolver))));
             services.Singleton<PlayerSession>(resolver=>new(start,resolver.Resolve<IFactory<GameBuildLoader,GameBuildReference>>(),
                 resolver.Resolve<IFactory<RuntimeProtocol,(SessionIdentity,IGameSession)>>(),resolver.Resolve<IFactory<GpuLocalSurfaceSession,GpuLocalSurfaceRequest>>(),resolver.Resolve<RuntimeMeshRenderHost>()));
             services.Singleton<IStartable>(resolver=>new AppServiceLifecycle(startable:resolver.Resolve<PlayerSession>()));

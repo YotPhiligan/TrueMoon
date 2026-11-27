@@ -124,52 +124,15 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                     _input.Clear();
                     _surfaceGeneration = surface.Generation; break;
                 case CommandKind.CaptureCheckpoint:
-                    RequireReady();
-                    if (_playing) throw new InvalidOperationException("Checkpoint capture requires Paused.");
-                    var beforeTick = game.TickNumber; var beforeRevision = game.Revision;
-                    if (CheckpointScene is not { } captureScene || game is not ICheckpointGameSession captureGame) checkpointOutcome = CheckpointOutcome.Unsupported;
-                    else
+                    checkpointOutcome = CaptureCheckpoint(out var captured);
+                    if (captured != null)
                     {
-                        try
-                        {
-                            var state = captureGame.CaptureCheckpoint();
-                            if (state == null || state.Tick != beforeTick) throw new InvalidDataException("Capture returned an incoherent tick.");
-                            checkpoint = GameCheckpointCodec.Encode(new(identity.HostContractId, identity.GameBuildId, captureScene.Id, captureScene.Revision, state));
-                            checkpointOutcome = CheckpointOutcome.Captured;
-                        }
-                        catch (CheckpointRejectedException error) when (error.Outcome is CheckpointOutcome.CaptureRejected or CheckpointOutcome.Unsupported)
-                        { checkpointOutcome = error.Outcome; }
+                        try { checkpoint = GameCheckpointCodec.Encode(captured); }
                         catch (InvalidDataException) { checkpointOutcome = CheckpointOutcome.CaptureRejected; }
                     }
-                    if (game.TickNumber != beforeTick || game.Revision != beforeRevision)
-                        throw new InvalidDataException("Capture changed the paused runtime; outcome is unsafe.");
                     break;
                 case CommandKind.RestoreCheckpoint:
-                    RequireScene();
-                    if (!_awaitingRestore || _playing || _surfaceGeneration != 0) throw new InvalidOperationException("Restore is only valid before fresh runtime readiness.");
-                    if (CheckpointScene is not { } restoreScene || game is not ICheckpointGameSession restoreGame) checkpointOutcome = CheckpointOutcome.Unsupported;
-                    else
-                    {
-                        GameCheckpoint? restored = null;
-                        try
-                        {
-                            restored = GameCheckpointCodec.Decode(request.Checkpoint ?? throw new InvalidDataException("Missing checkpoint."));
-                            restored.ValidateFor(identity.HostContractId, restoreScene.Id, restoreScene.Revision);
-                        }
-                        catch (InvalidDataException) { checkpointOutcome = CheckpointOutcome.RestoreRejected; }
-                        if (restored != null && checkpointOutcome == CheckpointOutcome.None)
-                        {
-                            try { restoreGame.RestoreCheckpoint(restored.State); }
-                            catch (CheckpointRejectedException error) when (error.Outcome == CheckpointOutcome.RestoreRejected)
-                            { checkpointOutcome = CheckpointOutcome.RestoreRejected; }
-                            if (checkpointOutcome == CheckpointOutcome.None)
-                            {
-                                if (game.Revision != restoreScene.Revision || game.TickNumber != restored.State.Tick || restoreGame.CaptureCheckpoint() != restored.State)
-                                    throw new InvalidDataException("Restore did not apply the complete state.");
-                                _input.Clear(); _awaitingRestore = false; checkpointOutcome = CheckpointOutcome.Restored;
-                            }
-                        }
-                    }
+                    checkpointOutcome = RestoreCheckpoint(null, request.Checkpoint);
                     break;
             }
             _sequence = unchecked((ulong)request.Sequence);
@@ -194,6 +157,48 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
         }
         finally { _worldSerial.Release(); }
     }
+    private CheckpointOutcome CaptureCheckpoint(out GameCheckpoint? checkpoint)
+    {
+        RequireReady();
+        if (_playing) throw new InvalidOperationException("Checkpoint capture requires Paused.");
+        var beforeTick = game.TickNumber; var beforeRevision = game.Revision;
+        checkpoint = null;
+        if (CheckpointScene is not { } scene || game is not ICheckpointGameSession checkpointGame) return CheckpointOutcome.Unsupported;
+        var outcome = CheckpointOutcome.Captured;
+        try
+        {
+            var state = checkpointGame.CaptureCheckpoint();
+            if (state == null || state.Tick != beforeTick) throw new InvalidDataException("Capture returned an incoherent tick.");
+            checkpoint = new(identity.HostContractId, identity.GameBuildId, scene.Id, scene.Revision, state);
+        }
+        catch (CheckpointRejectedException error) when (error.Outcome is CheckpointOutcome.CaptureRejected or CheckpointOutcome.Unsupported)
+        { outcome = error.Outcome; }
+        catch (InvalidDataException) { outcome = CheckpointOutcome.CaptureRejected; }
+        if (game.TickNumber != beforeTick || game.Revision != beforeRevision)
+            throw new InvalidDataException("Capture changed the paused runtime; outcome is unsafe.");
+        return outcome;
+    }
+
+    private CheckpointOutcome RestoreCheckpoint(GameCheckpoint? checkpoint, byte[]? encoded)
+    {
+        RequireScene();
+        if (!_awaitingRestore || _playing || _surfaceGeneration != 0) throw new InvalidOperationException("Restore is only valid before fresh runtime readiness.");
+        if (CheckpointScene is not { } scene || game is not ICheckpointGameSession checkpointGame) return CheckpointOutcome.Unsupported;
+        try
+        {
+            checkpoint ??= GameCheckpointCodec.Decode(encoded ?? throw new InvalidDataException("Missing checkpoint."));
+            checkpoint.ValidateFor(identity.HostContractId, scene.Id, scene.Revision);
+        }
+        catch (InvalidDataException) { return CheckpointOutcome.RestoreRejected; }
+        try { checkpointGame.RestoreCheckpoint(checkpoint.State); }
+        catch (CheckpointRejectedException error) when (error.Outcome == CheckpointOutcome.RestoreRejected)
+        { return CheckpointOutcome.RestoreRejected; }
+        if (game.Revision != scene.Revision || game.TickNumber != checkpoint.State.Tick || checkpointGame.CaptureCheckpoint() != checkpoint.State)
+            throw new InvalidDataException("Restore did not apply the complete state.");
+        _input.Clear(); _awaitingRestore = false;
+        return CheckpointOutcome.Restored;
+    }
+
     private (string Id, long Revision)? CheckpointScene => _scene is { } primitive
         ? (primitive.Id, primitive.Revision)
         : SceneGame?.ActiveScene?.Scene is { } world ? (world.Id.Value.ToString("D"), world.Revision) : null;

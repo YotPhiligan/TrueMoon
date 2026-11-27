@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Game.Logic;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Builds;
@@ -25,6 +26,30 @@ public sealed class PlayerStartTests
         Assert.Equal("local",start.Snapshot!.Id);Assert.Equal(11,start.Snapshot.Revision);Assert.Empty(start.Snapshot.CopyEntities());Assert.Null(start.World);
         Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(json))),start.SceneHash);
         await Assert.ThrowsAsync<InvalidDataException>(()=>PlayerStart.CaptureAsync(build.DirectoryPath,new('B',64),scene,true));
+    }
+
+    [Fact]
+    public async Task WithCheckpoint_RequiresExactBuildHostAndSceneWithoutChangingFrozenStart()
+    {
+        var (build,scene)=Create();
+        await File.WriteAllTextAsync(scene,"{\"formatVersion\":1,\"id\":\"local\",\"revision\":11,\"entities\":[]}");
+        var start=await PlayerStart.CaptureAsync(build.DirectoryPath,Hash,scene,true);
+        var otherHash=new string('B',64);
+        var state=new GameCheckpointState(13,default,false);
+        Assert.Throws<InvalidDataException>(()=>start.WithCheckpoint(new(Hash,otherHash,"local",11,state)));
+        Assert.Throws<InvalidDataException>(()=>start.WithCheckpoint(new(otherHash,build.BuildId,"local",11,state)));
+        Assert.Throws<InvalidDataException>(()=>start.WithCheckpoint(new(Hash,build.BuildId,"different",11,state)));
+        Assert.Throws<InvalidDataException>(()=>start.WithCheckpoint(new(Hash,build.BuildId,"local",12,state)));
+        var checkpoint=new GameCheckpoint(Hash,build.BuildId,"local",11,state);
+
+        var attached=start.WithCheckpoint(checkpoint);
+
+        Assert.Null(start.Checkpoint);
+        Assert.Same(checkpoint,attached.Checkpoint);
+        Assert.Same(start.Snapshot,attached.Snapshot);
+        Assert.Same(start.Artifact,attached.Artifact);
+        Assert.Equal(start.SceneHash,attached.SceneHash);
+        Assert.Throws<InvalidOperationException>(()=>attached.WithCheckpoint(checkpoint));
     }
     [Theory]
     [InlineData("{\"formatVersion\":2,\"id\":\"x\",\"revision\":0,\"entities\":[]}",false)]

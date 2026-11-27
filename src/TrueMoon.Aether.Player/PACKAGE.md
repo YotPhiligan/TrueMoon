@@ -44,6 +44,12 @@ font catalog factory for windowed captures or `null` for headless execution.
 Publish the Build for the exact managed entry assembly and pass cancellation
 from the host. The runner drains the App before publishing the report.
 
+An optional `PlayerScenarioCheckpointOptions` supplies storage callbacks for
+saving one completed tick and restoring the same Build and scene before
+readiness. The runner starts at the next absolute tick, restores held input
+from the same scenario, and does not replay earlier checkpoints or one-tick
+input pulses. Hosts own the storage and must bind it to the supplied hashes.
+
 Local runtime types now reside in the separate Runtime assembly; Player has no
 workflow Aether dependency. Expanded
 combined-exe/replace/crash/release matrix is ENG7b.3.

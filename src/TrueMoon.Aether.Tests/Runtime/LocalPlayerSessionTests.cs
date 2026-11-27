@@ -1,5 +1,6 @@
 using System.Numerics;
 using Game.Logic;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Ecs.Rendering;
 using TrueMoon.Aether.Ecs.Transforms;
@@ -155,6 +156,81 @@ public sealed class LocalPlayerSessionTests
         await player.StepAsync();Assert.Equal(1UL,game.TickNumber);
         await player.StopAsync();Assert.True(world.IsDisposed);
     }
+
+    [Theory]
+    [InlineData(13UL)]
+    [InlineData(ulong.MaxValue-1)]
+    public async Task WorldCheckpoint_IsConfirmedBeforeHudAndCanBeCapturedOnlyWhilePaused(ulong savedTick)
+    {
+        using var artifact=new Artifact();
+        var start=WorldCheckpointStart(artifact.Build,savedTick);
+        PlayerSession appPlayer=null!;
+        await using var app=WorldCheckpointApp(start,discardPayload:false,observeGame:game=>game.OnRestore=()=>
+        {
+            var player=appPlayer!;
+            Assert.Equal(PlayerState.Loading,player.Status.State);
+            Assert.Null(player.Hud);
+            Assert.Null(player.Surface);
+        });
+        appPlayer=app.Services.Resolve<PlayerSession>()!;
+        await app.StartAsync();
+
+        Assert.Equal(PlayerState.Paused,appPlayer.Status.State);
+        Assert.Equal(savedTick,appPlayer.Status.Tick);
+        Assert.Equal(start.Checkpoint!.State.Payload,appPlayer.Hud!.Status);
+        var captured=await appPlayer.CaptureCheckpointAsync();
+        Assert.Equal((start.Checkpoint.HostContractId,start.Checkpoint.SourceGameBuildId,start.Checkpoint.SceneId,start.Checkpoint.SceneRevision,start.Checkpoint.State),
+            (captured.HostContractId,captured.SourceGameBuildId,captured.SceneId,captured.SceneRevision,captured.State));
+        await appPlayer.SetPlayingAsync(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>appPlayer.CaptureCheckpointAsync());
+        await appPlayer.FixedTickAsync();
+        await appPlayer.SetPlayingAsync(false);
+        Assert.Equal(captured.State with{Tick=savedTick+1},(await appPlayer.CaptureCheckpointAsync()).State);
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>appPlayer.StartAsync());
+    }
+
+    [Fact]
+    public async Task WorldCheckpoint_DroppedPayloadRejectsStartupWithoutPublishingHud()
+    {
+        using var artifact=new Artifact();
+        var start=WorldCheckpointStart(artifact.Build);
+        CheckpointWorldGame game=null!;
+        await using var app=WorldCheckpointApp(start,discardPayload:true,observeGame:value=>game=value);
+        var player=app.Services.Resolve<PlayerSession>()!;
+
+        var error=await Assert.ThrowsAsync<InvalidDataException>(()=>player.StartAsync());
+
+        Assert.Contains("complete state",error.Message);
+        Assert.Equal(0,game.HudReads);
+        Assert.Equal(PlayerState.Stopped,player.Status.State);
+        Assert.Null(player.Hud);
+        Assert.Null(player.Surface);
+    }
+
+    private static PlayerStart WorldCheckpointStart(GameBuildArtifact artifact,ulong tick=13)
+    {
+        var scene=new SceneWorldData(new(new(Guid.NewGuid()),11,[],[],[]));
+        var state=new GameCheckpointState(tick,new(1,2,3,.1f,.2f,0),true)
+        {
+            Objects=new([new("switch",true)]),
+            Payload="状態🐉"
+        };
+        return PlayerStart.FromWorld(artifact,scene)
+            .WithCheckpoint(new(artifact.HostContractId,artifact.BuildId,scene.Scene.Id.Value.ToString("D"),scene.Scene.Revision,state));
+    }
+
+    private static IApp WorldCheckpointApp(PlayerStart start,bool discardPayload,Action<CheckpointWorldGame> observeGame)
+        => App.Build(context=>
+        {
+            context.Services(services=>services.Singleton<IFactory<IGameSession,Type>>(resolver=>new Factory<IGameSession,Type>(_=>
+            {
+                var loader=resolver.Resolve<IFactory<SceneWorldLoader,ComponentRegistry>>().Create(new ComponentRegistryBuilder().Build());
+                var game=new CheckpointWorldGame(loader,discardPayload);
+                observeGame(game);
+                return game;
+            })));
+            context.UseAetherLocalRuntime(start);
+        });
     private static IAppBuilder Builder(bool microsoft)=>App.Builder(context=>{if(microsoft)context.UseDI();});
     internal sealed class Artifact:IDisposable
     {
@@ -192,4 +268,22 @@ public sealed class LocalPlayerSessionTests
     }
     private sealed class WorldGame(SceneWorldLoader loader):SceneWorldGameSession(loader)
     {public override uint PatternColor=>0;protected override void TickWorld(SceneWorld scene,ulong nextTick){} }
+
+    private sealed class CheckpointWorldGame(SceneWorldLoader loader,bool discardPayload)
+        : SceneWorldGameSession(loader),ICheckpointGameSession,IGameHudSource
+    {
+        private GameCheckpointState _state=new(0,default,false);
+        internal int HudReads;
+        internal Action? OnRestore;
+        public override uint PatternColor=>0;
+        protected override void TickWorld(SceneWorld scene,ulong nextTick){}
+        public GameCheckpointState CaptureCheckpoint()=>_state with{Tick=TickNumber};
+        public void RestoreCheckpoint(GameCheckpointState state)
+        {
+            OnRestore?.Invoke();
+            RestoreSceneTick(state.Tick);
+            _state=discardPayload?state with{Payload=null}:state;
+        }
+        public GameHudSnapshot ReadHud(){HudReads++;return new(null,_state.Payload,[]);}
+    }
 }

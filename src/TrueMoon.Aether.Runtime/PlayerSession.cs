@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Input;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Frames;
@@ -69,6 +70,7 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
             if(_start.World is {} world)await _protocol.LoadLocalWorldAsync(world,linked.Token).ConfigureAwait(false);
             else await SendAsync(CommandKind.LoadScene,request=>
             {request.SceneId=_start.Snapshot!.Id;request.Revision=_start.Snapshot.Revision;request.Entities=_start.Snapshot.CopyEntities();},linked.Token).ConfigureAwait(false);
+            if(_start.Checkpoint is {} checkpoint)await _protocol.RestoreLocalCheckpointAsync(checkpoint,linked.Token).ConfigureAwait(false);
             await RefreshAsync(linked.Token).ConfigureAwait(false);
             RefreshHud();
         }
@@ -154,6 +156,18 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
     }
     /// <summary>Runs one paused tick through the same game/input protocol.</summary><param name="token">Cancellation.</param><returns>Applied tick.</returns>
     public Task<PlayerStatus> StepAsync(CancellationToken token=default)=>CommandAsync(CommandKind.Step,null,token);
+    /// <summary>Captures detached checkpoint state at the current paused tick without advancing the game.</summary>
+    /// <param name="token">Cancels waiting to capture.</param><returns>State bound to this Player's Build and scene.</returns>
+    public async Task<GameCheckpoint> CaptureCheckpointAsync(CancellationToken token=default)
+    {
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            Ready();
+            return await _protocol!.CaptureLocalCheckpointAsync(token).ConfigureAwait(false);
+        }
+        finally{_gate.Release();}
+    }
     /// <summary>Stages a detached input packet; it does not perform container resolution.</summary><param name="input">Bounded input.</param><param name="token">Cancellation.</param><returns>Capability outcome.</returns>
     public async Task<GameInputOutcome> InputAsync(GameInputState input,CancellationToken token=default)
     {
@@ -209,7 +223,7 @@ public sealed class PlayerSession : IStartable,IStoppable,IAsyncDisposable,IGpuS
     {var next=checked(_sequence+1);var request=ControlRequest.Create(Identity,next,kind);configure?.Invoke(request);var reply=await _protocol!.SendAsync(request,token).ConfigureAwait(false);_sequence=next;return reply;}
     private async Task<PlayerStatus> RefreshAsync(CancellationToken token){Apply(await SendAsync(CommandKind.GetStatus,null,token).ConfigureAwait(false));return Status;}
     private void RefreshHud()=>Volatile.Write(ref _hud,(_game?.Session as IGameHudSource)?.ReadHud());
-    private void Apply(ControlReply reply)=>Publish(new(reply.Phase=="Playing"?PlayerState.Playing:PlayerState.Paused,checked((ulong)reply.Tick),reply.RenderViewReady,Status.Error));
+    private void Apply(ControlReply reply)=>Publish(new(reply.Phase=="Playing"?PlayerState.Playing:PlayerState.Paused,unchecked((ulong)reply.Tick),reply.RenderViewReady,Status.Error));
     private void Publish(PlayerStatus status)=>Volatile.Write(ref _status,status);
     private void Guard()=>ObjectDisposedException.ThrowIf(Volatile.Read(ref _closing)!=0,this);
     private void Ready(){Guard();if(_protocol==null||Status.State is not (PlayerState.Paused or PlayerState.Playing))throw new InvalidOperationException("Player scene is not active.");}

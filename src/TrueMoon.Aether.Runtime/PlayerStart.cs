@@ -1,8 +1,10 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Checkpoints;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Scenes;
 using SceneDocument = TrueMoon.Aether.Scenes.SceneDocument;
@@ -13,8 +15,8 @@ namespace TrueMoon.Aether.Runtime;
 /// <summary>Immutable selected deployment and captured scene. It contains no App, game instance, source project or live file reader.</summary>
 public sealed class PlayerStart
 {
-    private PlayerStart(GameBuildArtifact artifact, SceneSnapshot? snapshot, SceneWorldData? world, string? sceneHash)
-    { Artifact = artifact; Snapshot = snapshot; World = world; SceneHash = sceneHash; }
+    private PlayerStart(GameBuildArtifact artifact, SceneSnapshot? snapshot, SceneWorldData? world, string? sceneHash, GameCheckpoint? checkpoint = null)
+    { Artifact = artifact; Snapshot = snapshot; World = world; SceneHash = sceneHash; Checkpoint = checkpoint; }
     /// <summary>Validated immutable selected build; Start revalidates it before loading code.</summary>
     public GameBuildArtifact Artifact { get; }
     /// <summary>Legacy bounded game input, exclusive with World.</summary>
@@ -23,6 +25,25 @@ public sealed class PlayerStart
     public SceneWorldData? World { get; }
     /// <summary>Exact captured scene bytes fingerprint; null for explicitly constructed data.</summary>
     public string? SceneHash { get; }
+    /// <summary>Optional checkpoint to apply before local Player readiness.</summary>
+    public GameCheckpoint? Checkpoint { get; }
+
+    /// <summary>Returns a new start that will restore the exact selected Build and scene.</summary>
+    /// <param name="checkpoint">Bounded state from the same host, Build, scene ID and revision.</param>
+    /// <returns>A new start with the same frozen deployment and scene.</returns>
+    public PlayerStart WithCheckpoint(GameCheckpoint checkpoint)
+    {
+        ArgumentNullException.ThrowIfNull(checkpoint);
+        if (Checkpoint != null) throw new InvalidOperationException("A Player start already carries a checkpoint.");
+        if (!string.Equals(checkpoint.SourceGameBuildId, Artifact.BuildId, StringComparison.Ordinal))
+            throw new InvalidDataException("Checkpoint was captured from a different Player Build.");
+        if (World is { } world)
+            checkpoint.ValidateFor(Artifact.HostContractId, world.Scene.Id.Value.ToString("D"), world.Scene.Revision);
+        else
+            checkpoint.ValidateFor(Artifact.HostContractId, Snapshot!);
+        GameCheckpointCodec.SceneByteCount(checkpoint.SceneId);
+        return new(Artifact, Snapshot, World, SceneHash, checkpoint);
+    }
     /// <summary>Captures immutable legacy data.</summary><param name="artifact">Selected deployment.</param><param name="scene">Frozen scene.</param><returns>Start data.</returns>
     public static PlayerStart FromSnapshot(GameBuildArtifact artifact, SceneSnapshot scene)
     { ArgumentNullException.ThrowIfNull(artifact); ArgumentNullException.ThrowIfNull(scene); return new(artifact, new(scene.Id, scene.Revision, scene.CopyEntities()), null, null); }

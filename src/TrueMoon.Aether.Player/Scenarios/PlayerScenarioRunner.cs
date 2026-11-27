@@ -36,9 +36,32 @@ public static class PlayerScenarioRunner
     /// <param name="configureDiagnostics">Optional customization of the scenario diagnostics.</param>
     /// <param name="cancellationToken">Caller cancellation, reported as exit code 4.</param>
     /// <returns>The scenario v1 exit code (0, 2, 3, 4, 5, 6, or 7).</returns>
-    public static async Task<int> RunAsync(string scenarioPath, string buildDirectory, string scenePath, string outputDirectory,
+    public static Task<int> RunAsync(string scenarioPath, string buildDirectory, string scenePath, string outputDirectory,
         bool legacyScene, Func<SkiaFontCatalog>? createWindowFonts, Action<DiagnosticPipelineOptions>? configureDiagnostics = null,
         CancellationToken cancellationToken = default)
+        => RunCoreAsync(scenarioPath, buildDirectory, scenePath, outputDirectory, legacyScene,
+            createWindowFonts, configureDiagnostics, cancellationToken, null);
+
+    /// <summary>Runs a version 1 scenario with optional resume and checkpoint persistence.</summary>
+    /// <param name="scenarioPath">Path to the scenario JSON.</param>
+    /// <param name="buildDirectory">Path to the exact published Build for the managed entry assembly.</param>
+    /// <param name="scenePath">Path to the selected scene.</param>
+    /// <param name="outputDirectory">Fresh output directory for reports, diagnostics, and frames.</param>
+    /// <param name="legacyScene">Whether to load a legacy scene snapshot instead of a World scene.</param>
+    /// <param name="createWindowFonts">Window font factory; null selects the headless profile.</param>
+    /// <param name="configureDiagnostics">Optional customization of the scenario diagnostics.</param>
+    /// <param name="cancellationToken">Caller cancellation, reported as exit code 4.</param>
+    /// <param name="checkpointOptions">Persistence callbacks and an optional absolute save tick.</param>
+    /// <returns>The scenario v1 exit code (0, 2, 3, 4, 5, 6, or 7).</returns>
+    public static Task<int> RunAsync(string scenarioPath, string buildDirectory, string scenePath, string outputDirectory,
+        bool legacyScene, Func<SkiaFontCatalog>? createWindowFonts, Action<DiagnosticPipelineOptions>? configureDiagnostics,
+        CancellationToken cancellationToken, PlayerScenarioCheckpointOptions checkpointOptions)
+        => RunCoreAsync(scenarioPath, buildDirectory, scenePath, outputDirectory, legacyScene,
+            createWindowFonts, configureDiagnostics, cancellationToken, checkpointOptions ?? throw new ArgumentNullException(nameof(checkpointOptions)));
+
+    private static async Task<int> RunCoreAsync(string scenarioPath, string buildDirectory, string scenePath, string outputDirectory,
+        bool legacyScene, Func<SkiaFontCatalog>? createWindowFonts, Action<DiagnosticPipelineOptions>? configureDiagnostics,
+        CancellationToken cancellationToken, PlayerScenarioCheckpointOptions? checkpointOptions)
     {
         var headless = createWindowFonts == null;
         try { outputDirectory = ReserveOutputDirectory(outputDirectory); }
@@ -56,6 +79,7 @@ public static class PlayerScenarioRunner
         Scenario? scenario = null;
         string? scenarioHash = null, error = null, cleanupError = null;
         var result = 0;
+        int? resumedFromTick = null, savedAtTick = null;
         PlayerSession? session = null;
         HostedUiWindow? window = null;
         try
@@ -68,8 +92,32 @@ public static class PlayerScenarioRunner
             var offset = bytes is [0xEF, 0xBB, 0xBF, ..] ? 3 : 0;
             scenario = JsonSerializer.Deserialize<Scenario>(bytes.AsSpan(offset), Json) ?? throw new InvalidDataException("Missing scenario.");
             Validate(scenario);
+            var saveAtTick = checkpointOptions?.SaveAtTick;
+            var save = checkpointOptions?.Save;
+            if (saveAtTick.HasValue != (save != null) || saveAtTick is { } requestedTick && (requestedTick < 1 || requestedTick > scenario.MaxTicks))
+                throw new InvalidDataException("Checkpoint saving requires a callback and a tick within the scenario.");
             timeout.CancelAfter(scenario.TimeoutMs);
             start = await PlayerStart.CaptureAsync(buildDirectory, BuildIdentity.HostId, scenePath, legacyScene, run.Token);
+            var resumeTick = 0;
+            var input = default(GameInputState);
+            if (checkpointOptions?.Load is { } load)
+            {
+                run.Token.ThrowIfCancellationRequested();
+                var restored = load(start, scenarioHash) ?? throw new InvalidDataException("Missing Player checkpoint.");
+                if (restored.State.Tick == 0 || restored.State.Tick >= (ulong)scenario.MaxTicks)
+                    throw new InvalidDataException("Resume tick must be positive and precede the final scenario tick.");
+                resumeTick = (int)restored.State.Tick;
+                if (saveAtTick is { } nextSaveTick && nextSaveTick <= resumeTick)
+                    throw new InvalidDataException("Save tick must follow the resume tick.");
+                start = start.WithCheckpoint(restored);
+                var latestHeldTick = 0;
+                foreach (var change in scenario.Input)
+                {
+                    if (change.Tick > resumeTick || change.Tick <= latestHeldTick) continue;
+                    latestHeldTick = change.Tick;
+                    input = ClearInputPulses(change.State);
+                }
+            }
             var app = App.Build(context =>
             {
                 var diagnosticsOptions = new DiagnosticPipelineOptions { JsonDirectory = Path.Combine(outputDirectory, "diagnostics") };
@@ -101,44 +149,63 @@ public static class PlayerScenarioRunner
                 var player = app.Services.Resolve<IPlayerScenarioDriver>() ?? throw new InvalidOperationException("Player scenario is unavailable.");
                 session = app.Services.Resolve<PlayerSession>() ?? throw new InvalidOperationException("Player session is unavailable.");
                 await app.StartAsync(run.Token);
+                if (resumeTick != 0)
+                {
+                    if (session.Status.Tick != (ulong)resumeTick)
+                        throw new InvalidDataException($"Resumed Player did not start at tick {resumeTick}.");
+                    resumedFromTick = resumeTick;
+                }
                 var changes = scenario.Input.ToDictionary(change => change.Tick);
                 var checkpoints = scenario.Checkpoints.ToDictionary(checkpoint => checkpoint.Tick);
-                var input = default(GameInputState);
-                for (var tick = 1; tick <= scenario.MaxTicks; tick++)
+                for (var tick = resumeTick + 1; tick <= scenario.MaxTicks; tick++)
                 {
                     if (changes.TryGetValue(tick, out var change)) input = change.State;
                     checkpoints.TryGetValue(tick, out var checkpoint);
                     var expected = checkpoint?.ExpectedObservations ?? [];
                     var step = await player.AdvanceScenarioAsync(input, checkpoint != null && player.SupportsFrameCapture, expected.Length != 0, run.Token);
-                    input = input with { Yaw = 0, Pitch = 0, InteractPressed = false };
+                    input = ClearInputPulses(input);
                     if (step.Status.Tick != (ulong)tick) throw new InvalidDataException($"Requested tick {tick}, observed {step.Status.Tick}.");
-                    if (checkpoint == null) continue;
-                    var frame = step.Frame;
-                    if (player.SupportsFrameCapture && frame == null)
-                        throw new InvalidDataException($"No frame for '{checkpoint.Id}'.");
-                    string? file = null, hash = null;
-                    if (frame != null)
+                    if (checkpoint != null)
                     {
-                        file = $"frame-{checkpoint.Id}.png";
-                        await File.WriteAllBytesAsync(Path.Combine(outputDirectory, file), frame.Png.AsMemory(), run.Token);
-                        hash = Convert.ToHexString(SHA256.HashData(frame.Png.AsSpan()));
+                        var frame = step.Frame;
+                        if (player.SupportsFrameCapture && frame == null)
+                            throw new InvalidDataException($"No frame for '{checkpoint.Id}'.");
+                        string? file = null, hash = null;
+                        if (frame != null)
+                        {
+                            file = $"frame-{checkpoint.Id}.png";
+                            await File.WriteAllBytesAsync(Path.Combine(outputDirectory, file), frame.Png.AsMemory(), run.Token);
+                            hash = Convert.ToHexString(SHA256.HashData(frame.Png.AsSpan()));
+                        }
+                        var hudStatus = session.Hud?.Status;
+                        var checks = expected.Select(expectation => Evaluate(expectation, step.Observation)).ToArray();
+                        var passed = (checkpoint.ExpectedInput == null || checkpoint.ExpectedInput == step.Input) &&
+                            (checkpoint.ExpectedHudStatus == null || checkpoint.ExpectedHudStatus == hudStatus) &&
+                            checks.All(check => check.Outcome == ObservationOutcome.Passed);
+                        observations.Add(new(checkpoint, step.Input, hudStatus, step.Status.Tick,
+                            frame != null ? "Captured" : "UnavailableHeadless", frame?.Tick, frame?.FrameId, frame?.SurfaceGeneration,
+                            frame?.Width, frame?.Height, frame?.Scale, file, hash,
+                            step.Observation?.Tick, step.Observation?.Version, checks, passed));
+                        if (!passed)
+                        {
+                            var unavailable = checks.Any(check => check.Outcome is ObservationOutcome.Unavailable or ObservationOutcome.Incompatible);
+                            result = unavailable ? 7 : 2;
+                            error = unavailable ? $"Observation unavailable or incompatible at '{checkpoint.Id}'." : $"Expectation failed at '{checkpoint.Id}'.";
+                            break;
+                        }
                     }
-                    var hudStatus = session.Hud?.Status;
-                    var checks = expected.Select(expectation => Evaluate(expectation, step.Observation)).ToArray();
-                    var passed = (checkpoint.ExpectedInput == null || checkpoint.ExpectedInput == step.Input) &&
-                        (checkpoint.ExpectedHudStatus == null || checkpoint.ExpectedHudStatus == hudStatus) &&
-                        checks.All(check => check.Outcome == ObservationOutcome.Passed);
-                    observations.Add(new(checkpoint, step.Input, hudStatus, step.Status.Tick,
-                        frame != null ? "Captured" : "UnavailableHeadless", frame?.Tick, frame?.FrameId, frame?.SurfaceGeneration,
-                        frame?.Width, frame?.Height, frame?.Scale, file, hash,
-                        step.Observation?.Tick, step.Observation?.Version, checks, passed));
-                    if (!passed)
-                    {
-                        var unavailable = checks.Any(check => check.Outcome is ObservationOutcome.Unavailable or ObservationOutcome.Incompatible);
-                        result = unavailable ? 7 : 2;
-                        error = unavailable ? $"Observation unavailable or incompatible at '{checkpoint.Id}'." : $"Expectation failed at '{checkpoint.Id}'.";
-                        break;
-                    }
+
+                    if (tick != saveAtTick) continue;
+                    // Windowed manual ticks advance in Playing mode; the request queue is idle here.
+                    var wasPlaying = session.Status.State == PlayerState.Playing;
+                    if (wasPlaying) await session.SetPlayingAsync(false, run.Token);
+                    var captured = await session.CaptureCheckpointAsync(run.Token);
+                    if (captured.State.Tick != (ulong)tick)
+                        throw new InvalidDataException($"Requested checkpoint at tick {tick}, captured {captured.State.Tick}.");
+                    run.Token.ThrowIfCancellationRequested();
+                    save!(start, scenarioHash, captured);
+                    savedAtTick = tick;
+                    if (wasPlaying && tick < scenario.MaxTicks) await session.SetPlayingAsync(true, run.Token);
                 }
             }
             finally
@@ -173,6 +240,7 @@ public static class PlayerScenarioRunner
         {
             FormatVersion = 1, ExitCode = result, Error = error, CleanupError = cleanupError, ScenarioHash = scenarioHash,
             Seed = scenario?.Seed, MaxTicks = scenario?.MaxTicks, TimeoutMs = scenario?.TimeoutMs,
+            ResumedFromTick = resumedFromTick, SavedAtTick = savedAtTick,
             BuildId = start?.Artifact.BuildId, SceneHash = start?.SceneHash,
             Scene = start?.World?.Scene.Id.Value.ToString() ?? start?.Snapshot?.Id,
             SceneRevision = start?.World?.Scene.Revision ?? start?.Snapshot?.Revision,
@@ -203,6 +271,9 @@ public static class PlayerScenarioRunner
             return true;
         }
     }
+
+    private static GameInputState ClearInputPulses(GameInputState input)
+        => input with { Yaw = 0, Pitch = 0, InteractPressed = false };
 
     private static string ReserveOutputDirectory(string path)
     {

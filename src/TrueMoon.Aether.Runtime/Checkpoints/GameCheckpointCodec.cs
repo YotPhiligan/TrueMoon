@@ -20,10 +20,7 @@ public static class GameCheckpointCodec
     public static byte[] Encode(GameCheckpoint checkpoint)
     {
         ArgumentNullException.ThrowIfNull(checkpoint);
-        int sceneSize;
-        try { sceneSize = Utf8.GetByteCount(checkpoint.SceneId); }
-        catch (EncoderFallbackException error) { throw new InvalidDataException("Checkpoint scene is not valid UTF-8.", error); }
-        if (sceneSize is < 1 or > MaxIdUtf8Bytes) throw new InvalidDataException("Invalid checkpoint scene UTF-8 length.");
+        var sceneSize = SceneByteCount(checkpoint.SceneId);
         // The immutable envelope has already validated the object IDs and optional payload.
         var state = checkpoint.State;
         var payload = state.Payload;
@@ -59,6 +56,15 @@ public static class GameCheckpointCodec
         BinaryPrimitives.WriteUInt16LittleEndian(span[offset..], (ushort)payloadSize); offset += 2;
         if (payload != null) Utf8.GetBytes(payload, span.Slice(offset, payloadSize));
         SHA256.HashData(span[..^HashBytes], span[^HashBytes..]); return bytes;
+    }
+
+    internal static int SceneByteCount(string sceneId)
+    {
+        int size;
+        try { size = Utf8.GetByteCount(sceneId); }
+        catch (EncoderFallbackException error) { throw new InvalidDataException("Checkpoint scene is not valid UTF-8.", error); }
+        if (size is < 1 or > MaxIdUtf8Bytes) throw new InvalidDataException("Invalid checkpoint scene UTF-8 length.");
+        return size;
     }
     /// <summary>Validates size/version/integrity and every field before creating any game state.</summary>
     public static GameCheckpoint Decode(ReadOnlySpan<byte> bytes)
