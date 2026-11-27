@@ -51,7 +51,7 @@ TexturesPart, MeshesPart)` (`:211-212`), `_tree.BlockInput()` при отлич�
 `TrueMoon.Argentis.Benchmarks --verify` — `VIEW_BASELINE_VERIFIED`, в проверке нагрузки новая группа
 `tree-sync`: у обеих реализаций один проход на N уведомлений, окно блокировки открыто до `Update` и снято
 после. Пара «ручная маска против примитива» — в [базе стоимости]
-(PERFORMANCE_BASELINE.md#uia410-deferred-tree-sync-2026-11-28).
+(PERFORMANCE_BASELINE.md#uia410-deferred-tree-sync-2026-11-27).
 
 Остаток UIA4.4 (`ElementScope` на каждый View и обязательный слой `ContentControl`), UIA4.7, UIA4.8 и
 UIA4.11 остаются открыты; известный регресс `KeyedRebuildSameKeys` (231/243 µs при 2496 строках) этот срез
