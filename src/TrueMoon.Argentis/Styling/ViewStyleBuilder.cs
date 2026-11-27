@@ -12,7 +12,7 @@ internal sealed class ViewStyleBuilder<TView>(TView view) : IViewStyleBuilder<TV
     {
         ArgumentNullException.ThrowIfNull(selector);
         var part = selector(view);
-        if (part == null || part.IsDisposed || !ReferenceEquals(part.FindScope(), view.OwnedScope))
+        if (part == null || part.IsDisposed || !ReferenceEquals(part.FindScope(), view))
             throw new ArgumentException("A style part must be live and belong to this view's boundary.",
                 nameof(selector));
         return Add(new(part, null));

@@ -98,7 +98,6 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
     {
         var typedView = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Views.View`1");
         var typedWindow = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Windows.Window`1");
-        var contentControl = compilation.GetTypeByMetadataName("TrueMoon.Argentis.Layout.ContentControl");
         var roots = ImmutableArray.CreateBuilder<SyntaxNode>();
         var seen = new HashSet<SyntaxNode>();
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
@@ -139,14 +138,14 @@ public sealed partial class ViewPartsGenerator : IIncrementalGenerator
                 else diagnostics.Add(Diagnostic.Create(UnsupportedFactory, call.GetLocation(), owner.Name));
             }
 
-            if (contentControl is not null)
-                foreach (var call in declaration.Members.SelectMany(Calls).Where(IsSetContentCall))
-                {
-                    if (model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol setting ||
-                        !SymbolEqualityComparer.Default.Equals(setting.ContainingType, contentControl)) continue;
-                    if (call.ArgumentList.Arguments is [{ Expression: var content }] && content is not LiteralExpressionSyntax)
-                        AddRoot(content);
-                }
+            // The view owns its content slot, so an argument of its own `SetContent` is a content position.
+            foreach (var call in declaration.Members.SelectMany(Calls).Where(IsSetContentCall))
+            {
+                if (model.GetSymbolInfo(call, cancellation).Symbol is not IMethodSymbol setting ||
+                    !SymbolEqualityComparer.Default.Equals(setting.ContainingType, view)) continue;
+                if (call.ArgumentList.Arguments is [{ Expression: var content }] && content is not LiteralExpressionSyntax)
+                    AddRoot(content);
+            }
         }
 
         var declaredCount = roots.Count;

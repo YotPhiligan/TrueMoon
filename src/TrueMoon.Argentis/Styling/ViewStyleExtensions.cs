@@ -44,7 +44,7 @@ public static partial class ViewStyleExtensions
             scope = builder.Build();
         }
 
-        view.OwnedScope.ReplaceStyle(scope);
+        view.ReplaceStyle(scope);
     }
 
     /// <summary>Adds a typed semantic role used by the nearest owning view's style.</summary>

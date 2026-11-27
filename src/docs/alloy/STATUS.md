@@ -3,6 +3,47 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+
+<a id="uia44-view-scope-2026-11-28"></a>
+28.11.2026 — UIA4.4 (четвёртая часть: область View и её слот контента): отдельного объекта области больше
+нет — `Argentis/ElementScope.cs` удалён (93 строки), индекс именованных частей, проверка дублей, обновление
+индекса при `TreeChange` и разрешение стиля выполняет сам `View` (`Views/View.cs:161-240`);
+`Element.OwnedScope` — это `View`, для корня области равный `this` (`Views/View.cs:26`, `Element.cs:379`,
+обход `ResolveThemeStyles`/`FindScope`/`RefreshViewStylesCore` не менялся — `Element.cs:607-631`). Узел View
+стоит на 32 байта дешевле: объект области (40 байта) и поле-ссылка на него ушли, два слота (словарь частей и
+область стиля) переехали в сам View; словарь, как и раньше, заводится при первом именованном элементе.
+
+`View` больше не наследует `ContentControl` — слот контента (`Child`, `Children`, `SetContent`, `MeasureCore`,
+`ArrangeCore`) объявлен прямо в `View` (`:17-51`) с теми же правилами владения (`ValidateChildChange`,
+`TreeChange.Acquire`, `Orphan`/`Adopt`, откат при отказе проверки). `ContentControl` остаётся обычным
+контент-хостом (`SplitView`, legacy-блоки, демонстрационные панели); проверка `element is ContentControl` для
+View-узла больше не истина — в репозитории такое место одно, `ManualTests/AlloyVulkanTest/WindowComponentProbe.cs:146`
+переведён с fluent-`Content(...)` на `SetContent(...)`. Генератор частей признаёт аргумент `SetContent`
+позицией контента по владельцу-`View` (`Argentis.Generator/ViewPartsGenerator.cs:141-148`) вместо типа
+`ContentControl`; `ViewStyleBuilder` проверяет принадлежность части сравнением `part.FindScope()` с самим
+View (`Styling/ViewStyleBuilder.cs:15`). Формулировка публичного контракта и миграция — в
+[PACKAGE пакета](../../TrueMoon.Argentis/PACKAGE.md), версия `1.2611.27.12-alpha`.
+
+Стенд: постоянная группа `view-node` в `Benchmarks/TrueMoon.Argentis.Benchmarks/Cases.cs` (строка = `BenchView`
+с контентом из конструктора, 4 узла на строку), проверка `WorkloadVerification.ViewNode` (слот контента View
+заполнен, измеряется и отдаёт ненулевую высоту) входит в `--verify`; `RunBaseline.ps1` знает размеры и число
+методов группы. Пара до/после — [база стоимости](PERFORMANCE_BASELINE.md#uia44-view-scope-2026-11-28):
+сборка сцены −1 248 / −9 984 / −79 872 байта при 39 / 312 / 2496 строках (ровно 32 байта на View), проход по
+готовой сцене — те же байты, время в пределах разброса проходов; охранная группа `node-cost` совпала побайтово
+на всех размерах. «До» снято на чистом HEAD `73e76e0d` в отдельном ovnfs-чекауте с теми же файлами стенда.
+
+Прогоны (28.11.2026, Release/net11.0, SDK 11.0.100): `TrueMoon.Alloy.Tests` — 1337 пройдено, 0 не пройдено
+(до среза 1332); `TrueMoon.Alloy.Hosting.Tests` — 225 (до 224, новых тестов срез не добавлял — счёт
+воспроизведён тем же прогонком); `TrueMoon.Argentis.Generator.Tests` — 36; `TrueMoon.Aether.Editor.Tests` —
+1656 (до 1654); `TrueMoon.Argentis.Benchmarks --verify` — `VIEW_BASELINE_VERIFIED`.
+
+Нативный smoke инспектора прошёл на новой сборке: `--smoke-inspector --project
+TestResults/InspectorSmoke-20261128-ui44/Documents.aetherproj --smoke …/out` — `report.json`
+`"Passed": true`, `"ViewDisposed": true`, нули на `UiSessions`/`Mappings`/`GpuResources`/`GpuHandles`,
+`ValidationReports: 1` при `ValidationErrors: 0`; экран (иерархия, инспектор, поповеры, блок свойств)
+живёт на собственном слоте контента View. Прежняя фикстура `InspectorSmoke-20261128` не переиспользована —
+свежая копия с чистым `Scenes/Inspector.aetherscene`.
+
 <a id="uia47-generated-view-parts-2026-11-28"></a>
 28.11.2026 — UIA4.7 (объявление контента во всех точках и типизированные View-части): для тестов
 генератора в репозитории отдельный проект `TrueMoon.Argentis.Generator.Tests` (36 тестов; `TestHelper`
@@ -13,8 +54,9 @@
 нераспознанный `Content` даёт ошибку ARG022 (`:27`) вместо тихой потери свойств; ручной
 `GetRequiredPart`/`TryGetPart` на месте сгенерированного свойства — предупреждение ARG023 (`:31`,
 поиск `:301-303`). Дочерние View-части больше не исключены: часть с типом, выводимым от `View`,
-получает типизированное свойство, а `ElementScope` индексирует и имя корня дочерней области — поиск
-имени внутри остаётся за самой дочерней областью (`Argentis/ElementScope.cs:31-36`, движковые
+получает типизированное свойство, а область индексирует и имя корня дочерней области — поиск
+имени внутри остаётся за самой дочерней областью (тогда `Argentis/ElementScope.cs:31-36`, с 28.11.2026
+индекс живёт в `Views/View.cs:161-219`, движковые
 `ViewPartScopeTests`). Инспектор переведён на генерацию: из `EditorInspectorView` удалены
 `NamedControls _parts = null!` и 13 ручных пробросов, partial-панели (Materials/Textures/Meshes)
 объявляют инлайн-ключи `Named(...)` с суффиксом `…Part`, внешние потребители (тесты, ManualTests)
@@ -92,10 +134,11 @@ TexturesPart, MeshesPart)` (`:211-212`), `_tree.BlockInput()` при отлич�
 после. Пара «ручная маска против примитива» — в [базе стоимости]
 (PERFORMANCE_BASELINE.md#uia410-deferred-tree-sync-2026-11-27).
 
-Остаток UIA4.4 (`ElementScope` на каждый View и обязательный слой `ContentControl`), UIA4.7, UIA4.8 и
-UIA4.11 остаются открыты; известный регресс `KeyedRebuildSameKeys` (231/243 µs при 2496 строках) этот срез
-не лечит — очередь сворачивает уведомления, а не снимает черновик привязки по адресу. Следующий шаг —
-UIA4.8 (явный выбор DI-конструктора) в одном генераторном контуре с UIA4.7.
+На момент этого среза остаток UIA4.4 (`ElementScope` на каждый View и обязательный слой `ContentControl`) и
+UIA4.11 оставались открыты, а UIA4.7/UIA4.8 закрывались тем же контуром; остаток UIA4.4 закрыт 28.11.2026
+([запись в начале раздела](#uia44-view-scope-2026-11-28)), UIA4.11 вне ближайшей очереди. Известный регресс
+`KeyedRebuildSameKeys` (231/243 µs при 2496 строках) этот срез не лечит — очередь сворачивает уведомления,
+а не снимает черновик привязки по адресу.
 
 <a id="uia49-view-activation-registry"></a>
 28.11.2026 — UIA4.9 (делегаты активации View в реестре вкладов): `ViewActivation<T>` больше не держит
@@ -437,8 +480,12 @@ Editor/OpenGL в обеих темах. Цели ввода адресованы
 отложенная очередь структурных изменений в движке (`DeferredTreeSync`, запись в начале раздела);
 закрыты 28.11.2026 UIA4.7 (точки объявления контента, дочерние View-части, кат-овер инспектора на
 сгенерированные свойства) и UIA4.8 (`[ViewConstructor]`, ARG024–ARG026, замкнутость графа регистраций),
-записи в начале раздела. Следующий шаг — остаток UIA4.4 (`ElementScope` на каждый View и обязательный
-слой `ContentControl`). UIA4.3.1 закрыта 27.11.2026 (`VirtualizingStack`, `BindVirtualizedItems`,
+записи в начале раздела. Закрыта 28.11.2026 и четвёртая часть UIA4.4 — отдельный объект области имён и стиля
+больше не заводится на каждый View, а `View` больше не наследует `ContentControl` и держит слот контента сам
+([запись в начале раздела](#uia44-view-scope-2026-11-28),
+[замер](PERFORMANCE_BASELINE.md#uia44-view-scope-2026-11-28)); UIA4.4 закрыта полностью. Следующий шаг —
+внеплановой кандидат `KeyedRebuildSameKeys` (231/243 µs при 2496 строках: адресный сброс черновика привязки
+при перепривязке). UIA4.3.1 закрыта 27.11.2026 (`VirtualizingStack`, `BindVirtualizedItems`,
 [замер](PERFORMANCE_BASELINE.md#uia431-viewport-virtualization-2026-11-27)); в прикладном коде она пока
 без потребителей — переход экранов с длинными списками не планировался; UIA4.11 вне ближайшей очереди.
 

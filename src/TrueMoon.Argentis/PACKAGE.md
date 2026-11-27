@@ -102,6 +102,16 @@ gets a generated typed property too; within that child subtree the child view's 
 name lookup. Reading a generated part through `GetRequiredPart`/`TryGetPart` warns as ARG023 —
 screens use the generated properties.
 
+**Migrating view content (`1.2611.27.12-alpha`, breaking).** `View` no longer derives from
+`ContentControl`. It declares its own single content slot — `Child`, `Children`, `SetContent` — with the same
+ownership rules as other content hosts (validation preserves the tree, the detached subtree stays caller
+owned). Consequences for existing code: `element is ContentControl host` no longer matches a view, the fluent
+`Content(element)` extension for content hosts does not apply to a view (declare `Content(...)` in the
+constructor, or call `SetContent(...)`), and `ContentControl`-typed fields or parameters cannot hold a view.
+`ContentControl` itself, `Border`, `ScrollViewer`, `SplitView` and `ConditionalContent` are unchanged. The
+part index, duplicate-name check and scoped style now live on the view itself; the view keeps its single
+content declaration, and the separate per-view scope object is gone (32 bytes less per view node).
+
 Use `ui.Adopt(control)` inside deferred `Content(...)` when a host needs a
 specific control before attachment. The control must be live, detached and
 unparented; the build takes ownership and applies the same tree and rollback

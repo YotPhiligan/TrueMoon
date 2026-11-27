@@ -143,6 +143,6 @@ internal static class WindowComponentProbe
     private sealed class ProbeWindow : Window<object>
     {
         internal TextBox Input { get; } = new() { Value = "draft" };
-        internal ProbeWindow() { this.WithTitle("Component window").WithClientSize(520, 320).Content(Input); }
+        internal ProbeWindow() { this.WithTitle("Component window").WithClientSize(520, 320).SetContent(Input); }
     }
 }

@@ -2,6 +2,7 @@ using TrueMoon.Argentis;
 using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Alloy.Runtime;
+using TrueMoon.Argentis.Views;
 using System.Collections.ObjectModel;
 using System.Collections.Immutable;
 
@@ -19,7 +20,7 @@ internal sealed record CaseDescriptor(string Group, string Method, Func<int, IUi
 /// <summary>The permanent UIA4.2 case set. Every group also measures <c>NoOp</c> as its harness floor.</summary>
 internal static class Cases
 {
-    internal static readonly string[] Groups = ["node-cost", "property-access", "property-store", "collection-binding", "keyed-binding", "virtualized-binding", "property-binding", "conditional-slot", "tree-sync"];
+    internal static readonly string[] Groups = ["node-cost", "view-node", "property-access", "property-store", "collection-binding", "keyed-binding", "virtualized-binding", "property-binding", "conditional-slot", "tree-sync"];
 
     /// <summary>Scene sizes per group: rows for the scene and binding groups, nodes for <c>property-store</c>, binding
     /// count for <c>property-binding</c>.</summary>
@@ -33,6 +34,7 @@ internal static class Cases
     internal static IReadOnlyList<CaseDescriptor> For(string group) => group switch
     {
         "node-cost" => [.. NodeCost(), new CaseDescriptor("node-cost", "NoOp", static _ => new NullCase())],
+        "view-node" => [.. ViewNode(), new CaseDescriptor("view-node", "NoOp", static _ => new NullCase())],
         "property-access" => [.. PropertyAccess(), new CaseDescriptor("property-access", "NoOp", static _ => new NullCase())],
         "property-store" => [.. PropertyStore(), new CaseDescriptor("property-store", "NoOp", static _ => new NullCase())],
         "collection-binding" => [.. CollectionBinding(), new CaseDescriptor("collection-binding", "NoOp", static _ => new NullCase())],
@@ -52,6 +54,13 @@ internal static class Cases
         yield return new("node-cost", "ArrangeScene", size => new ArrangeScene(size));
         yield return new("node-cost", "MeasureAndArrangeScene", size => new MeasureAndArrangeScene(size));
         yield return new("node-cost", "LeafEditThenLayout", size => new LeafEditThenLayout(size));
+    }
+
+    // Sizes are rows, and every row is one View rather than one plain panel.
+    private static IEnumerable<CaseDescriptor> ViewNode()
+    {
+        yield return new("view-node", "BuildViewScene", size => new BuildViewScene(size));
+        yield return new("view-node", "RelayoutViewScene", size => new RelayoutViewScene(size));
     }
 
     private static IEnumerable<CaseDescriptor> PropertyAccess()
@@ -367,6 +376,67 @@ internal sealed class LeafEditThenLayout(int rows) : TreeCase(rows)
         Root.Measure(Scene.Available, Text);
         Root.Arrange(Scene.Slot);
     }
+}
+
+/// <summary>
+/// The permanent-cost scene of a View node: every row is a <see cref="BenchView"/> whose content is declared
+/// once in the constructor and prepared at attach through the session factory registry — the application path
+/// an editor screen takes. The <c>node-cost</c> group contains no View at all, so it cannot price the scope,
+/// style boundary and content slot a View carries.
+/// </summary>
+internal static class ViewScene
+{
+    /// <summary>Nodes per row: the view, its content stack, the label and the fixed editor leaf.</summary>
+    public const int NodesPerRow = 4;
+
+    public static int Nodes(int rows) => rows * NodesPerRow + 1;
+
+    public static UiSession Build(int rows)
+    {
+        var root = new VStack();
+        for (var index = 0; index < rows; index++) root.Add(new BenchView());
+        return new UiSession(root, new HeadlessSurface(), new UiViewport(HeadlessSurface.Width, HeadlessSurface.Height),
+            null, new UiDispatchOptions(), null, new UiControlFactories());
+    }
+}
+
+/// <summary>One view authored the way an application view is: a layout declared in the constructor.</summary>
+internal sealed class BenchView : View
+{
+    public BenchView() => Content(ui => ui.VStack(ui.Text(""), new SizedElement()));
+}
+
+/// <summary>Builds, first-syncs and tears down the whole view scene; the per-View node cost is inside it.</summary>
+internal sealed class BuildViewScene(int rows) : IUiCase
+{
+    public void Setup() { }
+    public void Run()
+    {
+        using var session = ViewScene.Build(rows);
+        session.Update();
+    }
+    public void Cleanup() { }
+}
+
+/// <summary>One full layout pass over a prepared view scene: the walk through every View node and its
+/// content slot, which is what a frame that only re-lays out pays.</summary>
+internal sealed class RelayoutViewScene(int rows) : IUiCase
+{
+    private UiSession _session = null!;
+
+    public void Setup()
+    {
+        _session = ViewScene.Build(rows);
+        _session.Update();
+    }
+
+    public void Run()
+    {
+        _session.Root.Invalidate(Invalidation.Layout | Invalidation.Tree);
+        _session.Update();
+    }
+
+    public void Cleanup() => _session.Dispose();
 }
 
 internal abstract class ChainCase(int depth) : IUiCase

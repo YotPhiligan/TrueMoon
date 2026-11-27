@@ -18,6 +18,7 @@ internal static class WorkloadVerification
     internal static void Verify()
     {
         NodeLifecycle();
+        ViewNode();
         PropertyAccess();
         PropertyStore();
         CollectionBinding();
@@ -47,6 +48,26 @@ internal static class WorkloadVerification
         tree.Dispose();
         Check(tree.IsDisposed && row.IsDisposed, "scene dispose");
     }
+
+    private static void ViewNode()
+    {
+        const int rows = 12;
+        Check(ViewScene.Nodes(rows) == 49, "view node count");
+        using var session = ViewScene.Build(rows);
+        session.Update();
+        var root = (VStack)session.Root;
+        Check(root.Items.Count == rows, "view scene rows");
+        var view = (BenchView)root.Items[0];
+        Check(view.Children.Count == 1 && ReferenceEquals(view.Child, view.Children[0]), "view content slot");
+        var body = ContentBody(view.Child);
+        Check(body.Items.Count == 2 && ((Text)body.Items[0]).Value.Length == 0 && body.Items[1] is SizedElement,
+            "view content children");
+        view.Measure(Scene.Available, new FixedTextLayout());
+        Check(view.DesiredSize.Height > 0, "view measure");
+    }
+
+    private static ElementList ContentBody(Element? content) =>
+        content as ElementList ?? throw new InvalidOperationException("The view content is not a container.");
 
     private static void PropertyAccess()
     {

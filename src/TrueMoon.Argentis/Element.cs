@@ -376,7 +376,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             if (node.ChangingTree || node._disposing) throw new InvalidOperationException("UI tree changes cannot be reentrant.");
     }
 
-    internal virtual ElementScope? OwnedScope => null;
+    internal virtual View? OwnedScope => null;
     internal ViewDependencyOwnership? DependencyOwnership { get; set; }
     internal string? PartName { get; private set; }
 
@@ -604,14 +604,14 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         // Release the borrowed buffer: it must not outlive the change and keep disposed nodes alive.
         pending.Clear();
     }
-    private void ResolveThemeStyles(Theme theme, ElementScope? inherited, List<(Element Node, Style? Style)> pending)
+    private void ResolveThemeStyles(Theme theme, View? inherited, List<(Element Node, Style? Style)> pending)
     {
         var scope = OwnedScope ?? inherited;
         pending.Add((this, scope?.ResolveStyle(this, theme)));
         var children = Children;
         for (var index = 0; index < children.Count; index++) children[index].ResolveThemeStyles(theme, scope, pending);
     }
-    internal ElementScope? FindScope()
+    internal View? FindScope()
     {
         for (Element? node = this; node != null; node = node.Parent)
             if (node.OwnedScope is { } scope) return scope;
@@ -627,7 +627,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         Invalidate(Invalidation.Layout | Invalidation.Render);
     }
     private void RefreshViewStyles() => RefreshViewStylesCore(null);
-    private void RefreshViewStylesCore(ElementScope? inherited)
+    private void RefreshViewStylesCore(View? inherited)
     {
         var scope = OwnedScope ?? inherited;
         _viewStyle = scope?.ResolveStyle(this, Theme);
