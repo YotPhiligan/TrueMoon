@@ -6,15 +6,18 @@
 <a id="uia46-binding-converter"></a>
 28.11.2026 — UIA4.6 (типизированное преобразование значения привязки): `PropertyBinding` разделяет тип
 значения источника и тип UI-свойства — `PropertyBinding<TSource, TSourceValue, TValue>`
-(`TrueMoon.Argentis/Bindings/PropertyBinding.cs:7`, `:23-56`). Односторонняя привязка принимает
+(`TrueMoon.Argentis/Bindings/PropertyBinding.cs:7`, `:29-71`). Односторонняя привязка принимает
 `Func<TSourceValue, TValue>`, двусторонняя — `ITwoWayValueConverter<TSourceValue, TValue>`
 (`Bindings/ITwoWayValueConverter.cs`) с `Convert` и `TryConvertBack(value, out sourceValue, out error)`.
-Чтение источника идёт через `_convert` (`:160-166`), обратная запись сравнивает значение контроля с
-каноническим и пишет в источник только когда конвертер дал другое значение источника (`:168-210`).
+Чтение источника идёт через `_convert` (`:194-199`), обратная запись сравнивает значение контроля с
+каноническим и пишет в источник только когда конвертер дал другое значение источника (`:202-243`).
 Отказ обратного преобразования: черновик остаётся в контроле, источник не тронут, привязка ставит
-`UiProperties.HasError` и `UiProperties.ErrorMessage` и снимает только собственную ошибку — флаг
-`_conversionFailed` (`:135`, `:189-194`, `:212-225`). Публичные перегрузки: `Bind`, `BindTwoWay` и `BindText`
-с преобразователем (`ElementExtensions.cs:151-274`) и те же во Fluent-обёртках
+`UiProperties.HasError` и `UiProperties.ErrorMessage`, снимая сначала с элемента его прежнее состояние
+ошибки (`_priorHasError`/`_priorMessage`) и возвращая его при восстановлении; владение ошибкой
+(`_conversionFailed`) живёт на привязке, поэтому переживает reconnect и смену контекста, а сообщение,
+которое потребитель записал поверх отказа, остаётся нетронутым (`:23-27`, `:135-162`, вызов — `:226`).
+Публичные перегрузки: `Bind`, `BindTwoWay` и `BindText` с преобразователем
+(`ElementExtensions.cs:151-274`) и те же во Fluent-обёртках
 (`Views/UiBuildExtensions.cs:178-254`); генератор `FluentTwoWayBinding` не менялся.
 В инспекторе Editor presentation-строка убрана из ViewModel: `IEditorInspectorViewModel.SelectionText`
 заменён на `InspectorSelection(EntityId?, IsSceneOpen)` (`Editing/IEditorInspectorViewModel.cs:135-136`),
@@ -22,10 +25,11 @@
 строит `InspectorSelectionText.Describe` в привязке Fluent-дерева (`Editing/EditorInspectorView.cs:153`,
 `Editing/InspectorSelection.cs`). Ветка без модели (`EditorInspectorView.cs:307-313`) остаётся со своим
 текстом: привязки там нет.
-Проверки (28.11.2026, Release/net11.0): `TrueMoon.Alloy.Tests` — 1320 пройдено, 0 не пройдено, из них
-9 новых фактов `ConvertedBindingTests.cs` (проекция и уведомления, смена контекста, двусторонний ввод
-через `TextBox`, отказ с сохранением черновика и `ErrorMessage`, снятие собственной ошибки, чужое
-состояние ошибки не снимается, незаписываемый селектор, бросок конвертера). Фильтр
+Проверки (28.11.2026, Release/net11.0): `TrueMoon.Alloy.Tests` — 1323 пройдено, 0 не пройдено, из них
+12 новых фактов `ConvertedBindingTests.cs` (проекция и уведомления, смена контекста, двусторонний ввод
+через `TextBox`, отказ с сохранением черновика и `ErrorMessage`, снятие собственной ошибки, отказ при
+чужой ошибке и её восстановление, смена контекста после отказа, сообщение потребителя поверх отказа не
+переписывается, незаписываемый селектор, бросок конвертера). Фильтр
 `FullyQualifiedName~Inspector` в `TrueMoon.Aether.Editor.Tests` — 255 пройдено, 0 не пройдено (+2 новых
 факта `EditorInspectorViewTests`), полный прогон того же проекта — 1636 пройдено, 0 не пройдено;
 `TrueMoon.Alloy.Hosting.Tests` — 216 пройдено, 0 не пройдено. Утверждений о стоимости срез не делает,
