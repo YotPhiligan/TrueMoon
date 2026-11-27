@@ -44,9 +44,11 @@ TestResults/InspectorSmoke-20261128-ui44/Documents.aetherproj --smoke …/out` �
 живёт на собственном слоте контента View. Прежняя фикстура `InspectorSmoke-20261128` не переиспользована —
 свежая копия с чистым `Scenes/Inspector.aetherscene`.
 
-Хост запускается прямо (`bin/Release/net11.0/AetherEditorHost.exe` после `dotnet build -c Release`):
-`dotnet run --project … -c Release -- <аргументы>` даёт «Invalid editor arguments» при любом порядке флагов,
-а старый `bin/Release/net10.0` несёт прежние сборки рендеринга и воспроизводит уже исправленные дефекты.
+Хост native smoke запускается прямо: `bin/Release/net11.0/AetherEditorHost.exe` после `dotnet build
+-c Release`. Проверенная форма `dotnet run --project src/ManualTests/AetherEditorHost -c Release --nologo
+-v q -- <аргументы профиля>` вернула «Invalid editor arguments» в обеих испробованных последовательностях
+флагов; прямой exe те же два порядка принимает (парсер доходит до валидации комбинации/открытия файла).
+Старый `bin/Release/net10.0` несёт прежние сборки рендеринга и воспроизводит уже исправленные дефекты.
 
 Пакетная приёмка профиля `view-composition`: `ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1
 -ViewCompositionOnly -RunDirectory TestResults/AlloyPackages/uia44-view-scope` на версии
