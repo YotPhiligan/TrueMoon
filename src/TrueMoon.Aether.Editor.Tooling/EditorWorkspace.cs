@@ -53,6 +53,7 @@ public sealed class EditorWorkspace
     public SceneAuthoringState? Document => _document;
     /// <summary>Advances for every explicit selection/clear intent, including same-ID and already-clear requests.</summary>
     public ulong SelectionRevision { get; private set; }
+    internal Guid ViewportGestureOwner { get; set; }
     public SessionState State { get; private set; } = SessionState.Stopped;
     public GameEditorOperation Operation { get; private set; }
     public bool HasCandidate { get; private set; }

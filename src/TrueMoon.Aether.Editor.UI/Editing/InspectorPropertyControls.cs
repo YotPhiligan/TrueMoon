@@ -1,3 +1,4 @@
+using static TrueMoon.Aether.Editor.UI.Editing.EditorInspectorView;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis;
 
@@ -11,6 +12,7 @@ public sealed record InspectorPropertyControls(InspectorProperty Property, VStac
     CheckBox? Null, Button Reset, Text Source)
 {
     internal (VStack Panel, Dictionary<Guid, Button> Buttons)? SlotPickers { get; init; }
+    internal (ScrollViewer Host, ConditionalContent<RenderChoicesState?> Slot)? RenderChoices { get; init; }
 }
 
 /// <summary>Typed parts of one component section.</summary>

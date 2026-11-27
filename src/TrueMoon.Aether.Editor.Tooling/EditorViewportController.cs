@@ -179,6 +179,7 @@ public sealed partial class EditorViewportController : TrueMoon.Aether.Editor.UI
             if (input.Button == 0 && BeginTranslation(receipt, input, context)) return true;
             context.Focus(_view.Canvas);
             _gesture=input.Button==0?Gesture.Click:input.Button==1?Gesture.Orbit:Gesture.Pan;
+            _workspace.ViewportGestureOwner=ViewId;
             _start=receipt;_original=_state.Camera;_viewport=_ui!.Viewport;_selection=_workspace.SelectionRevision;_x=input.X;_y=input.Y;_capture=context;
             try{context.Capture(_view.Canvas);}catch{End(false);throw;}
             return true;
@@ -221,6 +222,7 @@ public sealed partial class EditorViewportController : TrueMoon.Aether.Editor.UI
         var translating = _gesture == Gesture.Translate;
         var restore=rollback&&(_gesture is Gesture.Orbit or Gesture.Pan)&&GestureCurrent(false);var original=_original;var receipt=_start;var capture=_capture;
         _gesture=Gesture.None;_capture=null;_start=null;_original=null;
+        if(_workspace.ViewportGestureOwner==ViewId)_workspace.ViewportGestureOwner=Guid.Empty;
         ClearTranslation();
         try{capture?.ReleaseCapture(_view.Canvas);}
         finally

@@ -24,6 +24,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private readonly Action<ProjectSession?>? _selectProject;
     private ProjectSession? _boundProject;
     private (ProjectSession Project, IReadOnlyList<ProjectModelCatalogItem> Items)? _modelCatalog;
+    private ProjectSession? _materialDraft;
+    internal const string MaterialDraftWarning = "Сохраните или отмените правку материала.";
     private bool _projectReady = true;
     private Task _pending = Task.CompletedTask;
     private Task<bool>? _exit;
@@ -95,12 +97,14 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         if (_closed || _busy || _exiting || _lifetime.IsCancellationRequested) return false;
         if (!_canTransition() && (command != DocumentCommand.ReimportModel || _canReimportWhilePlaying?.Invoke() != true)) return false;
         if (command is DocumentCommand.OpenProject or DocumentCommand.CloseProject)
-            return _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
+            return !HasMaterialDraft && _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
                 _projects.Active?.Documents?.Read().Operation is null or DocumentOperation.None;
         if (!BindingReady) return false;
         var session = _projects.Active?.Documents;
         var document = session?.Read();
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
+        if (command is DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial)
+            return session!.HasMaterialCatalog && (command == DocumentCommand.WriteMaterial || !HasMaterialDraft);
         if (command is DocumentCommand.ReadModelCatalog or DocumentCommand.SelectModel or DocumentCommand.PlaceModel)
             return session!.HasModelCatalog && (command == DocumentCommand.ReadModelCatalog || document.Content != null);
         if (command == DocumentCommand.ImportModel)
@@ -122,10 +126,85 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     internal bool PlaceModel(EditorProjectModelRow row) => Execute(DocumentCommand.PlaceModel, "", null, row);
     internal bool ImportModel(string path, ProjectSession project) => Execute(DocumentCommand.ImportModel, path, null, importTarget: project);
 
+    private bool HasMaterialDraft => _materialDraft != null && ReferenceEquals(_materialDraft, _projects.Active);
+
+    internal bool SetMaterialDraft(ProjectSession project, bool dirty)
+    {
+        lock (_gate)
+        {
+            if (dirty)
+            {
+                if (!ReferenceEquals(project, _projects.Active) || !Available(DocumentCommand.WriteMaterial)) return false;
+                _materialDraft = project;
+            }
+            else if (ReferenceEquals(_materialDraft, project))
+            {
+                _materialDraft = null;
+                if (_error is MaterialDraftException) _error = null;
+            }
+            return true;
+        }
+    }
+
+    internal Task<ProjectMaterialCatalogSnapshot> ReadMaterialCatalogAsync(ProjectSession project) =>
+        RunMaterialAsync(project, DocumentCommand.ReadMaterialCatalog, static (document, token) => document.ReadMaterialCatalogAsync(token));
+
+    internal Task<ProjectMaterialCatalogSnapshot> WriteMaterialAsync(ProjectSession project, ProjectMaterialCatalogSnapshot expected,
+        ProjectMaterial material) =>
+        RunMaterialAsync(project, DocumentCommand.WriteMaterial, (document, token) => document.WriteMaterialAsync(expected, material, token));
+
+    private Task<ProjectMaterialCatalogSnapshot> RunMaterialAsync(ProjectSession project, DocumentCommand command,
+        Func<SceneDocumentSession, CancellationToken, Task<ProjectMaterialCatalogSnapshot>> action)
+    {
+        TaskCompletionSource drain;
+        TaskCompletionSource<ProjectMaterialCatalogSnapshot> result;
+        CancellationTokenSource cancellation;
+        SceneDocumentSession document;
+        lock (_gate)
+        {
+            if (!ReferenceEquals(project, _projects.Active) || !Available(command))
+                return Task.FromException<ProjectMaterialCatalogSnapshot>(new InvalidOperationException("Операция с материалами сейчас недоступна."));
+            document = project.Documents!;
+            cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
+            drain = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            result = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _cancellation = cancellation;
+            _pending = drain.Task;
+            _busy = true;
+            _operation = command;
+            _cancellationError = null;
+        }
+        _ = Task.Run(async () =>
+        {
+            ProjectMaterialCatalogSnapshot? snapshot = null;
+            Exception? failure = null;
+            try
+            {
+                cancellation.Token.ThrowIfCancellationRequested();
+                snapshot = await action(document, cancellation.Token).ConfigureAwait(false);
+            }
+            catch (Exception error) { failure = error; }
+            lock (_gate)
+            {
+                failure = Combine(failure, _cancellationError);
+                _cancellationError = null;
+                _cancellation = null;
+                cancellation.Dispose();
+                if (!_exiting) { _busy = false; _operation = DocumentCommand.None; }
+                if (snapshot != null) result.SetResult(snapshot);
+                else if (failure is OperationCanceledException cancelled) result.SetCanceled(cancelled.CancellationToken);
+                else result.SetException(failure!);
+                drain.SetResult();
+            }
+        });
+        return result.Task;
+    }
+
     private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport,
         EditorProjectModelRow? catalogChoice = null, ProjectSession? importTarget = null)
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
+        if (command is DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial) return false;
         TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
         ProjectSession? owner;
         SceneDocument? placementDocument = null;
@@ -268,9 +347,9 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     // Runtime preparation and controls use the same gate and tracked completion as file/edit/exit operations.
     // Starting a game or building from Edit mode requires idle runtime admission.
     internal Task RunRuntimeAsync(GameEditorOperation operation, bool entering,
-        Func<ProjectSession, SceneAuthoringState, CancellationToken, Task> action, CancellationToken caller)
+        Func<ProjectSession, SceneAuthoringState, Guid, CancellationToken, Task> action, CancellationToken caller)
     {
-        ProjectSession project; SceneAuthoringState content; TaskCompletionSource completion; CancellationTokenSource cancellation;
+        ProjectSession project; SceneAuthoringState content; Guid opening; TaskCompletionSource completion; CancellationTokenSource cancellation;
         var result = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate)
         {
@@ -282,6 +361,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             if (state == null || state.IsClosed || state.Operation != DocumentOperation.None || state.Content == null)
                 throw new InvalidOperationException("Open an idle scene document first.");
             content = state.Content;
+            opening = state.OpeningId;
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(caller, _lifetime);
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _pending = completion.Task; _cancellation = cancellation; _busy = true; _operation = DocumentCommand.None;
@@ -290,7 +370,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         _ = Task.Run(async () =>
         {
             Exception? failure = null;
-            try { cancellation.Token.ThrowIfCancellationRequested(); await action(project, content, cancellation.Token).ConfigureAwait(false); }
+            try { cancellation.Token.ThrowIfCancellationRequested(); await action(project, content, opening, cancellation.Token).ConfigureAwait(false); }
             catch (Exception error) { failure = error; }
             lock (_gate)
             {
@@ -307,14 +387,15 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         return result.Task;
     }
 
-    internal Task RunCapturedRuntime(ProjectSession project, SceneAuthoringState content, Func<CancellationToken, Task> start, CancellationToken token)
+    internal Task RunCapturedRuntime(ProjectSession project, SceneAuthoringState content, Guid openingId,
+        Func<CancellationToken, Task> start, CancellationToken token)
     {
         lock (_gate)
         {
             token.ThrowIfCancellationRequested();
             if (_closed || _exiting || !BindingReady || !ReferenceEquals(_projects.Active, project))
                 throw new OperationCanceledException("Project startup was superseded.", token);
-            return project.Documents!.RunCapturedAsync(content, start, token);
+            return project.Documents!.RunCapturedAsync(content, start, token, openingId);
         }
     }
 
@@ -332,8 +413,9 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <returns>The engine receipt.</returns>
     public SceneAuthoringResult EditComponents(SceneDocument expected, ComponentEditBatch batch)
     { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.EditComponents(batch, _lifetime)); }
-    internal SceneAuthoringResult EditRenderComponents(SceneDocument expected, SceneRenderAssets assets, ComponentEditBatch batch)
-        => Edit(expected, document => document.EditRenderComponents(assets, batch, _lifetime));
+    internal SceneAuthoringResult EditRenderComponents(SceneDocument expected, SceneRenderAssets assets, ComponentEditBatch batch,
+        Guid openingId, ProjectSession? capturedProject)
+        => Edit(expected, document => document.EditRenderComponents(assets, batch, _lifetime), openingId, capturedProject);
     /// <summary>Edits name/placement metadata under the existing document/runtime/IO admission gate.</summary>
     /// <param name="expected">Exact captured document.</param><param name="batch">Atomic metadata request.</param><returns>Engine receipt.</returns>
     public SceneAuthoringResult EditHierarchy(SceneDocument expected, HierarchyEditBatch batch)
@@ -350,13 +432,17 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <param name="expected">Exact captured document.</param><param name="operation">Engine identity/revision.</param><returns>Engine receipt.</returns>
     public SceneAuthoringResult Redo(SceneDocument expected, AuthoringOperation operation)
     { ArgumentNullException.ThrowIfNull(operation); return Edit(expected, document => document.Redo(operation, _lifetime)); }
-    private SceneAuthoringResult Edit(SceneDocument expected, Func<SceneDocumentSession, SceneAuthoringResult> action)
+    private SceneAuthoringResult Edit(SceneDocument expected, Func<SceneDocumentSession, SceneAuthoringResult> action,
+        Guid? openingId = null, ProjectSession? capturedProject = null)
     {
         ArgumentNullException.ThrowIfNull(expected);
         lock (_gate)
         {
             if (!Available(DocumentCommand.Save)) throw new InvalidOperationException("Finish the current document/runtime transition before editing.");
             var document = _projects.Active!.Documents!;
+            if ((capturedProject != null && !ReferenceEquals(capturedProject, _projects.Active)) ||
+                (openingId is { } capturedOpening && document.Read().OpeningId != capturedOpening))
+                throw new InvalidOperationException("Сцена изменилась. Повторите правку.");
             return document.Edit(expected, action);
         }
     }
@@ -396,7 +482,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         {
             _decision?.TrySetResult((DocumentCloseChoice.Cancel, null));
             _cancellationError = Combine(_cancellationError, CancelWork());
-            _error = Combine(_error, _cancellationError);
+            if (_operation is not (DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial))
+                _error = Combine(_error, _cancellationError);
         }
     }
 
@@ -424,6 +511,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             }
             if (_closed && !force) return Task.FromResult(true);
             if (_closed && _exit?.IsCompletedSuccessfully == true && _exit.Result) return _exit;
+            if (!force && HasMaterialDraft)
+            {
+                _error = new MaterialDraftException();
+                return Task.FromResult(false);
+            }
             if (force) _closed = true;
             _exiting = true; _busy = true; _error = null; work = _pending; _operation = DocumentCommand.Exit;
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously); _exit = completion.Task;
@@ -468,6 +560,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         });
         return completion.Task;
     }
+
+    private sealed class MaterialDraftException() : InvalidOperationException(MaterialDraftWarning) { }
 
     private static void Validate(DocumentCommand command)
     {

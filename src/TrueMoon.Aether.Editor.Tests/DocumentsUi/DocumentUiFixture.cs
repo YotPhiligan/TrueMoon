@@ -25,12 +25,22 @@ internal sealed class DocumentUiFixture : IDisposable, IAsyncDisposable
     public Func<Task>? StopRuntime { get; set; }
     public SceneDocumentSession Document => Projects.Active!.Documents!;
 
-    public DocumentUiFixture(bool openProject = true, ISceneDocumentStore? sceneStore = null, CancellationToken lifetime = default, bool metadataOnly = false)
+    public DocumentUiFixture(bool openProject = true, ISceneDocumentStore? sceneStore = null, CancellationToken lifetime = default,
+        bool metadataOnly = false, bool materialCatalog = false, Func<ResolvedProject, SceneModelImports>? modelImports = null,
+        ResolvedProject? sharedProject = null, Func<ResolvedProject, ProjectMaterialCatalog>? createMaterialCatalog = null)
     {
-        Projects = new(new EditorProjectsTests.Store(Files.Project), new EditorProjectsTests.Toolchain(),
-            new EditorProjectsTests.Sessions { Activate = arguments => new(arguments, metadataOnly ? null : new(arguments.Project, sceneStore ?? Store, Authoring)) });
+        var project = sharedProject ?? Files.Project;
+        Projects = new(new EditorProjectsTests.Store(project), new EditorProjectsTests.Toolchain(),
+            new EditorProjectsTests.Sessions
+            {
+                Activate = arguments => new(arguments, metadataOnly ? null : new(arguments.Project, sceneStore ?? Store, Authoring)
+                {
+                    MaterialCatalog = createMaterialCatalog?.Invoke(arguments.Project) ?? (materialCatalog ? new(arguments.Project) : null),
+                    ModelImports = modelImports?.Invoke(arguments.Project)
+                })
+            });
         Commands = new(Projects, () => RuntimeIdle, async () => { RuntimeStops++; if (StopRuntime != null) await StopRuntime(); }, lifetime);
-        if (openProject) Projects.OpenAsync(Files.Project.ManifestPath).GetAwaiter().GetResult();
+        if (openProject) Projects.OpenAsync(project.ManifestPath).GetAwaiter().GetResult();
     }
 
     public void Run(DocumentCommand command, string path = "")

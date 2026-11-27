@@ -12,7 +12,7 @@ using TrueMoon.Argentis;
 namespace TrueMoon.Aether.Editor.UI.Editing;
 
 /// <summary>Schema-driven retained inspector. Borrows one model/style and owns only its control tree and subscriptions.</summary>
-public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiInputObserver, IUiFrameParticipant
+public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel>, IUiInputObserver, IUiFrameParticipant
 {
     /// <summary>Component section appearance.</summary>
     public static ViewStyleRole<Border> SectionRole { get; } = new("InspectorSection");
@@ -60,6 +60,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private readonly List<InspectorComponent> _componentRows = [];
     private InspectorRenderAssetSelection? _shownRenderAssets;
     private Guid? _openRenderSlot;
+    private int _renderSnapshotVersion;
     internal static ViewStyleRole<ScrollViewer> RenderChoicesRole { get; } = new("InspectorRenderChoices");
     /// <summary>Stable mirrors the keyed bindings of the choice and restoration containers read.</summary>
     private readonly List<InspectorComponentType> _addableTypes = [];
@@ -124,7 +125,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     /// <summary>Compact primary actions; each icon has a semantic name and delayed hover hint.</summary>
     public HStack Actions => _parts.Actions;
     /// <inheritdoc />
-    public bool NeedsFrame => _hint.IsPending || _hint.Target != null && !HintIsCurrent();
+    public bool NeedsFrame => _requestMaterialFocus || _hint.IsPending || _hint.Target != null && !HintIsCurrent();
 
     /// <summary>Builds a parent-owned inspector on the UI owner thread.</summary>
     /// <param name="model">Borrowed presentation.</param><param name="style">Borrowed scoped appearance.</param>
@@ -178,6 +179,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
                     .Configure(error => { error.MinWidth = 0; error.MinHeight = 0; })
                     .Bind(RichTextEditor.TextProperty, model => model.DiagnosticsText)
                     .Bind(UiProperties.Visible, model => model.HasDiagnostics),
+                BuildMaterials(ui),
                 ui.VStack().Named("ComponentListPart").WithRole(StackRole),
                 ui.VStack().Named("RemovedPart").WithRole(StackRole))
                 .Named("FormPart").WithRole(StackRole)));
@@ -200,6 +202,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             });
         this.AddChoicesPart.BindItems(_addableTypes, CreateAddChoice, static choice => (choice.Schema.TypeId, choice.Schema.Version), PresentAddChoice);
         this.RemovedPart.BindItems(_removedComponents, CreateRestoreRow, static removed => removed.Id, PresentRestoreRow);
+        PrepareMaterials();
         AttachmentChanged += Attachment;
         SynchronizeContext();
         this.ObservePropertyChanged(this, (_, change) => ModelChanged(change), SynchronizeContext);
@@ -225,6 +228,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             nameof(IEditorInspectorViewModel.CanChangeComponents) or nameof(IEditorInspectorViewModel.HasDraft) or
                 nameof(IEditorInspectorViewModel.DiagnosticsText) => InspectorUpdate.EditorState,
             nameof(IEditorInspectorViewModel.RenderAssets) => InspectorUpdate.RenderAssets,
+            nameof(IEditorInspectorViewModel.Materials) => InspectorUpdate.Materials,
             nameof(IEditorInspectorViewModel.HasSelection) => InspectorUpdate.CloseHint,
             _ => InspectorUpdate.None
         };
@@ -255,6 +259,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         this.ComponentListPart.IsInputBlocked = blocked;
         this.AddChoicesPart.IsInputBlocked = blocked;
         this.RemovedPart.IsInputBlocked = blocked;
+        MaterialsPart.IsInputBlocked = blocked;
     }
 
     private void Synchronize(InspectorUpdate update)
@@ -278,6 +283,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             SynchronizeComponents(model);
             SynchronizeComponentChoices(model);
         }
+        if ((update & InspectorUpdate.Materials) != 0) _materialContext.DataContext = model?.Materials;
         _presentedContext = model;
 
         if (model == null)
@@ -359,16 +365,18 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         var model = DataContext ?? throw new InvalidOperationException("A property row requires a presented inspector model.");
         var parts = InspectorPropertyEditorFactory.Create(model, property, section.Component.Title,
             _details.Contains(section.Address),
-            choices => ToggleRenderChoices(property, choices),
+            (host, choicesSlot) => ToggleRenderChoices(property, host, choicesSlot, null),
             () =>
             {
                 if (DataContext is { } current && current.RenderAssets is { CanRestoreMeshMaterial: true } selection &&
                     selection.Component == property.ComponentId)
                     current.RestoreMeshMaterial(selection);
-            });
+            },
+            (state, host) => CreateRenderChoices(property, state, host));
         // A row created inside a reconcile must arrive fully presented: the later editor passes only refresh live rows.
         ApplyEditorState(parts.Controls);
         ApplyGenericState(parts.Row);
+        ApplyRenderEditor(parts.Row);
         return parts.Row;
     }
 
@@ -445,25 +453,28 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (ReferenceEquals(_shownRenderAssets, assets)) return;
         foreach (var list in RenderLists()) CloseRenderChoices(list);
         _shownRenderAssets = assets;
+        _renderSnapshotVersion++;
         _openRenderSlot = null;
     }
 
     private void SynchronizeRenderEditors()
     {
-        foreach (var row in PropertyRows())
+        foreach (var row in PropertyRows()) ApplyRenderEditor(row);
+    }
+
+    private void ApplyRenderEditor(FieldRow row)
+    {
+        if (row.Choices == null) return;
+        var controls = row.Controls;
+        var picker = (Button)controls.Input;
+        var choices = RenderChoices(controls.Property);
+        picker.Value = choices.Items.FirstOrDefault(item => item.Id == choices.Selected)?.Name ?? "Выбрать";
+        picker.IsEnabled = _shownRenderAssets?.Enabled == true && choices.Items.Count != 0;
+        if (controls.Property.Key == "bindings")
         {
-            if (row.Choices == null) continue;
-            var controls = row.Controls;
-            var picker = (Button)controls.Input;
-            var choices = RenderChoices(controls.Property);
-            picker.Value = choices.Items.FirstOrDefault(item => item.Id == choices.Selected)?.Name ?? "Выбрать";
-            picker.IsEnabled = _shownRenderAssets?.Enabled == true && choices.Items.Count != 0;
-            if (controls.Property.Key == "bindings")
-            {
-                controls.Reset.IsEnabled = _shownRenderAssets is { CanRestoreMeshMaterial: true } selection &&
-                    selection.Component == controls.Property.ComponentId;
-                RefreshSlotPickers(row);
-            }
+            controls.Reset.IsEnabled = _shownRenderAssets is { CanRestoreMeshMaterial: true } selection &&
+                selection.Component == controls.Property.ComponentId;
+            RefreshSlotPickers(row);
         }
     }
 
@@ -519,9 +530,11 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     {
         var controls = row.Controls;
         var property = controls.Property;
-        if (controls.SlotPickers is not { } pickers) return;
+        if (controls.SlotPickers is not { } pickers || controls.RenderChoices is not { } choices) return;
         var selection = _shownRenderAssets;
         var slots = selection?.Component == property.ComponentId ? selection.Slots : [];
+        controls.Input.SemanticId = slots.Count == 0 && selection?.Component == property.ComponentId &&
+            selection.SingleSlotId is { } id ? $"editor.inspector.material.slot.{id:N}" : null;
         row.Editor.IsVisible = slots.Count == 0;
         pickers.Panel.IsVisible = slots.Count != 0;
         foreach (var stale in pickers.Buttons.Keys.Where(id => slots.All(slot => slot.Id != id)).ToArray())
@@ -537,67 +550,99 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             if (!pickers.Buttons.TryGetValue(slot.Id, out var button))
             {
                 button = new Button().WithRole(ActionRole)
-                    .OnClick(() => ToggleRenderChoices(property, row.Choices!, slot.Id));
+                    .OnClick(() => ToggleRenderChoices(property, choices.Host, choices.Slot, slot.Id));
+                button.SemanticId = $"editor.inspector.material.slot.{slot.Id:N}";
                 pickers.Buttons.Add(slot.Id, button);
                 pickers.Panel.Add(button);
             }
-            var material = selection!.Materials.FirstOrDefault(item => item.Id == slot.Material);
+            var materials = slot.Materials ?? selection!.Materials;
+            var material = materials.FirstOrDefault(item => item.Id == slot.Material);
             button.Value = slot.Name + " · " + (material?.Name ?? "Выбрать");
             button.AccessibleName = "Материал слота " + slot.Name;
-            button.IsEnabled = slot.CanSelect && selection.Materials.Count != 0;
+            button.IsEnabled = slot.CanSelect && materials.Count != 0;
             Reorder(pickers.Panel, button, i);
         }
     }
 
-    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer scroll) => ToggleRenderChoices(property, scroll, null);
-
-    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer scroll, Guid? slotId)
+    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer host, ConditionalContent<RenderChoicesState?> slot, Guid? slotId)
     {
         if (DataContext is not { } model || !ReferenceEquals(model, _presentedContext)) return;
-        var open = !scroll.IsVisible || _openRenderSlot != slotId;
-        foreach (var list in RenderLists()) CloseRenderChoices(list);
-        if (!open || _shownRenderAssets is not { Enabled: true } selection) return;
-        var slot = slotId.HasValue ? selection.Slots.FirstOrDefault(item => item.Id == slotId) : null;
-        if (slotId.HasValue && slot is not { CanSelect: true }) return;
+        var open = !host.IsVisible || _openRenderSlot != slotId;
+        foreach (var list in RenderLists()) if (!ReferenceEquals(list, host)) CloseRenderChoices(list);
+        if (!open) { CloseRenderChoices(host); return; }
+        var state = new RenderChoicesState(property.ComponentId, property.Key, slotId, _renderSnapshotVersion);
+        if (RenderChoicesRequest(property, state).Selection is null) { CloseRenderChoices(host); return; }
+        host.IsVisible = true;
+        _openRenderSlot = slotId;
+        // One state value for the whole list: clearing it releases the rows, so a settled reopen builds them again.
+        slot.State = state;
+    }
+
+    /// <summary>Whether one choice request still addresses the presented model, the current snapshot and an open slot.</summary>
+    private (InspectorRenderAssetSelection? Selection, InspectorRenderSlot? Slot) RenderChoicesRequest(
+        InspectorProperty property, RenderChoicesState? state)
+    {
+        if (state is null || !ReferenceEquals(DataContext, _presentedContext) ||
+            state.Component != property.ComponentId || state.PropertyKey != property.Key ||
+            state.SnapshotVersion != _renderSnapshotVersion || _shownRenderAssets is not { Enabled: true } assets ||
+            assets.Component != state.Component) return (null, null);
+        var slot = state.SlotId.HasValue ? assets.Slots.FirstOrDefault(item => item.Id == state.SlotId) : null;
+        if (state.SlotId.HasValue && slot is not { CanSelect: true }) return (null, null);
+        return (assets, slot);
+    }
+
+    /// <summary>Builds the choice rows of one requested state; null releases the branch when the request is no longer current.</summary>
+    private Element? CreateRenderChoices(InspectorProperty property, RenderChoicesState? state, ScrollViewer host)
+    {
+        var (selection, slot) = RenderChoicesRequest(property, state);
+        if (selection is null || state is null) return null;
+        var model = DataContext!;
         (IReadOnlyList<InspectorRenderAssetChoice> Items, Guid? Selected) choices =
-            slot == null ? RenderChoices(property) : (selection.Materials, slot.Material);
+            slot == null ? RenderChoices(property) : (slot.Materials ?? selection.Materials, slot.Material);
         var label = slot == null ? property.Label : "Материал слота " + slot.Name;
         var rows = new VStack().WithRole(StackRole);
+        var materialSlotId = property.Key == "bindings" ? slot?.Id ?? selection.SingleSlotId : null;
+        if (materialSlotId is { } currentSlot && choices.Selected is { } selectedMaterial)
+            AddMaterialSlotActions(rows, model, selection, currentSlot, selectedMaterial, host);
+        var authored = materialSlotId.HasValue && model.Materials is { Items.Count: > 0 } panel
+            ? panel.Items.Select(static item => item.Id).ToHashSet()
+            : null;
         foreach (var item in choices.Items)
         {
-            var button = new Button(item.Name).WithRole(ActionRole).OnClick(() =>
+            var name = authored?.Contains(item.Id) == true ? MaterialDisplayName(item) : item.Name;
+            var button = new Button(item.CanSelect ? name : $"{name} · недоступен").WithRole(ActionRole).OnClick(() =>
             {
-                CloseRenderChoices(scroll);
-                if (!ReferenceEquals(DataContext, model)) return;
+                CloseRenderChoices(host);
+                if (!item.CanSelect || !ReferenceEquals(DataContext, model)) return;
                 if (slot == null) model.SelectRenderAsset(selection, property, item.Id);
                 else model.SelectRenderSlotMaterial(selection, slot.Id, item.Id);
             });
-            button.AccessibleName = label + " · " + item.Name;
+            button.AccessibleName = label + " · " + button.Value;
+            button.IsEnabled = item.CanSelect;
+            if (materialSlotId is { } id)
+                button.SemanticId = $"editor.inspector.material.choice.{id:N}.{item.Id:N}";
             button.Tone = item.Id == choices.Selected ? ControlTone.Accent : ControlTone.Neutral;
             rows.Add(button);
             if (slot == null && property.Key == "mesh" && selection.MeshesWithMaterialTransfer.Contains(item.Id))
             {
                 var transfer = new Button("Выбрать с переносом материалов").WithRole(ActionRole).OnClick(() =>
                 {
-                    CloseRenderChoices(scroll);
+                    CloseRenderChoices(host);
                     if (ReferenceEquals(DataContext, model)) model.SelectMeshWithMaterialOverrides(selection, item.Id);
                 });
                 transfer.AccessibleName = "Выбрать с переносом материалов · " + item.Name;
                 rows.Add(transfer);
             }
         }
-        scroll.Content(rows);
-        scroll.IsVisible = true;
-        _openRenderSlot = slotId;
+        return rows;
     }
 
-    private static void CloseRenderChoices(ScrollViewer scroll)
+    private void CloseRenderChoices(ScrollViewer host)
     {
-        if (!scroll.IsVisible) return;
-        scroll.IsVisible = false;
-        var list = scroll.Child;
-        scroll.SetContent(null);
-        list?.Dispose();
+        if (!host.IsVisible) return;
+        host.IsVisible = false;
+        // The slot owns the branch: asking for no state releases its rows and their handlers.
+        if (host.Child is ConditionalContent<RenderChoicesState?> slot) slot.State = null;
     }
     private IEnumerable<NumberBox> NumericEditors() => PropertyRows().Select(row => row.Number)
         .Concat(Sections().SelectMany(section => section.TransformFields.Select(field => field.Number))).OfType<NumberBox>();
@@ -643,7 +688,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (input.Key == UiKey.Escape && model.CanCancel) { model.Cancel(); return true; }
         if (!input.Control) return false;
         if (input.Key == UiKey.Enter) { model.Apply(); return true; }
-        if (AllFields().Any(controls => controls.Input is TextBox or RichTextEditor && controls.Input.IsFocused)) return false;
+        if (MaterialTextHasFocus() || AllFields().Any(controls => controls.Input is TextBox or RichTextEditor && controls.Input.IsFocused)) return false;
         if (input.Key == UiKey.Z) { if (input.Shift) model.Redo(); else model.Undo(); return true; }
         if (input.Key == UiKey.Y) { model.Redo(); return true; }
         return false;
@@ -670,6 +715,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             }
         }
         else if (input.Kind is InputKind.PointerDown or InputKind.KeyDown or InputKind.FocusLost or InputKind.Wheel) CloseHint();
+        if (PreviewMaterialTextInput(input, context)) return true;
         if (input.Kind != InputKind.KeyDown || !(input.Control && input.Key == UiKey.Enter || input.Key == UiKey.Escape))
             return false;
         for (var focused = context.FocusedElement; focused != null; focused = focused.Parent)
@@ -679,6 +725,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
+        FocusRequestedMaterial(context);
         if (_hint.Target is not { } target) return;
         var layoutPending = context.HasPendingLayout;
         if (!layoutPending && !HintIsCurrent()) { CloseHint(); return; }
@@ -718,7 +765,14 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         _hintAncestors.Clear(); _hint.Reset(); _hintHost = null;
     }
     private void Attachment()
-    { if (!IsAttached) ForgetHint(); }
+    {
+        if (IsAttached) return;
+        _requestMaterialFocus = false;
+        _focusMaterialModel = null;
+        _materialInputField = null;
+        _clearMaterialInputQueued = false;
+        ForgetHint();
+    }
     internal static IconButton Action(UiSymbol symbol, string name)
         => ConfigureAction(new IconButton(symbol, name));
     internal static IconButton ConfigureAction(IconButton button)
@@ -742,7 +796,8 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         EditorState = 2,
         RenderAssets = 4,
         CloseHint = 8,
-        All = Structure | EditorState | RenderAssets
+        Materials = 16,
+        All = Structure | EditorState | RenderAssets | Materials
     }
 
     // Keep the existing public part handles inspectable after disposal.
@@ -847,6 +902,9 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             Choices = choices;
         }
     }
+
+    /// <summary>One requested choice list: the field and slot it belongs to plus the asset snapshot it was opened against.</summary>
+    internal sealed record RenderChoicesState(ComponentId Component, string PropertyKey, Guid? SlotId, int SnapshotVersion);
 
     private sealed record NamedControls(ScrollViewer Scroll, VStack Form, Text Empty, HStack Actions,
         Button Apply, Button Cancel, Button Undo, Button Redo, Button AddComponent, VStack AddChoices,

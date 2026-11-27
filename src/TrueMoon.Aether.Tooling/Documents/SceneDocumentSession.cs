@@ -12,6 +12,7 @@ namespace TrueMoon.Aether.Tooling.Documents;
 public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
 {
     private readonly Lock _gate = new();
+    private readonly Guid _projectId;
     private readonly string _root;
     private readonly ISceneDocumentStore _store;
     private readonly IFactory<ISceneAuthoringSession, SceneDocument> _authoring;
@@ -30,6 +31,30 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     private Exception? _error;
     internal SceneModelImports? ModelImports { get; init; }
     internal ProjectModelCatalog? ModelCatalog { get; init; }
+    internal ProjectMaterialCatalog? MaterialCatalog { get; init; }
+    private ProjectMaterialCatalogSnapshot? _materialSnapshot;
+    private ProjectMaterialCatalogSnapshot? _renderMaterials;
+    private SceneRenderAssets? _renderImports, _renderAssets;
+
+    internal bool HasMaterialCatalog => MaterialCatalog != null;
+    internal ProjectMaterialCatalogSnapshot? MaterialSnapshot { get { lock (_gate) return _materialSnapshot; } }
+
+    internal Task<ProjectMaterialCatalogSnapshot> ReadMaterialCatalogAsync(CancellationToken token) =>
+        (MaterialCatalog ?? throw new InvalidOperationException("Каталог материалов не настроен.")).ReadAsync(token);
+
+    internal Task<ProjectMaterialCatalogSnapshot> WriteMaterialAsync(ProjectMaterialCatalogSnapshot expected,
+        ProjectMaterial material, CancellationToken token) =>
+        (MaterialCatalog ?? throw new InvalidOperationException("Каталог материалов не настроен.")).WriteAsync(expected, material, token);
+
+    internal void PublishMaterialCatalog(ProjectMaterialCatalogSnapshot snapshot)
+    {
+        lock (_gate)
+        {
+            VerifyOpen();
+            if (snapshot.ProjectId != _projectId) throw new ArgumentException("Каталог принадлежит другому проекту.", nameof(snapshot));
+            if (_materialSnapshot == null || _materialSnapshot.Stamp != snapshot.Stamp) _materialSnapshot = snapshot;
+        }
+    }
 
     /// <summary>Whether this project exposes a catalog of its imported models.</summary>
     public bool HasModelCatalog => ModelCatalog != null;
@@ -82,6 +107,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     public SceneDocumentSession(ResolvedProject project, ISceneDocumentStore store, IFactory<ISceneAuthoringSession, SceneDocument> authoring)
     {
         ArgumentNullException.ThrowIfNull(project); ArgumentNullException.ThrowIfNull(store); ArgumentNullException.ThrowIfNull(authoring);
+        _projectId = project.Description.Id;
         _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(project.ScenesDirectory));
         _store = store; _authoring = authoring;
     }
@@ -135,15 +161,64 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     }
 
     /// <summary>Rechecks the selected sources before Build and returns their frozen resources, when selected.</summary>
-    public async Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default)
+    public Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default)
     {
-        var selection = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, cancellationToken).ConfigureAwait(false);
-        return Read() is { Content: { } scene } current && current.OpeningId == openingId
-            ? SceneRenderAssets.PrepareBuild(selection?.Assets, scene.Resolved, HasModelCatalog, cancellationToken)
-            : selection?.Content;
+        var state = Read();
+        return state.Content is { } scene && state.OpeningId == openingId
+            ? CheckModelImportsAsync(scene, openingId, null, cancellationToken)
+            : Task.FromCanceled<GameBuildRenderContent?>(cancellationToken.IsCancellationRequested ? cancellationToken : new(true));
     }
 
-    internal SceneRenderAssets? ReadRenderAssets(Guid openingId) => ModelImports?.ReadRenderAssets(openingId);
+    internal async Task<GameBuildRenderContent?> CheckModelImportsAsync(SceneAuthoringState scene, Guid openingId,
+        GameBuildRenderContent? fullContent, CancellationToken token)
+    {
+        SceneRenderAssets? imports;
+        lock (_gate)
+        {
+            VerifyBuildCapture(scene, openingId, token);
+            imports = ModelImports?.ReadRenderAssets(openingId);
+        }
+        var selection = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, token).ConfigureAwait(false);
+        var materials = MaterialCatalog == null ? null : await MaterialCatalog.ReadAsync(token).ConfigureAwait(false);
+        lock (_gate)
+        {
+            VerifyBuildCapture(scene, openingId, token);
+            if (!ReferenceEquals(imports, selection?.Assets) || !ReferenceEquals(imports, ModelImports?.ReadRenderAssets(openingId)))
+                throw new OperationCanceledException("Выбранные импорты изменились при подготовке сборки.", token);
+        }
+        var assets = SceneRenderAssets.WithMaterials(_projectId, imports, materials, fullContent);
+        var content = SceneRenderAssets.PrepareBuild(assets, scene.Resolved, HasModelCatalog && fullContent == null, token);
+        lock (_gate)
+        {
+            VerifyBuildCapture(scene, openingId, token);
+            if (!ReferenceEquals(imports, ModelImports?.ReadRenderAssets(openingId)))
+                throw new OperationCanceledException("Выбранные импорты изменились при подготовке сборки.", token);
+        }
+        return content;
+    }
+
+    private void VerifyBuildCapture(SceneAuthoringState scene, Guid openingId, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (_closed || _closing || openingId == Guid.Empty || _openingId != openingId || !ReferenceEquals(scene, _current?.Read()))
+            throw new OperationCanceledException("Сцена изменилась при подготовке сборки.", token);
+    }
+
+    internal SceneRenderAssets? ReadRenderAssets(Guid openingId)
+    {
+        lock (_gate)
+        {
+            if (_closed || openingId == Guid.Empty || openingId != _openingId) return null;
+            var imports = ModelImports?.ReadRenderAssets(openingId);
+            if (!ReferenceEquals(imports, _renderImports) || !ReferenceEquals(_materialSnapshot, _renderMaterials))
+            {
+                _renderAssets = SceneRenderAssets.WithMaterials(_projectId, imports, _materialSnapshot);
+                _renderImports = imports;
+                _renderMaterials = _materialSnapshot;
+            }
+            return _renderAssets;
+        }
+    }
 
     internal SceneAuthoringResult EditRenderComponents(SceneRenderAssets expected, ComponentEditBatch batch, CancellationToken token)
     {
@@ -152,6 +227,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
             VerifyEditable();
             if (!ReferenceEquals(ReadRenderAssets(_openingId), expected))
                 throw new InvalidOperationException("Ресурсы сцены изменились. Отмените черновик и повторите выбор.");
+            if (expected.Collision is { } collision) throw new InvalidOperationException(collision.Message);
             return Current.EditComponents(batch, token);
         }
     }
@@ -203,6 +279,8 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 previous = _current; _current = candidate; candidate = null; _generation++; _openingId = Guid.NewGuid();
                 _path = path; _stamp = stamp; _saved = path == null ? null : state.ContentRevision;
                 ModelImports?.Open(document.Id.Value, _openingId, imports);
+                _renderImports = _renderAssets = null;
+                _renderMaterials = null;
             }
             if (previous != null) Release(previous);
             if (ModelImports != null) await ModelImports.StartOpenedWatchesAsync().ConfigureAwait(false);
@@ -316,12 +394,14 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
         }
     }
 
-    internal Task RunCapturedAsync(SceneAuthoringState expected, Func<CancellationToken, Task> action, CancellationToken caller)
+    internal Task RunCapturedAsync(SceneAuthoringState expected, Func<CancellationToken, Task> action, CancellationToken caller,
+        Guid expectedOpening = default)
     {
         lock (_gate)
         {
             VerifyOpen();
-            if (_pending != null || _closing || _retired.Count != 0 || !ReferenceEquals(Current.Read(), expected))
+            if (_pending != null || _closing || _retired.Count != 0 ||
+                expectedOpening != Guid.Empty && _openingId != expectedOpening || !ReferenceEquals(_current?.Read(), expected))
                 throw new OperationCanceledException("Scene startup was superseded by document work.");
             caller.ThrowIfCancellationRequested();
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(caller);
@@ -423,6 +503,9 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 {
                     foreach (var retired in _retired.ToArray()) { retired.Dispose(); _retired.Remove(retired); }
                     _current?.Dispose(); _current = null; _path = null; _stamp = null; _saved = null; _generation++; _openingId = Guid.Empty;
+                    _renderImports = _renderAssets = null;
+                    _renderMaterials = null;
+                    if (_closed) _materialSnapshot = null;
                 }
                 if (ModelImports != null) await ModelImports.ClearAsync().ConfigureAwait(false);
             }

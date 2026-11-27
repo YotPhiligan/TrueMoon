@@ -10,7 +10,8 @@ public partial class EditorInspectorViewModel
     private SceneRenderAssets? _sceneAssets, _renderDraftAssets;
     private string? _renderReferenceDiagnostic;
     private InspectorRenderAssetSelection? _renderAssets;
-    private (SceneRenderAssets? Assets, ComponentId Component, EntityId Entity, Guid Opening, string Mesh, string Binding, bool Enabled) _renderKey;
+    private (SceneRenderAssets? Assets, ComponentId Component, EntityId Entity, Guid Opening, string Mesh, string Binding,
+        bool Enabled, string? CatalogDiagnostic) _renderKey;
     private IReadOnlyList<InspectorRenderAssetChoice> _meshChoices = [], _materialChoices = [];
 
     /// <inheritdoc />
@@ -34,9 +35,11 @@ public partial class EditorInspectorViewModel
             return;
         }
 
-        var enabled = _available && !_conflict && _numericGesture == null && _sceneAssets != null &&
+        var catalogDiagnostic = _materials.CatalogPending ? "Загрузка материалов…" : _materials.CatalogError;
+        var enabled = _available && !_conflict && _numericGesture == null && catalogDiagnostic == null &&
+            _sceneAssets is { Collision: null, Meshes.Count: > 0 } &&
             (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets));
-        var key = (_sceneAssets, _renderMesh.ComponentId, _entity, _openingId, _renderMesh.Value, _renderBinding.Value, enabled);
+        var key = (_sceneAssets, _renderMesh.ComponentId, _entity, _openingId, _renderMesh.Value, _renderBinding.Value, enabled, catalogDiagnostic);
         if (_renderKey == key) return;
         if (!ReferenceEquals(_renderKey.Assets, _sceneAssets))
         {
@@ -45,25 +48,34 @@ public partial class EditorInspectorViewModel
         }
         _renderKey = key;
         var references = SceneRenderAssets.ResolveReferences(_sceneAssets, _renderMesh.Value, _renderBinding.Value);
-        _renderReferenceDiagnostic = references.Diagnostic;
+        _renderReferenceDiagnostic = catalogDiagnostic ?? references.Diagnostic;
         var mesh = references.Mesh;
         var imported = mesh.HasValue ? _sceneAssets!.DefaultDefinition(mesh.Value) : null;
         var resolved = references.Definition;
         var defaultBinding = mesh.HasValue ? _sceneAssets!.DefaultBinding(mesh.Value) : null;
+        var sameMeshChoices = ReferenceEquals(_renderAssets?.Meshes, _meshChoices) && _renderAssets?.Mesh == mesh;
         var slots = imported is { Bindings.Length: > 1 }
             ? imported.Bindings.Select((slot, index) => new InspectorRenderSlot(slot.SlotId, _sceneAssets!.SlotName(slot.SlotId),
-                resolved?.Bindings[index].Material.AssetId, enabled && resolved != null)).ToArray()
+                resolved?.Bindings[index].Material.AssetId, enabled && resolved != null)
+                {
+                    Materials = sameMeshChoices ? _renderAssets!.Slots[index].Materials : MaterialChoices(mesh!.Value, slot.SlotId)
+                }).ToArray()
             : [];
+        var singleSlot = imported is { Bindings.Length: 1 } ? imported.Bindings[0].SlotId : (Guid?)null;
         var canRestore = enabled && defaultBinding.HasValue && defaultBinding != references.Binding;
         var transferMeshes = canRestore && mesh is { } source && resolved is { Bindings.Length: > 1 }
             ? _sceneAssets!.Meshes.Where(choice => _sceneAssets.BindingWithTransferredMaterials(source, resolved, choice.Id) != null)
                 .Select(choice => choice.Id).ToArray()
             : [];
-        var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [],
+        var materials = mesh.HasValue ? _materialChoices : [];
+        if (singleSlot is { } slotId)
+            materials = sameMeshChoices ? _renderAssets!.Materials : MaterialChoices(mesh!.Value, slotId);
+        var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, materials,
             mesh, resolved is { Bindings.Length: 1 } ? resolved.Bindings[0].Material.AssetId : null, enabled)
         {
             CanRestoreMeshMaterial = canRestore,
             MeshesWithMaterialTransfer = Array.AsReadOnly(transferMeshes),
+            SingleSlotId = singleSlot,
             Slots = Array.AsReadOnly(slots)
         };
         // Equivalent displayed values can still target a different entity, opening or import generation.
@@ -74,6 +86,21 @@ public partial class EditorInspectorViewModel
             => source == null ? [] : Array.AsReadOnly(source.Select(choice => new InspectorRenderAssetChoice(choice.Id, choice.Name)).ToArray());
     }
 
+    private IReadOnlyList<InspectorRenderAssetChoice> MaterialChoices(Guid mesh, Guid slot)
+    {
+        InspectorRenderAssetChoice[]? filtered = null;
+        for (var i = 0; i < _materialChoices.Count; i++)
+        {
+            var choice = _materialChoices[i];
+            if (_sceneAssets!.MaterialDiagnostic(mesh, slot, choice.Id) != null)
+            {
+                filtered ??= _materialChoices.ToArray();
+                filtered[i] = choice with { CanSelect = false };
+            }
+        }
+        return filtered == null ? _materialChoices : Array.AsReadOnly(filtered);
+    }
+
     private IEnumerable<string> RenderDiagnostic()
     {
         if (_renderAssets == null) yield break;
@@ -81,7 +108,7 @@ public partial class EditorInspectorViewModel
             yield return "Ресурсы сцены изменились. Отмените черновик и повторите выбор.";
         else if (_renderReferenceDiagnostic is { } diagnostic)
             yield return diagnostic;
-        else if (_sceneAssets == null)
+        else if (_sceneAssets == null || _sceneAssets.Meshes.Count == 0)
             yield return "Для выбора меша и материала отметьте импорт модели в каталоге сцены.";
     }
 
@@ -103,9 +130,10 @@ public partial class EditorInspectorViewModel
         }
         else if (ReferenceEquals(property, _renderBinding) && selection.Mesh is { } currentMesh)
         {
-            if (assetId == selection.Material || selection.Slots.Count != 0 || assets.DefaultDefinition(currentMesh) is not { } original) return;
+            if (assetId == selection.Material || selection.SingleSlotId is not { } slot ||
+                !selection.Materials.Any(choice => choice.Id == assetId && choice.CanSelect)) return;
             mesh = currentMesh;
-            binding = assets.BindingForMaterial(mesh, original.Bindings[0].SlotId, assetId);
+            binding = assets.BindingForMaterial(mesh, slot, assetId);
         }
         else return;
 
@@ -144,13 +172,24 @@ public partial class EditorInspectorViewModel
     {
         VerifyOwner();
         Refresh(_selection);
+        TryStageSlotMaterial(selection, slot, material);
+    }
+
+    private bool TryStageSlotMaterial(InspectorRenderAssetSelection selection, Guid slot, Guid material)
+    {
         if (!ReferenceEquals(_renderAssets, selection) || !selection.Enabled || selection.Mesh is not { } mesh ||
-            _sceneAssets is not { } assets || _renderBinding == null ||
-            selection.Slots.FirstOrDefault(item => item.Id == slot) is not { CanSelect: true } selected || selected.Material == material ||
-            assets.BindingWithSlotMaterial(mesh, _renderBinding.Value, slot, material) is not { } binding) return;
+            _sceneAssets is not { } assets || _renderBinding == null) return false;
+        string? binding;
+        if (selection.SingleSlotId == slot && selection.Material != material)
+            binding = assets.BindingForMaterial(mesh, slot, material)?.ToString("D");
+        else if (selection.Slots.FirstOrDefault(item => item.Id == slot) is { CanSelect: true } named && named.Material != material)
+            binding = assets.BindingWithSlotMaterial(mesh, _renderBinding.Value, slot, material);
+        else return false;
+        if (binding == null) return false;
 
         _renderDraftAssets = assets;
         _renderBinding.Value = binding;
+        return true;
     }
 
     /// <inheritdoc />

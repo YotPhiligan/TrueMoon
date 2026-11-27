@@ -84,6 +84,7 @@ public static class DocumentConfigurationExtensions
                         resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!)
                     {
                         ModelCatalog = hasCatalog ? resolver.Resolve<IFactory<ProjectModelCatalog, ResolvedProject>>().Create(project) : null,
+                        MaterialCatalog = new(project),
                         ModelImports = hasWatches ? new(project.Description.Id,
                             resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(),
                             resolver.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>(),

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Numerics;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tooling;
@@ -6,12 +7,15 @@ using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
 using TrueMoon.Aether.Tooling.Preview;
+using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 using Xunit;
 
@@ -410,9 +414,67 @@ public sealed class EditorScenePlaybackTests
         Assert.True(h.Playback.CanExecute(EditorCommand.Start)); Assert.Equal(1, h.Documents.Document.Read().Content!.UndoCount);
     }
 
+    [Fact]
+    public async Task FreshPlaybackUsesAuthoredMaterialButSelectedBuildStaysPinned()
+    {
+        if (!OperatingSystem.IsWindows()) return; // Handle-verified model source capture is a Windows profile.
+        MaterialModelFixture model = null!;
+        using var h = new Fixture(materialCatalog: true,
+            modelImports: project => (model = MaterialModelFixture.CreateAsync(project).GetAwaiter().GetResult()).CreateImports());
+        var project = h.Documents.Projects.Active!.Project;
+        var documents = h.Documents.Document;
+        var authored = new ProjectMaterial(Guid.NewGuid(), "Plaster", new(0, 0, 1), null);
+        var snapshot = await documents.WriteMaterialAsync(await documents.ReadMaterialCatalogAsync(default), authored, default);
+        var mesh = model.PlainMesh;
+        var assets = SceneRenderAssets.WithMaterials(project.Description.Id, model.Assets, snapshot)!;
+        var binding = Assert.IsType<Guid>(assets.BindingForMaterial(mesh.AssetId, mesh.SlotId, authored.Id));
+        var scene = SceneMaterialAuthoringTests.Scene((mesh.AssetId, binding.ToString("D")));
+        Assert.True(await documents.NewAsync(scene, DocumentCloseChoice.Discard));
+        var approved = documents.Read();
+        documents.ModelImports!.Open(scene.Id.Value, approved.OpeningId, new([model.Selection], model.Content, new("test-selection")));
+        Assert.Null(documents.MaterialSnapshot);
+
+        Assert.True(h.Playback.RunSimulation()); h.Complete();
+        Assert.Null(h.Playback.Error);
+        Assert.Equal(SessionState.Playing, h.State);
+        var first = h.Context!;
+        Assert.Same(approved.Content!.Document, first.World!.Scene);
+        var a = Assert.IsType<GameBuildRenderContent>(first.Build.RenderContent);
+        var firstMaterial = a.AssetKeys.Single(key => key.AssetId == authored.Id);
+        Assert.Equal(new OpaqueUnlitMaterialDefinition(authored.BaseColorSrgb).CreateKey(project.Description.Id, authored.Id), firstMaterial);
+        var firstBinding = a.AssetKeys.Single(key => key.AssetId == binding);
+        var artifact = MaterialModelFixture.PublishBuild(project, first.Build.SourceRevision, a);
+        Assert.True(h.Playback.Execute(EditorCommand.Stop)); h.Complete();
+
+        authored = authored with { BaseColorSrgb = Vector3.One };
+        await documents.WriteMaterialAsync(snapshot, authored, default);
+        Assert.True(h.Playback.Execute(EditorCommand.Build)); h.Complete();
+        Assert.Null(h.Playback.Error);
+        Assert.Same(approved.Content.Document, h.Context!.World!.Scene);
+        var b = Assert.IsType<GameBuildRenderContent>(h.Context.Build.RenderContent);
+        Assert.Equal(new OpaqueUnlitMaterialDefinition(Vector3.One).CreateKey(project.Description.Id, authored.Id),
+            b.AssetKeys.Single(key => key.AssetId == authored.Id));
+        Assert.NotEqual(firstBinding, b.AssetKeys.Single(key => key.AssetId == binding));
+        Assert.Same(approved.Content, documents.Read().Content);
+        var builds = h.Builds;
+
+        await File.WriteAllTextAsync(Path.Combine(project.ContentDirectory, ".aether-material-catalog.json"), "{}");
+        var pinned = GameBuildArtifact.Open(artifact.DirectoryPath, artifact.HostContractId, artifact.BuildId);
+        Assert.True(h.Playback.RunSelectedBuild(pinned)); h.Complete();
+        Assert.Null(h.Playback.Error);
+        Assert.Equal(SessionState.Playing, h.State);
+        Assert.Equal(builds, h.Builds);
+        Assert.Same(pinned, h.SelectedBuild);
+        Assert.Equal(pinned.SourceRevision, h.Context!.Build.SourceRevision);
+        Assert.Null(h.Context.Build.RenderContent);
+        Assert.Same(approved.Content.Document, h.Context.World!.Scene);
+        Assert.Contains(pinned.RenderContent!.Entries, entry => entry.Key == firstMaterial);
+        Assert.Contains(pinned.RenderContent.Entries, entry => entry.Key == firstBinding);
+    }
+
     private sealed class Fixture : IDisposable
     {
-        public DocumentUiFixture Documents { get; } = new();
+        public DocumentUiFixture Documents { get; }
         public EditorPreview Preview { get; }
         public EditorScenePlayback Playback { get; }
         public ConcurrentQueue<string> Events { get; } = new();
@@ -422,14 +484,22 @@ public sealed class EditorScenePlaybackTests
         public SessionIdentity? Identity;
         public Func<CancellationToken, Task>? Build, Start, Replace;
         public Func<Task>? StopPreview; public Exception? StopFailure; public Action? BeforeStart, AfterContext;
-        public Fixture(Task? ready = null)
+        public GameBuildArtifact? SelectedBuild { get; private set; }
+        public Fixture(Task? ready = null, bool materialCatalog = false, Func<ResolvedProject, SceneModelImports>? modelImports = null)
         {
+            Documents = new(materialCatalog: materialCatalog, modelImports: modelImports);
             DocumentUiFixture.Wait(Documents.Document.NewAsync(DocumentData.Scene()));
             var state = Documents.Document.Read().Content!;
             Documents.Commands.Apply(state.Document, DocumentData.Edit(state.Document.Revision, 9));
             Preview = new((_, _) => throw new NotSupportedException(), () => { Events.Enqueue("preview-stop"); return StopPreview?.Invoke() ?? Task.CompletedTask; });
             Playback = new(Documents.Commands, Preview, Runtime, Editor,
-                context => { Events.Enqueue("context"); Context = context; Version++; AfterContext?.Invoke(); }, Dispatch, StartVersionAsync, ready: ready, replace: ReplaceVersionAsync);
+                context => { Events.Enqueue("context"); Context = context; Version++; AfterContext?.Invoke(); }, Dispatch, StartVersionAsync,
+                ready: ready, replace: ReplaceVersionAsync, selectBuild: (build, version, token) =>
+                {
+                    if (version != Version) throw new OperationCanceledException(token);
+                    SelectedBuild = build;
+                    return Task.CompletedTask;
+                });
             Documents.StopRuntime = () => Dispatch(EditorCommand.Stop, default);
         }
         private Task StartVersionAsync(long version, CancellationToken token)

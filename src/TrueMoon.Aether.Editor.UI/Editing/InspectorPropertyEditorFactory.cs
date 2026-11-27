@@ -11,17 +11,22 @@ namespace TrueMoon.Aether.Editor.UI.Editing;
 internal static class InspectorPropertyEditorFactory
 {
     internal static Parts Create(IEditorInspectorViewModel model, InspectorProperty property, string component,
-        bool showDetails, Action<ScrollViewer> toggleRenderChoices, Action restoreMeshMaterial)
+        bool showDetails, Action<ScrollViewer, ConditionalContent<RenderChoicesState?>> toggleRenderChoices,
+        Action restoreMeshMaterial, Func<RenderChoicesState?, ScrollViewer, Element?> renderChoices)
     {
         Element input;
         Element content;
         NumberBox? number = null;
         ScrollViewer? choices = null;
+        ConditionalContent<RenderChoicesState?>? slot = null;
         if (property.IsRenderReference)
         {
             choices = new ScrollViewer { MaxHeight = 134 }.WithRole(RenderChoicesRole);
             choices.IsVisible = false;
-            content = input = new Button("Выбрать").WithRole(ActionRole).OnClick(() => toggleRenderChoices(choices));
+            // The rows live in the slot: clearing the request releases them, a new asset snapshot rebuilds them.
+            slot = new ConditionalContent<RenderChoicesState?>(null, state => renderChoices(state, choices));
+            choices.SetContent(slot);
+            content = input = new Button("Выбрать").WithRole(ActionRole).OnClick(() => toggleRenderChoices(choices, slot));
         }
         else if (property.Kind == PropertyValueKind.Boolean)
             content = input = new CheckBox().WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.BooleanValue);
@@ -69,7 +74,8 @@ internal static class InspectorPropertyEditorFactory
         row.Add(details);
         var controls = new InspectorPropertyControls(property, row, input, nullable, reset, source)
         {
-            SlotPickers = slotPanel == null ? null : (slotPanel, new())
+            SlotPickers = slotPanel == null ? null : (slotPanel, new()),
+            RenderChoices = choices == null || slot == null ? null : (choices, slot)
         };
         row.Initialize(controls, line, number, choices);
         return new(controls, row);

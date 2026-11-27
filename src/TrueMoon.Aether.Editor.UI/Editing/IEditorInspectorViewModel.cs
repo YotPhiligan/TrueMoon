@@ -42,6 +42,9 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <summary>Negative numeric adjustment limit in display units.</summary>
     double RotationMinimum { get; }
 
+    /// <summary>Project material authoring, when available in this composition.</summary>
+    IEditorMaterialsModel? Materials => null;
+
     /// <summary>Gets the nine stable numeric fields for legacy Transform form consumers. Dynamic UI uses Components.</summary>
     IReadOnlyList<TransformField> Fields { get; }
 

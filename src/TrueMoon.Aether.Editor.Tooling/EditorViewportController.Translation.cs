@@ -55,6 +55,7 @@ public sealed partial class EditorViewportController
             selection != _workspace.SelectionRevision || !_model.CanTranslateViewport) return true;
         _translationTarget = target; _translationDrag = drag; _translationPosition = target!.Original; _translationDelta = default;
         _gesture = Gesture.Translate; _start = receipt; _viewport = _ui!.Viewport; _selection = selection; _capture = context;
+        _workspace.ViewportGestureOwner = ViewId;
         try { context.Capture(_view.Canvas); _view.Canvas.Invalidate(); }
         catch { End(false); throw; }
         return true;

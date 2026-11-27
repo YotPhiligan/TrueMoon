@@ -4,6 +4,8 @@ using TrueMoon.Argentis.Layout;
 using TrueMoon.Argentis.Windows;
 using System.Buffers.Binary;
 using System.Globalization;
+using System.Diagnostics;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
@@ -405,9 +407,12 @@ internal static class EditorModelBuildSmoke
         var transferMaterials = initialMode == "--initial-import-material-transfer";
         var cameraProjection = initialMode is "--initial-import-camera-save" or "--initial-import-camera-reopen";
         var meshVisibility = initialMode is "--initial-import-visibility-save" or "--initial-import-visibility-reopen";
-        var saveInitialImport = transferMaterials || saveAfterSlotUndo || reimportTexture ||
+        var authoringSave = initialMode == "--initial-import-material-authoring-save";
+        var authoringReopen = initialMode == "--initial-import-material-authoring-reopen";
+        var materialAuthoring = authoringSave || authoringReopen;
+        var saveInitialImport = authoringSave || transferMaterials || saveAfterSlotUndo || reimportTexture ||
             initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides" or "--initial-import-camera-save" or "--initial-import-visibility-save";
-        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture"
+        var reopenInitialImport = authoringReopen || initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture"
             or "--initial-import-reopen-overrides" or "--initial-import-camera-reopen" or "--initial-import-visibility-reopen";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistMultipleOverrides = saveAfterSlotUndo || initialMode is "--initial-import-save-overrides" or "--initial-import-reopen-overrides";
@@ -520,7 +525,7 @@ internal static class EditorModelBuildSmoke
         var first = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
         window.FramePresented += OnFirstFrame;
         void OnFirstFrame(UiSession ui) { window.FramePresented -= OnFirstFrame; first.TrySetResult(ui); }
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(materialAuthoring ? 210 : 90));
         var token = timeout.Token;
         IProjectAssetStore? modelStore = null;
         try
@@ -745,40 +750,49 @@ internal static class EditorModelBuildSmoke
                         popup.ModelCatalogRows.Children.Count == 0, token, HoldCatalog);
                     await CloseCatalog();
 
-                    var pending = documents.Pending;
-                    await EnterPath(source);
-                    await EditorHeaderSmoke.UntilAsync(ui, () =>
-                    {
-                        if (ui.NeedsUpdate || !tools.CancelPath.IsVisible || tools.CancelPath.Bounds.Width <= 0) return false;
-                        EditorHeaderSmoke.Move(ui, tools.CancelPath);
-                        EditorHeaderSmoke.Click(ui, tools.CancelPath);
-                        return true;
-                    }, token);
-                    Check(ReferenceEquals(pending, documents.Pending) && !File.Exists(catalogFile), "Dismissing the prompt started an import.");
-                    await Import("source/missing.gltf");
-                    Check(documents.Read().Error is FileNotFoundException && !File.Exists(catalogFile),
-                        $"A missing BIN did not stop the initial import: {documents.Read().Error}");
-
-                    using (new FileStream(catalogFile + ".write-lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                    if (materialAuthoring)
                     {
                         await Import(source);
-                        Check(documents.Read().Error is IOException && !File.Exists(catalogFile),
-                            $"A blocked registration exposed a catalog row: {documents.Read().Error}");
+                        Check(documents.Read().Error == null && File.Exists(catalogFile),
+                            $"Could not import the Material authoring mesh: {documents.Read().Error}");
                     }
-                    var pendingLedger = Directory.EnumerateFiles(ledgerFolder, "*.tmledger").Single();
-                    var pendingHash = Hash(await File.ReadAllBytesAsync(pendingLedger, token));
-                    failedAdmission = true;
-                    await Import(source);
-                    Check(documents.Read().Error == null && File.Exists(catalogFile) &&
-                        Hash(await File.ReadAllBytesAsync(pendingLedger, token)) == pendingHash,
-                        $"Retry failed to register the published ledger: {documents.Read().Error}");
-                    var committedHash = Hash(await File.ReadAllBytesAsync(catalogFile, token));
-                    await Import(@"source\scene.gltf");
-                    Check(documents.Read().Error == null && Hash(await File.ReadAllBytesAsync(catalogFile, token)) == committedHash,
-                        "Repeating an imported path changed the catalog.");
+                    else
+                    {
+                        var pending = documents.Pending;
+                        await EnterPath(source);
+                        await EditorHeaderSmoke.UntilAsync(ui, () =>
+                        {
+                            if (ui.NeedsUpdate || !tools.CancelPath.IsVisible || tools.CancelPath.Bounds.Width <= 0) return false;
+                            EditorHeaderSmoke.Move(ui, tools.CancelPath);
+                            EditorHeaderSmoke.Click(ui, tools.CancelPath);
+                            return true;
+                        }, token);
+                        Check(ReferenceEquals(pending, documents.Pending) && !File.Exists(catalogFile), "Dismissing the prompt started an import.");
+                        await Import("source/missing.gltf");
+                        Check(documents.Read().Error is FileNotFoundException && !File.Exists(catalogFile),
+                            $"A missing BIN did not stop the initial import: {documents.Read().Error}");
+
+                        using (new FileStream(catalogFile + ".write-lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                        {
+                            await Import(source);
+                            Check(documents.Read().Error is IOException && !File.Exists(catalogFile),
+                                $"A blocked registration exposed a catalog row: {documents.Read().Error}");
+                        }
+                        var pendingLedger = Directory.EnumerateFiles(ledgerFolder, "*.tmledger").Single();
+                        var pendingHash = Hash(await File.ReadAllBytesAsync(pendingLedger, token));
+                        failedAdmission = true;
+                        await Import(source);
+                        Check(documents.Read().Error == null && File.Exists(catalogFile) &&
+                            Hash(await File.ReadAllBytesAsync(pendingLedger, token)) == pendingHash,
+                            $"Retry failed to register the published ledger: {documents.Read().Error}");
+                        var committedHash = Hash(await File.ReadAllBytesAsync(catalogFile, token));
+                        await Import(@"source\scene.gltf");
+                        Check(documents.Read().Error == null && Hash(await File.ReadAllBytesAsync(catalogFile, token)) == committedHash,
+                            "Repeating an imported path changed the catalog.");
+                    }
                     var item = documents.Read().ModelCatalog!.Single();
-                    Check(item.SourcePath == source && Path.GetFileNameWithoutExtension(pendingLedger) == item.SourceId.ToString("N"),
-                        "Catalog did not publish the retry's source identity.");
+                    Check(item.SourcePath == source && File.Exists(Path.Combine(ledgerFolder, $"{item.SourceId:N}.tmledger")),
+                        "Catalog did not publish the expected source identity.");
 
                     await ClickCatalog(popup => popup.ModelCatalogRows.Children.OfType<HStack>()
                         .SelectMany(row => row.Children.OfType<CheckBox>()).SingleOrDefault(check => check.Value.EndsWith(source, StringComparison.Ordinal) && !check.IsChecked));
@@ -808,6 +822,11 @@ internal static class EditorModelBuildSmoke
                 var published = await ledger.OpenAsync(token) ?? throw new InvalidDataException("Committed catalog ledger is missing.");
                 var mesh = published.Meshes.Single();
                 var entityId = published.Instances.Single().Id;
+                if (materialAuthoring)
+                {
+                    await VerifyMaterialAuthoring();
+                    return;
+                }
                 if (meshVisibility)
                 {
                     await VerifyMeshVisibility();
@@ -1125,6 +1144,261 @@ internal static class EditorModelBuildSmoke
                     await CheckReleased(generation, texture);
                     Check(engine.Supervisor.Status.State == SessionState.Stopped && engine.Frames.Presentation == null &&
                         engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0, "Stop retained viewport resources.");
+                }
+
+                async Task VerifyMaterialAuthoring()
+                {
+                    const string panel = "editor.materials";
+                    var inspector = view.Inspector!;
+                    IEditorMaterialsModel state = null!;
+                    await EditorHeaderSmoke.UntilAsync(ui, () =>
+                    {
+                        if (inspector.DataContext?.Materials is not { IsAvailable: true } materials) return false;
+                        state = materials;
+                        return true;
+                    }, token);
+                    var leftSlot = mesh.Slots[0].SlotId;
+                    var firstEntity = new EntityId(entityId);
+                    var pinnedPath = Path.Combine(Path.GetDirectoryName(scenePath)!, "pinned-A.aetherscene");
+                    var savedPath = Path.Combine(report, "import-saved", "editor-material-authoring-save.json");
+                    var placedTexture = published.Texture ?? throw new InvalidDataException("The Material fixture lost its imported PNG.");
+                    EntityId secondEntity;
+
+                    if (authoringReopen)
+                    {
+                        var save = JsonSerializer.Deserialize<MaterialAuthoringSave>(await File.ReadAllBytesAsync(savedPath, token))!;
+                        secondEntity = new(save.SecondEntity);
+                        Check(save.EditorPid != Environment.ProcessId && save.FirstEntity == entityId && save.FinalSceneHash == sceneHash,
+                            "Restart did not open the saved scene and its original instances.");
+                        var reopened = await BuildAuthoringFrame("reopened", save.CopyId, save.SharedId, Vector3.One, textured: true);
+                        Match(save.C, reopened);
+
+                        Check(documents.Execute(DocumentCommand.Close), "Editor declined closing the C scene.");
+                        await documents.Pending.WaitAsync(token);
+                        Check(documents.Read().Error == null, $"Could not close the C scene: {documents.Read().Error}");
+                        Check(Hash(await File.ReadAllBytesAsync(pinnedPath, token)) == save.PinnedSceneHash, "The frozen A scene changed.");
+                        scenePath = pinnedPath;
+                        Check(documents.Execute(DocumentCommand.Open, scenePath), "Editor declined opening the A scene.");
+                        await documents.Pending.WaitAsync(token);
+                        Check(documents.Read().Error == null, $"Could not reopen the A scene: {documents.Read().Error}");
+                        sceneHash = save.PinnedSceneHash;
+                        var pinnedArtifact = GameBuildArtifact.Open(Path.Combine(report, "import-saved", "editor-compiler", save.A.Frame.BuildId),
+                            hostId, save.A.Frame.BuildId);
+                        var pinned = await BuildAuthoringFrame("oldBuild", save.SharedId, save.SharedId, Vector3.UnitZ, textured: false, pinned: pinnedArtifact);
+                        Check(pinned.Frame.BuildId == save.A.Frame.BuildId, "Selected Play no longer runs the pinned A BuildId.");
+                        Match(save.A, pinned);
+                        await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-material-authoring.json"),
+                            JsonSerializer.Serialize(new { Completed = true, Save = save, ReopenedEditorPid = Environment.ProcessId, Reopened = reopened, OldBuild = pinned }), token);
+                        return;
+                    }
+
+                    await Select(firstEntity);
+                    await ClickElement(() => Descendants(view).SingleOrDefault(element => element.SemanticId == "editor.hierarchy.duplicate"));
+                    var duplicate = document.Read().Content!.Resolved.Entities.Values
+                        .Single(entity => entity.Id != firstEntity && entity.Components.Values.Any(item => item.TypeId == MeshRenderingComponents.MeshRendererId));
+                    secondEntity = duplicate.Id;
+                    await Place(firstEntity, "0.875");
+                    await Place(secondEntity, "-0.875");
+
+                    if (!state.IsOpen) await Click(panel);
+                    await Click(panel + ".new");
+                    await Enter(panel + ".name", "Plaster");
+                    await Enter(panel + ".r", "0");
+                    await Enter(panel + ".g", "0");
+                    await CommitMaterial();
+                    Guid sharedId = default;
+                    await ui.InvokeAsync(() =>
+                    {
+                        Check(state.Name == "Plaster", "The Material name was not committed from routed input.");
+                        sharedId = state.Items.Single().Id;
+                    }).WaitAsync(token);
+                    await Assign(firstEntity, sharedId);
+                    await Assign(secondEntity, sharedId);
+                    await SaveScene();
+                    File.Copy(scenePath, pinnedPath);
+                    var pinnedHash = sceneHash;
+                    var a = await BuildAuthoringFrame("A", sharedId, sharedId, Vector3.UnitZ, textured: false);
+
+                    var sceneBeforeMaterialEdit = document.Read().Content!;
+                    if (!state.IsOpen) await Click(panel);
+                    await Click($"{panel}.item.{sharedId:N}");
+                    await Enter(panel + ".r", "1");
+                    await Enter(panel + ".g", "1");
+                    await CommitMaterial();
+                    Check(ReferenceEquals(sceneBeforeMaterialEdit, document.Read().Content) && !document.Read().IsDirty,
+                        "Saving the shared Material touched the scene or its history.");
+                    var b = await BuildAuthoringFrame("B", sharedId, sharedId, Vector3.One, textured: false);
+                    Check(a.Frame.BuildId != b.Frame.BuildId && a.Bindings[0] == a.Bindings[1] && b.Bindings[0] == b.Bindings[1] &&
+                        a.Bindings[0].Binding.AssetId == b.Bindings[0].Binding.AssetId && a.Bindings[0].Binding != b.Bindings[0].Binding &&
+                        a.Bindings[0].Right == b.Bindings[0].Right && a.Bindings[0].Mesh == b.Bindings[0].Mesh &&
+                        a.Bindings[0].Left.AssetId == b.Bindings[0].Left.AssetId && a.Bindings[0].Left != b.Bindings[0].Left,
+                        "Editing the shared Material did not retain stable IDs while changing exact material and binding keys.");
+                    CompareRegions(a, b, [0, 2]);
+
+                    await Select(firstEntity);
+                    await Click($"editor.inspector.material.slot.{leftSlot:N}");
+                    await Click($"editor.inspector.material.copy.{leftSlot:N}");
+                    Guid copyId = default;
+                    await EditorHeaderSmoke.UntilAsync(ui, () =>
+                    {
+                        if (state.SelectedMaterialId is not { } id || id == sharedId || !state.IsOpen || !state.CanEditFields ||
+                            inspector.DataContext?.RenderAssets?.Slots.FirstOrDefault(slot => slot.Id == leftSlot)?.Material != id) return false;
+                        copyId = id;
+                        return true;
+                    }, token);
+                    await Click(panel + ".texture");
+                    await Click($"{panel}.texture.{placedTexture.AssetId:N}");
+                    await CommitMaterial();
+                    await SaveScene();
+                    var c = await BuildAuthoringFrame("C", copyId, sharedId, Vector3.One, textured: true);
+                    Check(c.Frame.BuildId != b.Frame.BuildId && c.Bindings[1] == b.Bindings[1] &&
+                        c.Bindings[0].Binding.AssetId != b.Bindings[0].Binding.AssetId &&
+                        c.Bindings[0].Right == b.Bindings[0].Right && c.Bindings[0].Mesh == b.Bindings[0].Mesh,
+                        "Copy and assign changed the other instance or lost the expected authored binding identity.");
+                    CompareRegions(b, c, [0]);
+                    await File.WriteAllTextAsync(savedPath, JsonSerializer.Serialize(new MaterialAuthoringSave(
+                        Environment.ProcessId, entityId, secondEntity.Value, sharedId, copyId, pinnedHash, sceneHash, a, b, c)), token);
+
+                    Task Select(EntityId entity) => EditorHierarchySmoke.ClickItemAsync(ui, view, entity.Value.ToString("D"), token);
+
+                    async Task Place(EntityId entity, string value)
+                    {
+                        await Select(entity);
+                        var transform = document.Read().Content!.Resolved.Entities[entity].Components.Values
+                            .Single(item => item.TypeId == BuiltInComponents.TransformId);
+                        await Enter($"editor.inspector.transform.{transform.Id.Value:N}.y", value);
+                        await Click("editor.inspector.apply");
+                        Check(document.Read().Content!.Resolved.Entities[entity].Components[transform.Id].Properties["y"].Value.GetNumber() ==
+                            double.Parse(value, CultureInfo.InvariantCulture), "The routed transform edit did not place the instance.");
+                    }
+
+                    async Task Assign(EntityId entity, Guid material)
+                    {
+                        await Select(entity);
+                        await Click($"editor.inspector.material.slot.{leftSlot:N}");
+                        await Click($"editor.inspector.material.choice.{leftSlot:N}.{material:N}");
+                        await Click("editor.inspector.apply");
+                    }
+
+                    async Task SaveScene()
+                    {
+                        await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+                        await documents.Pending.WaitAsync(token);
+                        Check(documents.Read().Error == null && !document.Read().IsDirty, $"Could not save the Material fixture: {documents.Read().Error}");
+                        sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
+                    }
+
+                    async Task CommitMaterial()
+                    {
+                        await Click(panel + ".save");
+                        await EditorHeaderSmoke.UntilAsync(ui, () => !state.HasDraft && state.CanEditFields, token);
+                    }
+
+                    async Task Enter(string id, string text)
+                    {
+                        await Click(id);
+                        await ui.InvokeAsync(() =>
+                        {
+                            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+                            ui.HandleInput(new(InputKind.Text, Text: text));
+                        }).WaitAsync(token);
+                    }
+
+                    Element? Find(string id) => Descendants(inspector).SingleOrDefault(element => element.SemanticId == id);
+                    Task Click(string id) => ClickElement(() => Find(id));
+                    Task ClickElement(Func<Element?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
+                    {
+                        if (find() is not { IsVisible: true, IsEffectivelyEnabled: true, Bounds.Width: > 0, Bounds.Height: > 0 } element) return false;
+                        var x = element.Bounds.X + element.Bounds.Width / 2;
+                        var y = element.Bounds.Y + element.Bounds.Height / 2;
+                        for (var parent = element.Parent; parent != null; parent = parent.Parent)
+                        {
+                            if (!parent.IsVisible) return false;
+                            if (parent is not ScrollViewer scroll || scroll.ChildClipBounds.Contains(x, y)) continue;
+                            scroll.BringIntoView(element.Bounds);
+                            return false;
+                        }
+                        if (ui.NeedsUpdate) return false;
+                        EditorHeaderSmoke.Move(ui, element);
+                        EditorHeaderSmoke.Click(ui, element);
+                        return true;
+                    }, token);
+
+                    async Task<MaterialAuthoringFrame> BuildAuthoringFrame(string name, Guid firstMaterial, Guid secondMaterial, Vector3 color,
+                        bool textured, GameBuildArtifact? pinned = null)
+                    {
+                        before = document.Read();
+                        content = before.Content!;
+                        var artifact = pinned;
+                        if (artifact == null)
+                        {
+                            await StartBuild();
+                            await Complete();
+                            artifact = engine.Editor.Status.Candidate!.Build.Artifact;
+                            Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "Fresh Material Build was not produced by this Editor.");
+                        }
+                        var manifest = artifact.RenderContent!;
+                        var imported = (MaterialBindingSetDefinition)manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId).Definition;
+                        var texture = manifest.Resolve(placedTexture.AssetId, RenderContentProfile.BaseColorTextureKindId).Key;
+                        Check(texture.Revision == placedTexture.Definition.Revision, "Build changed the selected import's exact texture revision.");
+                        MaterialAuthoringBinding[] bindings = [Resolve(firstEntity, firstMaterial, textured), Resolve(secondEntity, secondMaterial, false)];
+                        Check(playback.RunSelectedBuild(artifact), "Editor declined playing the Material Build.");
+                        await Complete();
+                        var frame = await CapturePlaying(name, artifact, 0);
+                        using var process = Process.GetProcessById(frame.Pid);
+                        _ = process.Handle; // Keep the exact child process handle across the owned Stop/reap.
+                        await StopAndCheck(frame.Generation, textured ? texture : null);
+                        await process.WaitForExitAsync(token);
+                        Check(process.ExitCode == 0, $"Material Build child exited with {process.ExitCode} after owned Stop.");
+                        return new(frame, bindings, process.ExitCode);
+
+                        MaterialAuthoringBinding Resolve(EntityId entity, Guid material, bool usesTexture)
+                        {
+                            var renderer = content.Resolved.Entities[entity].Components.Values.Single(item => item.TypeId == MeshRenderingComponents.MeshRendererId);
+                            var reference = renderer.Properties["bindings"].Value.GetString();
+                            Check(Guid.TryParseExact(reference, "D", out var bindingId) && bindingId != mesh.BindingSetId,
+                                "Expected the persisted single-slot override GUID for this renderer.");
+                            var entry = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
+                            var set = (MaterialBindingSetDefinition)entry.Definition;
+                            Check(set.Mesh == imported.Mesh && set.Mesh.AssetId == mesh.AssetId &&
+                                renderer.Properties["mesh"].Value.GetString() == mesh.AssetId.ToString("D") &&
+                                set.Bindings.Length == 2 && set.Bindings[0].SlotId == leftSlot && set.Bindings[1] == imported.Bindings[1] &&
+                                set.Bindings[0].Material.AssetId == material && manifest.Resolve(set.Bindings[1].Material).Key == set.Bindings[1].Material,
+                                "Build lost the renderer's mesh, authored left slot or unchanged exact right slot.");
+                            var left = (OpaqueUnlitMaterialDefinition)manifest.Resolve(set.Bindings[0].Material).Definition;
+                            Check(left.BaseColorSrgb == color && left.BaseColorTexture == (usesTexture ? texture : (RenderAssetKey?)null) &&
+                                (!usesTexture || left.Sampler == RenderTextureSampler.NearestClamp),
+                                "Build did not materialize the saved color or exact selected PNG.");
+                            return new(reference, AssetProof.From(set.Mesh), AssetProof.From(entry.Key), leftSlot, AssetProof.From(set.Bindings[0].Material),
+                                set.Bindings[1].SlotId, AssetProof.From(set.Bindings[1].Material), usesTexture ? AssetProof.From(texture) : null);
+                        }
+                    }
+
+                    static void Match(MaterialAuthoringFrame expected, MaterialAuthoringFrame observed)
+                    {
+                        Check(expected.Frame.ManifestHash == observed.Frame.ManifestHash && expected.Bindings.SequenceEqual(observed.Bindings),
+                            "Reopening did not preserve the exact material, binding and manifest revisions.");
+                        CompareRegions(expected, observed, []);
+                    }
+
+                    static void CompareRegions(MaterialAuthoringFrame baseline, MaterialAuthoringFrame observed, int[] changed)
+                    {
+                        var baselineRegions = baseline.Frame.Regions!;
+                        var observedRegions = observed.Frame.Regions!;
+                        for (var index = 0; index < baselineRegions.Length; index++)
+                        {
+                            var expected = baselineRegions[index];
+                            var actual = observedRegions[index];
+                            // The presentation scaler can blend along texel boundaries. Require the same interior footprint
+                            // when comparing solid colors or identical captures, allowing only that narrow seam for B → C.
+                            var textureTransition = observed.Frame.Name == "C" && index == 0;
+                            var sameGeometry = textureTransition
+                                ? actual.Pixels >= expected.Pixels * .85 && actual.Pixels <= expected.Pixels
+                                : expected.GeometrySha256 == actual.GeometrySha256 && expected.Pixels == actual.Pixels;
+                            Check(sameGeometry && (expected.ColorSha256 != actual.ColorSha256) == changed.Contains(index),
+                                $"Unexpected GPU region change in {expected.Name} from {baseline.Frame.Name} to {observed.Frame.Name}.");
+                        }
+                    }
                 }
 
                 async Task VerifyMeshVisibility()
@@ -2073,7 +2347,7 @@ internal static class EditorModelBuildSmoke
                 Check(ReferenceEquals(content, after.Content) && before.IsDirty == after.IsDirty &&
                     sceneHash == Hash(File.ReadAllBytes(scenePath)), "Replace changed the open authoring document.");
                 var proof = new FrameProof(name, artifact.BuildId, identity.Generation, status.ProcessId!.Value,
-                    manifest.Digest.ToString(), frame.Tick, frame.Mask) { Pixels = frame.Pixels };
+                    manifest.Digest.ToString(), frame.Tick, frame.Mask) { Pixels = frame.Pixels, Regions = frame.Regions };
                 captures.Add(proof);
                 return proof;
             }
@@ -2121,10 +2395,10 @@ internal static class EditorModelBuildSmoke
             CancelledGeneration = cancelledCandidate!.Generation, CorruptRejectedBeforeHandoff = true, RollbackSucceeded = true
         }, new JsonSerializerOptions { WriteIndented = true }), token);
 
-        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)> Capture(string name, SessionIdentity identity, Guid sceneId,
+        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels, MaterialAuthoringRegion[]? Regions)> Capture(string name, SessionIdentity identity, Guid sceneId,
             long revision, RenderContentHash digest, uint? textureTopLeft = null)
         {
-            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels, MaterialAuthoringRegion[]? Regions)>(TaskCreationOptions.RunContinuationsAsynchronously);
             void Presented(UiSession ui)
             {
                 if (result.Task.IsCompleted) return;
@@ -2150,12 +2424,17 @@ internal static class EditorModelBuildSmoke
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
                     var compareSlots = materialSlots || persistSlotOverride || reimportTexture || transferMaterials;
                     var redSlot = persistMultipleOverrides || transferMaterials;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot, meshVisibility);
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot, meshVisibility || materialAuthoring);
+                    if (materialAuthoring)
+                    {
+                        result.TrySetResult((mask, stamp.Tick, null, MeasureMaterialAuthoringRegions(view, pixels, clip, scale, name)));
+                        return;
+                    }
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
                         compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, redSlot, meshVisibility) : null;
-                    result.TrySetResult((mask, stamp.Tick, exact));
+                    result.TrySetResult((mask, stamp.Tick, exact, null));
                 }
                 catch (Exception error) { result.TrySetException(error); }
             }
@@ -2166,6 +2445,82 @@ internal static class EditorModelBuildSmoke
                 return await result.Task.WaitAsync(token);
             }
             finally { window.FramePresented -= Presented; }
+        }
+    }
+
+    private static MaterialAuthoringRegion[] MeasureMaterialAuthoringRegions(EditorView view, SKBitmap pixels, SKRectI image,
+        float scale, string frame)
+    {
+        const uint blue = 0x0000FFFF, white = 0xFFFFFFFF, green = 0x00FF00FF;
+        ReadOnlySpan<uint> reds = [0xD51006FF, 0xE40911FF, 0xF2160BFF, 0xFC0316FF];
+        const float clearance = 12;
+        var hierarchy = view.HierarchyIsland.Bounds;
+        var inspector = view.InspectorIsland.Bounds;
+        var header = view.Header!.Bounds;
+        var status = view.StatusBar!.Bounds;
+        var crop = new SKRectI(
+            Math.Max(image.Left, (int)MathF.Ceiling((hierarchy.X + hierarchy.Width + clearance) * scale)),
+            Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
+            Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
+            Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
+        var middleX = image.Left + image.Width / 2;
+        var middleY = image.Top + image.Height / 2;
+        Check(crop.Left < middleX && middleX < crop.Right && crop.Top < middleY && middleY < crop.Bottom,
+            "Editor chrome obscures the material fixture's four viewport regions.");
+        var left = frame is "A" or "oldBuild" ? blue : white;
+        ReadOnlySpan<uint> solid = [left];
+        var first = frame is "C" or "reopened" ? reds : solid;
+        return
+        [
+            MeasureRegion("first.left", new(crop.Left, crop.Top, middleX, middleY), first),
+            MeasureRegion("first.right", new(middleX, crop.Top, crop.Right, middleY), [green]),
+            MeasureRegion("second.left", new(crop.Left, middleY, middleX, crop.Bottom), [left]),
+            MeasureRegion("second.right", new(middleX, middleY, crop.Right, crop.Bottom), [green])
+        ];
+
+        MaterialAuthoringRegion MeasureRegion(string name, SKRectI bounds, ReadOnlySpan<uint> palette)
+        {
+            var count = 0;
+            Span<int> colors = stackalloc int[palette.Length];
+            colors.Clear();
+            using var geometry = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            using var rgba = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            Span<byte> sample = stackalloc byte[12];
+            for (var y = bounds.Top + 2; y < bounds.Bottom - 2; y++)
+            for (var x = bounds.Left + 2; x < bounds.Right - 2; x++)
+            {
+                var color = ReadColor(x, y);
+                var index = palette.IndexOf(color);
+                // Ignore the geometry edge; only interior fixture pixels enter either digest.
+                if (index < 0 || !palette.Contains(ReadColor(x - 2, y)) || !palette.Contains(ReadColor(x + 2, y)) ||
+                    !palette.Contains(ReadColor(x, y - 2)) || !palette.Contains(ReadColor(x, y + 2))) continue;
+                BinaryPrimitives.WriteInt32LittleEndian(sample, x - image.Left);
+                BinaryPrimitives.WriteInt32LittleEndian(sample[4..], y - image.Top);
+                BinaryPrimitives.WriteUInt32BigEndian(sample[8..], color);
+                geometry.AppendData(sample[..8]);
+                rgba.AppendData(sample);
+                colors[index]++;
+                count++;
+            }
+            var eachColorVisible = true;
+            foreach (var colorCount in colors) eachColorVisible &= colorCount > 20;
+            Check(count > 100 && eachColorVisible,
+                $"Frame {frame} has insufficient interior {name} pixels for palette {FormatColors(palette, colors)}.");
+            return new(name, count, Convert.ToHexString(geometry.GetHashAndReset()), Convert.ToHexString(rgba.GetHashAndReset()),
+                FormatColors(palette, colors));
+        }
+
+        uint ReadColor(int x, int y)
+        {
+            var color = pixels.GetPixel(x, y);
+            return ((uint)color.Red << 24) | ((uint)color.Green << 16) | ((uint)color.Blue << 8) | color.Alpha;
+        }
+
+        static string FormatColors(ReadOnlySpan<uint> palette, ReadOnlySpan<int> counts)
+        {
+            var result = new string[palette.Length];
+            for (var index = 0; index < palette.Length; index++) result[index] = $"{palette[index]:X8}:{counts[index]}";
+            return string.Join(", ", result);
         }
     }
 
@@ -2365,11 +2720,18 @@ internal static class EditorModelBuildSmoke
     private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask)
     {
         public ViewportPixelProof? Pixels { get; init; }
+        public MaterialAuthoringRegion[]? Regions { get; init; }
     }
     private sealed record AssetProof(Guid ProjectId, Guid AssetId, Guid KindId, int SchemaVersion, string Revision)
     {
         internal static AssetProof From(RenderAssetKey key) => new(key.ProjectId, key.AssetId, key.KindId, key.SchemaVersion, key.Revision.ToString());
     }
+    private sealed record MaterialAuthoringRegion(string Name, int Pixels, string GeometrySha256, string ColorSha256, string Colors);
+    private sealed record MaterialAuthoringBinding(string Reference, AssetProof Mesh, AssetProof Binding, Guid LeftSlot, AssetProof Left,
+        Guid RightSlot, AssetProof Right, AssetProof? Texture);
+    private sealed record MaterialAuthoringFrame(FrameProof Frame, MaterialAuthoringBinding[] Bindings, int ExitCode);
+    private sealed record MaterialAuthoringSave(int EditorPid, Guid FirstEntity, Guid SecondEntity, Guid SharedId, Guid CopyId,
+        string PinnedSceneHash, string FinalSceneHash, MaterialAuthoringFrame A, MaterialAuthoringFrame B, MaterialAuthoringFrame C);
     private sealed record ImportGeneration(Guid SourceId, long Generation);
     private sealed record InspectorMaterialProof(FrameProof Frame, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot);
     private sealed record InspectorRestartProof(int EditorPid, Guid OpeningId, Guid SceneId, long SceneRevision, string SceneSha256,

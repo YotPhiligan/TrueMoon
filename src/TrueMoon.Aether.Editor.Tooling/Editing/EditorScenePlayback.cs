@@ -217,7 +217,7 @@ public sealed class EditorScenePlayback
             _cancellation = cancellation; _error = null;
             _pending = ObserveAsync(work, cancellation); return true;
 
-            async Task RunAsync(ProjectSession project, SceneAuthoringState content, CancellationToken token)
+            async Task RunAsync(ProjectSession project, SceneAuthoringState content, Guid openingId, CancellationToken token)
             {
                 if (command is not (EditorCommand.Build or EditorCommand.Start or EditorCommand.Replace))
                 { await _dispatch(command, token).ConfigureAwait(false); return; }
@@ -236,17 +236,17 @@ public sealed class EditorScenePlayback
                     modelContent = startupProject ? _startup!.ProjectRenderContent : null;
                     if (modelContent != null && modelContent.AssetKeys[0].ProjectId != project.Project.Description.Id)
                         throw new InvalidDataException("Development render content belongs to another project.");
-                    if (modelContent == null && project.Documents is { } document)
-                        modelContent = await document.CheckModelImportsAsync(document.Read().OpeningId, token).ConfigureAwait(false);
+                    if (project.Documents is { } document)
+                        modelContent = await document.CheckModelImportsAsync(content, openingId, modelContent, token).ConfigureAwait(false);
                 }
-                VerifyCapture(project, content, token);
+                VerifyCapture(project, content, openingId, token);
                 var fullScene = selectedBuild != null || modelContent != null;
                 var scene = fullScene ? null : PrimitiveSceneAdapter.Project(content.Resolved, token);
                 var world = fullScene ? new SceneWorldData(content.Document) : null;
                 if (selectedBuild?.RenderContent is { } manifest && manifest.ProjectId != project.Project.Description.Id)
                     throw new InvalidDataException("Selected render content belongs to another project.");
                 if (!usesRunningGame) await _preview.StopAsync().ConfigureAwait(false);
-                VerifyCapture(project, content, token);
+                VerifyCapture(project, content, openingId, token);
                 if (usesRunningGame) VerifyRunning(project, content, runningOrigin, token);
                 else if (_runtime().State != SessionState.Stopped) throw new InvalidOperationException("Stop the previous runtime before starting a scene game.");
                 var revision = selectedBuild?.SourceRevision ?? Interlocked.Increment(ref _revision);
@@ -264,7 +264,7 @@ public sealed class EditorScenePlayback
                     await _dispatch(EditorCommand.Build, token).ConfigureAwait(false);
                 else
                     await (_selectBuild ?? throw new InvalidOperationException("Artifact selection is unavailable."))(selectedBuild, version, token).ConfigureAwait(false);
-                VerifyCapture(project, content, token);
+                VerifyCapture(project, content, openingId, token);
                 if (usesRunningGame) VerifyRunning(project, content, runningOrigin, token);
                 var built = _editor();
                 if (selectedBuild == null && built.ContextVersion == version && ReferenceEquals(built.Context?.Scene, scene) &&
@@ -276,7 +276,7 @@ public sealed class EditorScenePlayback
                 {
                     try
                     {
-                        await _documents.RunCapturedRuntime(project, content, captured => _replace(version, captured), token).ConfigureAwait(false);
+                        await _documents.RunCapturedRuntime(project, content, openingId, captured => _replace(version, captured), token).ConfigureAwait(false);
                         lock (_gate)
                         {
                             _runningIdentity = _runtime().Identity;
@@ -289,7 +289,7 @@ public sealed class EditorScenePlayback
                 }
                 await _ready.WaitAsync(token).ConfigureAwait(false);
                 // The engine atomically requires this version and its candidate; no fixed-runtime fallback is allowed.
-                var startup = _documents.RunCapturedRuntime(project, content, captured => _start(version, captured), token);
+                var startup = _documents.RunCapturedRuntime(project, content, openingId, captured => _start(version, captured), token);
                 lock (_gate) _ownsRuntime = true;
                 try
                 {
@@ -325,11 +325,11 @@ public sealed class EditorScenePlayback
                 throw new OperationCanceledException("The operation no longer targets the owned game/document.", token);
     }
 
-    private void VerifyCapture(ProjectSession project, SceneAuthoringState content, CancellationToken token)
+    private void VerifyCapture(ProjectSession project, SceneAuthoringState content, Guid openingId, CancellationToken token)
     {
-        token.ThrowIfCancellationRequested(); var state = _documents.Read(); var actual = state.Document?.Content;
+        token.ThrowIfCancellationRequested(); var state = _documents.Read();
         if (project.IsClosed || !state.ProjectReady || !ReferenceEquals(project, state.Project) ||
-            !ReferenceEquals(content, actual))
+            state.Document is not { } document || document.OpeningId != openingId || !ReferenceEquals(content, document.Content))
             throw new OperationCanceledException("The scene/project changed during game preparation.", token);
     }
 

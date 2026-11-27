@@ -1823,6 +1823,8 @@ texture/shader assets. [RENDERING_DESIGN](RENDERING_DESIGN.md) описывае�
 детальные этапы и acceptance принадлежат этой таблице. Renderer — сервис/подсистема,
 MeshRenderer — данные entity, MaterialAsset — разделяемый versioned ресурс; instance
 overrides не мутируют общий asset. World не владеет borrowed GPU handles.
+Авторское создание и редактирование Material/Texture/Mesh относится только к
+[ED4i](EDITOR_PLAN.md#ed4i-authoring-assets); в ARCH1f остаются runtime-контракты.
 
 | Этап | Запланированный результат и зависимости | Проверяемый критерий до закрытия |
 | --- | --- | --- |

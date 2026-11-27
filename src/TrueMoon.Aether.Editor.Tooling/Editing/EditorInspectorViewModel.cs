@@ -10,6 +10,7 @@ using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Preview;
+using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Argentis;
 
@@ -52,6 +53,9 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     private InspectorProperty? _scaleErrorField;
     private NumericDraftSession? _numericGesture;
     private long _nextGestureId;
+    private ulong _inspectorSelectionRevision;
+    private bool IsCopyGestureIdle => _numericGesture == null && !_resettingTransformGroup &&
+        (_workspace == null || _workspace.ViewportGestureOwner == Guid.Empty);
     private sealed record NumericDraftSession(long Id, InspectorProperty Source, SceneDocument? Document, string? Selection,
         (InspectorProperty Field, InspectorProperty.DraftState Draft, string? Display)[] Drafts);
     /// <summary>Opt-in proportional scale editing. Enabling it does not change any field or commit data.</summary>
@@ -112,6 +116,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         ArgumentNullException.ThrowIfNull(commands); ArgumentNullException.ThrowIfNull(preview);
         _commands = commands; _preview = preview;
         _workspace = workspace;
+        _materials = new(this);
         Fields = new[] { ("x", "X"), ("y", "Y"), ("z", "Z"), ("pitch", "Pitch, рад"), ("yaw", "Yaw, рад"), ("roll", "Roll, рад"), ("sx", "Scale X"), ("sy", "Scale Y"), ("sz", "Scale Z") }
             .Select(x => new TransformField(x.Item1, x.Item2, VerifyOwner)).ToArray();
         foreach (var field in Fields) field.Changed += DraftChanged;
@@ -172,14 +177,20 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         var opening = state.Document?.OpeningId ?? Guid.Empty;
         var changedOpening = opening != _openingId;
         var changedSelection = selectedId != _selection || _baseline?.Id != content?.Document.Id;
+        if (selectedId != _selection) _inspectorSelectionRevision++;
         _openingId = opening;
         _selection = selectedId;
         if (changedSelection || !HasDraft && !ReferenceEquals(_baseline, content?.Document)) Load(content);
         else if (changedOpening || !ReferenceEquals(_baseline, content?.Document)) _conflict = true;
-        _available = state.RuntimeIdle && !state.Busy && !state.Exiting && !state.Closed && state.Document?.Operation == DocumentOperation.None;
+        var assignCopy = _materials.RefreshCatalog(state.Project, content != null);
+        if (assignCopy != null) state = _commands.Read();
+        _available = state.RuntimeIdle && !state.Busy && !_materials.HasPendingOperation &&
+            !state.Exiting && !state.Closed && state.Document?.Operation == DocumentOperation.None;
         _sceneAssets = state.Project?.Documents?.ReadRenderAssets(opening);
+        _materials.RefreshAssets(_sceneAssets);
         if (content != null) _preview.Synchronize(content.Resolved);
         UpdateState(content);
+        assignCopy?.Invoke();
     }
     /// <summary>Gets only effective components of the selected authoring entity.</summary>
     public IReadOnlyList<InspectorComponent> Components => _components;
@@ -451,8 +462,14 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     /// <summary>Commits changed properties/resets as one shared authoring transaction.</summary>
     public void Apply()
     {
-        VerifyOwner(); if (_resettingTransformGroup) return;
-        Refresh(_selection); if (!CanApply || !Validate(_commands.Read().Document?.Content)) return;
+        VerifyOwner();
+        Refresh(_selection);
+        ApplyCurrentDraft();
+    }
+
+    private bool ApplyCurrentDraft(ProjectSession? capturedProject = null, Guid? capturedOpening = null)
+    {
+        if (_resettingTransformGroup || !CanApply || !Validate(_commands.Read().Document?.Content)) return false;
         var replaceTransform = ReplaceWholeTransform && Fields.Any(field => field.HasDraft);
         var edits = _active.Where(field => field.HasDraft || replaceTransform && field is TransformField).Select(field =>
         {
@@ -460,8 +477,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
             return new PropertyEdit(_entity, field.ComponentId, field.Key, value, field.IsReset);
         }).ToArray();
         var batch = new ComponentEditBatch(Operation(), edits);
-        Mutate(() => HasRenderDraft
-            ? _commands.EditRenderComponents(_baseline!, _renderDraftAssets!, batch)
+        return Mutate(() => HasRenderDraft
+            ? _commands.EditRenderComponents(_baseline!, _renderDraftAssets!, batch, capturedOpening ?? _openingId, capturedProject)
             : _commands.EditComponents(_baseline!, batch));
     }
     /// <summary>Compatibility policy for consumers that requested a full nine-value Transform replacement.</summary>
@@ -549,17 +566,19 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public void Undo() { VerifyOwner(); Refresh(_selection); if (CanUndo) Mutate(() => _commands.Undo(_baseline!, new(Guid.NewGuid(), _baseline!.Revision, "editor"))); }
     /// <summary>Uses the document's existing engine Redo history.</summary>
     public void Redo() { VerifyOwner(); Refresh(_selection); if (CanRedo) Mutate(() => _commands.Redo(_baseline!, new(Guid.NewGuid(), _baseline!.Revision, "editor"))); }
-    private void Mutate(Func<SceneAuthoringResult> action)
+    private bool Mutate(Func<SceneAuthoringResult> action)
     {
+        var succeeded = false;
         try
         {
             var result = action();
-            if (result.Succeeded) Load(_commands.Read().Document?.Content);
+            if (result.Succeeded) { succeeded = true; Load(_commands.Read().Document?.Content); }
             else SetProperty(ref _error, result.Error + ": " + result.Message, nameof(ErrorText));
         }
         catch (Exception error) { SetProperty(ref _error, error.Message, nameof(ErrorText)); }
         var failure = _error; Refresh(_selection); if (failure.Length != 0) SetProperty(ref _error, failure, nameof(ErrorText));
         OnPropertyChanged(nameof(HasDraft));
+        return succeeded;
     }
     /// <summary>Enables committed-revision preview or retries a failed revision.</summary>
     public void ShowPreview() { VerifyOwner(); Refresh(_selection); if (CanPreview && _commands.Read().Document?.Content is { } content) _preview.Show(content.Resolved); Refresh(_selection); }
@@ -584,6 +603,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public void Dispose()
     {
         if (_disposed) return; _disposed = true; _numericGesture = null;
+        _materials.Release();
         foreach (var field in Fields.Cast<InspectorProperty>().Concat(_properties.Values).Distinct()) field.Changed -= DraftChanged;
         ClearPropertyChangedSubscribers();
     }

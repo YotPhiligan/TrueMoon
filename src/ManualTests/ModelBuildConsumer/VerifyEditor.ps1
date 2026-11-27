@@ -18,6 +18,7 @@ param(
     [switch]$RenderMaterialSlotsRestart,
     [switch]$RenderMaterialSlotOverrides,
     [switch]$RenderMaterialTransfer,
+    [switch]$RenderMaterialAuthoring,
     [switch]$CameraProjection,
     [switch]$MeshVisibility,
     [switch]$SaveAfterSlotUndo,
@@ -30,6 +31,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($SaveAfterSlotUndo -and !$RenderMaterialSlotOverrides) { throw '-SaveAfterSlotUndo requires -RenderMaterialSlotOverrides.' }
+if ($RenderMaterialAuthoring -and $FreshPackages) { throw '-RenderMaterialAuthoring uses the source Release Editor only.' }
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $evidence = [IO.Path]::GetFullPath($EvidenceDirectory, $workspace)
@@ -44,14 +46,14 @@ $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
 $textureReplaceProbe = $ImportedTextureReplace -or $PlayingTextureWorkflow
 $textureReimportProbe = $ImportedTextureReimport -or $textureReplaceProbe
-$initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $RenderMaterialTransfer -or $CameraProjection -or $MeshVisibility -or $ImportedTextureRestart -or $textureReimportProbe
+$initialImportProbe = $RenderMaterialAuthoring -or $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $RenderMaterialTransfer -or $CameraProjection -or $MeshVisibility -or $ImportedTextureRestart -or $textureReimportProbe
 $renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $initialImportProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($MeshVisibility) { 'ED4i-mesh-visibility' } elseif ($CameraProjection) { 'ED4i-camera-projection' } elseif ($RenderMaterialTransfer) { 'ED4i-material-transfer' } elseif ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotOverrides) { 'ED4i-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($RenderMaterialAuthoring) { 'ED4i-material-authoring' } elseif ($MeshVisibility) { 'ED4i-mesh-visibility' } elseif ($CameraProjection) { 'ED4i-camera-projection' } elseif ($RenderMaterialTransfer) { 'ED4i-material-transfer' } elseif ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotOverrides) { 'ED4i-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -70,9 +72,11 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 }
 
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
-    foreach ($provider in @('cobalt', 'microsoft')) {
+    $providers = if ($RenderMaterialAuthoring) { @('cobalt') } else { @('cobalt', 'microsoft') }
+    foreach ($provider in $providers) {
         $output = "$directory/$provider"
         $mode = if ($MeshVisibility) { '--editor-mesh-visibility' } elseif ($CameraProjection) { '--editor-camera-projection' } elseif ($RenderMaterialTransfer) { '--editor-render-material-transfer' } elseif ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotOverrides) { '--editor-render-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        if ($RenderMaterialAuthoring) { $mode = '--editor-material-authoring' }
         if ($mode -eq '--editor-render-material-slot-overrides' -and $SaveAfterSlotUndo) { $mode += '-undo' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
@@ -81,7 +85,30 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
         if ($renderProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $run = @{ Name = "$name-$provider"; Fixture = $fixture }
-            if ($textureReimportProbe) {
+            if ($RenderMaterialAuthoring) {
+                $savedDir = "$output/import-saved"
+                $reopenedDir = "$output/import-reopened"
+                [void][IO.Directory]::CreateDirectory($savedDir)
+                [void][IO.Directory]::CreateDirectory($reopenedDir)
+                Copy-Item -Path "$fixture/import-saved/*.png", "$fixture/import-saved/runtime-*.json" -Destination $savedDir
+                Copy-Item -Path "$fixture/import-reopened/*.png", "$fixture/import-reopened/runtime-*.json" -Destination $reopenedDir
+                $path = "$output/editor-material-authoring.json"
+                Copy-Item -LiteralPath "$fixture/import-reopened/editor-material-authoring.json" -Destination $path
+                $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+                $children = @(Get-ChildItem -LiteralPath $savedDir -Filter 'runtime-*.json' -File) +
+                    @(Get-ChildItem -LiteralPath $reopenedDir -Filter 'runtime-*.json' -File)
+                if (!$proof.Completed -or $proof.Save.EditorPid -eq $proof.ReopenedEditorPid -or $children.Count -ne 5 -or
+                    $proof.Save.A.ExitCode -ne 0 -or $proof.Save.B.ExitCode -ne 0 -or $proof.Save.C.ExitCode -ne 0 -or
+                    $proof.Reopened.ExitCode -ne 0 -or $proof.OldBuild.ExitCode -ne 0 -or
+                    $proof.Save.A.Frame.BuildId -ne $proof.OldBuild.Frame.BuildId) {
+                    throw "Incomplete Material authoring GPU evidence for $name-$provider"
+                }
+                $run.MaterialAuthoring = $proof
+                $run.Path = $path
+                $run.Sha256 = (Get-FileHash -LiteralPath $path).Hash
+                $images = @("$savedDir/A.png", "$savedDir/B.png", "$savedDir/C.png",
+                    "$reopenedDir/reopened.png", "$reopenedDir/oldBuild.png")
+            } elseif ($textureReimportProbe) {
                 $childDirectory = "$fixture/import-reimported"
                 $path = "$output/editor-texture-reimport.json"
                 Copy-Item -LiteralPath "$childDirectory/editor-texture-reimport.json" -Destination $path
@@ -560,7 +587,8 @@ try {
     if ($FreshPackages) {
         Test-FreshEditor
     } else {
-        foreach ($configuration in @('Debug', 'Release')) {
+        $configurations = if ($RenderMaterialAuthoring) { @('Release') } else { @('Debug', 'Release') }
+        foreach ($configuration in $configurations) {
             $directory = "$evidence/$configuration"
             Invoke-Step "$configuration-authoring" @('build', "$PSScriptRoot/Authoring/Authoring.csproj", '-c', $configuration, '-o', "$directory/authoring", '-v:q')
             $verb = if ($configuration -eq 'Debug') { 'build' } else { 'publish' }

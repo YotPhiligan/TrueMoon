@@ -315,6 +315,10 @@ public sealed class AetherEditorCompositionTests
         Assert.Same(playback, app.Services.Resolve<EditorScenePlayback>());
         var model = app.Services.Resolve<EditorViewModel>()!; var engine = app.Services.Resolve<AetherHost>()!;
         model.Refresh(engine.Supervisor.Status, engine.Editor.Status);
+        // The first presentation loads project materials through the shared document lane.
+        DocumentUiFixture.Wait(app.Services.Resolve<EditorDocumentCommands>()!.Pending);
+        model.Refresh(engine.Supervisor.Status, engine.Editor.Status);
+        Assert.Empty(Assert.IsType<ProjectMaterialCatalogSnapshot>(project.Documents.MaterialSnapshot).Materials);
         Assert.True(model.CanRun); Assert.True(model.CanBuild);
         Assert.Null(app.Services.Resolve<AetherHost>()!.Editor.Status.Candidate);
         Assert.True(project.Documents.Read().IsDirty); Assert.Null(project.Documents.Read().Path); Assert.Equal(0, runtime.Launches);
