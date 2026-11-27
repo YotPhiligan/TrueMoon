@@ -28,8 +28,9 @@ $sizesByGroup = [ordered]@{
     'keyed-binding' = @(39, 312, 2496)
     'virtualized-binding' = @(39, 312, 2496)
     'property-binding' = @(1, 64, 512)
+    'conditional-slot' = @(39, 312, 2496)
 }
-$methodsByGroup = @{ 'node-cost' = 7; 'property-access' = 7; 'property-store' = 4; 'collection-binding' = 7; 'keyed-binding' = 7; 'virtualized-binding' = 8; 'property-binding' = 6 }
+$methodsByGroup = @{ 'node-cost' = 7; 'property-access' = 7; 'property-store' = 4; 'collection-binding' = 7; 'keyed-binding' = 7; 'virtualized-binding' = 8; 'property-binding' = 6; 'conditional-slot' = 5 }
 
 $summary = [ordered]@{
     Completed = $false; Scene = 'inspector-v1'; Samples = $Samples; WarmupSamples = $WarmupSamples

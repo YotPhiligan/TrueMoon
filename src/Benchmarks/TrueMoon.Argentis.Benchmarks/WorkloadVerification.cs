@@ -24,6 +24,7 @@ internal static class WorkloadVerification
         KeyedBinding();
         VirtualizedBinding();
         PropertyBinding();
+        ConditionalSlot();
     }
 
     private static void NodeLifecycle()
@@ -190,5 +191,29 @@ internal static class WorkloadVerification
         plainSession.Update();
         Check(plain.Items.Count == 312, "non-virtualized list keeps every row realized");
         Check(plainScroll.Offset > 0, "non-virtualized scroll moves");
+    }
+
+    private static void ConditionalSlot()
+    {
+        var host = new ScrollViewer();
+        var slot = new ConditionalContent<ConditionalState?>(new ConditionalState(0),
+            state => state == null ? null : ConditionalBranch.Build(8, state.Token));
+        host.SetContent(slot);
+        using var session = Scene.Session(host);
+        session.Update();
+        var first = slot.Child;
+        Check(first is VStack { Items.Count: 8 } && slot.HasBranch, "initial branch");
+        slot.State = new ConditionalState(0);
+        session.Update();
+        Check(ReferenceEquals(slot.Child, first), "equal state keeps the branch");
+        slot.State = new ConditionalState(1);
+        session.Update();
+        Check(slot.Child is VStack branch && !ReferenceEquals(branch, first), "new state rebuilds");
+        Check(first!.IsDisposed, "replaced branch is released");
+        slot.State = null;
+        session.Update();
+        Check(!slot.HasBranch && slot.Child == null, "null state releases the branch");
+        session.Dispose();
+        Check(host.IsDisposed && slot.IsDisposed, "conditional slot dispose");
     }
 }

@@ -12,7 +12,7 @@ namespace AlloyTest;
 public sealed class View1 : View<SettingsModel>
 {
     internal VStack RowList { get; }
-    internal LoadStatusRegion StatusRegion { get; }
+    internal ConditionalContent<LoadStatus> StatusRegion { get; }
     internal ScrollViewer RowScroll { get; }
     internal static readonly UiProperty<Theme> AppearanceProperty = new("Appearance", Theme.Dark, Invalidation.Layout, value => value != null);
     internal TextBox NameEditor { get; }
@@ -49,14 +49,14 @@ public sealed class View1 : View<SettingsModel>
         Meter = new VolumeMeter().Bind(ProgressBar.ValueProperty, model, x => x.Volume);
         SettingsFields = new VStack().Bind(UiProperties.Enabled, model, x => x.ControlsEnabled).WithChildren(
             new Text("Имя"), NameEditor, NotificationToggle, new Text("Громкость"), VolumeSlider, Meter);
-        StatusRegion = new LoadStatusRegion(status => status.Phase switch
+        StatusRegion = new ConditionalContent<LoadStatus>(LoadStatus.Ready, status => status.Phase switch
         {
             LoadPhase.Loading => new VStack().Configure(stack => stack.Spacing = 6).WithChildren(
                 new Text(status.Message), new ProgressBar { Value = .5f, Height = 8 }),
             LoadPhase.Error => new HStack().Configure(stack => stack.Spacing = 12).WithChildren(
                 new Text(status.Message).Width(340), new Button("Повторить").OnClick(model.BeginLoading)),
             _ => new Text(status.Message)
-        }).Height(48).Bind(LoadStatusRegion.StatusProperty, model, x => x.LoadStatus);
+        }).Height(48).Bind(ConditionalContent<LoadStatus>.StateProperty, model, x => x.LoadStatus);
         RowList = new VStack().Configure(stack => stack.Spacing = 8)
             .BindItems(model.Rows, row => new HStack().Configure(stack => stack.Spacing = 8).WithChildren(
                 new TextBox().Width(260).BindTwoWay(TextBox.ValueProperty, row, x => x.Name),

@@ -19,7 +19,6 @@
     <Compile Include="..\ManualTests\AlloyTest\LoadStatus.cs" Link="Demo\LoadStatus.cs" />
     <Compile Include="..\ManualTests\AlloyTest\DefaultStyleGallery.cs" Link="Demo\DefaultStyleGallery.cs" />
     <Compile Include="..\ManualTests\AlloyTest\CustomTitleBar.cs" Link="Demo\CustomTitleBar.cs" />
-    <Compile Include="..\ManualTests\AlloyTest\LoadStatusRegion.cs" Link="Demo\LoadStatusRegion.cs" />
     <Compile Include="..\ManualTests\AlloyTest\SettingsModel.cs" Link="Demo\SettingsModel.cs" />
     <Compile Include="..\ManualTests\AlloyTest\SettingsRow.cs" Link="Demo\SettingsRow.cs" />
     <Compile Include="..\ManualTests\AlloyTest\View1.cs" Link="Demo\View1.cs" />

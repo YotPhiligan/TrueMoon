@@ -28,7 +28,7 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false, bool trace
     private int _rowSelectionStart, _rowSelectionLength;
     private readonly HashSet<Element> _generated = new(ReferenceEqualityComparer.Instance);
     private Element[]? _rowsBeforeReset;
-    private LoadStatusRegion? _statusRegion;
+    private ConditionalContent<LoadStatus>? _statusRegion;
     private ScrollViewer? _rowScroll;
     private readonly HashSet<Element> _branches = new(ReferenceEqualityComparer.Instance);
     private Element? _previousBranch;
@@ -407,7 +407,7 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false, bool trace
     }
     private void VerifyStatusTransition(LoadPhase phase, bool preserveNeighbor)
     {
-        Require(_statusRegion!.DisplayedStatus == _model!.LoadStatus && _model.LoadStatus.Phase == phase, "Conditional state mismatch.");
+        Require(_statusRegion!.AppliedState == _model!.LoadStatus && _model.LoadStatus.Phase == phase, "Conditional state mismatch.");
         Require(_previousBranch is { IsDisposed: true, IsAttached: false }, "Replaced conditional branch was not released.");
         Require(_statusRegion.Child is { IsAttached: true, IsDisposed: false }, "New conditional branch was not attached.");
         Require(_list!.Items.SequenceEqual(_statusRows!), "Conditional replacement recreated list rows.");

@@ -29,6 +29,15 @@ a row that leaves the window is pooled and re-bound to another item, without it 
 and disposed on every scroll step. Without a `ScrollViewer` ancestor nothing defines a window, so
 every row is realized; rows cannot use `StackBase.Fill`.
 
+`ConditionalContent<TState>` keeps one subtree that follows a typed state. `State` (and `StateProperty`
+for a binding) accepts the state; the factory builds the branch or returns null to leave the slot empty.
+A state equal to the installed one keeps the branch, so focus, drafts and selection survive a no-change
+sync; call `Refresh()` to re-read the source while the state stays equal. The replaced branch is disposed
+by the slot — callers must not call `SetContent` on it — and rebuilds are queued on the dispatcher of the
+current attachment, so a refresh queued before detach never applies after reattach. Measured with UIA4.5:
+a repeated equal request costs 0 µs and 24 bytes instead of a full branch rebuild
+(`docs/alloy/PERFORMANCE_BASELINE.md#uia45-conditional-slot-2026-11-27`).
+
 `NumberBox.AdjustmentEnabled` opts into Up/Down stepping and pointer dragging on
 its prefix or geometric marker. Configure NumericKind, Step and inclusive bounds;
 invalid/nonfinite/overflow values are rejected without coercion or clamping.

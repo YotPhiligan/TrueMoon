@@ -18,7 +18,7 @@ internal sealed record CaseDescriptor(string Group, string Method, Func<int, IUi
 /// <summary>The permanent UIA4.2 case set. Every group also measures <c>NoOp</c> as its harness floor.</summary>
 internal static class Cases
 {
-    internal static readonly string[] Groups = ["node-cost", "property-access", "property-store", "collection-binding", "keyed-binding", "virtualized-binding", "property-binding"];
+    internal static readonly string[] Groups = ["node-cost", "property-access", "property-store", "collection-binding", "keyed-binding", "virtualized-binding", "property-binding", "conditional-slot"];
 
     /// <summary>Scene sizes per group: rows for the scene and binding groups, nodes for <c>property-store</c>, binding
     /// count for <c>property-binding</c>.</summary>
@@ -38,6 +38,7 @@ internal static class Cases
         "keyed-binding" => [.. KeyedBinding(), new CaseDescriptor("keyed-binding", "NoOp", static _ => new NullCase())],
         "virtualized-binding" => [.. VirtualizedBinding(), new CaseDescriptor("virtualized-binding", "NoOp", static _ => new NullCase())],
         "property-binding" => [.. PropertyBinding(), new CaseDescriptor("property-binding", "NoOp", static _ => new NullCase())],
+        "conditional-slot" => [.. ConditionalSlot(), new CaseDescriptor("conditional-slot", "NoOp", static _ => new NullCase())],
         _ => throw new ArgumentOutOfRangeException(nameof(group)),
     };
 
@@ -107,6 +108,108 @@ internal static class Cases
         yield return new("property-store", "StoreOneProperty", size => new StoreOneProperty(size));
         yield return new("property-store", "StoreTwoProperties", size => new StoreTwoProperties(size));
         yield return new("property-store", "StoreThreeProperties", size => new StoreThreeProperties(size));
+    }
+
+    // Sizes are rows inside the conditional branch, not nodes of the surrounding scene.
+    private static IEnumerable<CaseDescriptor> ConditionalSlot()
+    {
+        yield return new("conditional-slot", "ManualSetContentAndDispose", size => new ManualSetContentAndDispose(size));
+        yield return new("conditional-slot", "SlotNewState", size => new SlotNewState(size));
+        yield return new("conditional-slot", "SlotSameState", size => new SlotSameState(size));
+        yield return new("conditional-slot", "SlotCloseAndReopen", size => new SlotCloseAndReopen(size));
+    }
+}
+
+/// <summary>The branch both conditional cases build: one label per available choice.</summary>
+internal static class ConditionalBranch
+{
+    public static VStack Build(int rows, int token)
+    {
+        var branch = new VStack();
+        for (var index = 0; index < rows; index++) branch.Add(new Text("choice-" + token.ToStringInvariant() + "-" + index.ToStringInvariant()));
+        return branch;
+    }
+}
+
+/// <summary>The application pattern before UIA4.5: build a branch by hand, hand it to the host, dispose the previous one.</summary>
+internal sealed class ManualSetContentAndDispose(int rows) : IUiCase
+{
+    private int _token;
+    private ScrollViewer _host = null!;
+    private UiSession _session = null!;
+
+    public void Setup()
+    {
+        _host = new ScrollViewer();
+        _session = Scene.Session(_host);
+        _session.Update();
+    }
+
+    public void Run()
+    {
+        var branch = ConditionalBranch.Build(rows, _token);
+        var previous = _host.Child;
+        _host.SetContent(branch);
+        previous?.Dispose();
+        _token++;
+        _session.Update();
+    }
+
+    public void Cleanup() => _session.Dispose();
+}
+
+/// <summary>The identity of one requested branch; equal values must keep the installed subtree.</summary>
+internal sealed record ConditionalState(int Token);
+
+internal abstract class ConditionalSlotCase(int rows) : IUiCase
+{
+    protected int Token;
+    protected ScrollViewer Host = null!;
+    protected ConditionalContent<ConditionalState?> Slot = null!;
+    protected UiSession Session = null!;
+
+    public void Setup()
+    {
+        Host = new ScrollViewer();
+        Slot = new ConditionalContent<ConditionalState?>(new ConditionalState(0), state => state == null ? null : ConditionalBranch.Build(rows, state.Token));
+        Host.SetContent(Slot);
+        Session = Scene.Session(Host);
+        Session.Update();
+        if (!Slot.HasBranch) throw new InvalidOperationException("The initial conditional branch is missing.");
+    }
+
+    public abstract void Run();
+
+    public void Cleanup() => Session.Dispose();
+}
+
+internal sealed class SlotNewState(int rows) : ConditionalSlotCase(rows)
+{
+    public override void Run()
+    {
+        Slot.State = new ConditionalState(++Token);
+        Session.Update();
+    }
+}
+
+internal sealed class SlotSameState(int rows) : ConditionalSlotCase(rows)
+{
+    public override void Run()
+    {
+        // The same requested state: the slot keeps the installed rows, only the request itself is allocated.
+        Slot.State = new ConditionalState(Token);
+        Session.Update();
+    }
+}
+
+internal sealed class SlotCloseAndReopen(int rows) : ConditionalSlotCase(rows)
+{
+    public override void Run()
+    {
+        Slot.State = null;
+        Session.Update();
+        Slot.State = new ConditionalState(++Token);
+        Session.Update();
     }
 }
 
