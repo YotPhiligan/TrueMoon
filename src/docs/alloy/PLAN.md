@@ -103,9 +103,11 @@ UIA4.5 закрыта 27.11.2026 в части одной условной ве�
 UIA4.6 закрыта 28.11.2026: `PropertyBinding` разделяет тип значения источника и тип UI-свойства,
 односторонняя привязка принимает `Func<TSourceValue, TValue>`, двусторонняя —
 `ITwoWayValueConverter<TSourceValue, TValue>`; отказ обратного преобразования оставляет черновик в
-контроле и выставляет `UiProperties.HasError`/`UiProperties.ErrorMessage`, не трогая чужое состояние
-ошибки. Presentation-строка инспектора убрана: `SelectionText` → `InspectorSelection`, подпись строит
-`InspectorSelectionText.Describe` в дереве View. Проверки — 9 фактов `ConvertedBindingTests` (движок)
+контроле и выставляет `UiProperties.HasError`/`UiProperties.ErrorMessage`; владение этим состоянием
+принадлежит привязке, поэтому при восстановлении возвращается прежнее состояние элемента, а сообщение
+потребителя, записанное поверх отказа, не переписывается. Presentation-строка инспектора убрана:
+`SelectionText` → `InspectorSelection`, подпись строит `InspectorSelectionText.Describe` в дереве View.
+Проверки — 12 фактов `ConvertedBindingTests` (движок)
 и 2 факта `EditorInspectorViewTests` (инспектор Editor); замера стоимости нет — срез утверждений о
 стоимости не делает. [Запись в статусе](STATUS.md#uia46-binding-converter).
 
