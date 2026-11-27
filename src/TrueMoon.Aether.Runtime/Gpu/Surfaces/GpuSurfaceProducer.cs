@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.IO.Pipes;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Frames;
@@ -87,7 +88,7 @@ internal static class GpuSurfaceProducer
                             if ((frameProvider != null || frameSource != null) && data == null) throw new InvalidDataException("Runtime frame provider returned null.");
                             data?.Validate(stamp, extent.Width, extent.Height);
                             ready = data?.Snapshot is { } recording
-                                ? await surface.ProduceSnapshotAsync(stamp, recording, end).ConfigureAwait(false)
+                                ? await surface.ProduceSnapshotAsync(stamp, recording, end, data.PreviewOverlay).ConfigureAwait(false)
                                 : await surface.ProduceAsync(stamp, end, data?.Pixels, data?.Scene).ConfigureAwait(false);
                             if (data != null) frameSource?.Produced(data);
                         }
@@ -169,10 +170,11 @@ internal sealed class VulkanSurface(SessionIdentity identity, ulong generation, 
         finally { _gate.Release(); }
     }
     internal Task<GpuFrameCompletion> ProduceAsync(GpuFrameStamp stamp, CancellationToken token, byte[]? pixels = null, PrimitiveScene? scene = null) => ExecuteAsync(() => _slots[stamp.Slot].ProduceSlotAsync(stamp, token, pixels, scene), token);
-    internal Task<GpuFrameCompletion> ProduceSnapshotAsync(GpuFrameStamp stamp, Rendering.Snapshots.RenderSnapshotRecording recording, CancellationToken token)
+    internal Task<GpuFrameCompletion> ProduceSnapshotAsync(GpuFrameStamp stamp, Rendering.Snapshots.RenderSnapshotRecording recording,
+        CancellationToken token, ImmutableArray<RenderPrimitive> overlay)
         => ExecuteAsync(async () =>
         {
-            var use = await recording.SubmitAsync(_slots[stamp.Slot].SnapshotSubmissions(stamp, recording.Resources), token).ConfigureAwait(false);
+            var use = await recording.SubmitAsync(_slots[stamp.Slot].SnapshotSubmissions(stamp, recording.Resources, overlay), token).ConfigureAwait(false);
             await use.Completion.ConfigureAwait(false);
             return new GpuFrameCompletion(stamp, true);
         }, token);

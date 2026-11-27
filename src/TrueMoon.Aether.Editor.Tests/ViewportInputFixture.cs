@@ -13,6 +13,9 @@ using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Runtime.Transport;
 using TrueMoon.Aether.Scenes;
@@ -49,16 +52,36 @@ internal sealed class ViewportInputFixture : IDisposable
     internal readonly UiPresenters Presenters = UiPresenters.Create(EditorPresenters.Register);
     private ulong _frame;
     internal static readonly TimeSpan Deadline=TimeSpan.FromSeconds(5);
-    internal ViewportInputFixture(bool wrap=false)
+    internal ViewportInputFixture(bool wrap=false, bool? meshEnabled=null)
     {
         var source=DocumentData.Scene();
         EntityInstance Entity(EntityId id,double x)=>new(id,DocumentData.Base,new(propertyOverrides:
             [new(DocumentData.Transform,"x",PropertyValue.From(x)),new(DocumentData.Transform,"y",PropertyValue.From(1d))]));
-        Owner.Store.File=new(new(source.Id,source.Revision,[Entity(DocumentData.Parent,-1.2),Entity(DocumentData.Child,1.2)],source.Definitions,source.Schemas),new("input"));
+        List<EntityInstance> entities = [Entity(DocumentData.Parent,-1.2), Entity(DocumentData.Child,1.2)];
+        var definitions = source.Definitions;
+        var schemas = source.Schemas;
+        if (meshEnabled is { } enabled)
+        {
+            var mesh = SceneMaterialAuthoringTests.Scene(
+                (RenderContentProfile.CubeAssetId, RenderContentProfile.CubeBindingSetAssetId.ToString("D")));
+            var instance = Assert.Single(mesh.Entities);
+            var renderer = Assert.Single(instance.Changes.AddedComponents, component => component.TypeId == MeshRenderingComponents.MeshRendererId);
+            entities.Add(new(instance.Id, instance.DefinitionId, new(addedComponents:
+                [.. instance.Changes.AddedComponents.Where(component => component != renderer),
+                 new(renderer.Id, renderer.TypeId, renderer.SchemaVersion,
+                    [.. renderer.Properties, KeyValuePair.Create("enabled", PropertyValue.From(enabled))])])));
+            definitions = [.. definitions, .. mesh.Definitions];
+            schemas = [.. schemas, MeshRenderingComponents.MeshRendererSchema];
+            Runtime.RenderPreview = true;
+        }
+        Owner.Store.File=new(new(source.Id,source.Revision,entities,definitions,schemas),new("input"));
         Owner.Run(DocumentCommand.Open,"input.aetherscene");Workspace.SetProject(Owner.Projects.Active);SyncSource();
         Supervisor=new(Runtime,new('A',64),new('B',64),"input-tests",new(){HeartbeatInterval=TimeSpan.FromMinutes(1)});
         Frames=new(Supervisor,Viewport);Preview=new(Frames);State=new(Workspace,Preview);
-        Coordinator=new(State.Capture,(scene,view,token)=>Preview.ShowViewAsync(scene,view,640,360,token),Preview.StopAsync);
+        Coordinator = meshEnabled != null
+            ? new(State.CaptureSource, State.SetDesiredSource, State.CanReuse,
+                (scene, view, token) => Preview.ShowCapturedViewAsync(scene, view, 640, 360, token), Preview.StopAsync)
+            : new(State.Capture,(scene,view,token)=>Preview.ShowViewAsync(scene,view,640,360,token),Preview.StopAsync);
         Inspector=new(Owner.Commands,Coordinator,Workspace);Documents=new(Owner.Commands);
         Model=new(Workspace,Commands,Documents,Inspector);View=new(Model,new EditorViewStyle());
         Ui=InspectorFixture.Ui(wrap?new OverlayHost(View):View);Ui.Update();
@@ -69,7 +92,14 @@ internal sealed class ViewportInputFixture : IDisposable
     internal ViewportFrame Issue(PreviewViewState state)=>Frames.Presentation!.Issue(new(0,++_frame,0,0,1){PreviewView=state.Stamp});
     internal void Start()
     {
-        Assert.True(Coordinator.Show(Content.Resolved));WaitUntil(()=>Frames.Presentation!=null&&Preview.DesiredView!=null);
+        if (Coordinator.UsesCapturedSource)
+        {
+            var source = Owner.Document.CapturePreview(Content, Owner.Document.Read().OpeningId);
+            Assert.True(source.HasValue);
+            Assert.True(Coordinator.Show(source.Value));
+        }
+        else Assert.True(Coordinator.Show(Content.Resolved));
+        WaitUntil(()=>Frames.Presentation!=null&&Preview.DesiredView!=null);
         Present();DocumentUiFixture.Wait(Coordinator.Pending);Assert.Null(Coordinator.Read().Error);
     }
     internal void Present(Task? transition=null)
@@ -124,22 +154,29 @@ internal sealed class ViewportInputFixture : IDisposable
     internal sealed class RuntimeFactory : IRuntimeFactory
     {
         internal readonly List<Lease> Leases=[];
+        internal bool RenderPreview;
         internal volatile PreviewViewState? LastView;
         public IRuntimeLease Create(SessionLaunch launch){var lease=new Lease(this,launch);Leases.Add(lease);return lease;}
     }
     internal sealed class Lease(RuntimeFactory owner,SessionLaunch launch):IRuntimeLease
     {
-        internal readonly PreviewGameSession Game=new();
+        internal readonly PreviewGameSession Game = owner.RenderPreview
+            ? new(new Factory<World>(static () => new World())) : new();
         internal RuntimeProtocol Protocol=null!;
         private readonly TaskCompletionSource _exit=new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int ProcessId=>900;
         public Task Exited=>_exit.Task;
         public bool ResourcesReleased{get;private set;}
-        public Task LaunchAsync(CancellationToken token){token.ThrowIfCancellationRequested();Protocol=new(launch.Identity,Game,900,role:launch.Role);return Task.CompletedTask;}
+        public Task LaunchAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            Protocol = new(launch.Identity, Game, 900, role: launch.Role) { PreviewSurfaceAvailable = owner.RenderPreview };
+            return Task.CompletedTask;
+        }
         public async Task<ControlReply> SendAsync(ControlRequest request,CancellationToken token)
         {var reply=await Protocol.SendAsync(request,token);if(request.PreviewView!=null)owner.LastView=PreviewViewCodec.Decode(request.PreviewView);return reply;}
         public Task StopAsync(CancellationToken gracefulDeadline=default){_exit.TrySetResult();return Task.CompletedTask;}
-        public ValueTask DisposeAsync(){Game.Dispose();ResourcesReleased=true;return ValueTask.CompletedTask;}
+        public ValueTask DisposeAsync(){Protocol?.Dispose();Game.Dispose();ResourcesReleased=true;return ValueTask.CompletedTask;}
     }
     internal sealed class Transport : IGameViewportTransport
     {

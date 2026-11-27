@@ -28,6 +28,7 @@ internal static class RuntimeEntryPoint
             File.WriteAllText(Path.Combine(launch.ReportDirectory, $"runtime-{launch.Identity.Generation}.json"), JsonSerializer.Serialize(new
             { Pid = Environment.ProcessId, Validation = engine.Gpu.LastSurfaceProducer, Resources = engine.Gpu.ResourceCount, Handles = engine.Gpu.OpenHandleCount,
                 GameLoaded=assemblies.Contains("RenderSurface.Game"),EditorLoaded=assemblies.Any(name=>name.StartsWith("TrueMoon.Aether.Editor",StringComparison.Ordinal)),
+                Role=launch.Role.ToString(),BuildId=launch.Build?.BuildId,DeliveryGameLoaded=assemblies.Contains("DeliveryGame"),
                 ToolingLoaded=assemblies.Contains("TrueMoon.Aether.Tooling"),
                 Started=started,RuntimeActivated=runtime!=null,FailurePhase=failure==null?null:!started?"AppStartup":runtime==null?"GameActivation":"Run",
                 FailureType=failure?.GetType().FullName,NoGpuSurfaceProduced=engine.Gpu.LastSurfaceProducer==null,

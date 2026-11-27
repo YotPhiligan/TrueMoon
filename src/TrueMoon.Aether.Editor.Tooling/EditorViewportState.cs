@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Runtime.Preview;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Preview;
 
@@ -13,6 +14,7 @@ public sealed class EditorViewportState : IDisposable
     private Guid _active, _opening;
     private PreviewCamera _camera = PreviewCamera.Default;
     private PreviewViewContext? _context;
+    private PreviewViewState? _capturedView;
     private bool _disposed;
     private bool _visible;
     private TaskCompletionSource _visibleReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -59,17 +61,21 @@ public sealed class EditorViewportState : IDisposable
         lock (_gate)
         {
             if (_disposed || _active != Guid.Empty && _active != view) return false;
-            if (_active != view) { _active = view; _camera = PreviewCamera.Default; _context = null; }
+            if (_active != view) { _active = view; _camera = PreviewCamera.Default; _context = null; _capturedView = null; }
             return true;
         }
     }
     /// <summary>Releases only the actual binding owner. The controller separately drains borrowed preview work.</summary>
     /// <param name="view">Binding to release.</param><returns>True only for the current owner.</returns>
     public bool Release(Guid view)
-    { lock (_gate) { if (_active != view || view==Guid.Empty) return false; SetVisible(view,false);_active = Guid.Empty; _context = null; return true; } }
+    { lock (_gate) { if (_active != view || view==Guid.Empty) return false; SetVisible(view,false);_active = Guid.Empty; _context = null; _capturedView = null; return true; } }
     /// <summary>Captures committed source on the UI owner before it enters the asynchronous preview queue.</summary>
     /// <param name="scene">Exact current workspace resolved snapshot.</param><returns>Detached immutable context/camera.</returns>
-    public PreviewViewState Capture(ResolvedSceneSnapshot scene)
+    public PreviewViewState Capture(ResolvedSceneSnapshot scene) => Capture(scene, false);
+
+    internal PreviewViewState CaptureSource(ResolvedSceneSnapshot scene) => Capture(scene, true);
+
+    private PreviewViewState Capture(ResolvedSceneSnapshot scene, bool captured)
     {
         ArgumentNullException.ThrowIfNull(scene);
         lock (_gate)
@@ -77,9 +83,43 @@ public sealed class EditorViewportState : IDisposable
             ObjectDisposedException.ThrowIf(_disposed,this);
             if (_active == Guid.Empty || !ReferenceEquals(_workspace.Document?.Resolved,scene))
                 throw new InvalidOperationException("An active viewport and current committed workspace source are required.");
-            _context = new(_workspace.DocumentEpoch,_active,_workspace.ContentToken,scene.Id.Value,scene.Revision);
-            return new(_context,_camera);
+            var token = _workspace.ContentToken;
+            if (captured && _capturedView is { } previous && previous.Context.ContentId == token && previous.Camera == _camera)
+                return previous;
+            var view = new PreviewViewState(new(_workspace.DocumentEpoch,_active,token,scene.Id.Value,scene.Revision), _camera);
+            if (captured) _capturedView = view;
+            else { _capturedView = null; _context = view.Context; }
+            return view;
         }
+    }
+
+    // The worker installs only an identity derived from the current owner capture. It does not read the workspace or a View.
+    internal bool SetDesiredSource(PreviewViewContext? context)
+    {
+        lock (_gate)
+        {
+            if (context != null && (_disposed || _capturedView?.Context is not { } captured ||
+                captured.DocumentEpoch != context.DocumentEpoch || captured.ViewId != context.ViewId ||
+                captured.SceneId != context.SceneId || captured.SceneRevision != context.SceneRevision)) return false;
+            _context = context;
+            return true;
+        }
+    }
+
+    internal bool CanReuse(ScenePreviewDocument document, PreviewViewContext context)
+    {
+        lock (_gate) return !_disposed && _visible && _active == context.ViewId &&
+            _preview.PresentedView is { } current && current.State.Context == context &&
+            current.Frame.Presentation.Surface.Identity == document.Runtime &&
+            _preview.DesiredView?.Context == context;
+    }
+
+    internal bool Matches(Guid view, PreviewFrameStamp stamp)
+    {
+        lock (_gate) return _context is { } context && Matches(view, context) &&
+            stamp.DocumentEpoch == context.DocumentEpoch && stamp.ViewId == context.ViewId &&
+            stamp.ContentId == context.ContentId && stamp.SceneId == context.SceneId &&
+            stamp.SceneRevision == context.SceneRevision;
     }
     /// <summary>Checks opening/view/content admission without creating a new token or reading controls.</summary>
     /// <param name="view">Candidate binding.</param><param name="context">Frozen candidate context.</param><returns>Whether all ownership identities still match.</returns>
@@ -87,7 +127,8 @@ public sealed class EditorViewportState : IDisposable
     {
         ArgumentNullException.ThrowIfNull(context);
         lock (_gate) return !_disposed && _active == view && _context == context && context.DocumentEpoch == _workspace.DocumentEpoch &&
-            context.ContentId == _workspace.ContentToken && context.SceneRevision == _workspace.Scene.Revision;
+            context.SceneId == _workspace.Document?.Resolved.Id.Value && context.SceneRevision == _workspace.Scene.Revision &&
+            (_capturedView?.Context.ContentId ?? context.ContentId) == _workspace.ContentToken;
     }
     /// <summary>Publishes a validated candidate only when the same context still owns the runtime camera lane.</summary>
     /// <param name="view">Candidate binding.</param><param name="context">Exact committed source context.</param>
@@ -106,11 +147,11 @@ public sealed class EditorViewportState : IDisposable
         lock (_gate)
         {
             if (_opening != _workspace.DocumentEpoch) { _opening = _workspace.DocumentEpoch; _camera = PreviewCamera.Default; }
-            _context = null;
+            _context = null; _capturedView = null;
         }
     }
     /// <summary>Detaches App data subscriptions; borrowed preview/workspace are retained by their owners.</summary>
     public void Dispose()
-    { lock (_gate) { if(_disposed)return; _disposed=true; _active=Guid.Empty; _context=null; _workspace.SceneChanged-=SceneChanged;
+    { lock (_gate) { if(_disposed)return; _disposed=true; _active=Guid.Empty; _context=null; _capturedView=null; _workspace.SceneChanged-=SceneChanged;
         _visibleReady.TrySetCanceled();_visibility.Cancel();_visibility.Dispose(); } }
 }

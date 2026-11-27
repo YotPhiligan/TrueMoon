@@ -44,7 +44,20 @@ With `UseAetherProjectModelCatalog()` enabled, the status panel offers **Project
 models**. Its checkboxes update the resource selection for the active scene.
 Models come from the authoring pipeline's project registrations.
 
+The default document factory adds project catalogs for Material, Texture and
+Mesh. Texture source capture requires Windows x64 and a trusted project-relative
+opaque PNG. Creating or replacing named Mesh geometry requires a published
+model from `UseAetherProjectModelCatalog()`. Reopening and building detached
+assets do not need their live source files. A custom document factory is not
+replaced and does not implicitly get these editing panels.
+
+The standard GPU Edit Preview resolves committed mesh/material/texture assets
+without Build or Game.Logic. This uses Windows x64 Vulkan production and
+OpenGL presentation and requires a matching runtime host with
+`UseAetherSurfaceRendering`. A distinct preview transfer is negotiated for mesh
+content; the primitive Preview and game `LoadScene`/`SceneWorld` paths are unchanged.
+
 This replaces the previous `TrueMoon.Aether.Editor` package. Update PackageReferences
 and namespaces and rebuild matching hosts/games/artifacts/captures together. No facade
-or type forwarding is supplied; scene/project/control/frame/checkpoint formats stay
+or type forwarding is supplied; scene/project/frame/checkpoint formats stay
 unchanged. Mod loading/hot replacement is a later architecture stage.

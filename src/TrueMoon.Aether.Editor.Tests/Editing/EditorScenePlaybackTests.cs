@@ -426,7 +426,7 @@ public sealed class EditorScenePlaybackTests
         var authored = new ProjectMaterial(Guid.NewGuid(), "Plaster", new(0, 0, 1), null);
         var snapshot = await documents.WriteMaterialAsync(await documents.ReadMaterialCatalogAsync(default), authored, default);
         var mesh = model.PlainMesh;
-        var assets = SceneRenderAssets.WithMaterials(project.Description.Id, model.Assets, snapshot)!;
+        var assets = SceneRenderAssets.Capture(project.Description.Id, model.Assets, snapshot)!;
         var binding = Assert.IsType<Guid>(assets.BindingForMaterial(mesh.AssetId, mesh.SlotId, authored.Id));
         var scene = SceneMaterialAuthoringTests.Scene((mesh.AssetId, binding.ToString("D")));
         Assert.True(await documents.NewAsync(scene, DocumentCloseChoice.Discard));

@@ -616,6 +616,23 @@ Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smo
 component actions, зависимость, reset, theme retention, shared history, Save/reopen
 и фактически показанный Edit Preview, PNG/JSON и cleanup дочернего процесса.
 
+## Авторские ассеты проекта
+
+**Материалы**, **Текстуры** и **Меши** доступны в инспекторе независимо от
+выбранной сущности. Импортируйте непрозрачный PNG из доверенного проекта
+относительным путём; **Заменить** меняет пиксели, не ID текстуры. Для меша
+сначала зарегистрируйте модель через **Импортировать модель**, затем выберите
+её опубликованную геометрию в панели **Меши**. Выбирать этот импорт для сцены
+не нужно. Замена сохраняет ID меша и материалов по слотам, даже если новый
+источник переставил именованные слоты. Несовместимый состав слотов или потеря
+UV0 отклоняются.
+
+Сохранение ассета не добавляет правку в историю сцены. Чтобы назначить меш
+или материал слота экземпляру, используйте выбор ресурса и **Применить**.
+Свежий Build закрепляет достижимые ревизии; прежний опубликованный Build не
+читает каталоги, PNG или файлы модели. Пользовательская фабрика документов
+не заменяется; неподключённые панели скрыты.
+
 ## Transform, Undo/Redo и Edit preview
 
 Кнопка ↶ справа от каждой группы подготавливает сброс Position, Rotation или Scale
@@ -650,16 +667,18 @@ TextBox/RichTextEditor Ctrl+Z не перехватывается как ком�
 
 **Edit Preview → Preview** в строке состояния включает независимый просмотр
 committed сцены без Build/Play/Game.Logic.
-После Apply/Undo/Redo он обновляется автоматически. Статус различает ревизию
-документа и последнего реально показанного кадра. Один запрос выполняется, из
-ожидающих сохраняется только последний; набор текста не запускает preview.
+После Apply/Undo/Redo и сохранения используемого ассета просмотр обновляется
+автоматически. Одинаковый exact render content оставляет текущий child.
+До проверки нового снимка старый кадр не считается актуальным. Один запрос
+выполняется, из ожидающих сохраняется только последний; черновики не запускают preview.
 **Стоп** отменяет обновление и ждёт drain/reap. Open/New/Close/Exit останавливают
 preview до смены документа; Cancel решения оставляет прежнюю сцену и preview.
 Ошибка preview не откатывает правку и не удаляет history; повтор — кнопкой Preview.
 
 Текущий профиль: Windows x64, OpenGL UI/Vulkan child, transient editor camera,
-surface640×360, до64entities и новый child при обновлении committed source revision. Лимит относится
-к preview: большие authoring документы не обрезаются и доступны для сохранения.
+начальная surface 640×360, до 64 сущностей и новый child при изменённом
+committed render content. Лимит относится к preview: большие authoring
+документы не обрезаются и доступны для сохранения.
 New создаёт пустую сцену; её можно наполнить через команды обозревателя.
 Live runtime edits и gizmos остаются отдельными задачами; camera navigation подключена к Edit Preview.
 [Контракт камеры/selection ED5a.0](../docs/engine/EDITOR_CAMERA_SELECTION.md)
@@ -668,14 +687,16 @@ single selection owner. ED5a.1 CPU camera/projection/ray/pick values реали�
 в Aether; ED5a.2 добавил explicit ShowView/QueueCamera, Control4/Frame2 и actual receipt.
 ReadPresentedView(view) вызывается на UI owner и проверяет current camera/surface/
 drawn layout/clip/visibility. Upload и control ack не являются presentation.
-Default GPU coordinator использует explicit ShowView: actual document OpeningId,
-exclusive ViewId и committed ContentToken. External custom transport сохраняет
-legacy Show API и собственную presentation policy.
+Default GPU coordinator использует actual OpeningId, exclusive ViewId и
+отдельный render ContentId. Mesh Preview переносит только достижимые exact
+ресурсы, без живых источников и проектной Camera. External custom transport
+сохраняет legacy Show API и собственную presentation policy.
 
 В Edit Preview: RMB drag — orbit, MMB drag — pan, wheel — dolly; F на focused canvas
-кадрирует выбранный opaque cube. LMB click выбирает куб, фон очищает выбор через
-общий tree/inspector owner. Same-ID сохраняет draft, different/clear применяет прежнюю
-политику. Camera-only не меняет document/history/invalid draft; wheel не забирает focus.
+кадрирует выбранный opaque cube. В primitive-only кадре LMB выбирает куб,
+фон очищает выбор. При активном MeshRenderer точный picking недоступен:
+клик не очищает выбор, дерево и инспектор остаются доступными.
+Camera-only не меняет document/history/invalid draft; wheel не забирает focus.
 Esc/focus loss/capture cancellation откатывает pose с новой camera revision.
 Overlays, chrome, letterbox, pending camera и Play блокируют picking/navigation.
 

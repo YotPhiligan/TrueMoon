@@ -2,6 +2,7 @@ using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Ecs.Loading;
 using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Preview;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Diagnostics;
@@ -100,6 +101,12 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         => StartCoreAsync(scene, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview);
     internal Task StartPreviewViewAsync(SceneSnapshot scene, PreviewViewState view, int width, int height, CancellationToken token)
         => StartCoreAsync(scene, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview, previewView: view);
+    internal Task StartPreviewRenderViewAsync(PreviewRenderPayload payload, PreviewViewState view, int width, int height, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(payload); ArgumentNullException.ThrowIfNull(view);
+        if (TransportKind != ViewportTransportKind.Gpu) throw new NotSupportedException("Render preview requires the GPU viewport transport.");
+        return StartCoreAsync(null, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview, previewView: view, previewRender: payload);
+    }
 
     /// <summary>Starts a selected artifact and waits for its acknowledged first presentation.</summary>
     public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, int width, int height, string behavior = "normal", CancellationToken token = default)
@@ -141,7 +148,7 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
     }
     private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, int width, int height, string behavior,
         CancellationToken token, ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null,
-        PreviewViewState? previewView = null)
+        PreviewViewState? previewView = null, PreviewRenderPayload? previewRender = null)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -168,6 +175,8 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
                     else if (build == null) await supervisor.StartWorldAsync(worldScene, behavior, deadline.Token).ConfigureAwait(false);
                     else await supervisor.StartWorldAsync(worldScene, build, behavior, deadline.Token).ConfigureAwait(false);
                 }
+                else if (previewRender != null)
+                    await supervisor.StartPreviewRenderViewAsync(previewRender, previewView!, deadline.Token).ConfigureAwait(false);
                 else if (role == RuntimeRole.EditPreview)
                 {
                     if (previewView == null) await supervisor.StartPreviewAsync(scene!, deadline.Token).ConfigureAwait(false);

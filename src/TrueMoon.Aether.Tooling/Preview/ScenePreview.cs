@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Frames;
@@ -19,7 +20,7 @@ namespace TrueMoon.Aether.Tooling.Preview
         private CancellationTokenSource? _work;
         private int _fence;
         private bool _closed, _ownsSession;
-        private (SceneId Id, long Revision)? _target;
+        private (SceneId Id, long Revision, PreviewViewContext? View)? _target;
         private ScenePreviewDocument? _document;
         private ScenePreviewFrame? _presented;
         private Exception? _error;
@@ -60,10 +61,68 @@ namespace TrueMoon.Aether.Tooling.Preview
         private async Task<ScenePreviewDocument> ShowCoreAsync(ResolvedSceneSnapshot scene, int width, int height, CancellationToken token, PreviewViewState? view = null)
         {
             ArgumentNullException.ThrowIfNull(scene);
-            var fence = BeginPreflight(); ValidateSize(width, height, false);
-            if (_frames.TransportKind != ViewportTransportKind.Gpu) throw new NotSupportedException("Edit preview requires the explicit primitive GPU viewport.");
+            var fence = ValidatePreflight(width, height);
             var projection = PrimitiveSceneAdapter.Project(scene, token);
             var picks = view == null ? null : PreviewPickSnapshot.Capture(projection, PreviewPickSnapshot.CubeGeometryProfile);
+            return await StartPreparedAsync(scene.Id, scene.Revision, projection, null, view, picks, width, height, fence, token).ConfigureAwait(false);
+        }
+
+        internal Task<ScenePreviewDocument> ShowCapturedViewAsync(PreparedScenePreview prepared, PreviewViewState view,
+            int width, int height, CancellationToken token)
+        {
+            ArgumentNullException.ThrowIfNull(prepared);
+            ArgumentNullException.ThrowIfNull(view);
+            var source = prepared.Source;
+            if (view.Context.DocumentEpoch != source.OpeningId || view.Context.SceneId != source.Scene.Id.Value ||
+                view.Context.SceneRevision != source.Scene.Revision)
+                throw new ArgumentException("View does not describe the captured document opening.", nameof(view));
+            if (prepared.Render is { } render) return ShowRenderViewAsync(render, view, width, height, token);
+            var fence = ValidatePreflight(width, height);
+            view.Camera.CreateProjection(width, height);
+            token.ThrowIfCancellationRequested();
+            var primitive = prepared.Primitive!;
+            var picks = PreviewPickSnapshot.Capture(primitive, PreviewPickSnapshot.CubeGeometryProfile);
+            return StartPreparedAsync(source.Scene.Id, source.Scene.Revision, primitive, null, view, picks, width, height, fence, token);
+        }
+
+        internal Task<ScenePreviewDocument> ShowRenderViewAsync(PreviewRenderPayload payload, PreviewViewState view,
+            int width, int height, CancellationToken token)
+        {
+            ArgumentNullException.ThrowIfNull(payload);
+            ArgumentNullException.ThrowIfNull(view);
+            if (view.Context.SceneId != payload.SceneId.Value || view.Context.SceneRevision != payload.Revision)
+                throw new ArgumentException("View does not describe the captured render payload.", nameof(view));
+            var fence = ValidatePreflight(width, height);
+            view.Camera.CreateProjection(width, height);
+            token.ThrowIfCancellationRequested();
+            var picks = CaptureRenderPicks(payload);
+            return StartPreparedAsync(payload.SceneId, payload.Revision, null, payload, view, picks, width, height, fence, token);
+        }
+
+        internal static PreviewPickSnapshot CaptureRenderPicks(PreviewRenderPayload payload)
+        {
+            var cubes = ImmutableArray.CreateBuilder<PreviewPickPrimitive>();
+            var hasVisibleMesh = false;
+            for (var i = 0; i < payload.Rows.Length; i++)
+            {
+                var row = payload.Rows[i];
+                if (row.IsMesh) hasVisibleMesh |= row.Enabled && row.Layers != 0;
+                else cubes.Add(new(row.Entity, i, row.World));
+            }
+            return PreviewPickSnapshot.CaptureRender(payload.SceneId, payload.Revision, cubes.ToImmutable(), hasVisibleMesh);
+        }
+
+        private int ValidatePreflight(int width, int height)
+        {
+            var fence = BeginPreflight();
+            ValidateSize(width, height, false);
+            if (_frames.TransportKind != ViewportTransportKind.Gpu) throw new NotSupportedException("Edit preview requires the explicit GPU viewport.");
+            return fence;
+        }
+
+        private async Task<ScenePreviewDocument> StartPreparedAsync(SceneId sceneId, long revision, SceneSnapshot? projection,
+            PreviewRenderPayload? render, PreviewViewState? view, PreviewPickSnapshot? picks, int width, int height, int fence, CancellationToken token)
+        {
             await EnterViewGateAsync(token).ConfigureAwait(false);
             try
             {
@@ -73,7 +132,7 @@ namespace TrueMoon.Aether.Tooling.Preview
                     if (!_ownsSession && _frames.Supervisor.Status.State != SessionState.Stopped ||
                         _frames.Supervisor.Status.State != SessionState.Stopped && _frames.Supervisor.ActiveRole != RuntimeRole.EditPreview)
                         throw new InvalidOperationException("Stop the game explicitly before opening Edit preview.");
-                    if (_document is { } previous && previous.SceneId == scene.Id && scene.Revision < previous.Revision &&
+                    if (_document is { } previous && previous.SceneId == sceneId && revision < previous.Revision &&
                         (view == null || _viewCurrent?.Context.DocumentEpoch == view.Context.DocumentEpoch))
                         throw new InvalidOperationException("Stale authoring revision. Stop before opening a different authoring session.");
                     _work = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -87,10 +146,11 @@ namespace TrueMoon.Aether.Tooling.Preview
                     lock (_stateGate)
                     {
                         CheckFence(fence, token);
-                        _ownsSession = true; _target = (scene.Id, scene.Revision); work = _work!.Token;
+                        _ownsSession = true; _target = (sceneId, revision, view?.Context); work = _work!.Token;
                     }
-                    if (view == null) await _frames.StartPreviewAsync(projection, width, height, work).ConfigureAwait(false);
-                    else await _frames.StartPreviewViewAsync(projection, view, width, height, work).ConfigureAwait(false);
+                    if (render != null) await _frames.StartPreviewRenderViewAsync(render, view!, width, height, work).ConfigureAwait(false);
+                    else if (view == null) await _frames.StartPreviewAsync(projection!, width, height, work).ConfigureAwait(false);
+                    else await _frames.StartPreviewViewAsync(projection!, view, width, height, work).ConfigureAwait(false);
                     lock (_stateGate)
                     {
                         CheckFence(fence, work);
@@ -163,8 +223,9 @@ namespace TrueMoon.Aether.Tooling.Preview
             var target = _target;
             if (_closed || target == null || !ReferenceEquals(_frames.Presentation, frame.Presentation) ||
                 !MatchesRuntime(frame.Presentation.Surface.Identity) || _frames.Supervisor.Status.SceneRevision != target.Value.Revision ||
-                (_viewCurrent != null && CaptureStateCore(frame) == null) || (_viewCurrent == null && frame.Metadata.PreviewView != null)) return null;
-            return new(new(target.Value.Id, target.Value.Revision, frame.Presentation.Surface.Identity), frame);
+                (target.Value.View is { } view && CaptureStateCore(frame)?.Context != view) ||
+                (target.Value.View == null && frame.Metadata.PreviewView != null)) return null;
+            return new(new(target.Value.Id, target.Value.Revision, frame.Presentation.Surface.Identity) { ViewContext = target.Value.View }, frame);
         }
         private bool MatchesRuntime(SessionIdentity identity) => _frames.Supervisor.ActiveRole == RuntimeRole.EditPreview &&
                                                                  _frames.Supervisor.Status.Identity == identity && _frames.Supervisor.Status.State == SessionState.Paused &&

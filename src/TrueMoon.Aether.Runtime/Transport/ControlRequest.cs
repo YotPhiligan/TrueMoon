@@ -49,7 +49,7 @@ public sealed class ControlRequest
     /// <summary>SHA256 of the complete encoded scene envelope in hexadecimal.</summary>
     public string SceneDigest { get; set; } = "";
 
-    /// <summary>Exact preview-view/1 bytes, used by explicit preview LoadScene and SetPreviewView only.</summary>
+    /// <summary>Exact preview-view/1 bytes, used by explicit preview LoadScene, SetPreviewView and BeginPreviewRender.</summary>
     public byte[]? PreviewView { get; set; }
     /// <summary>Exact fixed132byte mesh-view/1 stamp, used only by PresentRenderView.</summary>
     public byte[]? RenderViewStamp { get; set; }

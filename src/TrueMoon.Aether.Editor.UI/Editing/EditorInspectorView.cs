@@ -180,6 +180,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
                     .Bind(RichTextEditor.TextProperty, model => model.DiagnosticsText)
                     .Bind(UiProperties.Visible, model => model.HasDiagnostics),
                 BuildMaterials(ui),
+                BuildTextures(ui),
+                BuildMeshes(ui),
                 ui.VStack().Named("ComponentListPart").WithRole(StackRole),
                 ui.VStack().Named("RemovedPart").WithRole(StackRole))
                 .Named("FormPart").WithRole(StackRole)));
@@ -203,6 +205,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         this.AddChoicesPart.BindItems(_addableTypes, CreateAddChoice, static choice => (choice.Schema.TypeId, choice.Schema.Version), PresentAddChoice);
         this.RemovedPart.BindItems(_removedComponents, CreateRestoreRow, static removed => removed.Id, PresentRestoreRow);
         PrepareMaterials();
+        PrepareTextures();
+        PrepareMeshes();
         AttachmentChanged += Attachment;
         SynchronizeContext();
         this.ObservePropertyChanged(this, (_, change) => ModelChanged(change), SynchronizeContext);
@@ -229,6 +233,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
                 nameof(IEditorInspectorViewModel.DiagnosticsText) => InspectorUpdate.EditorState,
             nameof(IEditorInspectorViewModel.RenderAssets) => InspectorUpdate.RenderAssets,
             nameof(IEditorInspectorViewModel.Materials) => InspectorUpdate.Materials,
+            nameof(IEditorInspectorViewModel.Textures) => InspectorUpdate.Textures,
+            nameof(IEditorInspectorViewModel.Meshes) => InspectorUpdate.Meshes,
             nameof(IEditorInspectorViewModel.HasSelection) => InspectorUpdate.CloseHint,
             _ => InspectorUpdate.None
         };
@@ -260,6 +266,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         this.AddChoicesPart.IsInputBlocked = blocked;
         this.RemovedPart.IsInputBlocked = blocked;
         MaterialsPart.IsInputBlocked = blocked;
+        TexturesPart.IsInputBlocked = blocked;
+        MeshesPart.IsInputBlocked = blocked;
     }
 
     private void Synchronize(InspectorUpdate update)
@@ -284,6 +292,16 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
             SynchronizeComponentChoices(model);
         }
         if ((update & InspectorUpdate.Materials) != 0) _materialContext.DataContext = model?.Materials;
+        if ((update & InspectorUpdate.Textures) != 0)
+        {
+            _textureContext.DataContext = model?.Textures;
+            SynchronizeTextures();
+        }
+        if ((update & InspectorUpdate.Meshes) != 0)
+        {
+            _meshContext.DataContext = model?.Meshes;
+            SynchronizeMeshes();
+        }
         _presentedContext = model;
 
         if (model == null)
@@ -621,6 +639,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
             button.IsEnabled = item.CanSelect;
             if (materialSlotId is { } id)
                 button.SemanticId = $"editor.inspector.material.choice.{id:N}.{item.Id:N}";
+            else if (property.Key == "mesh")
+                button.SemanticId = $"editor.inspector.mesh.choice.{item.Id:N}";
             button.Tone = item.Id == choices.Selected ? ControlTone.Accent : ControlTone.Neutral;
             rows.Add(button);
             if (slot == null && property.Key == "mesh" && selection.MeshesWithMaterialTransfer.Contains(item.Id))
@@ -681,6 +701,16 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     public bool HandleShortcut(UiInput input)
     {
         VerifyAccess(); if (input.Kind != InputKind.KeyDown || DataContext is not { } model) return false;
+        if (TextureTextHasFocus())
+        {
+            if (input.Key == UiKey.Escape) { CurrentTextures?.Cancel(); return true; }
+            return input.Control && input.Key == UiKey.Enter;
+        }
+        if (MeshTextHasFocus())
+        {
+            if (input.Key == UiKey.Escape) { CurrentMeshes?.Cancel(); return true; }
+            return input.Control && input.Key == UiKey.Enter;
+        }
         if (input.Key == UiKey.Escape && NumericEditors().FirstOrDefault(box => box.IsDragging) is { } dragging)
         { dragging.CancelGesture(); return true; }
         if (input.Control && input.Key == UiKey.Enter && ReferenceEquals(model, _presentedContext))
@@ -797,7 +827,9 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         RenderAssets = 4,
         CloseHint = 8,
         Materials = 16,
-        All = Structure | EditorState | RenderAssets | Materials
+        Textures = 32,
+        Meshes = 64,
+        All = Structure | EditorState | RenderAssets | Materials | Textures | Meshes
     }
 
     // Keep the existing public part handles inspectable after disposal.

@@ -95,10 +95,10 @@ public sealed partial class ScenePreview
             if (_presentationSuspended || layoutRevision == 0 || !image.TryMapPixel(image.Left, image.Top, 1, 1, out _, out _) ||
                 !clip.TryMapPixel(clip.Left, clip.Top, 1, 1, out _, out _)) return false;
             var state = CaptureStateCore(frame);
-            if (state == null || _viewPicks == null || DescribeCore(frame) == null) return false;
+            if (state == null || _viewPicks == null || DescribeCore(frame) is not { } described) return false;
             var projection = state.Camera.CreateProjection(frame.Presentation.Surface.Width, frame.Presentation.Surface.Height);
             if (!_frames.Presented(frame)) return false;
-            _presented = new(new(new(state.Context.SceneId), state.Context.SceneRevision, frame.Presentation.Surface.Identity), frame);
+            _presented = described;
             _viewReceipt = new(frame, state, projection, _viewPicks, image, clip, layoutRevision);
             AcknowledgeCameraCore(frame); return true;
         }

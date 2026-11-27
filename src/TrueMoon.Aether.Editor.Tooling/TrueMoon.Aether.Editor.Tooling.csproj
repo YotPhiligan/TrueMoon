@@ -19,6 +19,8 @@
     <ProjectReference Include="../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="../TrueMoon.Aether.Importing.Assimp/BaseColorPng.cs" Link="Importing/BaseColorPng.cs" />
+    <PackageReference Include="SkiaSharp" />
     <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 </Project>

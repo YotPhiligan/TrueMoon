@@ -26,10 +26,19 @@ public static class BuiltInComponents
     {
         var expected = Schemas.FirstOrDefault(s => s.TypeId == actual.TypeId);
         if (expected == null) return;
-        if (actual.Version != expected.Version || actual.AllowMultiple != expected.AllowMultiple ||
-            !actual.RequiredTypes.SetEquals(expected.RequiredTypes) || actual.Properties.Count != expected.Properties.Count ||
-            expected.Properties.Any(p => !actual.Properties.TryGetValue(p.Key, out var value) || value.Kind != p.Value.Kind ||
-                value.IsNullable != p.Value.IsNullable || value.DefaultValue != p.Value.DefaultValue))
+        if (!HasExactSchema(actual, expected))
             throw new InvalidDataException($"Unsupported built-in component schema: {actual.TypeId.Value:D}, version {actual.Version}.");
+    }
+
+    internal static bool HasExactSchema(ComponentSchema actual, ComponentSchema expected)
+    {
+        if (actual.TypeId != expected.TypeId || actual.Version != expected.Version || actual.AllowMultiple != expected.AllowMultiple ||
+            !actual.RequiredTypes.SetEquals(expected.RequiredTypes) || actual.Properties.Count != expected.Properties.Count)
+            return false;
+        foreach (var (key, property) in expected.Properties)
+            if (!actual.Properties.TryGetValue(key, out var value) || value.Kind != property.Kind ||
+                value.IsNullable != property.IsNullable || value.DefaultValue != property.DefaultValue)
+                return false;
+        return true;
     }
 }

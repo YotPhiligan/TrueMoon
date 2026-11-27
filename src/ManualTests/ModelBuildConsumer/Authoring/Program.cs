@@ -25,7 +25,7 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-render-material-slot-overrides" or "--editor-render-material-slot-overrides-undo" or "--editor-render-material-transfer" or "--editor-material-authoring" or "--editor-camera-projection" or "--editor-mesh-visibility" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-render-material-slot-overrides" or "--editor-render-material-slot-overrides-undo" or "--editor-render-material-transfer" or "--editor-material-authoring" or "--editor-authoring-assets" or "--editor-camera-projection" or "--editor-mesh-visibility" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
 var playerTexture = args.Length == 8 && args[7] == "--imported-texture";
 var saveAfterSlotUndo = args.Length == 8 && args[7] == "--editor-render-material-slot-overrides-undo";
 var restartMultipleOverrides = saveAfterSlotUndo || args.Length == 8 && args[7] == "--editor-render-material-slot-overrides";
@@ -38,7 +38,9 @@ var transferMaterials = args.Length == 8 && args[7] == "--editor-render-material
 var cameraProjection = args.Length == 8 && args[7] == "--editor-camera-projection";
 var meshVisibility = args.Length == 8 && args[7] == "--editor-mesh-visibility";
 var materialAuthoring = args.Length == 8 && args[7] == "--editor-material-authoring";
-var editorInitialImport = materialAuthoring || meshVisibility || cameraProjection || transferMaterials || restartSlotOverride || restartImportedTexture || reimportTexture ||
+var authoringAssets = args.Length == 8 && args[7] == "--editor-authoring-assets";
+if (authoringAssets && args[0] != "cobalt") return 2;
+var editorInitialImport = authoringAssets || materialAuthoring || meshVisibility || cameraProjection || transferMaterials || restartSlotOverride || restartImportedTexture || reimportTexture ||
     args.Length == 8 && args[7] == "--editor-initial-model-import";
 var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
 var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
@@ -168,7 +170,7 @@ var path = Path.Combine(sourceDirectory, "scene.gltf");
 var original = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
 var primitives = original["meshes"]![0]!["primitives"]!.AsArray();
 const string revisedColorPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAHUlEQVR4AQESAO3/ACGU1f/kCRH/APIWC//8Axb/TywIralGM+UAAAAASUVORK5CYII=";
-if (materialAuthoring || restartImportedTexture || reimportTexture || playerTexture)
+if (authoringAssets || materialAuthoring || restartImportedTexture || reimportTexture || playerTexture)
 {
     original = WriteTexturedModel(sourceDirectory);
 }
@@ -198,6 +200,25 @@ else
 }
 var sourceJson = original.ToJsonString();
 File.WriteAllText(path, sourceJson);
+if (authoringAssets)
+{
+    const string textureB = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAG0lEQVR4nGNQnHL1f3Uxz38GA98J/3MlVv0HAExSCL160DzLAAAAAElFTkSuQmCC";
+    File.WriteAllBytes(Path.Combine(sourceDirectory, "textures", "replacement.png"), Convert.FromBase64String(textureB));
+    var replacement = original.DeepClone();
+    replacement["buffers"]![0]!["uri"] = "replacement.bin";
+    var slots = replacement["meshes"]![0]!["primitives"]!.AsArray();
+    var first = slots[0]!;
+    slots.RemoveAt(0);
+    slots.Add(first);
+    var bytes = File.ReadAllBytes(Path.Combine(sourceDirectory, "scene.bin"));
+    BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(0), -1.39f);
+    BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(9 * sizeof(float)), -1.39f);
+    BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(15 * sizeof(float)), 1.30f);
+    replacement["accessors"]![0]!["min"]![0] = -1.39;
+    replacement["accessors"]![1]!["max"]![0] = 1.30;
+    File.WriteAllBytes(Path.Combine(sourceDirectory, "replacement.bin"), bytes);
+    File.WriteAllText(Path.Combine(sourceDirectory, "replacement.gltf"), replacement.ToJsonString());
+}
 if (transferMaterials)
 {
     var target = original.DeepClone();
@@ -220,7 +241,8 @@ var initialScene = new SceneDocument(sceneId, 40, [new(cameraId, cameraDefinitio
     [new(cameraDefinition, new EntityPatch(addedComponents:
     [
         new(new(Guid.Parse("e6fa2583-22fc-4d02-b740-4ad263e419e4")), BuiltInComponents.TransformId, 1,
-            new Dictionary<string, PropertyValue> { ["z"] = PropertyValue.From(5d) }),
+            authoringAssets ? new Dictionary<string, PropertyValue> { ["y"] = PropertyValue.From(1d), ["z"] = PropertyValue.From(5d) } :
+                new Dictionary<string, PropertyValue> { ["z"] = PropertyValue.From(5d) }),
         new(new(Guid.Parse("33f571d0-da11-4e0c-b4ba-d1068cd827fc")), MeshRenderingComponents.CameraId, 1,
             meshVisibility ? [KeyValuePair.Create("layers", PropertyValue.From(2L))] : [])
     ]))], [BuiltInComponents.Schemas[0], MeshRenderingComponents.CameraSchema]);
@@ -234,7 +256,45 @@ if (editorInitialImport)
     await using (var authoring = App.Build(context => context.UseAetherAuthoring()))
     {
         var codec = new SceneFileCodec(authoring.Services.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!);
-        await File.WriteAllBytesAsync(scene, codec.Encode(initialScene));
+        if (authoringAssets)
+        {
+            var cubes = AssetScene(includeMeshes: false);
+            await File.WriteAllBytesAsync(Path.Combine(scenes.FullName, "cubes.aetherscene"), codec.Encode(cubes));
+            await File.WriteAllBytesAsync(scene, codec.Encode(AssetScene(includeMeshes: true)));
+        }
+        else await File.WriteAllBytesAsync(scene, codec.Encode(initialScene));
+
+        SceneDocument AssetScene(bool includeMeshes)
+        {
+            var entities = initialScene.Entities.ToList();
+            var definitions = initialScene.Definitions.ToList();
+            Add(3, -.93, 1.55, .68, .24, cube: true);
+            Add(4, 0, .27, .2, .29, cube: true);
+            if (includeMeshes)
+            {
+                Add(1, 0, 1.73, 0, 1, cube: false);
+                Add(2, 0, .27, 0, 1, cube: false);
+            }
+            return new(includeMeshes ? sceneId : new(Guid.Parse("58eb2f7e-94e2-4ce6-aa58-a79568863339")),
+                40, entities, definitions, [.. BuiltInComponents.Schemas, MeshRenderingComponents.CameraSchema, MeshRenderingComponents.MeshRendererSchema]);
+
+            void Add(int number, double x, double y, double z, double scale, bool cube)
+            {
+                var id = new EntityId(Id(number, 1));
+                var definition = new EntityDefinitionId(Id(number, 2));
+                entities.Add(new(id, definition));
+                definitions.Add(new(definition, new EntityPatch(addedComponents:
+                [
+                    new(new(Id(number, 3)), BuiltInComponents.TransformId, 1,
+                        [Value("x", x), Value("y", y), Value("z", z), Value("sx", scale), Value("sy", scale), Value("sz", scale)]),
+                    cube ? new(new(Id(number, 4)), BuiltInComponents.AppearanceId, 1,
+                        number == 3 ? [Value("r", 1), Value("g", 1), Value("b", 0)] : [Value("r", 0), Value("g", 1), Value("b", 1)]) :
+                        new(new(Id(number, 4)), MeshRenderingComponents.MeshRendererId, 1,
+                            [KeyValuePair.Create("mesh", PropertyValue.From(Id(1, 5).ToString("D"))),
+                             KeyValuePair.Create("bindings", PropertyValue.From(Id(2, 5).ToString("D")))])
+                ])));
+            }
+        }
     }
     var manifest = Path.Combine(evidence, "Delivery.aetherproj");
     await File.WriteAllTextAsync(manifest, JsonSerializer.Serialize(new
@@ -260,20 +320,25 @@ if (editorInitialImport)
         Check(reimported.ExitCode == 0, reimported.Error);
         return 0;
     }
-    var saveMode = materialAuthoring ? "--initial-import-material-authoring-save" : meshVisibility ? "--initial-import-visibility-save" :
+    var saveMode = authoringAssets ? "--initial-import-authoring-assets-save" :
+        materialAuthoring ? "--initial-import-material-authoring-save" : meshVisibility ? "--initial-import-visibility-save" :
         cameraProjection ? "--initial-import-camera-save" : restartImportedTexture ? "--initial-import-save-texture" :
         saveAfterSlotUndo ? "--initial-import-save-overrides-after-undo" :
         restartMultipleOverrides ? "--initial-import-save-overrides" : restartSlotOverride ? "--initial-import-save-slot" : "--initial-import-save";
-    var reopenMode = materialAuthoring ? "--initial-import-material-authoring-reopen" : meshVisibility ? "--initial-import-visibility-reopen" :
+    var reopenMode = authoringAssets ? "--initial-import-authoring-assets-reopen" :
+        materialAuthoring ? "--initial-import-material-authoring-reopen" : meshVisibility ? "--initial-import-visibility-reopen" :
         cameraProjection ? "--initial-import-camera-reopen" : restartImportedTexture ? "--initial-import-reopen-texture" :
         restartMultipleOverrides && !saveAfterSlotUndo ? "--initial-import-reopen-overrides" : restartSlotOverride ? "--initial-import-reopen-slot" : "--initial-import-reopen";
-    var duration = TimeSpan.FromSeconds(materialAuthoring ? 240 : 120);
+    var duration = TimeSpan.FromSeconds(authoringAssets ? 310 : materialAuthoring ? 240 : 120);
     var saved = await RunChild("import-saved", [.. arguments, saveMode], duration);
     Check(saved.ExitCode == 0, saved.Error);
     var reopened = await RunChild("import-reopened", [.. arguments, reopenMode], duration);
     Check(reopened.ExitCode == 0 && saved.Pid != reopened.Pid, reopened.Error);
     return 0;
 }
+
+static Guid Id(int number, byte kind) => new(number, 0x792e, 0x42b0, 0xab, 0x3f, 0x9a, 0xd2, 0x6c, 0xa7, 0xa3, kind);
+static KeyValuePair<string, PropertyValue> Value(string key, double number) => KeyValuePair.Create(key, PropertyValue.From(number));
 
 static JsonObject WriteTexturedModel(string directory)
 {

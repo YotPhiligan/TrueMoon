@@ -104,11 +104,14 @@ public sealed partial class EditorViewportController : TrueMoon.Aether.Editor.UI
     private bool Blocked() => _view.Documents?.IsVisible==true || AnyPopup(Root());
     private static bool AnyPopup(Element root) => root is OverlayHost {Popup:not null} || root.Children.Any(AnyPopup);
     private Element Root() { Element root=_view;while(root.Parent!=null)root=root.Parent;return root; }
+    internal bool MatchesPreview(PreviewFrameStamp stamp) => CanPresent && _state.Matches(ViewId, stamp);
+    internal bool MatchesPreview(PreviewViewContext context) => CanPresent && _state.Matches(ViewId, context);
+
     private PreviewPresentedView? Ready()
     {
         if(!CanPresent||_ui==null||_ui.Viewport.IsEmpty||!DocumentReady()||Blocked())return null;
         var receipt=_preview.PresentedView;
-        return receipt!=null&&_state.Matches(ViewId,receipt.State.Context)&&_preview.IsCurrent(receipt)&&
+        return receipt!=null&&MatchesPreview(receipt.State.Context)&&_preview.IsCurrent(receipt)&&
             _view.Canvas.DrawnFrame?.Metadata.PreviewView==receipt.State.Stamp&&
             ReferenceEquals(_view.Canvas.DrawnFrame?.Presentation,receipt.Frame.Presentation)&&
             _view.Canvas.MatchesPresentedLayout(receipt.ImageBounds,receipt.ClipBounds,receipt.LayoutRevision)?receipt:null;

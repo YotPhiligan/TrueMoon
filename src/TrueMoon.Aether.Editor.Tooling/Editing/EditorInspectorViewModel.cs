@@ -117,6 +117,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         _commands = commands; _preview = preview;
         _workspace = workspace;
         _materials = new(this);
+        _textures = new(this);
+        _meshes = new(this);
         Fields = new[] { ("x", "X"), ("y", "Y"), ("z", "Z"), ("pitch", "Pitch, рад"), ("yaw", "Yaw, рад"), ("roll", "Roll, рад"), ("sx", "Scale X"), ("sy", "Scale Y"), ("sz", "Scale Z") }
             .Select(x => new TransformField(x.Item1, x.Item2, VerifyOwner)).ToArray();
         foreach (var field in Fields) field.Changed += DraftChanged;
@@ -182,15 +184,36 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         _selection = selectedId;
         if (changedSelection || !HasDraft && !ReferenceEquals(_baseline, content?.Document)) Load(content);
         else if (changedOpening || !ReferenceEquals(_baseline, content?.Document)) _conflict = true;
-        var assignCopy = _materials.RefreshCatalog(state.Project, content != null);
+        var assignCopy = _materials.RefreshCatalog(state.Project);
+        _textures.Refresh(state.Project);
+        _meshes.Refresh(state.Project, state.ModelCatalog);
+        var hasScene = content != null;
+        _materials.TryInitialRead(hasScene);
+        _textures.TryInitialRead(hasScene || _materials.IsOpen);
+        _meshes.TryInitialRead(hasScene || _materials.IsOpen);
+        _meshes.RefreshEditor();
+        _textures.Update();
         if (assignCopy != null) state = _commands.Read();
-        _available = state.RuntimeIdle && !state.Busy && !_materials.HasPendingOperation &&
+        _available = state.RuntimeIdle && !state.Busy && !_materials.HasPendingOperation && !_textures.HasPendingOperation &&
+            !_meshes.HasPendingOperation &&
             !state.Exiting && !state.Closed && state.Document?.Operation == DocumentOperation.None;
         _sceneAssets = state.Project?.Documents?.ReadRenderAssets(opening);
-        _materials.RefreshAssets(_sceneAssets);
-        if (content != null) _preview.Synchronize(content.Resolved);
+        _materials.RefreshAssets(content != null ? _sceneAssets : state.Project?.Documents?.ReadProjectAssetChoices());
+        if (assignCopy != null)
+        {
+            // Copy can commit a scene binding. Do not queue the intermediate material-only receipt.
+            UpdateState(content);
+            assignCopy();
+            state = _commands.Read();
+            content = state.Document?.Content;
+            opening = state.Document?.OpeningId ?? Guid.Empty;
+        }
+        if (content != null)
+        {
+            if (!_preview.UsesCapturedSource) _preview.Synchronize(content.Resolved);
+            else if (state.Project?.Documents?.CapturePreview(content, opening) is { } source) _preview.Synchronize(source);
+        }
         UpdateState(content);
-        assignCopy?.Invoke();
     }
     /// <summary>Gets only effective components of the selected authoring entity.</summary>
     public IReadOnlyList<InspectorComponent> Components => _components;
@@ -580,7 +603,18 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         return succeeded;
     }
     /// <summary>Enables committed-revision preview or retries a failed revision.</summary>
-    public void ShowPreview() { VerifyOwner(); Refresh(_selection); if (CanPreview && _commands.Read().Document?.Content is { } content) _preview.Show(content.Resolved); Refresh(_selection); }
+    public void ShowPreview()
+    {
+        VerifyOwner();
+        Refresh(_selection);
+        var state = _commands.Read();
+        if (CanPreview && state.Document is { Content: { } content } document)
+        {
+            if (!_preview.UsesCapturedSource) _preview.Show(content.Resolved);
+            else if (state.Project?.Documents?.CapturePreview(content, document.OpeningId) is { } source) _preview.Show(source);
+        }
+        Refresh(_selection);
+    }
     /// <summary>Fences and drains preview, preserving document/history and uncommitted input.</summary>
     /// <returns>Actual cleanup completion.</returns>
     public Task StopPreviewAsync() { VerifyOwner(); return _preview.StopAsync(); }
@@ -603,6 +637,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     {
         if (_disposed) return; _disposed = true; _numericGesture = null;
         _materials.Release();
+        _textures.Release();
+        _meshes.Release();
         foreach (var field in Fields.Cast<InspectorProperty>().Concat(_properties.Values).Distinct()) field.Changed -= DraftChanged;
         ClearPropertyChangedSubscribers();
     }

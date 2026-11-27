@@ -1,14 +1,12 @@
 # Aether / Editor: состояние и точка продолжения
 
+<a id="ed4i-authoring-assets-status"></a>
 27.11.2026 — [ED4i: авторские ассеты](EDITOR_PLAN.md#ed4i-authoring-assets).
-Общий `Unlit` хранится в каталоге проекта; свежий Build разрешает его ссылки в
-точные ревизии, опубликованный Build остаётся закреплённым. Отдельные Texture,
-Mesh и нативный Edit Preview — следующие этапы.
-В `1.2611.27.5-alpha` прошли 72 целевых теста Editor (Release/net11.0):
-каталог и конфликт записи, маршрутизируемый ввод, копирование слота и
-закреплённые ключи Build. Режим `VerifyEditor.ps1 -RenderMaterialAuthoring`
-не дошёл до захвата: на машине нет слоя `VK_LAYER_KHRONOS_validation`.
-Пиксельная приёмка A/B/C, reopen и pinned A не подтверждена.
+Texture и Mesh добавлены рядом с Material. Их локальные каталоги не меняют
+историю сцены; свежий Build разрешает точные зависимости, а опубликованный
+Build остаётся закреплённым. Edit Preview захватывает committed render content
+без Build и Game.Logic; актуальность кадра зависит от ContentId, а не только
+от ревизии сцены. [Проверки и ограничения](HISTORY.md#ed4i-authoring-assets-2026-11-27).
 
 27.11.2026 — `1.2611.27.3-alpha`: сценарный Player продолжает тот же Build с
 сохранённого тика. Tales проверила окно и headless после реального Ctrl+C;

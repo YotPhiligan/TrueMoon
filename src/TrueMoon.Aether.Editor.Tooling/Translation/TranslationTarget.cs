@@ -34,7 +34,8 @@ public sealed class TranslationTarget
     public static bool TryCapture(SceneAuthoringState state, PreviewPickSnapshot picks, EntityId entity, out TranslationTarget? target)
     {
         ArgumentNullException.ThrowIfNull(state); ArgumentNullException.ThrowIfNull(picks); target = null;
-        if (picks.GeometryProfile != PreviewPickSnapshot.CubeGeometryProfile || picks.Scene != state.Document.Id || picks.Revision != state.Document.Revision ||
+        if (picks.GeometryProfile is not (PreviewPickSnapshot.CubeGeometryProfile or PreviewPickSnapshot.MeshAndCubeGeometryProfile) ||
+            picks.Scene != state.Document.Id || picks.Revision != state.Document.Revision ||
             !state.Resolved.Entities.TryGetValue(entity, out var resolved)) return false;
         var primitive = picks.Primitives.FirstOrDefault(p => p.Entity == entity);
         if (primitive.Entity != entity || entity.Value == Guid.Empty) return false;

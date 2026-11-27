@@ -35,7 +35,8 @@ public partial class EditorInspectorViewModel
             return;
         }
 
-        var catalogDiagnostic = _materials.CatalogPending ? "Загрузка материалов…" : _materials.CatalogError;
+        var catalogDiagnostic = _materials.CatalogPending ? "Загрузка материалов…" :
+            _materials.CatalogError ?? _textures.CatalogDiagnostic ?? _meshes.CatalogDiagnostic;
         var enabled = _available && !_conflict && _numericGesture == null && catalogDiagnostic == null &&
             _sceneAssets is { Collision: null, Meshes.Count: > 0 } &&
             (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets));
@@ -98,6 +99,14 @@ public partial class EditorInspectorViewModel
                 filtered[i] = choice with { CanSelect = false };
             }
         }
+        if (_sceneAssets!.AuthoredDefaultMaterialChoice(mesh, slot) is { } ownDefault)
+        {
+            var choices = new InspectorRenderAssetChoice[_materialChoices.Count + 1];
+            if (filtered != null) filtered.CopyTo(choices, 0);
+            else for (var i = 0; i < _materialChoices.Count; i++) choices[i] = _materialChoices[i];
+            choices[^1] = new(ownDefault.Id, ownDefault.Name);
+            return Array.AsReadOnly(choices);
+        }
         return filtered == null ? _materialChoices : Array.AsReadOnly(filtered);
     }
 
@@ -109,7 +118,7 @@ public partial class EditorInspectorViewModel
         else if (_renderReferenceDiagnostic is { } diagnostic)
             yield return diagnostic;
         else if (_sceneAssets == null || _sceneAssets.Meshes.Count == 0)
-            yield return "Для выбора меша и материала отметьте импорт модели в каталоге сцены.";
+            yield return "Создайте меш в каталоге проекта или отметьте импорт модели в каталоге сцены.";
     }
 
     /// <inheritdoc />

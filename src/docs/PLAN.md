@@ -14,7 +14,7 @@
 
 | Очередь | Ближайший результат | План владельца |
 | --- | --- | --- |
-| Editor / свойства рендера | Видимость и слои проверены с Undo/Redo, перезапуском Editor и кадрами Vulkan. Открыто поведение при смене ресурсов, в Play и нативном Edit Preview | [Проверенный срез](engine/EDITOR_PLAN.md#ed4i-mesh-visibility), [очередь ED4i](engine/EDITOR_PLAN.md#ed4i-next) |
+| Editor / свойства рендера | Texture и Mesh используют стабильные ID; свежий Build и committed Edit Preview разрешают exact keys. Пиксельный профиль Windows x64 проверяется отдельно от managed и от игровых настроек камеры | [Авторские ассеты](engine/EDITOR_PLAN.md#ed4i-authoring-assets), [очередь ED4i](engine/EDITOR_PLAN.md#ed4i-next) |
 | Alloy / качество текста | Отдельная настройка Skia для `TextBox` и `NumberBox` проверена локально, штатный режим прежний. До решения о включении проверить ввод и отсечение при реальном переходе между DPI. | [Очередь UI](alloy/PLAN.md#current-ui-queue), [PA8c.1a](alloy/PLAN.md#pa8c1a-positioning-rollout) |
 | Alloy / композиция View | Адресная пакетная приёмка и проверка замены свойства по тому же адресу пройдены. Не расширять API удержания строк без подтверждённого сценария частой замены. | [Пакетный профиль](alloy/PLAN.md#uia1-view-package-acceptance), [условие для исследования](alloy/PLAN.md#ui-reuse-study) |
 | Alloy / итоговая приёмка | Полная матрица K1–K9 и 5.4/5.5 на целевом артефакте остаётся отдельной от адресных профилей. | [Итоговый проход alpha](alloy/PLAN.md#воспроизводимый-итоговый-проход-alpha) |

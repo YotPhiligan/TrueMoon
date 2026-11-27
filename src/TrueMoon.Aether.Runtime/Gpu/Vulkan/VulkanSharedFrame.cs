@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -250,7 +251,8 @@ public sealed partial class VulkanSharedFrame : IGpuResource
         }
         finally { ReleaseGates(); }
     }
-    private unsafe void Submit(bool returned, PrimitiveScene? scene = null, RenderSnapshotData? snapshot = null, RenderSnapshotResources? resources = null)
+    private unsafe void Submit(bool returned, PrimitiveScene? scene = null, RenderSnapshotData? snapshot = null,
+        RenderSnapshotResources? resources = null, ImmutableArray<RenderPrimitive> overlay = default)
     {
         Check(_vk!.ResetFences(_device, 1, in _fence), "ResetFences"); Check(_vk.ResetCommandBuffer(_command, 0), "ResetCommandBuffer");
         var begin = new CommandBufferBeginInfo { SType = StructureType.CommandBufferBeginInfo, Flags = CommandBufferUsageFlags.OneTimeSubmitBit };
@@ -269,7 +271,7 @@ public sealed partial class VulkanSharedFrame : IGpuResource
                 var copy = new BufferImageCopy { ImageSubresource = new(ImageAspectFlags.ColorBit, 0, 0, 1), ImageExtent = new((uint)_width, (uint)_height, 1) };
                 _vk.CmdCopyBufferToImage(_command, _staging, _image, ImageLayout.TransferDstOptimal, 1, &copy);
             }
-            else if (snapshot != null) _meshRenderer!.DrawSnapshot(_command, snapshot, resources!);
+            else if (snapshot != null) _meshRenderer!.DrawSnapshot(_command, snapshot, resources!, overlay);
             else _renderer!.Draw(_command, scene!);
             barrier.OldLayout = drawWork ? ImageLayout.ColorAttachmentOptimal : ImageLayout.TransferDstOptimal; barrier.NewLayout = ImageLayout.General;
             barrier.SrcAccessMask = drawWork ? AccessFlags.ColorAttachmentWriteBit : AccessFlags.TransferWriteBit; barrier.DstAccessMask = 0;

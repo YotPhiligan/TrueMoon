@@ -27,7 +27,9 @@ internal sealed class DocumentUiFixture : IDisposable, IAsyncDisposable
 
     public DocumentUiFixture(bool openProject = true, ISceneDocumentStore? sceneStore = null, CancellationToken lifetime = default,
         bool metadataOnly = false, bool materialCatalog = false, Func<ResolvedProject, SceneModelImports>? modelImports = null,
-        ResolvedProject? sharedProject = null, Func<ResolvedProject, ProjectMaterialCatalog>? createMaterialCatalog = null)
+        ResolvedProject? sharedProject = null, Func<ResolvedProject, ProjectMaterialCatalog>? createMaterialCatalog = null,
+        Func<ResolvedProject, ProjectTextureCatalog>? createTextureCatalog = null,
+        Func<ResolvedProject, ProjectMeshCatalog>? createMeshCatalog = null, Func<Task>? stopPreview = null)
     {
         var project = sharedProject ?? Files.Project;
         Projects = new(new EditorProjectsTests.Store(project), new EditorProjectsTests.Toolchain(),
@@ -36,10 +38,12 @@ internal sealed class DocumentUiFixture : IDisposable, IAsyncDisposable
                 Activate = arguments => new(arguments, metadataOnly ? null : new(arguments.Project, sceneStore ?? Store, Authoring)
                 {
                     MaterialCatalog = createMaterialCatalog?.Invoke(arguments.Project) ?? (materialCatalog ? new(arguments.Project) : null),
+                    TextureCatalog = createTextureCatalog?.Invoke(arguments.Project),
+                    MeshCatalog = createMeshCatalog?.Invoke(arguments.Project),
                     ModelImports = modelImports?.Invoke(arguments.Project)
                 })
             });
-        Commands = new(Projects, () => RuntimeIdle, async () => { RuntimeStops++; if (StopRuntime != null) await StopRuntime(); }, lifetime);
+        Commands = new(Projects, () => RuntimeIdle, async () => { RuntimeStops++; if (StopRuntime != null) await StopRuntime(); }, lifetime, stopPreview);
         if (openProject) Projects.OpenAsync(project.ManifestPath).GetAwaiter().GetResult();
     }
 

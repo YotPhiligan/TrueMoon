@@ -8,6 +8,8 @@ using TrueMoon.Aether.Editor.UI.Diagnostics;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Editor.UI.Hierarchy;
+using TrueMoon.Aether.Importing;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling;
@@ -18,6 +20,7 @@ using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Aether.Tooling.SourceTracking;
 using TrueMoon.Argentis;
+using TrueMoon.Alloy.Rendering.Skia;
 
 namespace TrueMoon.Aether.Editor.Tooling;
 
@@ -49,6 +52,8 @@ public static class AetherEditorConfigurationExtensions
             if (services.Exist<EditorSession>() || services.Exist<EditorProjects>() || services.Exist<AetherHost>())
                 throw new InvalidOperationException("Aether editor requires one engine/editor registration per App.");
             services.Singleton<RuntimeViewportBinding>(_ => new(defaultViewport));
+            if (!services.Exist<Func<ReadOnlyMemory<byte>, BaseColorTextureDefinition>>())
+                services.Singleton<Func<ReadOnlyMemory<byte>, BaseColorTextureDefinition>>(_ => DecodeProjectTexture);
         });
         context.UseAether(engine =>
         {
@@ -81,7 +86,7 @@ public static class AetherEditorConfigurationExtensions
                 if (!defaultViewport)
                     return new EditorPreview((scene, token) => engine.Preview.ShowAsync(scene, 640, 360, token), engine.Preview.StopAsync);
                 var state = resolver.Resolve<EditorViewportState>();
-                return new(state.Capture, async (scene, view, token) =>
+                return new(state.CaptureSource, state.SetDesiredSource, state.CanReuse, async (source, view, token) =>
                 {
                     await viewport.Ready.WaitAsync(token).ConfigureAwait(false);
                     while(true)
@@ -89,7 +94,7 @@ public static class AetherEditorConfigurationExtensions
                         await state.VisibleReady.WaitAsync(token).ConfigureAwait(false);
                         var visibility=state.VisibilityToken;
                         using var linked=CancellationTokenSource.CreateLinkedTokenSource(token,visibility);
-                        try{return await engine.Preview.ShowViewAsync(scene,view,640,360,linked.Token).ConfigureAwait(false);}
+                        try{return await engine.Preview.ShowCapturedViewAsync(source,view,640,360,linked.Token).ConfigureAwait(false);}
                         catch(OperationCanceledException)when(!token.IsCancellationRequested&&visibility.IsCancellationRequested) { }
                     }
                 }, engine.Preview.StopAsync);
@@ -142,5 +147,11 @@ public static class AetherEditorConfigurationExtensions
                 r.Resolve<IFactory<TrueMoon.Aether.Editor.UI.IEditorViewportController,EditorViewportArguments>>()))
             .Singleton<IStartable>(r => r.Resolve<EditorSession>()).Singleton<IStoppable>(r => r.Resolve<EditorSession>()));
         return context;
+    }
+
+    internal static BaseColorTextureDefinition DecodeProjectTexture(ReadOnlyMemory<byte> png)
+    {
+        SkiaNativeLibrary.Initialize();
+        return BaseColorPng.Decode(png.Span);
     }
 }

@@ -110,7 +110,11 @@ public static class RuntimeConfigurationExtensions
                     new Factory<Ecs.Loading.SceneWorldLoader, Ecs.Loading.ComponentRegistry>(registry =>
                         new(registry, resolver.Resolve<IFactory<Ecs.World>>(), resolver.Resolve<Scenes.SceneResolutionService>())));
             if (launch.Role == RuntimeRole.EditPreview)
-                Register<PreviewGameSession>(services, _ => new Factory<PreviewGameSession>(() => new()));
+                Register<PreviewGameSession>(services, resolver =>
+                {
+                    var worlds = resolver.Resolve<IFactory<Ecs.World>>();
+                    return new Factory<PreviewGameSession>(() => new(worlds));
+                });
             Register<FrameProducer>(services, _ => new Factory<FrameProducer>(() => new()));
             Register<UnitParentProcessEventsHandler>(services, resolver => new Factory<UnitParentProcessEventsHandler>(() =>
                     new(frozenParent, resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())));
@@ -118,7 +122,10 @@ public static class RuntimeConfigurationExtensions
                     new Factory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(args =>
                         new(args.Launch.Identity, args.Game, Environment.ProcessId, args.Frames.Configure, () => args.Frames.Dropped,
                             args.Launch.RequireRestore, args.Launch.Role,
-                            resolver.TryResolve<Ecs.Loading.SceneWorldCodec>() ?? EcsSceneLoadingConfigurationExtensions.CreateNeutralCodec(resolver))));
+                            resolver.TryResolve<Ecs.Loading.SceneWorldCodec>() ?? EcsSceneLoadingConfigurationExtensions.CreateNeutralCodec(resolver))
+                        {
+                            PreviewSurfaceAvailable = args.Launch.Role == RuntimeRole.EditPreview && resolver.TryResolve<RuntimeMeshRenderHost>() != null
+                        }));
             Register<PipesInvocationServer<IEngineControl>, PipesInvocationServerArguments<IEngineControl>>(services, resolver =>
                     new PipesInvocationServerFactory<IEngineControl>(resolver.Resolve<IEventsSource<PipesInvocationServer<IEngineControl>>>(),
                         new PipesTransportOptions { PropagateTraceContext = true }, resolver.Resolve<IDiagnosticTelemetry>()));

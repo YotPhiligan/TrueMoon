@@ -86,7 +86,9 @@ public partial class EditorInspectorViewModel
         public Guid? SelectedMaterialId => _selected;
         public IReadOnlyList<InspectorRenderAssetChoice> Items => _items;
         public IReadOnlyList<InspectorRenderAssetChoice> Textures => _textures;
-        private bool Idle => _project != null && _operation == null && Commands.CanExecute(DocumentCommand.WriteMaterial);
+        private bool Idle => _project != null && _operation == null && !inspector._textures.HasPendingOperation &&
+            !inspector._meshes.HasPendingOperation &&
+            Commands.CanExecute(DocumentCommand.WriteMaterial);
         internal bool HasPendingOperation => _operation != null;
         private History? CurrentHistory => _shown != null && _histories.TryGetValue(_shown.Id, out var branch) ? branch : null;
         private bool TextureAvailable(Guid? id)
@@ -98,12 +100,12 @@ public partial class EditorInspectorViewModel
         internal bool CatalogPending => _project != null && _snapshot == null && _loadError.Length == 0;
         internal string? CatalogError => _snapshot == null && _loadError.Length != 0 ? _loadError : null;
 
-        internal Action? RefreshCatalog(ProjectSession? project, bool hasScene)
+        internal Action? RefreshCatalog(ProjectSession? project)
         {
             if (project?.Documents?.HasMaterialCatalog != true) project = null;
             if (!ReferenceEquals(project, _project))
             {
-                if (_project != null) Commands.SetMaterialDraft(_project, false);
+                if (_project != null) Commands.SetAssetDraft(_project, AssetDraftKind.Material, false);
                 _project = project;
                 _operation = null;
                 _snapshot = _draftSnapshot = null;
@@ -152,7 +154,7 @@ public partial class EditorInspectorViewModel
                         }
                         _previousMaterial = null;
                         _draftSnapshot = null;
-                        Commands.SetMaterialDraft(project, false);
+                        Commands.SetAssetDraft(project, AssetDraftKind.Material, false);
                         SetProperty(ref _draft, false, nameof(HasDraft));
                         Show(value);
                     }
@@ -169,7 +171,6 @@ public partial class EditorInspectorViewModel
                 ReconcileHistory();
                 if (!_draft && _shown != null && !_readOnly) Show(shared.Find(_shown.Id));
             }
-            TryInitialRead(hasScene);
             return assignCopy;
         }
 
@@ -200,14 +201,15 @@ public partial class EditorInspectorViewModel
                 if (_snapshot!.Find(id) != branch.Edge) _histories.Remove(id);
         }
 
-        private void TryInitialRead(bool hasScene)
+        internal void TryInitialRead(bool hasScene)
         {
             if (!_readRequested && _snapshot == null && (hasScene || _open)) StartRead();
         }
 
         private void StartRead()
         {
-            if (_project == null || _operation != null || !Commands.CanExecute(DocumentCommand.ReadMaterialCatalog)) return;
+            if (_project == null || _operation != null || inspector._textures.HasPendingOperation || inspector._meshes.HasPendingOperation ||
+                !Commands.CanExecute(DocumentCommand.ReadMaterialCatalog)) return;
             _readRequested = true;
             _message = _loadError = "";
             _operation = new(Commands.ReadMaterialCatalogAsync(_project), ActionKind.Read);
@@ -233,7 +235,7 @@ public partial class EditorInspectorViewModel
         public void New()
         {
             inspector.VerifyOwner();
-            if (!CanSwitch() || _project == null || _snapshot == null || !Commands.SetMaterialDraft(_project, true)) return;
+            if (!CanSwitch() || _project == null || _snapshot == null || !Commands.SetAssetDraft(_project, AssetDraftKind.Material, true)) return;
             _previousMaterial = _shown?.Id;
             _draftSnapshot = _snapshot;
             _message = "";
@@ -260,7 +262,7 @@ public partial class EditorInspectorViewModel
         {
             inspector.VerifyOwner();
             if (!_draft || _operation != null || _project == null) return;
-            Commands.SetMaterialDraft(_project, false);
+            Commands.SetAssetDraft(_project, AssetDraftKind.Material, false);
             _draftSnapshot = null;
             SetProperty(ref _draft, false, nameof(HasDraft));
             _message = "";
@@ -380,7 +382,7 @@ public partial class EditorInspectorViewModel
         {
             inspector.VerifyOwner();
             if (!CanEditFields || _shown == null || _project == null || EqualityComparer<T>.Default.Equals(field, value) ||
-                !Commands.SetMaterialDraft(_project, true)) return;
+                !Commands.SetAssetDraft(_project, AssetDraftKind.Material, true)) return;
             _message = "";
             field = value;
             var draft = _new || _name != _shown.Name || _texture != _shown.BaseColorTextureId ||
@@ -388,7 +390,7 @@ public partial class EditorInspectorViewModel
             if (draft) _draftSnapshot ??= _snapshot;
             else
             {
-                Commands.SetMaterialDraft(_project, false);
+                Commands.SetAssetDraft(_project, AssetDraftKind.Material, false);
                 _draftSnapshot = null;
                 if (_snapshot?.Find(_shown.Id) != _shown) Show(_snapshot?.Find(_shown.Id));
             }
@@ -425,9 +427,12 @@ public partial class EditorInspectorViewModel
                 TextureAvailable(branch.Entries[branch.Cursor - 1].Before.BaseColorTextureId), nameof(CanUndo));
             SetProperty(ref _canRedo, idle && !_draft && !_readOnly && branch != null && branch.Cursor < branch.Entries.Count &&
                 TextureAvailable(branch.Entries[branch.Cursor].After.BaseColorTextureId), nameof(CanRedo));
+            var textureCatalogDiagnostic = inspector._textures.CatalogDiagnostic ?? inspector._meshes.CatalogDiagnostic;
             var status = _operation is { } operation ? (operation.Kind == ActionKind.Read ? "Загрузка материалов…" : "Сохранение материала…") :
                 _message.Length != 0 ? _message : _assets?.Collision?.Message ??
-                (_texture is { } missing && !TextureAvailable(missing) ? $"Текстура недоступна: {missing:D}." :
+                (_texture is { } missing && !TextureAvailable(missing) ?
+                    textureCatalogDiagnostic ?? $"Текстура недоступна: {missing:D}." :
+                _open && textureCatalogDiagnostic != null ? textureCatalogDiagnostic :
                 _draft ? (valid ? EditorDocumentCommands.MaterialDraftWarning : InvalidFields + " " + EditorDocumentCommands.MaterialDraftWarning) :
                 CatalogPending && (_open || inspector._baseline != null) ? "Загрузка материалов…" : "");
             SetProperty(ref _status, _available ? status : "", nameof(StatusText));
@@ -435,7 +440,7 @@ public partial class EditorInspectorViewModel
 
         internal void Release()
         {
-            if (_project != null) Commands.SetMaterialDraft(_project, false);
+            if (_project != null) Commands.SetAssetDraft(_project, AssetDraftKind.Material, false);
             ClearPropertyChangedSubscribers();
         }
     }

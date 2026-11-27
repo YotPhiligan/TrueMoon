@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
+using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
@@ -12,6 +14,29 @@ public sealed record GpuFrameData(byte[] Pixels, FrameMetadata Metadata)
     public PrimitiveScene? Scene { get; init; }
     /// <summary>Owned f.3 reservation, exclusive with Scene/CPU pixels; transfers to the producer until submitted or discarded.</summary>
     public RenderSnapshotRecording? Snapshot { get; init; }
+    internal ImmutableArray<RenderPrimitive> PreviewOverlay { get; private init; }
+    private PreviewFrameStamp? ExpectedPreview { get; init; }
+    private GpuFrameStamp? PreviewTarget { get; init; }
+    private RenderSnapshotRecording? PreviewRecording { get; init; }
+
+    internal static GpuFrameData FromPreviewSnapshot(GpuFrameStamp stamp, RenderSnapshotRecording recording,
+        PreviewViewState view, ImmutableArray<RenderPrimitive> overlay)
+    {
+        ArgumentNullException.ThrowIfNull(recording);
+        ArgumentNullException.ThrowIfNull(view);
+        var data = recording.Snapshot;
+        if (data.CameraWorld != view.Camera.World || data.Configuration.CameraRevision != view.Camera.Revision ||
+            data.SceneId.Value != view.Context.SceneId || data.SourceRevision != view.Context.SceneRevision || data.Tick != 0)
+            throw new InvalidDataException("Preview reservation does not describe the captured scene and camera.");
+        if (!overlay.IsDefaultOrEmpty && overlay.Length > PrimitiveScene.MaximumPrimitives)
+            throw new InvalidDataException("Too many preview primitives.");
+        var preview = view.Stamp;
+        return new([], new(stamp.Slot, FrameNumber(stamp), 0, 0, Stopwatch.GetTimestamp()) { PreviewView = preview })
+        {
+            Snapshot = recording, PreviewOverlay = overlay, ExpectedPreview = preview, PreviewTarget = stamp,
+            PreviewRecording = recording
+        };
+    }
     /// <summary>Transfers a live mesh reservation into the explicit GPU-only frame profile.</summary>
     public static GpuFrameData FromSnapshot(GpuFrameStamp stamp, RenderSnapshotRecording recording)
     {
@@ -39,10 +64,19 @@ public sealed record GpuFrameData(byte[] Pixels, FrameMetadata Metadata)
         Metadata?.RenderView?.Validate();
         if (Snapshot != null && (Scene != null || Snapshot.IsReleased || Snapshot.Snapshot.Configuration.Width != width ||
             Snapshot.Snapshot.Configuration.Height != height || Snapshot.Snapshot.Identity.SessionId != stamp.Identity.SessionId ||
-            Snapshot.Snapshot.Configuration.SurfaceGeneration != stamp.SurfaceGeneration || Metadata?.RenderView != RenderSnapshotStamp.FromSnapshot(Snapshot.Snapshot)) ||
-            Snapshot == null && Metadata?.RenderView != null) throw new InvalidDataException("Mesh reservation/metadata/target mismatch.");
+            Snapshot.Snapshot.Configuration.SurfaceGeneration != stamp.SurfaceGeneration ||
+            (ExpectedPreview == null && Metadata?.RenderView != RenderSnapshotStamp.FromSnapshot(Snapshot.Snapshot)) ||
+            (ExpectedPreview != null && (Metadata?.RenderView != null || PreviewTarget != stamp || Metadata?.Tick != 0 ||
+                !ReferenceEquals(Snapshot, PreviewRecording)))) ||
+            Snapshot == null && (Metadata?.RenderView != null || ExpectedPreview != null))
+            throw new InvalidDataException("Mesh reservation/metadata/target mismatch.");
         Metadata?.PreviewView?.Validate();
-        if (Metadata?.PreviewView != Scene?.PreviewView?.Stamp) throw new InvalidDataException("Preview metadata must match the captured render scene.");
+        if (Metadata?.PreviewView != (ExpectedPreview ?? Scene?.PreviewView?.Stamp) ||
+            ExpectedPreview != null && Snapshot is { } recording &&
+            (recording.Snapshot.SceneId.Value != ExpectedPreview.SceneId ||
+                recording.Snapshot.SourceRevision != ExpectedPreview.SceneRevision ||
+                recording.Snapshot.Configuration.CameraRevision != ExpectedPreview.CameraRevision))
+            throw new InvalidDataException("Preview metadata must match the captured render scene.");
         if (width == 0 || Pixels == null || Pixels.Length != (Scene == null && Snapshot == null ? checked(width * height * 4) : 0) || Metadata == null ||
             Metadata.Slot != stamp.Slot || Metadata.FrameId != FrameNumber(stamp) || Metadata.ProducedTimestamp <= 0)
             throw new InvalidDataException("GPU frame pixels/metadata do not match the produced slot.");

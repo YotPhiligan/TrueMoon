@@ -48,7 +48,7 @@ internal static unsafe class NativeProjection
                 var materialIndex = Array.IndexOf(materialSources, texture.MaterialIndex);
                 Require(materialIndex >= 0, "The textured material is missing from the native scene.");
                 var locator = "texture/" + Convert.ToHexStringLower(SHA256.HashData(ModelSourcePath.Utf8.GetBytes(texture.Name)));
-                importedTexture = new(locator, materialIndex, BaseColorPng.Decode(source.GetFile(texture.Name).Bytes.Span));
+                importedTexture = new(locator, materialIndex, TrueMoon.Aether.Importing.BaseColorPng.Decode(source.GetFile(texture.Name).Bytes.Span));
             }
             var meshes = new ModelImportMesh[scene->NumMeshes]; long outputBytes = 0;
             var meshInfos=new GltfIdentityTags.MeshInfo[meshes.Length]; var seenMeshes=new HashSet<string>();

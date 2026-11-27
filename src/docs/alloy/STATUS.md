@@ -35,6 +35,13 @@
 `TrueMoon.Alloy.Hosting.Tests` — 216 пройдено, 0 не пройдено. Утверждений о стоимости срез не делает,
 поэтому случай в `TrueMoon.Argentis.Benchmarks` не добавлялся.
 
+27.11.2026 — [ED4i, панели Texture и Mesh](../engine/EDITOR_PLAN.md#ed4i-authoring-assets).
+Панели проекта удерживают ввод при сворачивании, используют keyed `BindItems`
+и принимают выбор только из текущей презентации. Общий admission не даёт
+сменить проект, пока остался черновик любой панели. Маршрутизируемый ввод,
+переключение сцены и точные ключи проверяются в `EditorProjectAssetsTests`.
+Нативные кадры учитываются отдельно в [статусе ED4i](../engine/STATUS.md#ed4i-authoring-assets-status).
+
 28.11.2026 — UIA4.5 (остаток: legacy-блок свойств Editor на условном слоте): вместо ручной замены панель
 держит `ConditionalContent<PropertySetToken?>` (`TrueMoon.Aether.Editor.UI/EditorView.cs:185-186`,
 `:281-321`), модель отдаёт токен из двух массивов ключей и значений — равный по содержимому токен сохраняет

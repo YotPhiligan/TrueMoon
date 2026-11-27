@@ -19,6 +19,7 @@ param(
     [switch]$RenderMaterialSlotOverrides,
     [switch]$RenderMaterialTransfer,
     [switch]$RenderMaterialAuthoring,
+    [switch]$RenderAuthoringAssets,
     [switch]$CameraProjection,
     [switch]$MeshVisibility,
     [switch]$SaveAfterSlotUndo,
@@ -32,6 +33,12 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($SaveAfterSlotUndo -and !$RenderMaterialSlotOverrides) { throw '-SaveAfterSlotUndo requires -RenderMaterialSlotOverrides.' }
 if ($RenderMaterialAuthoring -and $FreshPackages) { throw '-RenderMaterialAuthoring uses the source Release Editor only.' }
+if ($RenderAuthoringAssets -and @($PSBoundParameters.Values | Where-Object { $_ -is [switch] -and $_.IsPresent }).Count -ne 1) {
+    throw '-RenderAuthoringAssets is a separate source Release Editor probe.'
+}
+if ($RenderAuthoringAssets -and (!$IsWindows -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString() -ne 'X64' -or -not [Environment]::UserInteractive)) {
+    throw '-RenderAuthoringAssets requires an interactive Windows x64 Vulkan/OpenGL desktop.'
+}
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $evidence = [IO.Path]::GetFullPath($EvidenceDirectory, $workspace)
@@ -46,7 +53,7 @@ $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
 $textureReplaceProbe = $ImportedTextureReplace -or $PlayingTextureWorkflow
 $textureReimportProbe = $ImportedTextureReimport -or $textureReplaceProbe
-$initialImportProbe = $RenderMaterialAuthoring -or $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $RenderMaterialTransfer -or $CameraProjection -or $MeshVisibility -or $ImportedTextureRestart -or $textureReimportProbe
+$initialImportProbe = $RenderAuthoringAssets -or $RenderMaterialAuthoring -or $InitialModelImport -or $RenderMaterialSlotsRestart -or $RenderMaterialSlotOverrides -or $RenderMaterialTransfer -or $CameraProjection -or $MeshVisibility -or $ImportedTextureRestart -or $textureReimportProbe
 $renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $initialImportProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
@@ -58,6 +65,7 @@ $report = [ordered]@{
     Runs = @()
     Commands = @()
 }
+if ($RenderAuthoringAssets) { $report.Stage = 'ED4i-authoring-assets-native-preview' }
 
 function Invoke-Step([string]$name, [string[]]$arguments) {
     if ($arguments[0] -in @('build', 'publish', 'restore', 'pack')) { $arguments += "-bl:$evidence/$name-{}.binlog" }
@@ -72,11 +80,12 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 }
 
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
-    $providers = if ($RenderMaterialAuthoring) { @('cobalt') } else { @('cobalt', 'microsoft') }
+    $providers = if ($RenderMaterialAuthoring -or $RenderAuthoringAssets) { @('cobalt') } else { @('cobalt', 'microsoft') }
     foreach ($provider in $providers) {
         $output = "$directory/$provider"
         $mode = if ($MeshVisibility) { '--editor-mesh-visibility' } elseif ($CameraProjection) { '--editor-camera-projection' } elseif ($RenderMaterialTransfer) { '--editor-render-material-transfer' } elseif ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotOverrides) { '--editor-render-material-slot-overrides' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         if ($RenderMaterialAuthoring) { $mode = '--editor-material-authoring' }
+        if ($RenderAuthoringAssets) { $mode = '--editor-authoring-assets' }
         if ($mode -eq '--editor-render-material-slot-overrides' -and $SaveAfterSlotUndo) { $mode += '-undo' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
@@ -85,7 +94,47 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
         if ($renderProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $run = @{ Name = "$name-$provider"; Fixture = $fixture }
-            if ($RenderMaterialAuthoring) {
+            if ($RenderAuthoringAssets) {
+                $path = "$output/editor-authoring-assets.json"
+                Copy-Item -LiteralPath "$fixture/import-reopened/editor-authoring-assets.json" -Destination $path
+                $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+                if (!$proof.Completed -or $proof.Save.EditorPid -eq $proof.Reopened.EditorPid -or
+                    !$proof.Save.NoBuildBeforePreview -or !$proof.Reopened.WithheldPresentDrained -or
+                    $null -eq $proof.Save.ReplacementSource -or
+                    $proof.Save.ReplacementSource.ReorderedGeneration -ne ($proof.Save.ReplacementSource.ImportedGeneration + 1) -or
+                    $proof.Save.Frames.Count -ne 11 -or $proof.Reopened.Frames.Count -ne 2 -or
+                    $proof.Save.Children.Count -ne 9 -or $proof.Reopened.Children.Count -ne 3) {
+                    throw "Incomplete authoring-assets native evidence for $name-$provider"
+                }
+                $children = @()
+                $images = @()
+                foreach ($part in @(@{ Folder = 'import-saved'; Proof = $proof.Save }, @{ Folder = 'import-reopened'; Proof = $proof.Reopened })) {
+                    $folder = "$output/$($part.Folder)"
+                    [void][IO.Directory]::CreateDirectory($folder)
+                    $runtimeReports = @(Get-ChildItem -LiteralPath "$fixture/$($part.Folder)" -Filter 'runtime-*.json' -File)
+                    if ($runtimeReports.Count -ne $part.Proof.Children.Count) { throw 'Unexpected owned child report count.' }
+                    foreach ($owned in $part.Proof.Children) {
+                        $file = "runtime-$($owned.Generation).json"
+                        Copy-Item -LiteralPath "$fixture/$($part.Folder)/$file" -Destination "$folder/$file"
+                        $runtime = Get-Content -LiteralPath "$folder/$file" -Raw | ConvertFrom-Json
+                        if ($owned.ExitCode -ne 0 -or !$owned.Reaped -or !$owned.Released -or $runtime.Pid -ne $owned.Pid) {
+                            throw "Invalid owned runtime exit evidence: $file"
+                        }
+                        $children += Get-Item -LiteralPath "$folder/$file"
+                    }
+                    foreach ($frame in $part.Proof.Frames) {
+                        $file = "$($frame.Name).png"
+                        Copy-Item -LiteralPath "$fixture/$($part.Folder)/$file" -Destination "$folder/$file"
+                        if ((Get-FileHash -LiteralPath "$folder/$file").Hash -ne $frame.PngSha256) {
+                            throw "Native PNG hash mismatch: $file"
+                        }
+                        $images += "$folder/$file"
+                    }
+                }
+                $run.AuthoringAssets = $proof
+                $run.Path = $path
+                $run.Sha256 = (Get-FileHash -LiteralPath $path).Hash
+            } elseif ($RenderMaterialAuthoring) {
                 $savedDir = "$output/import-saved"
                 $reopenedDir = "$output/import-reopened"
                 [void][IO.Directory]::CreateDirectory($savedDir)
@@ -525,7 +574,7 @@ catch (Exception error)
             }
             [IO.File]::WriteAllText($project, @"
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>$($consumer.Assembly)</AssemblyName><AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>$($consumer.Assembly)</AssemblyName><AllowUnsafeBlocks>true</AllowUnsafeBlocks><DefineConstants>MODEL_BUILD_PUBLISHED_PROBE</DefineConstants></PropertyGroup>
   <ItemGroup>$references</ItemGroup>
 </Project>
 "@)
@@ -583,11 +632,12 @@ try {
     Invoke-Step worker @('publish', 'TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj',
         '-c', 'Release', '-r', 'win-x64', '--self-contained', 'false', '-p:UseAppHost=false', '-o', $worker, '-v:q')
     $report.NativeSha256 = (Get-FileHash -LiteralPath "$worker/assimp.dll").Hash
-    if ($report.NativeSha256 -ne '90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386') { throw 'Native worker drift.' }
+    # Reviewed AssimpNetter 6.0.6 win-x64 native binary; see docs/engine/MODEL_IMPORT_WORKER.md.
+    if ($report.NativeSha256 -ne '4EC73281A4FDDB735A0A59180EBFCEAB122EC8A8EF136814B2FCCCFB7B78E944') { throw 'Native worker drift.' }
     if ($FreshPackages) {
         Test-FreshEditor
     } else {
-        $configurations = if ($RenderMaterialAuthoring) { @('Release') } else { @('Debug', 'Release') }
+        $configurations = if ($RenderMaterialAuthoring -or $RenderAuthoringAssets) { @('Release') } else { @('Debug', 'Release') }
         foreach ($configuration in $configurations) {
             $directory = "$evidence/$configuration"
             Invoke-Step "$configuration-authoring" @('build', "$PSScriptRoot/Authoring/Authoring.csproj", '-c', $configuration, '-o', "$directory/authoring", '-v:q')

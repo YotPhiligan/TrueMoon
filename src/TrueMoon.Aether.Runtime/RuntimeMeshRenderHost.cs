@@ -1,3 +1,6 @@
+using System.Collections.Immutable;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Gpu.Surfaces;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
@@ -15,9 +18,21 @@ internal sealed class RuntimeMeshRenderHost(IFactory<RenderResourceHost, IFactor
     private RenderSnapshotView? _view;
     private RenderSceneSource? _source;
     private IFactory<IRenderResourceBackend, RenderDeviceRequest>? _backends;
+    private PreviewViewContext? _previewContext;
     private int _closed;
 
-    internal async Task<GpuFrameData> CaptureAsync(RenderSceneSource source, ulong tick, GpuSurfaceRenderRequest request, CancellationToken token)
+    internal Task<GpuFrameData> CaptureAsync(RenderSceneSource source, ulong tick, GpuSurfaceRenderRequest request, CancellationToken token)
+        => CaptureCoreAsync(source, tick, request, token, null, default);
+
+    internal Task<GpuFrameData> CapturePreviewAsync(RenderSceneSource source, PreviewViewState view, ImmutableArray<RenderPrimitive> overlay,
+        GpuSurfaceRenderRequest request, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+        return CaptureCoreAsync(source, 0, request, token, view, overlay);
+    }
+
+    private async Task<GpuFrameData> CaptureCoreAsync(RenderSceneSource source, ulong tick, GpuSurfaceRenderRequest request,
+        CancellationToken token, PreviewViewState? preview, ImmutableArray<RenderPrimitive> overlay)
     {
         ArgumentNullException.ThrowIfNull(source); ArgumentNullException.ThrowIfNull(source.World); ArgumentNullException.ThrowIfNull(source.Content);
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _closed) != 0, this);
@@ -27,6 +42,18 @@ internal sealed class RuntimeMeshRenderHost(IFactory<RenderResourceHost, IFactor
         try
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _closed) != 0, this);
+            if (preview == null && _previewContext != null || preview != null && _previewContext == null && _resources != null)
+                throw new InvalidDataException("Cannot switch an active mesh host between game and preview workloads.");
+            if (preview != null)
+            {
+                if (_previewContext != null && _previewContext != preview.Context ||
+                    preview.Context.SceneId != source.SceneId.Value || preview.Context.SceneRevision != source.SourceRevision ||
+                    preview.Camera.Revision != source.CameraRevision || preview.Camera.World != source.Camera.ExternalWorld ||
+                    preview.Camera.Projection != new PerspectiveProjection(source.Camera.ExternalSettings.FieldOfView,
+                        source.Camera.ExternalSettings.Near, source.Camera.ExternalSettings.Far))
+                    throw new InvalidDataException("Preview view does not match the render source.");
+                _previewContext = preview.Context;
+            }
             if (_resources == null)
             {
                 _resources = roots.Create(request.Backends); _backends = request.Backends; _source = source;
@@ -42,6 +69,7 @@ internal sealed class RuntimeMeshRenderHost(IFactory<RenderResourceHost, IFactor
                 throw new InvalidDataException("Detach the prior required view before changing its context/World/source identity.");
             if (_binding!.Current!.Manifest.Digest != source.Content.Digest)
             {
+                if (preview != null) throw new InvalidDataException("Preview content cannot change within one child.");
                 using var content = _resources.Content.Acquire(source.Content);
                 var result = await _binding.ReloadAsync(content, token).ConfigureAwait(false);
                 if (!result.Committed || result.CleanupError != null) throw new RenderResourceException(RenderResourceError.CleanupFailed, "Required content reload did not release its previous owners.", result.CleanupError);
@@ -51,7 +79,11 @@ internal sealed class RuntimeMeshRenderHost(IFactory<RenderResourceHost, IFactor
             if (current == null || current.Tick != tick || current.Configuration != configuration || current.BindingRevision != _binding.Revision)
                 await _view.CaptureAsync(tick, configuration, token).ConfigureAwait(false);
             var recording = await _view.RecordCurrentAsync(token).ConfigureAwait(false) ?? throw new InvalidOperationException("Required mesh publication unavailable.");
-            try { return GpuFrameData.FromSnapshot(request.Stamp, recording); }
+            try
+            {
+                return preview == null ? GpuFrameData.FromSnapshot(request.Stamp, recording) :
+                    GpuFrameData.FromPreviewSnapshot(request.Stamp, recording, preview, overlay);
+            }
             catch { await recording.DisposeAsync().ConfigureAwait(false); throw; }
         }
         finally { _gate.Release(); }

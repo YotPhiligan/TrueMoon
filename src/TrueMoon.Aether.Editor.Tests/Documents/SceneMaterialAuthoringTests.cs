@@ -26,13 +26,13 @@ public sealed class SceneMaterialAuthoringTests
         var material = Material(400, "Plaster", Vector3.UnitZ);
         var catalog = new ProjectMaterialCatalog(files.Project);
         var snapshot = await catalog.WriteAsync(await catalog.ReadAsync(default), material, default);
-        var originalAssets = SceneRenderAssets.WithMaterials(model.ProjectId, model.Assets, snapshot)!;
+        var originalAssets = SceneRenderAssets.Capture(model.ProjectId, model.Assets, snapshot)!;
         Assert.Equal(Guid.Parse(leftOverride), originalAssets.BindingForMaterial(mesh.AssetId, mesh.SlotId, material.Id));
         var document = Scene((mesh.AssetId, leftOverride), (mesh.AssetId, leftOverride));
         var store = new JsonSceneDocumentStore(new(DocumentData.Factory()));
         var stamp = await store.WriteAsync(files.ScenePath, document, null);
         var scene = Resolve(document);
-        var original = Prepare(originalAssets, scene);
+        var original = await Prepare(originalAssets, scene);
         var oldMaterial = Key(original, material.Id);
         var oldArtifact = MaterialModelFixture.PublishBuild(files.Project, 3, original);
         var oldBytes = File.ReadAllBytes(Path.Combine(oldArtifact.DirectoryPath, GameBuildArtifact.RenderContentFile));
@@ -43,8 +43,8 @@ public sealed class SceneMaterialAuthoringTests
         Assert.Equal(stamp, reopened.Stamp);
         Assert.Equal(document.Revision, reopened.Document.Revision);
         var resolved = Resolve(reopened.Document);
-        var changedAssets = SceneRenderAssets.WithMaterials(model.ProjectId, model.Assets, await catalog.ReadAsync(default))!;
-        var edited = Prepare(changedAssets, resolved);
+        var changedAssets = SceneRenderAssets.Capture(model.ProjectId, model.Assets, await catalog.ReadAsync(default))!;
+        var edited = await Prepare(changedAssets, resolved);
         var editedMaterial = Key(edited, changed.Id);
         Assert.Equal(new OpaqueUnlitMaterialDefinition(changed.BaseColorSrgb).CreateKey(model.ProjectId, changed.Id), editedMaterial);
         var bindingId = Guid.Parse(leftOverride);
@@ -69,7 +69,7 @@ public sealed class SceneMaterialAuthoringTests
         foreach (var row in new[] { changed with { Name = "Renamed" }, Material(401, "Unused", Vector3.One) })
         {
             snapshot = await catalog.WriteAsync(snapshot, row, default);
-            var metadataOnly = Prepare(SceneRenderAssets.WithMaterials(model.ProjectId, model.Assets, snapshot)!, resolved);
+            var metadataOnly = await Prepare(SceneRenderAssets.Capture(model.ProjectId, model.Assets, snapshot)!, resolved);
             Assert.Equal(edited.AssetKeys.ToArray(), metadataOnly.AssetKeys.ToArray());
             Assert.Equal(editedBytes, Bytes(metadataOnly));
         }
@@ -81,7 +81,7 @@ public sealed class SceneMaterialAuthoringTests
     }
 
     [Fact]
-    public void ReopenedSingleAndCombinedBindingsResolveAuthoredAndImportedSlots()
+    public async Task ReopenedSingleAndCombinedBindingsResolveAuthoredAndImportedSlots()
     {
         var model = new MaterialModelFixture(DocumentData.Id(350));
         var mesh = model.UvMesh;
@@ -97,7 +97,7 @@ public sealed class SceneMaterialAuthoringTests
         var scene = Scene((single.AssetId, singleBinding!.Value.ToString("D")), (mesh.AssetId, combined!));
         var codec = new SceneFileCodec(DocumentData.Factory());
         var reopened = Resolve(codec.Decode(codec.Encode(scene)));
-        var content = Prepare(With(model, authored), reopened);
+        var content = await Prepare(With(model, authored), reopened);
         var authoredKey = Key(content, authored.Id);
         var singleSet = Bindings(content, singleBinding.Value);
         Assert.Equal(new MaterialSlotBinding(single.SlotId, authoredKey), Assert.Single(singleSet.Bindings));
@@ -107,7 +107,7 @@ public sealed class SceneMaterialAuthoringTests
     }
 
     [Fact]
-    public void MissingTextureOnlyRejectsUsedMaterial()
+    public async Task MissingTextureOnlyRejectsUsedMaterial()
     {
         var model = new MaterialModelFixture(DocumentData.Id(350));
         var uv = model.UvMesh;
@@ -120,9 +120,9 @@ public sealed class SceneMaterialAuthoringTests
         var texturedAssets = With(model, textured);
         var leftBinding = solidAssets.BindingForMaterial(uv.AssetId, uv.SlotId, solid.Id)!.Value;
         var plainBinding = solidAssets.BindingForMaterial(plain.AssetId, plain.SlotId, solid.Id)!.Value;
-        Assert.Same(model.Content, Prepare(missingAssets, Resolve(Scene((uv.AssetId, uv.BindingSetId.ToString("D"))))));
+        Assert.Same(model.Content, await Prepare(missingAssets, Resolve(Scene((uv.AssetId, uv.BindingSetId.ToString("D"))))));
         Assert.Null(missingAssets.BindingForMaterial(uv.AssetId, uv.SlotId, solid.Id));
-        var missingError = Assert.Throws<InvalidOperationException>(() => Prepare(missingAssets, Resolve(Scene((uv.AssetId, leftBinding.ToString("D"))))));
+        var missingError = await Assert.ThrowsAsync<InvalidOperationException>(() => Prepare(missingAssets, Resolve(Scene((uv.AssetId, leftBinding.ToString("D"))))));
         Assert.Contains(solid.Name, missingError.Message);
         Assert.Contains(solid.Id.ToString("D"), missingError.Message);
         Assert.Contains(missing.BaseColorTextureId!.Value.ToString("D"), missingError.Message);
@@ -130,7 +130,7 @@ public sealed class SceneMaterialAuthoringTests
         Assert.Contains(missing.BaseColorTextureId.Value.ToString("D"), SceneRenderAssets.ResolveReferences(missingAssets, uv.AssetId.ToString("D"), combined).Diagnostic);
 
         Assert.Equal(leftBinding, texturedAssets.BindingForMaterial(uv.AssetId, uv.SlotId, solid.Id));
-        var content = Prepare(texturedAssets, Resolve(Scene((uv.AssetId, leftBinding.ToString("D")))));
+        var content = await Prepare(texturedAssets, Resolve(Scene((uv.AssetId, leftBinding.ToString("D")))));
         var definition = Assert.IsType<OpaqueUnlitMaterialDefinition>(content.Entries.Single(entry => entry.Key.AssetId == solid.Id).Definition);
         Assert.Equal(Key(model.Content, model.TextureId), definition.BaseColorTexture);
         Assert.Equal(RenderTextureSampler.NearestClamp, definition.Sampler);
@@ -140,7 +140,7 @@ public sealed class SceneMaterialAuthoringTests
 
         Assert.Null(texturedAssets.BindingForMaterial(plain.AssetId, plain.SlotId, textured.Id));
         Assert.Null(texturedAssets.BindingWithSlotMaterial(plain.AssetId, plain.BindingSetId.ToString("D"), plain.SlotId, textured.Id));
-        var uvError = Assert.Throws<InvalidOperationException>(() => Prepare(texturedAssets, Resolve(Scene((plain.AssetId, plainBinding.ToString("D"))))));
+        var uvError = await Assert.ThrowsAsync<InvalidOperationException>(() => Prepare(texturedAssets, Resolve(Scene((plain.AssetId, plainBinding.ToString("D"))))));
         Assert.Contains("UV0", uvError.Message);
         Assert.Contains(textured.Id.ToString("D"), uvError.Message);
         Assert.Contains(plain.AssetId.ToString("D"), uvError.Message);
@@ -152,7 +152,7 @@ public sealed class SceneMaterialAuthoringTests
     }
 
     [Fact]
-    public void ImportSlotOrTextureCollisionBlocksPickerAndBuildWithoutHidingCatalog()
+    public async Task ImportSlotOrTextureCollisionBlocksPickerAndBuildWithoutHidingCatalog()
     {
         var model = new MaterialModelFixture(DocumentData.Id(350));
         var mesh = model.UvMesh;
@@ -165,13 +165,13 @@ public sealed class SceneMaterialAuthoringTests
             Assert.Equal(row, assets.ReadMaterial(id));
             Assert.Null(assets.BindingForMaterial(mesh.AssetId, mesh.SlotId, mesh.MaterialId));
             Assert.Contains(id.ToString("D"), SceneRenderAssets.ResolveReferences(assets, mesh.AssetId.ToString("D"), mesh.BindingSetId.ToString("D")).Diagnostic);
-            Assert.Contains(id.ToString("D"), Assert.Throws<InvalidOperationException>(() => Prepare(assets, scene)).Message);
+            Assert.Contains(id.ToString("D"), (await Assert.ThrowsAsync<InvalidOperationException>(() => Prepare(assets, scene))).Message);
         }
-        Assert.Same(model.Content, Prepare(With(model, Material(401, "Independent", Vector3.One)), scene));
+        Assert.Same(model.Content, await Prepare(With(model, Material(401, "Independent", Vector3.One)), scene));
     }
 
     [Fact]
-    public void ExplicitFullPayloadRetainsRawBindingsAndDeduplicatesOnlyExactImportKeys()
+    public async Task ExplicitFullPayloadRetainsRawBindingsAndDeduplicatesOnlyExactImportKeys()
     {
         var model = new MaterialModelFixture(DocumentData.Id(350));
         var plain = model.PlainMesh;
@@ -187,14 +187,14 @@ public sealed class SceneMaterialAuthoringTests
         var authored = Material(400, "Catalog", Vector3.One) with { BaseColorTextureId = rawTextureKey.AssetId };
         var snapshot = new ProjectMaterialCatalogSnapshot(model.ProjectId, [authored], null);
         var resolved = Resolve(Scene((plain.AssetId, rawBindingKey.AssetId.ToString("D"))));
-        var rawOnly = SceneRenderAssets.WithMaterials(model.ProjectId, null, snapshot, raw)!;
+        var rawOnly = SceneRenderAssets.Capture(model.ProjectId, null, snapshot, raw)!;
         Assert.Empty(rawOnly.Meshes);
         Assert.Empty(rawOnly.Textures);
-        Assert.Same(raw, Prepare(rawOnly, resolved));
+        Assert.Same(raw, await Prepare(rawOnly, resolved));
         var unknownBinding = Resolve(Scene((plain.AssetId, DocumentData.Id(450).ToString("D"))));
-        Assert.Same(raw, SceneRenderAssets.PrepareBuild(rawOnly, unknownBinding, requireAll: false, default));
-        var merged = SceneRenderAssets.WithMaterials(model.ProjectId, model.Assets, snapshot, raw)!;
-        var content = Prepare(merged, resolved);
+        Assert.Same(raw, await SceneRenderAssets.PrepareBuildAsync(rawOnly, unknownBinding, requireAll: false, default));
+        var merged = SceneRenderAssets.Capture(model.ProjectId, model.Assets, snapshot, raw)!;
+        var content = await Prepare(merged, resolved);
         Assert.Equal(model.Content.AssetKeys.Append(rawKey).Append(rawBindingKey).Append(rawTextureKey).OrderBy(key => key.AssetId), content.AssetKeys);
         Assert.Equal(rawKey, Assert.Single(Bindings(content, rawBindingKey.AssetId).Bindings).Material);
         Assert.Equal(model.TextureId, Assert.Single(merged.Textures).Id);
@@ -202,9 +202,9 @@ public sealed class SceneMaterialAuthoringTests
         var different = new OpaqueUnlitMaterialDefinition(new(.1f, .2f, .3f));
         var conflictKey = different.CreateKey(model.ProjectId, plain.MaterialId);
         var conflict = new GameBuildRenderContent(model.ProjectId, [new(conflictKey, different)]);
-        var rejected = SceneRenderAssets.WithMaterials(model.ProjectId, model.Assets, snapshot, conflict)!;
+        var rejected = SceneRenderAssets.Capture(model.ProjectId, model.Assets, snapshot, conflict)!;
         Assert.Equal(plain.MaterialId, rejected.Collision!.Id);
-        Assert.Contains(plain.MaterialId.ToString("D"), Assert.Throws<InvalidOperationException>(() => Prepare(rejected, resolved)).Message);
+        Assert.Contains(plain.MaterialId.ToString("D"), (await Assert.ThrowsAsync<InvalidOperationException>(() => Prepare(rejected, resolved))).Message);
     }
 
     internal static SceneDocument Scene(params (Guid Mesh, string Binding)[] renderers) => new(new(DocumentData.Id(230)), 3,
@@ -218,7 +218,7 @@ public sealed class SceneMaterialAuthoringTests
     private static ProjectMaterial Material(int id, string name, Vector3 color) => new(DocumentData.Id(id), name, color, null);
 
     private static SceneRenderAssets With(MaterialModelFixture model, params ProjectMaterial[] materials) =>
-        SceneRenderAssets.WithMaterials(model.ProjectId, model.Assets, new(model.ProjectId, materials, null))!;
+        SceneRenderAssets.Capture(model.ProjectId, model.Assets, new(model.ProjectId, materials, null))!;
 
     private static ResolvedSceneSnapshot Resolve(SceneDocument scene)
     {
@@ -226,8 +226,8 @@ public sealed class SceneMaterialAuthoringTests
         return authoring.Read().Resolved;
     }
 
-    private static GameBuildRenderContent Prepare(SceneRenderAssets assets, ResolvedSceneSnapshot scene) =>
-        Assert.IsType<GameBuildRenderContent>(SceneRenderAssets.PrepareBuild(assets, scene, requireAll: true, default));
+    private static async Task<GameBuildRenderContent> Prepare(SceneRenderAssets assets, ResolvedSceneSnapshot scene) =>
+        Assert.IsType<GameBuildRenderContent>(await SceneRenderAssets.PrepareBuildAsync(assets, scene, requireAll: true, default));
 
     private static RenderAssetKey Key(GameBuildRenderContent content, Guid id) => Assert.Single(content.AssetKeys, key => key.AssetId == id);
     private static MaterialBindingSetDefinition Bindings(GameBuildRenderContent content, Guid id) =>

@@ -1,5 +1,6 @@
 ﻿using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
@@ -72,6 +73,7 @@ public static class DocumentConfigurationExtensions
                 var hasWatches = services.Exist<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>();
                 var persistsModels = services.Exist<ModelSelectionPersistence>();
                 var hasCatalog = services.Exist<IFactory<ProjectModelCatalog, ResolvedProject>>();
+                var hasTextureDecoder = services.Exist<Func<ReadOnlyMemory<byte>, BaseColorTextureDefinition>>();
                 if (persistsModels && !hasWatches)
                     throw new InvalidOperationException("Register model source capture before enabling model selection persistence.");
                 if (hasCatalog && !persistsModels)
@@ -80,18 +82,24 @@ public static class DocumentConfigurationExtensions
                     services.Exist<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>();
                 var restoresReimport = hasImport && services.Exist<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>();
                 services.Singleton<IFactory<SceneDocumentSession, ResolvedProject>>(resolver =>
-                    new Factory<SceneDocumentSession, ResolvedProject>(project => new(project, resolver.Resolve<ISceneDocumentStore>()!,
-                        resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!)
+                    new Factory<SceneDocumentSession, ResolvedProject>(project =>
                     {
-                        ModelCatalog = hasCatalog ? resolver.Resolve<IFactory<ProjectModelCatalog, ResolvedProject>>().Create(project) : null,
-                        MaterialCatalog = new(project),
-                        ModelImports = hasWatches ? new(project.Description.Id,
-                            resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(),
-                            resolver.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>(),
-                            hasImport ? resolver.Resolve<IFactory<ModelImportOperation, ModelImportArguments>>() : null,
-                            hasImport ? resolver.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>() : null,
-                            persistsModels ? new(project, restoresReimport ?
-                                resolver.Resolve<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>() : null) : null) : null
+                        var models = hasCatalog ? resolver.Resolve<IFactory<ProjectModelCatalog, ResolvedProject>>().Create(project) : null;
+                        return new(project, resolver.Resolve<ISceneDocumentStore>()!,
+                            resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!)
+                        {
+                            ModelCatalog = models,
+                            MaterialCatalog = new(project),
+                            TextureCatalog = new(project, hasTextureDecoder ? resolver.Resolve<Func<ReadOnlyMemory<byte>, BaseColorTextureDefinition>>() : null),
+                            MeshCatalog = new(project, models),
+                            ModelImports = hasWatches ? new(project.Description.Id,
+                                resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(),
+                                resolver.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>(),
+                                hasImport ? resolver.Resolve<IFactory<ModelImportOperation, ModelImportArguments>>() : null,
+                                hasImport ? resolver.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>() : null,
+                                persistsModels ? new(project, restoresReimport ?
+                                    resolver.Resolve<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>() : null) : null) : null
+                        };
                     }));
             }
         });

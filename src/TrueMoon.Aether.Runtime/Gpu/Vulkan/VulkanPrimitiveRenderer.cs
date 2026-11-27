@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Silk.NET.Vulkan;
@@ -17,6 +18,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
     private Framebuffer _framebuffer;
     private PipelineLayout _layout;
     private Pipeline _pipeline;
+    private Pipeline _overlayPipeline;
     private DescriptorSetLayout _texturedSetLayout;
     private PipelineLayout _texturedLayout;
     private Pipeline _texturedPipeline;
@@ -67,7 +69,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
             AttachmentCount = 2, PAttachments = views, Width = (uint)width, Height = (uint)height, Layers = 1 };
         Check(vk.CreateFramebuffer(device, in framebuffer, null, out _framebuffer), "CreatePrimitiveFramebuffer");
         CreateLayout(default, out _layout);
-        CreatePipeline(MeshProfile ? "mesh" : "cube", false, _layout, ref _pipeline);
+        CreatePipeline(MeshProfile ? "mesh" : "cube", MeshProfile, false, _layout, ref _pipeline);
     }
 
     private void EnsureTexturedPipeline()
@@ -77,7 +79,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
         try
         {
             CreateLayout(_texturedSetLayout, out _texturedLayout);
-            CreatePipeline("mesh-textured", true, _texturedLayout, ref _texturedPipeline);
+            CreatePipeline("mesh-textured", true, true, _texturedLayout, ref _texturedPipeline);
         }
         catch
         {
@@ -94,7 +96,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
         Check(vk.CreatePipelineLayout(device, in layout, null, out target), "CreatePrimitiveLayout");
     }
 
-    private void CreatePipeline(string shader, bool textured, PipelineLayout layout, ref Pipeline target)
+    private void CreatePipeline(string shader, bool vertexInput, bool textured, PipelineLayout layout, ref Pipeline target)
     {
         ShaderModule vertex = default, fragment = default;
         try
@@ -109,7 +111,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
                 { new(0, 12, VertexInputRate.Vertex), new(1, 8, VertexInputRate.Vertex) };
             var attributes = stackalloc VertexInputAttributeDescription[2]
                 { new(0, 0, Format.R32G32B32Sfloat, 0), new(1, 1, Format.R32G32Sfloat, 0) };
-            if (MeshProfile)
+            if (vertexInput)
             {
                 input.VertexBindingDescriptionCount = textured ? 2u : 1u; input.PVertexBindingDescriptions = bindings;
                 input.VertexAttributeDescriptionCount = textured ? 2u : 1u; input.PVertexAttributeDescriptions = attributes;
@@ -140,38 +142,55 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
 
     internal void Draw(CommandBuffer command, PrimitiveScene scene)
     {
-        var viewProjection = scene.CreateViewProjection(width, height);
         var primitives = scene.Primitives;
         Span<Constants> draws = stackalloc Constants[primitives.Length];
-        for (var i = 0; i < primitives.Length; i++)
-        {
-            var transform = primitives[i].World * viewProjection;
-            RenderPrimitive.ValidateMatrix(transform);
-            draws[i] = new(transform, new(primitives[i].Color, 1));
-        }
+        PrepareCubes(primitives.AsSpan(), scene.CreateViewProjection(width, height), draws);
         var clears = stackalloc ClearValue[2];
         clears[0].Color = new ClearColorValue(0.04f, 0.06f, 0.10f, 1);
         clears[1].DepthStencil = new ClearDepthStencilValue(1, 0);
         var begin = new RenderPassBeginInfo { SType = StructureType.RenderPassBeginInfo, RenderPass = _pass, Framebuffer = _framebuffer,
             RenderArea = new(default, new((uint)width, (uint)height)), ClearValueCount = 2, PClearValues = clears };
         vk.CmdBeginRenderPass(command, in begin, SubpassContents.Inline);
-        vk.CmdBindPipeline(command, PipelineBindPoint.Graphics, _pipeline);
+        DrawCubes(command, _pipeline, draws);
+        vk.CmdEndRenderPass(command);
+    }
+
+    private static void PrepareCubes(ReadOnlySpan<RenderPrimitive> primitives, Matrix4x4 viewProjection, Span<Constants> draws)
+    {
+        for (var i = 0; i < primitives.Length; i++)
+        {
+            var transform = primitives[i].World * viewProjection;
+            RenderPrimitive.ValidateMatrix(transform);
+            draws[i] = new(transform, new(primitives[i].Color, 1));
+        }
+    }
+
+    private void DrawCubes(CommandBuffer command, Pipeline pipeline, ReadOnlySpan<Constants> draws)
+    {
+        vk.CmdBindPipeline(command, PipelineBindPoint.Graphics, pipeline);
         foreach (var draw in draws)
         {
             var constants = draw;
             vk.CmdPushConstants(command, _layout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, 80, &constants);
             vk.CmdDraw(command, 36, 1, 0, 0);
         }
-        vk.CmdEndRenderPass(command);
     }
 
-    internal void DrawSnapshot(CommandBuffer command, RenderSnapshotData snapshot, RenderSnapshotResources resources)
+    internal void DrawSnapshot(CommandBuffer command, RenderSnapshotData snapshot, RenderSnapshotResources resources,
+        ImmutableArray<RenderPrimitive> overlay)
     {
         var owner = resources.Device;
         if (!MeshProfile || snapshot.DeviceGeneration != owner.Generation || snapshot.Identity != owner.Identity ||
             snapshot.BindingRevision != resources.BindingRevision || snapshot.ManifestDigest != resources.Manifest.Digest ||
             snapshot.Configuration.Width != width || snapshot.Configuration.Height != height)
             throw new InvalidDataException("Mesh snapshot/device/target mismatch.");
+        Span<Constants> cubes = stackalloc Constants[overlay.IsDefaultOrEmpty ? 0 : overlay.Length];
+        if (!cubes.IsEmpty)
+        {
+            PrepareCubes(overlay.AsSpan(), snapshot.ViewProjection, cubes);
+            if (_overlayPipeline.Handle == 0)
+                CreatePipeline("cube", false, false, _layout, ref _overlayPipeline);
+        }
         // Resolve every non-owning handle before recording; the accepted snapshot
         // submission owns the retained uploads until its actual GPU fence completes.
         foreach (var draw in snapshot.Draws)
@@ -190,6 +209,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
         var begin = new RenderPassBeginInfo { SType = StructureType.RenderPassBeginInfo, RenderPass = _pass, Framebuffer = _framebuffer,
             RenderArea = new(default, new((uint)width, (uint)height)), ClearValueCount = 2, PClearValues = clears };
         vk.CmdBeginRenderPass(command, in begin, SubpassContents.Inline);
+        if (!cubes.IsEmpty) DrawCubes(command, _overlayPipeline, cubes);
         Pipeline boundPipeline = default;
         var buffers = stackalloc Silk.NET.Vulkan.Buffer[2];
         var offsets = stackalloc ulong[2];
@@ -263,6 +283,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
     public void Dispose()
     {
         ReleaseTexturedPipeline();
+        if (_overlayPipeline.Handle != 0) vk.DestroyPipeline(device, _overlayPipeline, null); _overlayPipeline = default;
         if (_pipeline.Handle != 0) vk.DestroyPipeline(device, _pipeline, null); _pipeline = default;
         if (_layout.Handle != 0) vk.DestroyPipelineLayout(device, _layout, null); _layout = default;
         if (_framebuffer.Handle != 0) vk.DestroyFramebuffer(device, _framebuffer, null); _framebuffer = default;

@@ -102,11 +102,26 @@ public static class MeshRenderingComponents
 
     private static Vector3 ClearColor(ComponentValidationContext context)
         => new(context.GetSingle("clearR", 0, 1), context.GetSingle("clearG", 0, 1), context.GetSingle("clearB", 0, 1));
-    private static uint Layers(ComponentValidationContext context)
+    private static uint Layers(ComponentValidationContext context) => Layers(context.GetInteger("layers"));
+
+    private static uint Layers(long value)
     {
-        var value = context.GetInteger("layers");
         ContentValidation.Require(value is >= 0 and <= uint.MaxValue, RenderContentError.InvalidComponent, "Layers require an unsigned 32-bit mask.");
         return (uint)value;
+    }
+
+    internal static (bool Enabled, uint Layers, bool TintEnabled, Vector3 TintLinear) PreviewValues(ResolvedComponent renderer)
+    {
+        var properties = renderer.Properties;
+        return (properties["enabled"].Value.GetBoolean(), Layers(properties["layers"].Value.GetInteger()),
+            properties["tintEnabled"].Value.GetBoolean(), new(Tint("tintR"), Tint("tintG"), Tint("tintB")));
+
+        float Tint(string key)
+        {
+            var value = properties[key].Value.GetNumber();
+            ContentValidation.Require(value is >= 0 and <= 1, RenderContentError.InvalidComponent, "Tint requires a finite value in [0,1].");
+            return (float)value;
+        }
     }
     private static ComponentPropertySchema Mask() => new("layers", PropertyValueKind.Integer, PropertyValue.From((long)uint.MaxValue));
     private static ComponentPropertySchema Number(string id, double value) => new(id, PropertyValueKind.Number, PropertyValue.From(value));

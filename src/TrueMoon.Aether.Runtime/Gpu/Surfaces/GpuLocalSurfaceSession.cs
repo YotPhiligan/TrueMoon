@@ -85,7 +85,7 @@ public sealed class GpuLocalSurfaceSession : IGpuResource
             try
             {
                 data.Validate(stamp,offer.Width,offer.Height);
-                ready=data.Snapshot is {} recording ? await _surface.ProduceSnapshotAsync(stamp,recording,linked.Token).ConfigureAwait(false)
+                ready=data.Snapshot is {} recording ? await _surface.ProduceSnapshotAsync(stamp,recording,linked.Token,data.PreviewOverlay).ConfigureAwait(false)
                     : await _surface.ProduceAsync(stamp,linked.Token,data.Pixels,data.Scene).ConfigureAwait(false);
                 _request.Source.Produced(data);
             }

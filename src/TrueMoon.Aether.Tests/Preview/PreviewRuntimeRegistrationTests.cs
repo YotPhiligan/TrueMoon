@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Hosting;
@@ -10,8 +11,10 @@ using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Aether.Tooling.Preview;
 using TrueMoon.Dependencies;
+using TrueMoon.Diagnostics;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Extensions.DependencyInjection;
+using TrueMoon.Generated.TrueMoon.Aether;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Preview;
@@ -168,6 +171,69 @@ public sealed class PreviewRuntimeRegistrationTests
         }
         finally { await app.DisposeAsync(); }
         Assert.Equal(1, previews.Disposals); Assert.Equal(0, gameLoads); Assert.Equal(0, runtimeLaunches);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task RuntimeHost_RenderPreviewRequiresSurfaceRegistrationAndNeverCreatesGameLoader(bool di, bool surface)
+    {
+        var launch = Launch(); var gameLoads = 0;
+        RuntimeProtocol? createdProtocol = null;
+        await using var app = Builder(di).Setup(context =>
+        {
+            context.Services(services =>
+            {
+                services.Singleton<IFactory<GameBuildLoader, GameBuildReference>>(_ => new global::TrueMoon.Factory<GameBuildLoader, GameBuildReference>(_ =>
+                { gameLoads++; throw new IOException("preview must not load a game"); }));
+                services.Singleton<IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)>>(resolver =>
+                    new global::TrueMoon.Factory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)>(args =>
+                    {
+                        createdProtocol = args.Protocol;
+                        return resolver.Resolve<IFactory<PipesInvocationServer<IEngineControl>, PipesInvocationServerArguments<IEngineControl>>>()
+                            .Create(new(args.Launch.Endpoint, new BoundedControlHandler(new EngineControlInvocationServerHandler(
+                                args.Protocol, resolver.Resolve<IEventsSource<EngineControlInvocationServerHandler>>()))));
+                    }));
+            });
+            context.UseAether(Configure);
+            if (surface) context.UseAetherSurfaceRendering();
+            context.UseAetherPreviewRuntime(launch, int.MaxValue);
+        }).Build();
+        Assert.Null(createdProtocol);
+        var host = app.Services.Resolve<AetherRuntimeHost>()!;
+        var protocol = Assert.IsType<RuntimeProtocol>(createdProtocol);
+        var hello = await protocol.SendAsync(ControlRequest.Create(launch.Identity, 1, CommandKind.Hello));
+        Assert.Equal(surface ? 1 : 0, hello.PreviewRenderVersion);
+        if (surface)
+        {
+            var view = PreviewViewCodecTests.View();
+            var payload = PreviewRenderProtocolTests.CreateWirePayload(view);
+            var operation = Guid.NewGuid().ToString("D");
+            ulong sequence = 2;
+            var begin = ControlRequest.Create(launch.Identity, sequence++, CommandKind.BeginPreviewRender);
+            begin.SceneLoadId = operation; begin.SceneId = payload.SceneId.Value.ToString("D"); begin.Revision = payload.Revision;
+            begin.SceneBytes = payload.Length; begin.SceneDigest = payload.Digest.ToString(); begin.PreviewView = PreviewViewCodec.Encode(view);
+            await protocol.SendAsync(begin);
+            for (var offset = 0; offset < payload.Length;)
+            {
+                var count = Math.Min(PreviewRenderPayload.ChunkBytes, payload.Length - offset);
+                var append = ControlRequest.Create(launch.Identity, sequence++, CommandKind.AppendPreviewRender);
+                append.SceneLoadId = operation; append.SceneOffset = offset; append.SceneChunk = payload.CopyChunk(offset, count);
+                Assert.Equal(offset + count, (await protocol.SendAsync(append)).SceneLoadOffset);
+                offset += count;
+            }
+            var activate = ControlRequest.Create(launch.Identity, sequence, CommandKind.ActivatePreviewRender);
+            activate.SceneLoadId = operation;
+            var active = await protocol.SendAsync(activate);
+            Assert.Equal("Paused", active.Phase);
+            Assert.Equal(payload.Digest.ToString(), active.PreviewRenderDigest);
+            Assert.Equal(view.Stamp, PreviewViewCodec.ReadStamp(active.PreviewViewStamp!));
+            Assert.Equal(0, active.RenderViewVersion); Assert.False(active.RenderViewReady);
+        }
+        await host.DisposeAsync();
+        Assert.Equal(0, gameLoads);
     }
 
     [Theory]

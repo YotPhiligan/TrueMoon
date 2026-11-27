@@ -2,6 +2,7 @@ using System.Numerics;
 using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Ecs.Rendering;
 using TrueMoon.Aether.Ecs.Transforms;
+using TrueMoon.Aether.Preview;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Gpu;
 using TrueMoon.Aether.Runtime;
@@ -65,6 +66,38 @@ public sealed class RuntimeMeshRenderHostTests
         await owner.DetachAsync(); Assert.True(roots[0].IsReleased); Assert.Equal(2, backend.DisposeCalls);
         Assert.True(world.IsAlive(entity)); Assert.True(Assert.Single(backend.CreatedUploads).IsReleased);
         Assert.Equal(0, roots[0].Content.Counts.LeaseCount);
+    }
+
+    [Fact]
+    public async Task PreviewHost_UsesExternalProjectionAndRejectsForeignContentEvenAfterDetach()
+    {
+        var backend = new ResourceTestBackend();
+        var backends = new ResourceTestBackendFactory(backend);
+        await using var owner = new RuntimeMeshRenderHost(new Factory<RenderResourceHost, IFactory<IRenderResourceBackend, RenderDeviceRequest>>(factory => new(new(), factory)));
+        var content = ResourceTestFixture.Content();
+        using var world = World(content, out _);
+        var viewPose = Matrix4x4.CreateTranslation(0, 1, 6);
+        var initial = Source(world, content);
+        var projection = new PerspectiveProjection(.82f, .3f, 42);
+        var view = new PreviewViewState(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), initial.SceneId.Value, initial.SourceRevision),
+            new(viewPose, projection, Vector3.Zero, 6, 3));
+        var clear = new Vector3(.04f, .06f, .10f);
+        var source = initial with { Camera = RenderCameraSource.External(viewPose, new(.82f, .3f, 42, uint.MaxValue, clear)), CameraRevision = 3 };
+        var request = Request(backends);
+        var overlay = new RenderPrimitive(Matrix4x4.CreateTranslation(-3, 0, 0), new(0, .5f, 1));
+        var frame = await owner.CapturePreviewAsync(source, view, [overlay], request, CancellationToken.None);
+        var recording = frame.Snapshot!;
+        Assert.Equal(view.Camera.CreateProjection(request.Width, request.Height).ViewProjection, recording.Snapshot.ViewProjection);
+        Assert.Equal(clear, recording.Snapshot.ClearColorSrgb);
+        Assert.Equal(view.Stamp, frame.Metadata.PreviewView);
+        Assert.Null(frame.Metadata.RenderView);
+        Assert.Equal(overlay, Assert.Single(frame.PreviewOverlay));
+        await recording.DisposeAsync();
+        await owner.DetachAsync();
+        var changed = new PreviewViewState(view.Context with { ContentId = Guid.NewGuid() }, view.Camera);
+        await Assert.ThrowsAsync<InvalidDataException>(() => owner.CapturePreviewAsync(source, changed, [], request, CancellationToken.None));
+        Assert.Equal(1, backends.Calls);
+        Assert.False(world.IsDisposed);
     }
     [Fact]
     public async Task AppFallback_CancelsPendingUpload_ButRetainsNativeOwnerUntilLateCompletion()

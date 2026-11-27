@@ -45,6 +45,12 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <summary>Project material authoring, when available in this composition.</summary>
     IEditorMaterialsModel? Materials => null;
 
+    /// <summary>Project texture authoring, when available in this composition.</summary>
+    IEditorTexturesModel? Textures => null;
+
+    /// <summary>Project mesh authoring, when available in this composition.</summary>
+    IEditorMeshesModel? Meshes => null;
+
     /// <summary>Gets the nine stable numeric fields for legacy Transform form consumers. Dynamic UI uses Components.</summary>
     IReadOnlyList<TransformField> Fields { get; }
 

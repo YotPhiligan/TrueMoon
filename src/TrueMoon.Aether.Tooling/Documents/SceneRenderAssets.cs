@@ -2,13 +2,14 @@ using System.Security.Cryptography;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
+using TrueMoon.Aether.Runtime.Rendering;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Importing;
 
 namespace TrueMoon.Aether.Tooling.Documents;
 
-// The selection owns the exact CPU resources. A scene-specific binding is published only into a Build.
-internal sealed class SceneRenderAssets
+// An immutable logical resolver over selected imports and project catalog headers. Geometry and pixels materialize only for a frozen closure.
+internal sealed partial class SceneRenderAssets
 {
     internal sealed record Choice(Guid Id, string Name);
     internal readonly record struct References(Guid? Mesh, Guid Binding, MaterialBindingSetDefinition? Definition, string? Diagnostic);
@@ -24,8 +25,12 @@ internal sealed class SceneRenderAssets
     private readonly Dictionary<Guid, Guid> _defaults;
     private readonly Dictionary<Guid, string> _slotNames;
     private readonly HashSet<Guid>? _importIds;
+    private readonly HashSet<Guid>? _fullSlotIds;
     private readonly Dictionary<Guid, RenderAssetKey> _textureKeys;
+    private readonly Dictionary<Guid, ProjectTexture>? _projectTextures;
+    private readonly ProjectTextureCatalog? _textureCatalog;
     private readonly AuthoredMaterials? _authored;
+    private readonly AuthoredMeshes? _meshes;
     private readonly Lock _variantGate = new();
     private Dictionary<(Guid Mesh, string Binding), References>? _variants;
 
@@ -35,32 +40,48 @@ internal sealed class SceneRenderAssets
         _content = content;
         _entries = content.Entries.ToDictionary(entry => entry.Key.AssetId);
         var bindings = imports.SelectMany(model => model.Watch.Published.Bindings.Select(binding => (model.Name, Binding: binding))).ToArray();
-        _importIds = bindings.Select(item => item.Binding.Id).ToHashSet();
-        _defaults = imports.SelectMany(model => model.Watch.Published.Meshes)
-            .ToDictionary(mesh => mesh.AssetId, mesh => mesh.BindingSetId);
-        _slotNames = bindings.Where(item => item.Binding.Kind == ModelSubassetKind.Slot)
-            .ToDictionary(item => item.Binding.Id, item => Uri.UnescapeDataString(item.Binding.Key.Locator[(item.Binding.Key.Locator.LastIndexOf('/') + 1)..]));
+        _importIds = [];
+        _slotNames = [];
+        foreach (var item in bindings)
+        {
+            var binding = item.Binding;
+            if (!_importIds.Add(binding.Id)) Collision ??= new(binding.Id);
+            if (binding.Kind == ModelSubassetKind.Slot)
+            {
+                var locator = binding.Key.Locator;
+                _slotNames.TryAdd(binding.Id, Uri.UnescapeDataString(locator[(locator.LastIndexOf('/') + 1)..]));
+            }
+        }
+        _defaults = [];
+        foreach (var model in imports)
+            foreach (var mesh in model.Watch.Published.Meshes)
+                if (!_defaults.TryAdd(mesh.AssetId, mesh.BindingSetId)) Collision ??= new(mesh.AssetId);
         Meshes = SortChoices(PublishedChoices(ModelSubassetKind.Mesh));
         Materials = SortChoices(PublishedChoices(ModelSubassetKind.Material));
         _textureKeys = content.Entries.Where(entry => entry.Definition is BaseColorTextureDefinition)
             .ToDictionary(entry => entry.Key.AssetId, entry => entry.Key);
-        var textureNames = PublishedChoices(ModelSubassetKind.Texture).ToDictionary(choice => choice.Id, choice => choice.Name);
+        var textureNames = new Dictionary<Guid, string>();
+        foreach (var choice in PublishedChoices(ModelSubassetKind.Texture)) textureNames.TryAdd(choice.Id, choice.Name);
         Textures = SortChoices(_textureKeys.Keys.Select(id => new Choice(id, textureNames.GetValueOrDefault(id) ?? id.ToString("D"))));
 
         IEnumerable<Choice> PublishedChoices(ModelSubassetKind kind) => bindings.Where(item => item.Binding.Kind == kind)
             .Select(item => new Choice(item.Binding.Id, $"{item.Name} · {item.Binding.Key.Locator}"));
     }
 
-    internal static SceneRenderAssets? WithMaterials(Guid projectId, SceneRenderAssets? imports,
-        ProjectMaterialCatalogSnapshot? materials, GameBuildRenderContent? fullContent = null) =>
-        materials is { Materials.Count: > 0 } || fullContent != null
-            ? new(projectId, imports, materials, fullContent)
+    internal static SceneRenderAssets? Capture(Guid projectId, SceneRenderAssets? imports,
+        ProjectMaterialCatalogSnapshot? materials, GameBuildRenderContent? fullContent = null,
+        ProjectTextureCatalogSnapshot? textures = null, ProjectTextureCatalog? textureCatalog = null,
+        ProjectMeshCatalogSnapshot? meshes = null, ProjectMeshCatalog? meshCatalog = null) =>
+        materials is { Materials.Count: > 0 } || textures is { Textures.Count: > 0 } || meshes is { Meshes.Count: > 0 } || fullContent != null
+            ? new(projectId, imports, materials, fullContent, textures, textureCatalog, meshes, meshCatalog)
             : imports;
 
     private SceneRenderAssets(Guid projectId, SceneRenderAssets? imports, ProjectMaterialCatalogSnapshot? materials,
-        GameBuildRenderContent? fullContent)
+        GameBuildRenderContent? fullContent, ProjectTextureCatalogSnapshot? textures, ProjectTextureCatalog? textureCatalog,
+        ProjectMeshCatalogSnapshot? meshes, ProjectMeshCatalog? meshCatalog)
     {
         _projectId = projectId;
+        Collision = imports?.Collision;
         _hasFullContent = fullContent != null;
         if (fullContent != null && fullContent.Entries[0].Key.ProjectId != projectId)
             throw new InvalidOperationException("Ресурсы сборки принадлежат другому проекту.");
@@ -92,17 +113,61 @@ internal sealed class SceneRenderAssets
                 _rebuildBase = true;
             }
         }
+        if (fullContent != null)
+        {
+            _fullSlotIds = [];
+            foreach (var entry in fullContent.Entries)
+                if (entry.Definition is MeshDefinition mesh)
+                    foreach (var slot in mesh.Slots)
+                        _fullSlotIds.Add(slot.SlotId);
+        }
+
+        if (textures is { Textures.Count: > 0 })
+        {
+            if (textures.ProjectId != projectId || textureCatalog == null)
+                throw new InvalidOperationException("Каталог текстур не принадлежит проекту или недоступен.");
+            _textureCatalog = textureCatalog;
+            _projectTextures = textures.Textures.ToDictionary(row => row.Id);
+            _textureKeys = new(_textureKeys);
+            foreach (var texture in textures.Textures)
+            {
+                if (IsCatalogIdReserved(texture.Id) || !_textureKeys.TryAdd(texture.Id, texture.Key(projectId)))
+                    Collision ??= new(texture.Id);
+            }
+            if (Collision == null)
+                Textures = SortChoices(Textures.Concat(textures.Textures.Select(texture => new Choice(texture.Id, texture.Name))));
+        }
 
         Materials = imports?.Materials ?? [];
-        if (materials is not { Materials.Count: > 0 }) return;
-        foreach (var material in materials.Materials)
+        if (materials is { Materials.Count: > 0 })
         {
-            if (_entries.ContainsKey(material.Id) || _importIds?.Contains(material.Id) == true)
-                Collision ??= new(material.Id);
+            foreach (var material in materials.Materials)
+                if (HasReservedId(material.Id)) Collision ??= new(material.Id);
+            _authored = new(materials.Materials);
+            if (Collision == null)
+                Materials = SortChoices(Materials.Concat(materials.Materials.Select(material => new Choice(material.Id, material.Name))));
         }
-        _authored = new(materials.Materials);
-        if (Collision == null)
-            Materials = SortChoices(Materials.Concat(materials.Materials.Select(material => new Choice(material.Id, material.Name))));
+
+        if (meshes is { Meshes.Count: > 0 })
+        {
+            if (meshes.ProjectId != projectId || meshCatalog == null)
+                throw new InvalidOperationException("Каталог мешей не принадлежит проекту или недоступен.");
+            var headers = new AuthoredMeshes(projectId, meshCatalog, meshes.Meshes);
+            foreach (var id in headers.Owners.Keys)
+                if (HasReservedId(id)) Collision ??= new(id);
+            Collision ??= headers.Collision;
+            _meshes = headers;
+            if (Collision == null)
+            {
+                Meshes = SortChoices(Meshes.Concat(meshes.Meshes.Select(mesh => new Choice(mesh.Id, mesh.Name))));
+                if (headers.Textures.Count != 0)
+                {
+                    if (_projectTextures == null) _textureKeys = new(_textureKeys);
+                    foreach (var (id, key) in headers.Textures) _textureKeys.Add(id, key);
+                    Textures = SortChoices(Textures.Concat(headers.Textures.Keys.Select(id => new Choice(id, MeshDefaultName(headers.Owners[id])))));
+                }
+            }
+        }
     }
 
     private static IReadOnlyList<Choice> SortChoices(IEnumerable<Choice> choices) => Array.AsReadOnly(choices
@@ -116,50 +181,93 @@ internal sealed class SceneRenderAssets
     internal ProjectMaterial? ReadMaterial(Guid id)
     {
         if (_authored?.Find(id) is { } material) return material;
+        if (_meshes?.Materials.TryGetValue(id, out var frozen) == true)
+            return new(id, MeshDefaultName(_meshes.Owners[id]), frozen.BaseColorSrgb, frozen.BaseColorTextureId);
         if (_entries.GetValueOrDefault(id)?.Definition is not OpaqueUnlitMaterialDefinition imported) return null;
         var choice = Materials.FirstOrDefault(item => item.Id == id);
         return new(id, choice?.Name ?? id.ToString("D"), imported.BaseColorSrgb, imported.BaseColorTexture?.AssetId);
     }
 
-    internal Guid? DefaultBinding(Guid mesh) => _defaults.TryGetValue(mesh, out var binding) ? binding : null;
+    internal Guid? DefaultBinding(Guid mesh) => _meshes?.Rows.GetValueOrDefault(mesh)?.DefaultBindingId ??
+        (_defaults.TryGetValue(mesh, out var binding) ? binding : null);
+
     internal MaterialBindingSetDefinition? DefaultDefinition(Guid mesh) =>
-        DefaultBinding(mesh) is { } binding ? (MaterialBindingSetDefinition)_entries[binding].Definition : null;
-    internal string SlotName(Guid slot) => _slotNames[slot];
+        DefaultBinding(mesh) is { } binding ? ReadBindingEntry(binding)?.Definition as MaterialBindingSetDefinition : null;
+
+    internal string SlotName(Guid slot) => _meshes?.SlotNames.GetValueOrDefault(slot) ?? _slotNames[slot];
+
+    internal Choice? AuthoredDefaultMaterialChoice(Guid mesh, Guid slot)
+    {
+        if (_meshes?.Rows.GetValueOrDefault(mesh) is not { } row) return null;
+        foreach (var item in row.Slots)
+            if (item.Id == slot) return new(item.DefaultMaterialId, MeshDefaultName(row));
+        return null;
+    }
+
+    private static string MeshDefaultName(ProjectMesh row) => $"Из меша · {row.Name}";
+
+    private RenderAssetEntry? ReadBindingEntry(Guid binding) => _entries.GetValueOrDefault(binding) ?? _meshes?.Bindings.GetValueOrDefault(binding);
+
+    private bool TryGeometry(Guid mesh, out RenderAssetKey key, out bool hasUv0)
+    {
+        if (_entries.GetValueOrDefault(mesh) is { Definition: MeshDefinition geometry } entry)
+        {
+            key = entry.Key;
+            hasUv0 = !geometry.Uv0.IsEmpty;
+            return true;
+        }
+        if (_meshes?.Rows.GetValueOrDefault(mesh) is { } row)
+        {
+            key = row.MeshKey(_projectId);
+            hasUv0 = row.HasUv0;
+            return true;
+        }
+        key = default;
+        hasUv0 = false;
+        return false;
+    }
 
     internal string? MaterialDiagnostic(Guid mesh, Guid slot, Guid material) =>
         ResolveMaterialSource(mesh, slot, material, out _, out _);
 
-    private string? ResolveMaterialSource(Guid mesh, Guid slot, Guid material, out ProjectMaterial? authored, out RenderAssetEntry? imported)
+    private string? ResolveMaterialSource(Guid mesh, Guid slot, Guid material, out ProjectMaterial? authored, out RenderAssetKey frozenKey)
     {
         authored = null;
-        imported = null;
+        frozenKey = default;
         if (Collision is { } collision) return collision.Message;
-        if (_entries.GetValueOrDefault(mesh)?.Definition is not MeshDefinition geometry ||
-            DefaultDefinition(mesh) is not { } original || SlotIndex(original, slot) < 0)
+        if (!TryGeometry(mesh, out _, out var hasUv0) || DefaultDefinition(mesh) is not { } original)
+            return InvalidSlot(mesh, slot);
+        var index = SlotIndex(original, slot);
+        if (index < 0)
             return InvalidSlot(mesh, slot);
         if (_authored?.Find(material) is { } row)
         {
             authored = row;
             if (authored.BaseColorTextureId is not { } texture) return null;
             if (!_textureKeys.ContainsKey(texture))
-                return $"Текстура {texture:D} материала «{authored.Name}» ({material:D}) отсутствует в выбранных импортах сцены.";
-            if (geometry.Uv0.IsEmpty)
+                return $"Текстура {texture:D} материала «{authored.Name}» ({material:D}) отсутствует в проекте и выбранных импортах сцены.";
+            if (!hasUv0)
                 return $"Материал «{authored.Name}» ({material:D}) требует UV0 у меша {mesh:D}.";
+            return null;
+        }
+        if (_meshes?.Materials.ContainsKey(material) == true && original.Bindings[index].Material.AssetId == material)
+        {
+            frozenKey = original.Bindings[index].Material;
             return null;
         }
         if (_entries.GetValueOrDefault(material) is not { Definition: OpaqueUnlitMaterialDefinition definition } entry)
             return $"Материал {material:D} отсутствует.";
-        imported = entry;
-        return definition.BaseColorTexture.HasValue && geometry.Uv0.IsEmpty
+        frozenKey = entry.Key;
+        return definition.BaseColorTexture.HasValue && !hasUv0
             ? $"Материал {material:D} требует UV0 у меша {mesh:D}." : null;
     }
 
-    private RenderAssetEntry? ResolveMaterial(Guid mesh, Guid slot, Guid id, out string? diagnostic)
+    private RenderAssetKey? ResolveMaterial(Guid mesh, Guid slot, Guid id, out string? diagnostic)
     {
-        diagnostic = ResolveMaterialSource(mesh, slot, id, out var authored, out var imported);
+        diagnostic = ResolveMaterialSource(mesh, slot, id, out var authored, out var frozenKey);
         if (diagnostic != null) return null;
-        return authored == null ? imported : _authored!.Resolve(_projectId, authored,
-            authored.BaseColorTextureId is { } texture ? _textureKeys[texture] : null);
+        return authored == null ? frozenKey : _authored!.Resolve(_projectId, authored,
+            authored.BaseColorTextureId is { } texture ? _textureKeys[texture] : null).Key;
     }
 
     private static int SlotIndex(MaterialBindingSetDefinition set, Guid slot)
@@ -170,14 +278,22 @@ internal sealed class SceneRenderAssets
     }
 
     private static string InvalidSlot(Guid mesh, Guid slot) => $"Слот {slot:D} отсутствует у меша {mesh:D}.";
-    private bool HasReservedId(Guid id) => _entries.ContainsKey(id) || _importIds?.Contains(id) == true || _authored?.Find(id) != null;
+    private static bool IsBuiltinId(Guid id) => id == RenderContentProfile.CubeAssetId ||
+        id == RenderContentProfile.CubeBindingSetAssetId || id == RenderContentProfile.WhiteMaterialAssetId ||
+        id == RenderContentProfile.DefaultSlotId;
+
+    private bool IsCatalogIdReserved(Guid id) => IsBuiltinId(id) || _entries.ContainsKey(id) || _importIds?.Contains(id) == true ||
+        _fullSlotIds?.Contains(id) == true;
+
+    private bool HasReservedId(Guid id) => IsCatalogIdReserved(id) || _projectTextures?.ContainsKey(id) == true ||
+        _authored?.Find(id) != null || _meshes?.Owners.ContainsKey(id) == true;
 
     internal Guid? BindingForMaterial(Guid mesh, Guid slot, Guid material)
     {
         if (MaterialDiagnostic(mesh, slot, material) != null) return null;
         var original = DefaultDefinition(mesh)!;
         var imported = original.Bindings[SlotIndex(original, slot)];
-        if (imported.Material.AssetId == material) return _defaults[mesh];
+        if (imported.Material.AssetId == material) return DefaultBinding(mesh);
         var id = MaterialBindingId(mesh, original.Bindings.Length == 1 ? null : slot, material);
         return HasReservedId(id) || id == Guid.Empty ? null : id;
     }
@@ -190,7 +306,7 @@ internal sealed class SceneRenderAssets
 
         var overrides = previous.Bindings.Select(item =>
                 (item.SlotId, MaterialId: item.SlotId == slot ? material : item.Material.AssetId))
-            .Where((item, index) => item.MaterialId != original.Bindings[index].Material.AssetId).ToArray();
+            .Where(item => item.MaterialId != original.Bindings[SlotIndex(original, item.SlotId)].Material.AssetId).ToArray();
         return OverrideReference(mesh, overrides);
     }
 
@@ -201,10 +317,11 @@ internal sealed class SceneRenderAssets
 
         var overrides = new List<(Guid SlotId, Guid MaterialId)>();
         var foundOverride = false;
-        for (var i = 0; i < original.Bindings.Length; i++)
+        foreach (var slot in original.Bindings)
         {
-            var slot = original.Bindings[i];
-            var material = current.Bindings[i].Material.AssetId;
+            var index = SlotIndex(current, slot.SlotId);
+            if (index < 0) return null;
+            var material = current.Bindings[index].Material.AssetId;
             if (material == slot.Material.AssetId) continue;
             foundOverride = true;
             var label = SlotName(slot.SlotId);
@@ -220,7 +337,7 @@ internal sealed class SceneRenderAssets
     private string? OverrideReference(Guid mesh, IReadOnlyList<(Guid SlotId, Guid MaterialId)> overrides)
     {
         if (Collision != null) return null;
-        if (overrides.Count == 0) return _defaults[mesh].ToString("D");
+        if (overrides.Count == 0) return DefaultBinding(mesh)?.ToString("D");
         if (overrides.Count == 1)
             return BindingForMaterial(mesh, overrides[0].SlotId, overrides[0].MaterialId)?.ToString("D");
         foreach (var (slot, material) in overrides)
@@ -230,12 +347,14 @@ internal sealed class SceneRenderAssets
     }
 
     internal static References ResolveReferences(SceneRenderAssets? assets, string meshReference, string bindingReference,
-        bool allowMissingMesh = false)
+        bool allowMissingMesh = false, bool preview = false)
     {
         if (assets?.Collision is { } collision) return new(null, default, null, collision.Message);
         if (!Guid.TryParseExact(meshReference, "D", out var mesh) || mesh == Guid.Empty)
             return new(null, default, null, "Ссылка на меш должна содержать непустой ID.");
-        if (assets == null || !assets._defaults.ContainsKey(mesh))
+        if (preview && mesh == RenderContentProfile.CubeAssetId)
+            return ResolveParsedReferences(null, mesh, bindingReference, allowMissingMesh: false);
+        if (assets == null || assets.DefaultBinding(mesh) == null)
             return ResolveParsedReferences(assets, mesh, bindingReference, allowMissingMesh);
 
         // Cache only the derived bindings this snapshot actually uses, not every possible mesh/slot/material tuple.
@@ -244,7 +363,7 @@ internal sealed class SceneRenderAssets
         {
             if (assets._variants?.TryGetValue(key, out var cached) == true) return cached;
             var resolved = ResolveParsedReferences(assets, mesh, bindingReference, allowMissingMesh);
-            if (resolved.Definition != null && !assets._entries.ContainsKey(resolved.Binding) &&
+            if (resolved.Definition != null && assets.ReadBindingEntry(resolved.Binding) == null &&
                 (assets._variants?.Count ?? 0) < RenderContentProfile.MaximumManifestEntries)
                 (assets._variants ??= []).Add(key, resolved);
             return resolved;
@@ -254,24 +373,23 @@ internal sealed class SceneRenderAssets
     private static References ResolveParsedReferences(SceneRenderAssets? assets, Guid mesh, string bindingReference, bool allowMissingMesh)
     {
         var validBinding = SceneMaterialBindingReference.TryParse(mesh, bindingReference, out var binding, out var overrides);
-        if (assets?._content == null && mesh == RenderContentProfile.CubeAssetId)
+        if (mesh == RenderContentProfile.CubeAssetId && assets?._entries.ContainsKey(mesh) != true)
         {
             if (!validBinding || overrides.Length != 0) return new(null, binding, null, InvalidBinding(mesh));
-            return binding == RenderContentProfile.CubeBindingSetAssetId ? default : new(null, binding, null, MissingBinding(mesh, binding));
+            return binding == RenderContentProfile.CubeBindingSetAssetId ? new(null, binding, null, null) : new(null, binding, null, MissingBinding(mesh, binding));
         }
-        var geometry = assets?._entries.GetValueOrDefault(mesh);
-        if (geometry?.Definition is not MeshDefinition)
+        if (assets == null || !assets.TryGeometry(mesh, out var geometry, out _))
         {
             if (allowMissingMesh && validBinding) return default;
-            return new(null, binding, null, geometry == null
-                ? $"Меш {mesh:D} отсутствует. Выберите его импорт в каталоге сцены."
+            return new(null, binding, null, assets?.HasReservedId(mesh) != true
+                ? $"Меш {mesh:D} отсутствует. Выберите ассет проекта или его импорт в каталоге сцены."
                 : $"По ссылке {mesh:D} ожидается меш.");
         }
         if (!validBinding)
             return new(mesh, binding, null, InvalidBinding(mesh));
 
-        var entry = assets!._entries.GetValueOrDefault(binding);
-        var allowFullContentFallback = allowMissingMesh && assets._hasFullContent;
+        var entry = assets.ReadBindingEntry(binding);
+        var allowFullContentFallback = allowMissingMesh && assets._hasFullContent && assets._meshes?.Rows.ContainsKey(mesh) != true;
         if (entry == null)
         {
             if (assets.HasReservedId(binding))
@@ -287,7 +405,7 @@ internal sealed class SceneRenderAssets
         }
         if (entry.Definition is not MaterialBindingSetDefinition set)
             return new(mesh, binding, null, $"По ссылке {binding:D} ожидается привязка материала для меша {mesh:D}.");
-        if (set.Mesh != geometry.Key)
+        if (set.Mesh != geometry)
             return new(mesh, binding, null, $"Привязка материала {binding:D} относится к мешу {set.Mesh.AssetId:D}. Требуется привязка для меша {mesh:D}.");
         if (overrides.Length != 0 && !MatchesOverrides(set, assets.DefaultDefinition(mesh), overrides))
             return new(mesh, binding, null, MissingBinding(mesh, binding));
@@ -301,7 +419,8 @@ internal sealed class SceneRenderAssets
         for (var i = 0; i < set.Bindings.Length; i++)
         {
             var slot = set.Bindings[i];
-            var material = original?.Bindings[i].Material.AssetId;
+            var index = original == null ? -1 : SlotIndex(original, slot.SlotId);
+            var material = index < 0 ? (Guid?)null : original!.Bindings[index].Material.AssetId;
             foreach (var (slotId, materialId) in overrides)
             {
                 if (slotId != slot.SlotId) continue;
@@ -326,8 +445,8 @@ internal sealed class SceneRenderAssets
         var bindings = original.Bindings.ToBuilder();
         foreach (var (slot, material) in overrides)
         {
-            if (ResolveMaterial(mesh, slot, material, out diagnostic) is not { } entry) return null;
-            bindings[SlotIndex(original, slot)] = new(slot, entry.Key);
+            if (ResolveMaterial(mesh, slot, material, out diagnostic) is not { } key) return null;
+            bindings[SlotIndex(original, slot)] = new(slot, key);
         }
         return new(original.Mesh, bindings);
     }
@@ -352,50 +471,190 @@ internal sealed class SceneRenderAssets
         }
         if (match < 0) return null;
         var matchedSlot = original.Bindings[match];
-        if (ResolveMaterial(mesh, matchedSlot.SlotId, material, out diagnostic) is not { } entry) return null;
-        return new(original.Mesh, original.Bindings.SetItem(match, matchedSlot with { Material = entry.Key }));
+        if (ResolveMaterial(mesh, matchedSlot.SlotId, material, out diagnostic) is not { } key) return null;
+        return new(original.Mesh, original.Bindings.SetItem(match, matchedSlot with { Material = key }));
     }
 
-    internal static GameBuildRenderContent? PrepareBuild(SceneRenderAssets? assets, ResolvedSceneSnapshot scene, bool requireAll, CancellationToken token)
+    internal static async Task<GameBuildRenderContent?> PrepareBuildAsync(SceneRenderAssets? assets, ResolvedSceneSnapshot scene,
+        bool requireAll, CancellationToken token)
     {
         if (assets == null && !requireAll) return null;
         if (assets?.Collision is { } collision) throw new InvalidOperationException(collision.Message);
-        var added = new Dictionary<Guid, RenderAssetEntry>();
+        var closure = assets == null ? null : new ExactClosure(assets, keepBase: true);
+        var builtinCube = false;
         foreach (var entity in scene.Entities.Values)
         {
             token.ThrowIfCancellationRequested();
-            foreach (var renderer in entity.Components.Values.Where(component => component.TypeId == MeshRenderingComponents.MeshRendererId))
+            foreach (var renderer in entity.Components.Values)
             {
-                var references = ResolveReferences(assets, renderer.Properties["mesh"].Value.GetString(),
-                    renderer.Properties["bindings"].Value.GetString(), allowMissingMesh: !requireAll);
-                if (references.Diagnostic is { } error)
-                    throw new InvalidOperationException($"Сущность {entity.Id.Value:D}. {error}");
-                if (assets == null || references.Definition is not { } variant || assets._entries.ContainsKey(references.Binding)) continue;
-                if (!Add(variant.CreateKey(assets._projectId, references.Binding), variant)) continue;
-                foreach (var slot in variant.Bindings)
-                {
-                    if (assets._entries.ContainsKey(slot.Material.AssetId)) continue;
-                    if (assets._authored?.FindResolved(slot.Material.AssetId) is not { } material || material.Key != slot.Material)
-                        throw new InvalidOperationException($"Ревизия материала {slot.Material.AssetId:D} не разрешена для сборки.");
-                    Add(material.Key, material.Definition, material);
-                }
+                if (renderer.TypeId != MeshRenderingComponents.MeshRendererId) continue;
+                var references = await MaterializeRendererAsync(assets, closure, entity, renderer, requireAll, preview: false, token)
+                    .ConfigureAwait(false);
+                builtinCube |= references.Definition == null && references.Binding == RenderContentProfile.CubeBindingSetAssetId;
             }
         }
-        if (assets == null) return null;
-        if (added.Count == 0 && !assets._rebuildBase) return assets._content;
-        return new(assets._projectId, [.. assets._entries.Values, .. added.Values]);
+        if (closure == null) return null;
+        if (builtinCube && closure.HasEntries) closure.AddBuiltinCube();
+        return closure.Freeze();
+    }
 
-        bool Add(RenderAssetKey key, RenderAssetDefinition definition, RenderAssetEntry? entry = null)
+    private static async ValueTask<References> MaterializeRendererAsync(SceneRenderAssets? assets, ExactClosure? closure,
+        ResolvedEntity entity, ResolvedComponent renderer, bool requireAll, bool preview, CancellationToken token)
+    {
+        var references = ResolveReferences(assets, renderer.Properties["mesh"].Value.GetString(),
+            renderer.Properties["bindings"].Value.GetString(), allowMissingMesh: !requireAll, preview);
+        if (references.Diagnostic is { } error)
+            throw new InvalidOperationException($"Сущность {entity.Id.Value:D}. {error}");
+        if (references.Definition is { } binding)
+            await closure!.AddBindingAsync(references.Binding, binding, token).ConfigureAwait(false);
+        return references;
+    }
+
+    // A single exact walk keeps old selected/full payloads in Build, never whole authored mesh blobs.
+    private sealed class ExactClosure(SceneRenderAssets assets, bool keepBase)
+    {
+        private readonly Dictionary<Guid, RenderAssetEntry> _added = [];
+        private Dictionary<Guid, RenderContentManifest>? _loadedMeshes;
+        private bool _builtinCubeAdded;
+        internal bool HasEntries => _added.Count != 0 || keepBase && assets._entries.Count != 0;
+
+        internal async ValueTask AddBindingAsync(Guid id, MaterialBindingSetDefinition binding, CancellationToken token)
         {
-            if (added.TryGetValue(key.AssetId, out var previous))
+            var entry = assets.ReadBindingEntry(id);
+            var key = entry?.Key ?? binding.CreateKey(assets._projectId, id);
+            if (Existing(key) != null) return;
+            AddNew(entry ?? new(key, binding));
+            await AddResourceAsync(binding.Mesh, token).ConfigureAwait(false);
+            foreach (var slot in binding.Bindings)
             {
-                if (previous.Key != key) throw new InvalidOperationException(new ResourceCollision(key.AssetId).Message);
-                return false;
+                var material = await AddResourceAsync(slot.Material, token).ConfigureAwait(false);
+                if (material.Definition is OpaqueUnlitMaterialDefinition { BaseColorTexture: { } texture })
+                    await AddResourceAsync(texture, token).ConfigureAwait(false);
             }
-            if (assets!._entries.Count + added.Count >= RenderContentProfile.MaximumManifestEntries)
+        }
+
+        internal void AddBuiltinCube()
+        {
+            if (_builtinCubeAdded) return;
+            var slotId = RenderContentProfile.DefaultSlotId;
+            if (assets._entries.ContainsKey(slotId) || assets._importIds?.Contains(slotId) == true)
+                throw new InvalidOperationException(new ResourceCollision(slotId).Message);
+            var builtin = BuiltinRenderContent.Create(assets._projectId, RenderContentHash.Compute("TRC1"u8), Guid.NewGuid());
+            foreach (var entry in builtin.Entries)
+            {
+                var id = entry.Key.AssetId;
+                var occupying = assets._entries.GetValueOrDefault(id);
+                if (occupying is { } other && other.Key != entry.Key || assets._fullSlotIds?.Contains(id) == true ||
+                    occupying == null && assets._importIds?.Contains(id) == true)
+                    throw new InvalidOperationException(new ResourceCollision(id).Message);
+                if (Existing(entry.Key) == null) AddNew(entry);
+            }
+            _builtinCubeAdded = true;
+        }
+
+        internal GameBuildRenderContent? Freeze()
+        {
+            if (!HasEntries) return null;
+            if (keepBase && _added.Count == 0 && !assets._rebuildBase) return assets._content;
+            return new(assets._projectId, keepBase ? [.. assets._entries.Values, .. _added.Values] : [.. _added.Values]);
+        }
+
+        private async ValueTask<RenderAssetEntry> AddResourceAsync(RenderAssetKey key, CancellationToken token)
+        {
+            if (Existing(key) is { } existing) return existing;
+            var entry = assets._entries.GetValueOrDefault(key.AssetId) ?? assets._authored?.FindResolved(key.AssetId);
+            if (entry == null && key.KindId == RenderContentProfile.BaseColorTextureKindId &&
+                assets._projectTextures?.GetValueOrDefault(key.AssetId) is { } texture)
+            {
+                try { entry = new(key, await assets._textureCatalog!.ReadDefinitionAsync(texture, token).ConfigureAwait(false)); }
+                catch (Exception failure) when (failure is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or RenderContentException)
+                {
+                    throw new InvalidOperationException($"Не удалось прочитать текстуру «{texture.Name}» ({texture.Id:D}).", failure);
+                }
+            }
+            if (entry == null && assets._meshes?.Owners.GetValueOrDefault(key.AssetId) is { } mesh)
+            {
+                _loadedMeshes ??= [];
+                if (!_loadedMeshes.TryGetValue(mesh.Id, out var manifest))
+                {
+                    try { manifest = await assets._meshes.Catalog.ReadDefinitionAsync(mesh, token).ConfigureAwait(false); }
+                    catch (Exception failure) when (failure is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or RenderContentException)
+                    {
+                        throw new InvalidOperationException($"Не удалось прочитать меш «{mesh.Name}» ({mesh.Id:D}).", failure);
+                    }
+                    _loadedMeshes.Add(mesh.Id, manifest);
+                }
+                entry = manifest.Resolve(key);
+            }
+            if (entry == null || entry.Key != key)
+                throw new InvalidOperationException($"Ревизия ресурса {key.AssetId:D} не разрешена для сборки.");
+            AddNew(entry);
+            return entry;
+        }
+
+        private RenderAssetEntry? Existing(RenderAssetKey key)
+        {
+            var entry = _added.GetValueOrDefault(key.AssetId) ?? (keepBase ? assets._entries.GetValueOrDefault(key.AssetId) : null);
+            if (entry != null && entry.Key != key) throw new InvalidOperationException(new ResourceCollision(key.AssetId).Message);
+            return entry;
+        }
+
+        private void AddNew(RenderAssetEntry entry)
+        {
+            if ((keepBase ? assets._entries.Count : 0) + _added.Count >= RenderContentProfile.MaximumManifestEntries)
                 throw new InvalidOperationException("Превышен лимит ресурсов в сборке сцены.");
-            added.Add(key.AssetId, entry ?? new(key, definition));
-            return true;
+            _added.Add(entry.Key.AssetId, entry);
+        }
+    }
+
+    private sealed class AuthoredMeshes
+    {
+        internal ProjectMeshCatalog Catalog { get; }
+        internal Dictionary<Guid, ProjectMesh> Rows { get; } = [];
+        internal Dictionary<Guid, ProjectMesh> Owners { get; } = [];
+        internal Dictionary<Guid, RenderAssetEntry> Bindings { get; } = [];
+        internal Dictionary<Guid, ProjectMeshDefaultMaterial> Materials { get; } = [];
+        internal Dictionary<Guid, RenderAssetKey> Textures { get; } = [];
+        internal Dictionary<Guid, string> SlotNames { get; } = [];
+        internal ResourceCollision? Collision { get; }
+
+        internal AuthoredMeshes(Guid project, ProjectMeshCatalog catalog, IReadOnlyList<ProjectMesh> rows)
+        {
+            Catalog = catalog;
+            ResourceCollision? collision = null;
+            foreach (var row in rows)
+            {
+                Reserve(row.Id, row);
+                Reserve(row.DefaultBindingId, row);
+                Rows.TryAdd(row.Id, row);
+                foreach (var texture in row.DefaultTextures)
+                {
+                    Reserve(texture.Id, row);
+                    Textures.TryAdd(texture.Id, texture.Key(project));
+                }
+                foreach (var material in row.DefaultMaterials)
+                {
+                    Reserve(material.Id, row);
+                    Materials.TryAdd(material.Id, material);
+                }
+                var bindings = new MaterialSlotBinding[row.Slots.Length];
+                for (var index = 0; index < bindings.Length; index++)
+                {
+                    var slot = row.Slots[index];
+                    Reserve(slot.Id, row);
+                    SlotNames.TryAdd(slot.Id, slot.Name);
+                    var material = Materials[slot.DefaultMaterialId];
+                    bindings[index] = new(slot.Id, material.Key(project));
+                }
+                var set = new MaterialBindingSetDefinition(row.MeshKey(project), bindings);
+                Bindings.TryAdd(row.DefaultBindingId, new(row.DefaultBindingKey(project), set));
+            }
+            Collision = collision;
+
+            void Reserve(Guid id, ProjectMesh row)
+            {
+                if (!Owners.TryAdd(id, row)) collision ??= new(id);
+            }
         }
     }
 

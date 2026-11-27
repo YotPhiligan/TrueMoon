@@ -81,6 +81,10 @@ headless Player совпали по вводу и игровым наблюде�
 проверены в `1.2611.21.9-alpha`. Следующие варианты собраны в
 [очереди ED4i](engine/EDITOR_PLAN.md#ed4i-next).
 
+[Авторские Texture и Mesh](engine/EDITOR_PLAN.md#ed4i-authoring-assets)
+входят в Build и committed Edit Preview. Управляемые и нативные результаты
+ведутся раздельно в [статусе ED4i](engine/STATUS.md#ed4i-authoring-assets-status).
+
 Результаты относятся к проверенным Windows x64 профилям. K7, физический ввод
 и DPI, device loss, другие OS/RID, performance/soak и итоговые
 [критерии выпуска](PLAN.md#общие-критерии-выпуска) остаются открыты.

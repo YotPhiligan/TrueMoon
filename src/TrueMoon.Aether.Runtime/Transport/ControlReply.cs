@@ -43,4 +43,8 @@ public sealed class ControlReply
     public bool RenderViewReady { get; set; }
     /// <summary>True only when this PresentRenderView command matched a produced frame of the current source.</summary>
     public bool RenderViewPresentationAccepted { get; set; }
+    /// <summary>Exact render payload capability; zero outside mesh-capable EditPreview.</summary>
+    public int PreviewRenderVersion { get; set; }
+    /// <summary>Canonical render payload SHA256; empty until successful activation.</summary>
+    public string PreviewRenderDigest { get; set; } = "";
 }

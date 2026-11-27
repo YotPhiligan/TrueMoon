@@ -9,6 +9,9 @@ using TrueMoon.Aether.Tooling.Scenes.Authoring;
 
 namespace TrueMoon.Aether.Editor.Tooling.Documents;
 
+[Flags]
+internal enum AssetDraftKind { None = 0, Material = 1, Texture = 2, Mesh = 4 }
+
 /// <summary>Serializes document actions and user decisions, without holding controls or owning project sessions.</summary>
 /// <remarks>The App owns this service. Window close calls RequestExitAsync; terminal shutdown calls StopAsync.
 /// Snapshot refresh belongs to the UI owner. Recoverable errors veto close and remain available through Read.</remarks>
@@ -24,8 +27,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private readonly Action<ProjectSession?>? _selectProject;
     private ProjectSession? _boundProject;
     private (ProjectSession Project, IReadOnlyList<ProjectModelCatalogItem> Items)? _modelCatalog;
-    private ProjectSession? _materialDraft;
+    private ProjectSession? _assetDraftProject;
+    private AssetDraftKind _assetDrafts;
     internal const string MaterialDraftWarning = "Сохраните или отмените правку материала.";
+    internal const string TextureDraftWarning = "Сохраните или отмените правку текстуры.";
+    internal const string MeshDraftWarning = "Сохраните или отмените правку меша.";
     private bool _projectReady = true;
     private Task _pending = Task.CompletedTask;
     private Task<bool>? _exit;
@@ -97,14 +103,34 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         if (_closed || _busy || _exiting || _lifetime.IsCancellationRequested) return false;
         if (!_canTransition() && (command != DocumentCommand.ReimportModel || _canReimportWhilePlaying?.Invoke() != true)) return false;
         if (command is DocumentCommand.OpenProject or DocumentCommand.CloseProject)
-            return !HasMaterialDraft && _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
+            return ActiveDrafts == AssetDraftKind.None && _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
                 _projects.Active?.Documents?.Read().Operation is null or DocumentOperation.None;
         if (!BindingReady) return false;
         var session = _projects.Active?.Documents;
         var document = session?.Read();
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
-        if (command is DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial)
-            return session!.HasMaterialCatalog && (command == DocumentCommand.WriteMaterial || !HasMaterialDraft);
+        switch (command)
+        {
+            case DocumentCommand.ReadMaterialCatalog:
+                return session!.HasMaterialCatalog && !ActiveDrafts.HasFlag(AssetDraftKind.Material);
+            case DocumentCommand.WriteMaterial:
+                return session!.HasMaterialCatalog;
+            case DocumentCommand.ReadTextureCatalog:
+                return session!.HasTextureCatalog && !ActiveDrafts.HasFlag(AssetDraftKind.Texture);
+            case DocumentCommand.RenameTexture:
+                return session!.HasTextureCatalog;
+            case DocumentCommand.ImportTexture:
+            case DocumentCommand.ReplaceTextureSource:
+                return session!.CanEditTextureCatalog;
+            case DocumentCommand.ReadMeshCatalog:
+                return session!.HasMeshCatalog && !ActiveDrafts.HasFlag(AssetDraftKind.Mesh);
+            case DocumentCommand.RenameMesh:
+                return session!.HasMeshCatalog;
+            case DocumentCommand.ReadMeshSource:
+            case DocumentCommand.CreateMesh:
+            case DocumentCommand.ReplaceMeshGeometry:
+                return session!.CanEditMeshCatalog;
+        }
         if (command is DocumentCommand.ReadModelCatalog or DocumentCommand.SelectModel or DocumentCommand.PlaceModel)
             return session!.HasModelCatalog && (command == DocumentCommand.ReadModelCatalog || document.Content != null);
         if (command == DocumentCommand.ImportModel)
@@ -126,44 +152,107 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     internal bool PlaceModel(EditorProjectModelRow row) => Execute(DocumentCommand.PlaceModel, "", null, row);
     internal bool ImportModel(string path, ProjectSession project) => Execute(DocumentCommand.ImportModel, path, null, importTarget: project);
 
-    private bool HasMaterialDraft => _materialDraft != null && ReferenceEquals(_materialDraft, _projects.Active);
+    private AssetDraftKind ActiveDrafts => ReferenceEquals(_assetDraftProject, _projects.Active) ? _assetDrafts : AssetDraftKind.None;
 
-    internal bool SetMaterialDraft(ProjectSession project, bool dirty)
+    internal bool SetAssetDraft(ProjectSession project, AssetDraftKind kind, bool dirty)
     {
         lock (_gate)
         {
             if (dirty)
             {
-                if (!ReferenceEquals(project, _projects.Active) || !Available(DocumentCommand.WriteMaterial)) return false;
-                _materialDraft = project;
+                var command = kind switch
+                {
+                    AssetDraftKind.Material => DocumentCommand.WriteMaterial,
+                    AssetDraftKind.Texture => DocumentCommand.RenameTexture,
+                    AssetDraftKind.Mesh => DocumentCommand.RenameMesh,
+                    _ => throw new ArgumentOutOfRangeException(nameof(kind))
+                };
+                if (!ReferenceEquals(project, _projects.Active) || !Available(command)) return false;
+                if (!ReferenceEquals(project, _assetDraftProject))
+                {
+                    _assetDraftProject = project;
+                    _assetDrafts = AssetDraftKind.None;
+                }
+                _assetDrafts |= kind;
             }
-            else if (ReferenceEquals(_materialDraft, project))
+            else if (ReferenceEquals(_assetDraftProject, project))
             {
-                _materialDraft = null;
-                if (_error is MaterialDraftException) _error = null;
+                _assetDrafts &= ~kind;
+                if (_assetDrafts == AssetDraftKind.None) _assetDraftProject = null;
+                if (_error is AssetDraftException) _error = DraftError(ActiveDrafts);
             }
             return true;
         }
     }
 
+    private static Exception? DraftError(AssetDraftKind drafts) => drafts switch
+    {
+        AssetDraftKind.None => null,
+        AssetDraftKind.Material => new AssetDraftException(MaterialDraftWarning),
+        AssetDraftKind.Texture => new AssetDraftException(TextureDraftWarning),
+        AssetDraftKind.Mesh => new AssetDraftException(MeshDraftWarning),
+        _ => new AssetDraftException("Сохраните или отмените правки ресурсов проекта.")
+    };
+
+    private static bool IsAssetCatalogCommand(DocumentCommand command) =>
+        command is DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial or
+            DocumentCommand.ReadTextureCatalog or DocumentCommand.ImportTexture or DocumentCommand.ReplaceTextureSource or DocumentCommand.RenameTexture or
+            DocumentCommand.ReadMeshCatalog or DocumentCommand.ReadMeshSource or DocumentCommand.CreateMesh or DocumentCommand.ReplaceMeshGeometry or DocumentCommand.RenameMesh;
+
     internal Task<ProjectMaterialCatalogSnapshot> ReadMaterialCatalogAsync(ProjectSession project) =>
-        RunMaterialAsync(project, DocumentCommand.ReadMaterialCatalog, static (document, token) => document.ReadMaterialCatalogAsync(token));
+        RunAssetCatalogAsync(project, DocumentCommand.ReadMaterialCatalog, static (document, token) => document.ReadMaterialCatalogAsync(token));
 
     internal Task<ProjectMaterialCatalogSnapshot> WriteMaterialAsync(ProjectSession project, ProjectMaterialCatalogSnapshot expected,
         ProjectMaterial material) =>
-        RunMaterialAsync(project, DocumentCommand.WriteMaterial, (document, token) => document.WriteMaterialAsync(expected, material, token));
+        RunAssetCatalogAsync(project, DocumentCommand.WriteMaterial, (document, token) => document.WriteMaterialAsync(expected, material, token));
 
-    private Task<ProjectMaterialCatalogSnapshot> RunMaterialAsync(ProjectSession project, DocumentCommand command,
-        Func<SceneDocumentSession, CancellationToken, Task<ProjectMaterialCatalogSnapshot>> action)
+    internal Task<ProjectTextureCatalogSnapshot> ReadTextureCatalogAsync(ProjectSession project) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ReadTextureCatalog, static (document, token) => document.Textures.ReadAsync(token));
+
+    internal Task<ProjectTextureCatalogSnapshot> ImportTextureAsync(ProjectSession project, ProjectTextureCatalogSnapshot expected,
+        string name, string path) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ImportTexture, (document, token) => document.Textures.ImportAsync(expected, name, path, token));
+
+    internal Task<ProjectTextureCatalogSnapshot> ReplaceTextureSourceAsync(ProjectSession project, ProjectTextureCatalogSnapshot expected,
+        Guid id, string path) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ReplaceTextureSource, (document, token) => document.Textures.ReplaceSourceAsync(expected, id, path, token));
+
+    internal Task<ProjectTextureCatalogSnapshot> RenameTextureAsync(ProjectSession project, ProjectTextureCatalogSnapshot expected,
+        Guid id, string name) =>
+        RunAssetCatalogAsync(project, DocumentCommand.RenameTexture, (document, token) => document.Textures.RenameAsync(expected, id, name, token));
+
+    internal Task<ProjectMeshCatalogSnapshot> ReadMeshCatalogAsync(ProjectSession project) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ReadMeshCatalog, static (document, token) => document.Meshes.ReadAsync(token));
+
+    internal Task<IReadOnlyList<ProjectModelCatalogItem>> ReadMeshSourcesAsync(ProjectSession project) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ReadMeshSource, static (document, token) => document.Meshes.ReadSourcesAsync(token));
+
+    internal Task<IReadOnlyList<ProjectMeshGeometryChoice>> ReadMeshSourceAsync(ProjectSession project, Guid sourceId) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ReadMeshSource, (document, token) => document.Meshes.ReadSourceAsync(sourceId, token));
+
+    internal Task<ProjectMeshCatalogSnapshot> CreateMeshAsync(ProjectSession project, ProjectMeshCatalogSnapshot expected,
+        MeshSourceChoice source, string name) =>
+        RunAssetCatalogAsync(project, DocumentCommand.CreateMesh, (document, token) => document.Meshes.CreateAsync(expected, source, name, token));
+
+    internal Task<ProjectMeshCatalogSnapshot> ReplaceMeshGeometryAsync(ProjectSession project, ProjectMeshCatalogSnapshot expected,
+        Guid id, MeshSourceChoice source) =>
+        RunAssetCatalogAsync(project, DocumentCommand.ReplaceMeshGeometry, (document, token) => document.Meshes.ReplaceGeometryAsync(expected, id, source, token));
+
+    internal Task<ProjectMeshCatalogSnapshot> RenameMeshAsync(ProjectSession project, ProjectMeshCatalogSnapshot expected,
+        Guid id, string name) =>
+        RunAssetCatalogAsync(project, DocumentCommand.RenameMesh, (document, token) => document.Meshes.RenameAsync(expected, id, name, token));
+
+    private Task<T> RunAssetCatalogAsync<T>(ProjectSession project, DocumentCommand command,
+        Func<SceneDocumentSession, CancellationToken, Task<T>> action) where T : class
     {
         TaskCompletionSource drain;
-        TaskCompletionSource<ProjectMaterialCatalogSnapshot> result;
+        TaskCompletionSource<T> result;
         CancellationTokenSource cancellation;
         SceneDocumentSession document;
         lock (_gate)
         {
             if (!ReferenceEquals(project, _projects.Active) || !Available(command))
-                return Task.FromException<ProjectMaterialCatalogSnapshot>(new InvalidOperationException("Операция с материалами сейчас недоступна."));
+                return Task.FromException<T>(new InvalidOperationException("Операция с каталогом ресурсов сейчас недоступна."));
             document = project.Documents!;
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
             drain = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -176,7 +265,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         }
         _ = Task.Run(async () =>
         {
-            ProjectMaterialCatalogSnapshot? snapshot = null;
+            T? snapshot = null;
             Exception? failure = null;
             try
             {
@@ -204,7 +293,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         EditorProjectModelRow? catalogChoice = null, ProjectSession? importTarget = null)
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
-        if (command is DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial) return false;
+        if (IsAssetCatalogCommand(command)) return false;
         TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
         ProjectSession? owner;
         SceneDocument? placementDocument = null;
@@ -482,7 +571,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         {
             _decision?.TrySetResult((DocumentCloseChoice.Cancel, null));
             _cancellationError = Combine(_cancellationError, CancelWork());
-            if (_operation is not (DocumentCommand.ReadMaterialCatalog or DocumentCommand.WriteMaterial))
+            if (!IsAssetCatalogCommand(_operation))
                 _error = Combine(_error, _cancellationError);
         }
     }
@@ -511,9 +600,9 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             }
             if (_closed && !force) return Task.FromResult(true);
             if (_closed && _exit?.IsCompletedSuccessfully == true && _exit.Result) return _exit;
-            if (!force && HasMaterialDraft)
+            if (!force && DraftError(ActiveDrafts) is { } draftError)
             {
-                _error = new MaterialDraftException();
+                _error = draftError;
                 return Task.FromResult(false);
             }
             if (force) _closed = true;
@@ -561,7 +650,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         return completion.Task;
     }
 
-    private sealed class MaterialDraftException() : InvalidOperationException(MaterialDraftWarning) { }
+    private sealed class AssetDraftException(string message) : InvalidOperationException(message) { }
 
     private static void Validate(DocumentCommand command)
     {

@@ -11,6 +11,7 @@ using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Preview;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Runtime.Transport;
 using TrueMoon.Aether.Scenes;
@@ -150,11 +151,12 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
         ReplacementAdmission.Lease owner, CancellationToken token) => StartCoreAsync(null, build, checkpoint, behavior, token, owner, worldScene: scene);
 
     private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, string behavior, CancellationToken token,
-        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null, PreviewViewState? previewView = null)
+        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null,
+        PreviewViewState? previewView = null, PreviewRenderPayload? previewRender = null)
     {
-        if (scene == null && worldScene == null) throw new ArgumentNullException(nameof(scene));
-        var sceneId = worldScene?.Scene.Id.Value.ToString("D") ?? scene!.Id;
-        var sceneRevision = worldScene?.Scene.Revision ?? scene!.Revision;
+        if (scene == null && worldScene == null && previewRender == null) throw new ArgumentNullException(nameof(scene));
+        var sceneId = previewRender?.SceneId.Value.ToString("D") ?? worldScene?.Scene.Id.Value.ToString("D") ?? scene!.Id;
+        var sceneRevision = previewRender?.Revision ?? worldScene?.Scene.Revision ?? scene!.Revision;
         checkpoint?.ValidateFor(_hostId, sceneId, sceneRevision);
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -176,6 +178,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
                 Convert.ToHexString(RandomNumberGenerator.GetBytes(32)));
             _work?.Dispose(); _work = new(); _sequence = 0;
             _activeWorldId = null; _activeRegistryId = null; _activeSceneOperation = null;
+            _activePreviewRender = null;
             Publish(new(SessionState.Starting, identity));
             try
             {
@@ -194,13 +197,15 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
                     throw new InvalidDataException("Runtime does not support the explicit preview view capability.");
                 Publish(Status with { HelloAccepted = true });
                 phase = "LoadScene";
-                var loaded = worldScene == null
-                    ? await ExchangeAsync(CommandKind.LoadScene, r =>
-                        { r.SceneId = scene!.Id; r.Revision = scene.Revision; r.Entities = scene.CopyEntities();
-                          r.PreviewView = previewView == null ? null : PreviewViewCodec.Encode(previewView); }, startup.Token).ConfigureAwait(false)
-                    : await TransferWorldAsync(worldScene, worldBytes!, worldComponents, hello, startup.Token).ConfigureAwait(false);
+                var loaded = previewRender != null
+                    ? await TransferPreviewRenderAsync(previewRender, previewView!, hello, startup.Token).ConfigureAwait(false)
+                    : worldScene != null
+                        ? await TransferWorldAsync(worldScene, worldBytes!, worldComponents, hello, startup.Token).ConfigureAwait(false)
+                        : await ExchangeAsync(CommandKind.LoadScene, r =>
+                            { r.SceneId = scene!.Id; r.Revision = scene.Revision; r.Entities = scene.CopyEntities();
+                              r.PreviewView = previewView == null ? null : PreviewViewCodec.Encode(previewView); }, startup.Token).ConfigureAwait(false);
                 if (loaded.Revision != sceneRevision || loaded.Phase != "Paused") throw new InvalidDataException("Scene acknowledgement mismatch.");
-                if (previewView != null) ValidatePreviewReply(loaded, previewView);
+                if (previewView != null && previewRender == null) ValidatePreviewReply(loaded, previewView);
                 _sceneId = sceneId;
                 Publish(Status with { SceneLoaded = true, Tick = unchecked((ulong)loaded.Tick), SceneRevision = sceneRevision,
                     SceneWorldId = _activeWorldId == null ? null : Guid.Parse(_activeWorldId),
@@ -249,6 +254,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
         var reply = await pending.WaitAsync(token).ConfigureAwait(false);
         ValidateReply(identity, unchecked((ulong)request.Sequence), kind, lease.ProcessId, reply);
         ValidateActiveWorld(reply);
+        ValidateActivePreviewRender(reply);
         _lastAcknowledgement = Stopwatch.GetTimestamp();
         return reply;
     }

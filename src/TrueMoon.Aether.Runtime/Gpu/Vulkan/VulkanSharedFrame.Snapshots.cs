@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Rendering.Resources;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
 
@@ -5,10 +7,12 @@ namespace TrueMoon.Aether.Runtime.Gpu.Vulkan;
 
 public sealed partial class VulkanSharedFrame
 {
-    internal IFactory<IRenderSnapshotSubmission, RenderSnapshotData> SnapshotSubmissions(GpuFrameStamp stamp, RenderSnapshotResources resources)
-        => new Factory<IRenderSnapshotSubmission, RenderSnapshotData>(data => new SnapshotUse(this, stamp, resources, data));
+    internal IFactory<IRenderSnapshotSubmission, RenderSnapshotData> SnapshotSubmissions(GpuFrameStamp stamp, RenderSnapshotResources resources,
+        ImmutableArray<RenderPrimitive> overlay)
+        => new Factory<IRenderSnapshotSubmission, RenderSnapshotData>(data => new SnapshotUse(this, stamp, resources, data, overlay));
 
-    private async Task ProduceSnapshotAsync(GpuFrameStamp stamp, RenderSnapshotData snapshot, RenderSnapshotResources resources, CancellationToken token)
+    private async Task ProduceSnapshotAsync(GpuFrameStamp stamp, RenderSnapshotData snapshot, RenderSnapshotResources resources,
+        ImmutableArray<RenderPrimitive> overlay, CancellationToken token)
     {
         await WaitGatesAsync(token).ConfigureAwait(false);
         try
@@ -25,7 +29,7 @@ public sealed partial class VulkanSharedFrame
                 _meshRenderer.Initialize();
             }
             _stamp = stamp;
-            Submit(false, snapshot: snapshot, resources: resources);
+            Submit(false, snapshot: snapshot, resources: resources, overlay: overlay);
             await FenceAsync(token).ConfigureAwait(false);
             _produced = true; _retired = false;
         }
@@ -39,7 +43,8 @@ public sealed partial class VulkanSharedFrame
         finally { ReleaseGates(); }
     }
 
-    private sealed class SnapshotUse(VulkanSharedFrame frame, GpuFrameStamp stamp, RenderSnapshotResources resources, RenderSnapshotData data)
+    private sealed class SnapshotUse(VulkanSharedFrame frame, GpuFrameStamp stamp, RenderSnapshotResources resources, RenderSnapshotData data,
+        ImmutableArray<RenderPrimitive> overlay)
         : IRenderSnapshotSubmission
     {
         private Task? _work;
@@ -55,7 +60,7 @@ public sealed partial class VulkanSharedFrame
             }
         }
         private async Task ExecuteCoreAsync(CancellationToken token)
-        { await frame.ProduceSnapshotAsync(stamp, data, resources, token).ConfigureAwait(false); IsComplete = true; }
+        { await frame.ProduceSnapshotAsync(stamp, data, resources, overlay, token).ConfigureAwait(false); IsComplete = true; }
         public async ValueTask DisposeAsync()
         {
             Task? work; lock (_workGate) work = _work;

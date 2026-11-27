@@ -1,5 +1,6 @@
 ﻿using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Tooling.Importing;
+using TrueMoon.Aether.Tooling.Preview;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
@@ -32,12 +33,44 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     internal SceneModelImports? ModelImports { get; init; }
     internal ProjectModelCatalog? ModelCatalog { get; init; }
     internal ProjectMaterialCatalog? MaterialCatalog { get; init; }
+    internal ProjectTextureCatalog? TextureCatalog { get; init; }
+    internal ProjectMeshCatalog? MeshCatalog { get; init; }
+    private ProjectMeshCatalogSnapshot? _meshSnapshot, _renderMeshes;
+    private ProjectTextureCatalogSnapshot? _textureSnapshot, _renderTextures;
     private ProjectMaterialCatalogSnapshot? _materialSnapshot;
     private ProjectMaterialCatalogSnapshot? _renderMaterials;
     private SceneRenderAssets? _renderImports, _renderAssets;
 
     internal bool HasMaterialCatalog => MaterialCatalog != null;
     internal ProjectMaterialCatalogSnapshot? MaterialSnapshot { get { lock (_gate) return _materialSnapshot; } }
+    internal bool HasTextureCatalog => TextureCatalog != null;
+    internal bool CanEditTextureCatalog => TextureCatalog?.CanEdit == true;
+    internal ProjectTextureCatalog Textures => TextureCatalog ?? throw new InvalidOperationException("Каталог текстур не настроен.");
+    internal ProjectTextureCatalogSnapshot? TextureSnapshot { get { lock (_gate) return _textureSnapshot; } }
+    internal bool HasMeshCatalog => MeshCatalog != null;
+    internal bool CanEditMeshCatalog => MeshCatalog?.CanEdit == true;
+    internal ProjectMeshCatalog Meshes => MeshCatalog ?? throw new InvalidOperationException("Каталог мешей не настроен.");
+    internal ProjectMeshCatalogSnapshot? MeshSnapshot { get { lock (_gate) return _meshSnapshot; } }
+
+    internal void PublishMeshCatalog(ProjectMeshCatalogSnapshot snapshot)
+    {
+        lock (_gate)
+        {
+            VerifyOpen();
+            if (snapshot.ProjectId != _projectId) throw new ArgumentException("Каталог принадлежит другому проекту.", nameof(snapshot));
+            if (_meshSnapshot == null || _meshSnapshot.Stamp != snapshot.Stamp) _meshSnapshot = snapshot;
+        }
+    }
+
+    internal void PublishTextureCatalog(ProjectTextureCatalogSnapshot snapshot)
+    {
+        lock (_gate)
+        {
+            VerifyOpen();
+            if (snapshot.ProjectId != _projectId) throw new ArgumentException("Каталог принадлежит другому проекту.", nameof(snapshot));
+            if (_textureSnapshot == null || _textureSnapshot.Stamp != snapshot.Stamp) _textureSnapshot = snapshot;
+        }
+    }
 
     internal Task<ProjectMaterialCatalogSnapshot> ReadMaterialCatalogAsync(CancellationToken token) =>
         (MaterialCatalog ?? throw new InvalidOperationException("Каталог материалов не настроен.")).ReadAsync(token);
@@ -180,14 +213,17 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
         }
         var selection = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, token).ConfigureAwait(false);
         var materials = MaterialCatalog == null ? null : await MaterialCatalog.ReadAsync(token).ConfigureAwait(false);
+        var textures = TextureCatalog == null ? null : await TextureCatalog.ReadAsync(token).ConfigureAwait(false);
+        var meshes = MeshCatalog == null ? null : await MeshCatalog.ReadAsync(token).ConfigureAwait(false);
         lock (_gate)
         {
             VerifyBuildCapture(scene, openingId, token);
             if (!ReferenceEquals(imports, selection?.Assets) || !ReferenceEquals(imports, ModelImports?.ReadRenderAssets(openingId)))
                 throw new OperationCanceledException("Выбранные импорты изменились при подготовке сборки.", token);
         }
-        var assets = SceneRenderAssets.WithMaterials(_projectId, imports, materials, fullContent);
-        var content = SceneRenderAssets.PrepareBuild(assets, scene.Resolved, HasModelCatalog && fullContent == null, token);
+        var assets = SceneRenderAssets.Capture(_projectId, imports, materials, fullContent, textures, TextureCatalog, meshes, MeshCatalog);
+        var content = await SceneRenderAssets.PrepareBuildAsync(assets, scene.Resolved,
+            HasModelCatalog && fullContent == null || meshes is { Meshes.Count: > 0 }, token).ConfigureAwait(false);
         lock (_gate)
         {
             VerifyBuildCapture(scene, openingId, token);
@@ -209,15 +245,50 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
         lock (_gate)
         {
             if (_closed || openingId == Guid.Empty || openingId != _openingId) return null;
-            var imports = ModelImports?.ReadRenderAssets(openingId);
-            if (!ReferenceEquals(imports, _renderImports) || !ReferenceEquals(_materialSnapshot, _renderMaterials))
-            {
-                _renderAssets = SceneRenderAssets.WithMaterials(_projectId, imports, _materialSnapshot);
-                _renderImports = imports;
-                _renderMaterials = _materialSnapshot;
-            }
-            return _renderAssets;
+            return GetRenderAssets(ModelImports?.ReadRenderAssets(openingId));
         }
+    }
+
+    internal CapturedScenePreview? CapturePreview(SceneAuthoringState expected, Guid openingId)
+    {
+        lock (_gate)
+        {
+            if (_closed || _closing || openingId == Guid.Empty || openingId != _openingId || !ReferenceEquals(expected, _current?.Read()))
+                return null;
+            return new(_projectId, openingId, expected, GetRenderAssets(ModelImports?.ReadRenderAssets(openingId)));
+        }
+    }
+
+    internal SceneRenderAssets? ReadProjectAssetChoices()
+    {
+        lock (_gate)
+        {
+            if (_closed) return null;
+            return GetRenderAssets(_openingId == Guid.Empty ? null : ModelImports?.ReadRenderAssets(_openingId));
+        }
+    }
+
+    private SceneRenderAssets? GetRenderAssets(SceneRenderAssets? imports)
+    {
+        if (!ReferenceEquals(imports, _renderImports) || !ReferenceEquals(_materialSnapshot, _renderMaterials) ||
+            !ReferenceEquals(_textureSnapshot, _renderTextures) || !ReferenceEquals(_meshSnapshot, _renderMeshes))
+        {
+            _renderAssets = SceneRenderAssets.Capture(_projectId, imports, _materialSnapshot,
+                textures: _textureSnapshot, textureCatalog: TextureCatalog, meshes: _meshSnapshot, meshCatalog: MeshCatalog);
+            _renderImports = imports;
+            _renderMaterials = _materialSnapshot;
+            _renderTextures = _textureSnapshot;
+            _renderMeshes = _meshSnapshot;
+        }
+        return _renderAssets;
+    }
+
+    private void ResetRenderAssets()
+    {
+        _renderImports = _renderAssets = null;
+        _renderMaterials = null;
+        _renderTextures = null;
+        _renderMeshes = null;
     }
 
     internal SceneAuthoringResult EditRenderComponents(SceneRenderAssets expected, ComponentEditBatch batch, CancellationToken token)
@@ -279,8 +350,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 previous = _current; _current = candidate; candidate = null; _generation++; _openingId = Guid.NewGuid();
                 _path = path; _stamp = stamp; _saved = path == null ? null : state.ContentRevision;
                 ModelImports?.Open(document.Id.Value, _openingId, imports);
-                _renderImports = _renderAssets = null;
-                _renderMaterials = null;
+                ResetRenderAssets();
             }
             if (previous != null) Release(previous);
             if (ModelImports != null) await ModelImports.StartOpenedWatchesAsync().ConfigureAwait(false);
@@ -503,9 +573,13 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 {
                     foreach (var retired in _retired.ToArray()) { retired.Dispose(); _retired.Remove(retired); }
                     _current?.Dispose(); _current = null; _path = null; _stamp = null; _saved = null; _generation++; _openingId = Guid.Empty;
-                    _renderImports = _renderAssets = null;
-                    _renderMaterials = null;
-                    if (_closed) _materialSnapshot = null;
+                    ResetRenderAssets();
+                    if (_closed)
+                    {
+                        _materialSnapshot = null;
+                        _textureSnapshot = null;
+                        _meshSnapshot = null;
+                    }
                 }
                 if (ModelImports != null) await ModelImports.ClearAsync().ConfigureAwait(false);
             }

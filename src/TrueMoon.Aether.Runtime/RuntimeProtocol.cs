@@ -9,6 +9,7 @@ using TrueMoon.Aether.Runtime.Gpu.Surfaces;
 using TrueMoon.Aether.Runtime.Input;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
 using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Preview;
 using TrueMoon.Aether.Runtime.Transport;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
@@ -53,7 +54,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
             if (!Enum.IsDefined((CommandKind)request.Kind)) throw new InvalidDataException("Unknown control operation.");
             if (_stopping) throw new InvalidOperationException("Runtime is stopping.");
             var kind = (CommandKind)request.Kind;
-            if (request.PreviewView != null && kind is not (CommandKind.LoadScene or CommandKind.SetPreviewView))
+            if (request.PreviewView != null && kind is not (CommandKind.LoadScene or CommandKind.SetPreviewView or CommandKind.BeginPreviewRender))
                 throw new InvalidDataException("Preview payload is not valid for this operation.");
             if (request.RenderViewStamp != null && kind != CommandKind.PresentRenderView)
                 throw new InvalidDataException("Mesh presentation payload is not valid for this operation.");
@@ -71,6 +72,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                 case CommandKind.LoadScene:
                     if (_loaded) throw new InvalidOperationException("Scene already loaded.");
                     if (_sceneTransferUsed) throw new InvalidOperationException("Full-scene transfer already admitted on this runtime.");
+                    if (_previewRenderOperation.Length != 0) throw new InvalidOperationException("Render preview transfer already admitted on this runtime.");
                     var scene = new SceneSnapshot(request.SceneId, request.Revision, request.Entities ?? throw new InvalidDataException("Missing scene entities."));
                     if (request.PreviewView != null)
                     {
@@ -101,7 +103,13 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                     RequireReady();
                     if (_playing) throw new InvalidOperationException("Step requires Paused.");
                     TickGame(); break;
-                case CommandKind.Stop: SetPlayback(false); _input.Clear(); _sceneStage = null; _stopping = true; break;
+                case CommandKind.Stop:
+                    SetPlayback(false); _input.Clear(); _sceneStage = null; _previewRenderStage = null; _stopping = true; break;
+                case CommandKind.BeginPreviewRender:
+                case CommandKind.AppendPreviewRender:
+                case CommandKind.ActivatePreviewRender:
+                case CommandKind.AbortPreviewRender:
+                    ExecutePreviewRender(kind, request, cancellationToken); break;
                 case CommandKind.BeginSceneWorld:
                 case CommandKind.AppendSceneWorld:
                 case CommandKind.ActivateSceneWorld:
@@ -117,6 +125,8 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                 case CommandKind.ConfigureSurface:
                     RequireReady();
                     if (RequiresMeshView) throw new NotSupportedException("Required mesh views use the explicit GPU surface transport.");
+                    if (game is PreviewGameSession { IsRenderMode: true })
+                        throw new NotSupportedException("Render preview requires the explicit GPU surface transport.");
                     var surface = (request.Surface ?? throw new InvalidDataException("Missing surface.")).Describe(identity);
                     surface.Validate();
                     if (surface.Generation <= _surfaceGeneration) throw new InvalidDataException("Stale surface generation.");
@@ -152,7 +162,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                 if (previewGame.View is { } currentView)
                 { reply.PreviewViewStamp = new byte[PreviewViewCodec.StampBytes]; PreviewViewCodec.WriteStamp(reply.PreviewViewStamp, currentView.Stamp); }
             }
-            DescribeSceneWorld(reply); return reply;
+            DescribeSceneWorld(reply); DescribePreviewRender(reply); return reply;
         }
         }
         finally { _worldSerial.Release(); }
@@ -285,7 +295,8 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
     {
         lock (_gate)
         {
-            if (_disposed || !_loaded || _stopping || _playbackFaulted || _awaitingRestore || SceneGame?.IsFaulted == true || RequiresMeshView) { frame = default; return false; }
+            if (_disposed || !_loaded || _stopping || _playbackFaulted || _awaitingRestore || SceneGame?.IsFaulted == true ||
+                RequiresMeshView || game is PreviewGameSession { IsRenderMode: true }) { frame = default; return false; }
             frame = (game.TickNumber, game.PatternColor); return true;
         }
     }
@@ -295,6 +306,19 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
         await _worldSerial.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            if (role == RuntimeRole.EditPreview && game is PreviewGameSession { IsRenderMode: true } preview)
+            {
+                RenderSceneSource scene; PreviewViewState view;
+                lock (_gate)
+                {
+                    RequireReady();
+                    if (_stopping) throw new InvalidOperationException("Runtime is stopping.");
+                    if (request.Stamp.Identity != identity) throw new InvalidDataException("Foreign render preview surface identity.");
+                    scene = preview.ReadRenderScene(); view = preview.View!;
+                }
+                return await (meshes ?? throw new InvalidOperationException("Call UseAetherSurfaceRendering in the runtime composition root."))
+                    .CapturePreviewAsync(scene, view, preview.PrimitiveOverlay, request, token).ConfigureAwait(false);
+            }
             if (game is IRenderSnapshotGameSession source)
             {
                 RenderSceneSource scene; ulong tick;

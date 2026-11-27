@@ -47,6 +47,8 @@ public sealed class EditorInspectorViewStyle : IViewStyle<EditorInspectorView>
             .Set(RichTextEditor.MinimumContentHeightProperty, 16f).Set(RichTextEditor.MaximumContentHeightProperty, 64f);
         styles.Role(EditorInspectorView.MaterialNameRole).FontSize(12).Padding(new Thickness(4, 2, 4, 2))
             .Set(RichTextEditor.MinimumContentHeightProperty, 20f).Set(RichTextEditor.MaximumContentHeightProperty, 58f);
+        styles.Role(EditorInspectorView.TextureMetadataRole).FontSize(11).Padding(new Thickness(3))
+            .Set(RichTextEditor.MinimumContentHeightProperty, 16f).Set(RichTextEditor.MaximumContentHeightProperty, 100f);
         styles.Part(v => v.ApplyPart).Tone(ControlTone.Accent);
         styles.Part(v => v.ErrorPart).FontSize(11).Height(72).Foreground(t => t.Error);
         styles.Part(v => v.AddComponentPart).Height(26);

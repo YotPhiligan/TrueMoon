@@ -310,7 +310,7 @@ public sealed class EditorMaterialAuthoringTests
         return owner;
     }
 
-    private static void Open(DocumentUiFixture owner, MaterialModelFixture models, string path, params (Guid Mesh, string Binding)[] renderers)
+    internal static void Open(DocumentUiFixture owner, MaterialModelFixture models, string path, params (Guid Mesh, string Binding)[] renderers)
     {
         var template = SceneMaterialAuthoringTests.Scene(renderers);
         var scene = new SceneDocument(new(Guid.NewGuid()), template.Revision, template.Entities, template.Definitions, template.Schemas);
@@ -344,7 +344,7 @@ public sealed class EditorMaterialAuthoringTests
     private static ProjectMaterialCatalogSnapshot Read(ProjectMaterialCatalog catalog) => Await(catalog.ReadAsync(default));
     private static T Await<T>(Task<T> task) => task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
 
-    private sealed class RoutedInspector : IDisposable
+    internal sealed class RoutedInspector : IDisposable
     {
         private readonly DocumentUiFixture _owner;
         private readonly EditorPreview _preview;

@@ -1,3 +1,6 @@
+using System.Numerics;
+using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Runtime.Gpu;
 using TrueMoon.Aether.Runtime.Gpu.Surfaces;
 using TrueMoon.Aether.Runtime.Rendering.Snapshots;
@@ -23,6 +26,44 @@ public sealed class GpuSnapshotFrameTests
         Assert.Throws<InvalidDataException>(() => data.Validate(stamp with { SurfaceGeneration = 2 }, 640, 360));
         Assert.Throws<InvalidDataException>(() => data.Validate(stamp with { Identity = stamp.Identity with { SessionId = Guid.NewGuid() } }, 640, 360));
         Assert.False(recording.IsReleased); Assert.Equal(1, fixture.View.Counts.HasRecording ? 1 : 0);
+    }
+
+    [Fact]
+    public async Task PreviewReservation_RejectsForeignOpeningContentCameraAndRuntimeStamps()
+    {
+        await using var fixture = await SnapshotFixture.CreateAsync();
+        var snapshot = await fixture.CaptureAsync();
+        await using var recording = (await fixture.View.TakeLatestAsync())!;
+        var stamp = new GpuFrameStamp(new(fixture.Device.Identity.SessionId, 1, new('A', 64), new('B', 64), new('C', 64)), 1, 1, 0, 2);
+        var camera = new PreviewCamera(snapshot.CameraWorld, PerspectiveProjection.Default, Vector3.Zero, 6, snapshot.Configuration.CameraRevision);
+        var view = new PreviewViewState(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), snapshot.SceneId.Value, snapshot.SourceRevision), camera);
+        var cube = new RenderPrimitive(Matrix4x4.CreateTranslation(2, 0, 0), new(.5f, .25f, 1));
+        var frame = GpuFrameData.FromPreviewSnapshot(stamp, recording, view, [cube]);
+
+        frame.Validate(stamp, 640, 360);
+        Assert.Equal(view.Stamp, frame.Metadata.PreviewView);
+        Assert.Null(frame.Metadata.RenderView);
+        Assert.Equal(cube, Assert.Single(frame.PreviewOverlay));
+        Assert.Same(recording, frame.Snapshot);
+        Assert.Empty(frame.Pixels);
+        Assert.Null(frame.Scene);
+
+        foreach (var foreign in new[]
+        {
+            view.Stamp with { DocumentEpoch = Guid.NewGuid() },
+            view.Stamp with { ContentId = Guid.NewGuid() },
+            view.Stamp with { CameraRevision = view.Camera.Revision + 1 },
+            view.Stamp with { SceneId = Guid.NewGuid() },
+            view.Stamp with { SceneRevision = view.Context.SceneRevision + 1 }
+        })
+            Assert.Throws<InvalidDataException>(() => (frame with { Metadata = frame.Metadata with { PreviewView = foreign } }).Validate(stamp, 640, 360));
+        Assert.Throws<InvalidDataException>(() => frame.Validate(stamp with { SurfaceGeneration = 2 }, 640, 360));
+        Assert.Throws<InvalidDataException>(() => frame.Validate(stamp with { Identity = stamp.Identity with { Generation = 2 } }, 640, 360));
+        Assert.Throws<InvalidDataException>(() => (frame with { Pixels = [1] }).Validate(stamp, 640, 360));
+        Assert.Throws<InvalidDataException>(() => (frame with { Metadata = frame.Metadata with { RenderView = RenderSnapshotStamp.FromSnapshot(snapshot) } }).Validate(stamp, 640, 360));
+        Assert.Throws<InvalidDataException>(() => GpuFrameData.FromPreviewSnapshot(stamp, recording,
+            new(view.Context with { SceneId = Guid.NewGuid() }, camera), [cube]));
+        Assert.False(recording.IsReleased);
     }
     [Fact]
     public async Task PausedPublication_ReusesOneEnvelopeAndCollectsCompletedSubmissionsBeforeBudgetAdmission()

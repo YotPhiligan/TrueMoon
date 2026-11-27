@@ -85,12 +85,16 @@ public sealed class EditorSession : IStartable, IStoppable
         view.ViewportController?.Observe(ui);
         var active=view.ViewportController?.IsActive!=false;
         if(active)_viewport.Observe(ui, view);
+        _model.Refresh(() => _engine.Supervisor.Status, () => _engine.Editor.Status, _commands.Error ?? _engine.Frames.TransportError);
         if (active && view.Canvas.CurrentDraw is {} draw)
         {
             var (frame, image, clip, revision) = draw;
-            if (frame.Metadata.PreviewView != null)
-                _engine.Preview.Presented(frame, new(image.X, image.Y, image.Width, image.Height),
-                    new(clip.X, clip.Y, clip.Width, clip.Height), revision);
+            if (frame.Metadata.PreviewView is { } stamp)
+            {
+                if (view.ViewportController is not EditorViewportController controller || controller.MatchesPreview(stamp))
+                    _engine.Preview.Presented(frame, new(image.X, image.Y, image.Width, image.Height),
+                        new(clip.X, clip.Y, clip.Width, clip.Height), revision);
+            }
             else if (!_engine.Preview.Presented(frame))
             {
                 if (frame.Metadata.RenderView != null)
@@ -101,7 +105,6 @@ public sealed class EditorSession : IStartable, IStoppable
                 else _engine.Frames.Presented(frame);
             }
         }
-        _model.Refresh(() => _engine.Supervisor.Status, () => _engine.Editor.Status, _commands.Error ?? _engine.Frames.TransportError);
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
         if (_diagnostics != null && now >= _nextDiagnosticsRefresh)
         {
@@ -122,8 +125,9 @@ public sealed class EditorSession : IStartable, IStoppable
         if (!ReferenceEquals(view.DataContext,_model) || view.IsDisposed || view.ViewportController?.IsActive==false) return null;
         var receipt = _engine.Preview.PresentedView;
         return receipt != null && _engine.Preview.IsCurrent(receipt) &&
-            (view.ViewportController==null || receipt.State.Context.ViewId==view.ViewportController.ViewId &&
-                receipt.State.Context.DocumentEpoch==_workspace.DocumentEpoch && receipt.State.Context.ContentId==_workspace.ContentToken) &&
+            (view.ViewportController is EditorViewportController controller ? controller.MatchesPreview(receipt.State.Context) :
+                view.ViewportController == null || receipt.State.Context.ViewId == view.ViewportController.ViewId &&
+                receipt.State.Context.DocumentEpoch == _workspace.DocumentEpoch && receipt.State.Context.ContentId == _workspace.ContentToken) &&
             view.Canvas.DrawnFrame?.Metadata.PreviewView == receipt.State.Stamp &&
             ReferenceEquals(view.Canvas.DrawnFrame?.Presentation,receipt.Frame.Presentation) &&
             view.Canvas.MatchesPresentedLayout(receipt.ImageBounds,receipt.ClipBounds,receipt.LayoutRevision) ? receipt : null;

@@ -27,6 +27,7 @@ internal static class InspectorPropertyEditorFactory
             slot = new ConditionalContent<RenderChoicesState?>(null, state => renderChoices(state, choices));
             choices.SetContent(slot);
             content = input = new Button("Выбрать").WithRole(ActionRole).OnClick(() => toggleRenderChoices(choices, slot));
+            if (property.Key == "mesh") input.SemanticId = $"editor.inspector.mesh.{property.ComponentId.Value:N}";
         }
         else if (property.Kind == PropertyValueKind.Boolean)
             content = input = new CheckBox().WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.BooleanValue);

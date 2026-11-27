@@ -20,5 +20,13 @@ public enum CommandKind
     /// <summary>Updates the explicit external view on the same EditPreview runtime, without simulation or surface replacement.</summary>
     SetPreviewView,
     /// <summary>Acknowledges actual presentation of a GPU mesh-view/1 frame.</summary>
-    PresentRenderView
+    PresentRenderView,
+    /// <summary>Admits one bounded render preview payload on a fresh EditPreview runtime.</summary>
+    BeginPreviewRender,
+    /// <summary>Appends the next contiguous preview render chunk.</summary>
+    AppendPreviewRender,
+    /// <summary>Atomically installs the validated preview render payload.</summary>
+    ActivatePreviewRender,
+    /// <summary>Discards staging without installing a preview World.</summary>
+    AbortPreviewRender
 }

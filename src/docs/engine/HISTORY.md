@@ -1,3 +1,37 @@
+<a id="ed4i-authoring-assets-2026-11-27"></a>
+## 2026-11-27 — ED4i: Texture, Mesh и committed Edit Preview
+
+Локальная версия `1.2611.27.6-alpha`. История поставки `1.2611.27.5-alpha`:
+72 целевых теста Material прошли; прежний `-RenderMaterialAuthoring` не дошёл
+до захвата из-за отсутствовавшего слоя `VK_LAYER_KHRONOS_validation`.
+
+В промежуточных Release/net11.0 срезах прошли 99 тестов после Texture, 107
+после Mesh, 178 Aether и 79 Editor на срезе Edit Preview. Прогоны были адресными,
+не полными наборами. Managed preview подтверждает протокол, exact closure,
+actual-draw admission и владение World, но не подтверждает GPU pixels.
+
+Итоговый Release/net11.0 (`1.2611.27.6-alpha`, SDK 11.0.100), каталог
+`src/TestResults/AuthoringAssets-2611276`. Все заданные фильтры дали результаты.
+
+| Проверка | Результат | Артефакт в каталоге |
+| --- | --- | --- |
+| Editor: хранилища, маршрутизируемый ввод, exact closure, receipt и draft | 143 прошли, 0 падений и пропусков | `editor.trx` и `editor-*.binlog` |
+| Aether: перенос TPR1, GPU stamps/ownership, primitive, Game SceneWorld и local Player | 240 прошли, 0 падений и пропусков | `preview.trx` и `preview-*.binlog` |
+| `VerifyEditor.ps1 -RenderAuthoringAssets` | 13 PNG, 12 дочерних процессов (9 EditPreview + 3 Game) | `vulkan-Exact-Authored/verification.json` |
+| `VerifyEditor.ps1 -RenderMaterialAuthoring` | A/B/C, свежий C после перезапуска, pinned A; 5 PNG, 5 дочерних процессов | `vulkan-Exact-Material/verification.json` |
+| `EngineSessionProbe --edit-preview-proof` | 6 PNG, 5 дочерних процессов | `native-primitive/preview-report.json` |
+
+Нативные проверки выполнялись на Windows x64 с Vulkan → OpenGL и локальным
+слоем `VK_LAYER_KHRONOS_validation`. В отчётах всех 22 runtime: 0 ошибок и
+предупреждений, живых слотов и GPU handles после выхода. В смешанной сцене
+цвета legacy кубов сохранились, передний куб перекрывал меш. Замена Texture,
+геометрии с перестановкой слотов и Material Save/Undo/Redo меняли exact content
+при ревизии сцены 44. Orbit сменил camera stamp, resize — surface stamp; оба
+сохранили child и ContentId. Перезапуск открыл сохранённые ключи без источников.
+Close завершил child с удержанным first-present; pinned A сохранил кадр при
+временно убранных авторских blobs. Первый смешанный Preview не запускал Build
+и не загружал Game.Logic. Fresh-package и кроссплатформенные прогоны не выполнялись.
+
 <a id="player-scenario-disk-resume-2026-11-27"></a>
 ## 2026-11-27 — Player: продолжение сценария с точного тика
 

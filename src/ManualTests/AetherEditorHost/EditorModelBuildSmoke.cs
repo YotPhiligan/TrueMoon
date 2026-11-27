@@ -410,9 +410,12 @@ internal static class EditorModelBuildSmoke
         var authoringSave = initialMode == "--initial-import-material-authoring-save";
         var authoringReopen = initialMode == "--initial-import-material-authoring-reopen";
         var materialAuthoring = authoringSave || authoringReopen;
-        var saveInitialImport = authoringSave || transferMaterials || saveAfterSlotUndo || reimportTexture ||
+        var authoringAssetsSave = initialMode == "--initial-import-authoring-assets-save";
+        var authoringAssetsReopen = initialMode == "--initial-import-authoring-assets-reopen";
+        var authoringAssets = authoringAssetsSave || authoringAssetsReopen;
+        var saveInitialImport = authoringAssetsSave || authoringSave || transferMaterials || saveAfterSlotUndo || reimportTexture ||
             initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides" or "--initial-import-camera-save" or "--initial-import-visibility-save";
-        var reopenInitialImport = authoringReopen || initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture"
+        var reopenInitialImport = authoringAssetsReopen || authoringReopen || initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture"
             or "--initial-import-reopen-overrides" or "--initial-import-camera-reopen" or "--initial-import-visibility-reopen";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistMultipleOverrides = saveAfterSlotUndo || initialMode is "--initial-import-save-overrides" or "--initial-import-reopen-overrides";
@@ -525,7 +528,7 @@ internal static class EditorModelBuildSmoke
         var first = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
         window.FramePresented += OnFirstFrame;
         void OnFirstFrame(UiSession ui) { window.FramePresented -= OnFirstFrame; first.TrySetResult(ui); }
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(materialAuthoring ? 210 : 90));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(authoringAssets ? 270 : materialAuthoring ? 210 : 90));
         var token = timeout.Token;
         IProjectAssetStore? modelStore = null;
         try
@@ -539,6 +542,18 @@ internal static class EditorModelBuildSmoke
             await documents.Pending.WaitAsync(token);
             var before = documents.Read().Document ?? throw new InvalidOperationException("No active document.");
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
+            if (authoringAssets)
+            {
+#if MODEL_BUILD_PUBLISHED_PROBE
+                throw new NotSupportedException("The authoring assets native proof only runs in the source Release Editor host.");
+#else
+                var editorSession = app.Services.Resolve<EditorSession>()!;
+                await EditorAuthoringAssetsSmoke.RunAsync(authoringAssetsReopen, report, proofDirectory, compiler, scenePath,
+                    window, ui, view, engine, native, documents, playback, editorSession,
+                    app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!, token);
+                return;
+#endif
+            }
             if (initialImport)
             {
                 await VerifyInitialImport();
@@ -1350,7 +1365,7 @@ internal static class EditorModelBuildSmoke
                         await StopAndCheck(frame.Generation, textured ? texture : null);
                         await process.WaitForExitAsync(token);
                         Check(process.ExitCode == 0, $"Material Build child exited with {process.ExitCode} after owned Stop.");
-                        return new(frame, bindings, process.ExitCode);
+                        return new(frame, bindings, process.ExitCode, Hash(File.ReadAllBytes(Path.Combine(artifact.DirectoryPath, GameBuildArtifact.RenderContentFile))));
 
                         MaterialAuthoringBinding Resolve(EntityId entity, Guid material, bool usesTexture)
                         {
@@ -1376,8 +1391,10 @@ internal static class EditorModelBuildSmoke
 
                     static void Match(MaterialAuthoringFrame expected, MaterialAuthoringFrame observed)
                     {
-                        Check(expected.Frame.ManifestHash == observed.Frame.ManifestHash && expected.Bindings.SequenceEqual(observed.Bindings),
-                            "Reopening did not preserve the exact material, binding and manifest revisions.");
+                        // The render manifest includes BuildId; a fresh compilation may produce a different BuildId for the same TRC1.
+                        Check(expected.RenderContentHash == observed.RenderContentHash && expected.Bindings.SequenceEqual(observed.Bindings) &&
+                            (expected.Frame.BuildId == observed.Frame.BuildId) == (expected.Frame.ManifestHash == observed.Frame.ManifestHash),
+                            "Reopening did not preserve the exact render payload/bindings or returned a foreign build manifest.");
                         CompareRegions(expected, observed, []);
                     }
 
@@ -2729,7 +2746,7 @@ internal static class EditorModelBuildSmoke
     private sealed record MaterialAuthoringRegion(string Name, int Pixels, string GeometrySha256, string ColorSha256, string Colors);
     private sealed record MaterialAuthoringBinding(string Reference, AssetProof Mesh, AssetProof Binding, Guid LeftSlot, AssetProof Left,
         Guid RightSlot, AssetProof Right, AssetProof? Texture);
-    private sealed record MaterialAuthoringFrame(FrameProof Frame, MaterialAuthoringBinding[] Bindings, int ExitCode);
+    private sealed record MaterialAuthoringFrame(FrameProof Frame, MaterialAuthoringBinding[] Bindings, int ExitCode, string RenderContentHash);
     private sealed record MaterialAuthoringSave(int EditorPid, Guid FirstEntity, Guid SecondEntity, Guid SharedId, Guid CopyId,
         string PinnedSceneHash, string FinalSceneHash, MaterialAuthoringFrame A, MaterialAuthoringFrame B, MaterialAuthoringFrame C);
     private sealed record ImportGeneration(Guid SourceId, long Generation);

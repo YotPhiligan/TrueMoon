@@ -11,36 +11,32 @@ public sealed class PreviewPickSnapshot
 {
     /// <summary>Exact geometry profile. Unknown visible occluders disable the entire query.</summary>
     public const string CubeGeometryProfile = "editor.opaque-cubes/1";
+    /// <summary>Mixed authored meshes and known legacy cubes. Cube rows can frame a selected entity, but mesh occlusion prevents ray picking.</summary>
+    public const string MeshAndCubeGeometryProfile = "editor.meshes-and-cubes/1";
     private readonly ImmutableArray<Matrix4x4> _inverses;
     private readonly PreviewPickUnavailableReason _unavailable;
 
-    private PreviewPickSnapshot(SceneSnapshot source, string geometryProfile)
+    private PreviewPickSnapshot(SceneId scene, long revision, string geometryProfile, ImmutableArray<PreviewPickPrimitive> primitives)
     {
-        if (!Guid.TryParse(source.Id, out var scene) || scene == Guid.Empty)
-            throw new ArgumentException("Picking requires a persistent authoring scene ID.", nameof(source));
-        Scene = new(scene); Revision = source.Revision;
-        GeometryProfile = geometryProfile;
-        var cubes = ImmutableArray.CreateBuilder<PreviewPickPrimitive>();
-        var inverses = ImmutableArray.CreateBuilder<Matrix4x4>();
-        var ids = new HashSet<EntityId>(); var order = 0;
-        foreach (var entity in source.CopyEntities())
-        {
-            if (!Guid.TryParse(entity.Id, out var value) || value == Guid.Empty || !ids.Add(new(value)))
-                throw new ArgumentException("Picking requires distinct persistent authoring entity IDs.", nameof(source));
-            if (entity.Primitive is { } geometry)
-            {
-                var world = geometry.ToPrimitive().World;
-                cubes.Add(new(new(value), order, world));
-                if (!ContentValidation.TryInvertFinite(world, out var inverse))
-                    _unavailable = PreviewPickUnavailableReason.InvalidMath;
-                inverses.Add(inverse);
-            }
-            order++;
-        }
-        Primitives = cubes.ToImmutable(); _inverses = inverses.ToImmutable();
+        Scene = scene; Revision = revision; GeometryProfile = geometryProfile; Primitives = primitives;
         if (!string.Equals(geometryProfile, CubeGeometryProfile, StringComparison.Ordinal))
+        {
             _unavailable = PreviewPickUnavailableReason.UnsupportedGeometry;
+            _inverses = [];
+            return;
+        }
+        var inverses = ImmutableArray.CreateBuilder<Matrix4x4>(primitives.Length);
+        foreach (var primitive in primitives)
+        {
+            if (!ContentValidation.TryInvertFinite(primitive.World, out var inverse))
+                _unavailable = PreviewPickUnavailableReason.InvalidMath;
+            inverses.Add(inverse);
+        }
+        _inverses = inverses.MoveToImmutable();
     }
+
+    internal static PreviewPickSnapshot CaptureRender(SceneId scene, long revision, ImmutableArray<PreviewPickPrimitive> primitives,
+        bool hasVisibleMesh) => new(scene, revision, hasVisibleMesh ? MeshAndCubeGeometryProfile : CubeGeometryProfile, primitives);
 
     /// <summary>Captures the same deep-owned projected SceneSnapshot supplied to rendering; does not reproject authoring.</summary>
     /// <param name="source">Complete projected scene, up to64 entities. All IDs must be nonempty GUIDs.</param>
@@ -49,7 +45,19 @@ public sealed class PreviewPickSnapshot
     public static PreviewPickSnapshot Capture(SceneSnapshot source, string geometryProfile)
     {
         ArgumentNullException.ThrowIfNull(source); ArgumentNullException.ThrowIfNull(geometryProfile);
-        return new(source, geometryProfile);
+        if (!Guid.TryParse(source.Id, out var scene) || scene == Guid.Empty)
+            throw new ArgumentException("Picking requires a persistent authoring scene ID.", nameof(source));
+        var cubes = ImmutableArray.CreateBuilder<PreviewPickPrimitive>();
+        var ids = new HashSet<EntityId>(); var order = 0;
+        foreach (var entity in source.CopyEntities())
+        {
+            if (!Guid.TryParse(entity.Id, out var value) || value == Guid.Empty || !ids.Add(new(value)))
+                throw new ArgumentException("Picking requires distinct persistent authoring entity IDs.", nameof(source));
+            if (entity.Primitive is { } geometry)
+                cubes.Add(new(new(value), order, geometry.ToPrimitive().World));
+            order++;
+        }
+        return new(new(scene), source.Revision, geometryProfile, cubes.ToImmutable());
     }
 
     /// <summary>Gets the persistent scene ID. Open-document epochs are added by presentation admission later.</summary>
