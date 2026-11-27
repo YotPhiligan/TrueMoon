@@ -16,4 +16,8 @@ public sealed record InspectorComponentType(ComponentSchema Schema, string Title
 /// <summary>Hidden inherited occurrence that can be restored without creating a new identity.</summary>
 /// <param name="Id">Occurrence identity.</param><param name="Title">Display label.</param>
 /// <param name="LocalMask">Whether restoring clears this instance's own removal mask.</param>
-public sealed record InspectorRemovedComponent(ComponentId Id, string Title, bool LocalMask);
+public sealed record InspectorRemovedComponent(ComponentId Id, string Title, bool LocalMask)
+{
+    /// <summary>Whether the hidden occurrence is eligible for restoration on the selected entity.</summary>
+    public bool CanRestore { get; init; } = true;
+}

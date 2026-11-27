@@ -37,7 +37,10 @@ public sealed class ComponentEditBatch
     /// <param name="properties">Scalar sets/resets; may be empty when changing component presence.</param>
     /// <param name="components">Presence changes; omitted for property-only edits.</param>
     public ComponentEditBatch(AuthoringOperation operation, IEnumerable<PropertyEdit> properties,
-        IEnumerable<ComponentEdit>? components = null)
+        IEnumerable<ComponentEdit>? components = null) : this(operation, properties, components, null) { }
+
+    internal ComponentEditBatch(AuthoringOperation operation, IEnumerable<PropertyEdit> properties,
+        IEnumerable<ComponentEdit>? components, ComponentSchema? addedSchema)
     {
         ArgumentNullException.ThrowIfNull(operation); ArgumentNullException.ThrowIfNull(properties);
         Operation = operation;
@@ -55,6 +58,7 @@ public sealed class ComponentEditBatch
         }
         if (values.Count + presence.Count == 0) throw new ArgumentException("A batch must contain an edit.", nameof(properties));
         Properties = values.ToImmutable(); Components = presence.ToImmutable();
+        AddedSchema = addedSchema;
     }
     /// <summary>Gets immutable operation metadata.</summary>
     public AuthoringOperation Operation { get; }
@@ -62,12 +66,22 @@ public sealed class ComponentEditBatch
     public ImmutableArray<PropertyEdit> Properties { get; }
     /// <summary>Gets the frozen presence changes.</summary>
     public ImmutableArray<ComponentEdit> Components { get; }
+    internal ComponentSchema? AddedSchema { get; }
 
     internal bool SameChanges(ComponentEditBatch other) =>
+        SameSchema(AddedSchema, other.AddedSchema) &&
         Properties.SequenceEqual(other.Properties) && Components.Length == other.Components.Length &&
         Components.Zip(other.Components).All(pair =>
             pair.First.EntityId == pair.Second.EntityId && pair.First.ComponentId == pair.Second.ComponentId &&
             pair.First.Kind == pair.Second.Kind && SameData(pair.First.Addition, pair.Second.Addition));
+
+    internal static bool SameSchema(ComponentSchema? first, ComponentSchema? second) =>
+        ReferenceEquals(first, second) || first != null && second != null &&
+        first.TypeId == second.TypeId && first.Version == second.Version && first.AllowMultiple == second.AllowMultiple &&
+        first.RequiredTypes.SetEquals(second.RequiredTypes) && first.Properties.Count == second.Properties.Count &&
+        first.Properties.Values.All(property => second.Properties.TryGetValue(property.Id, out var other) &&
+            property.Kind == other.Kind && property.IsNullable == other.IsNullable && property.DefaultValue == other.DefaultValue);
+
     private static bool SameData(ComponentData? first, ComponentData? second) =>
         ReferenceEquals(first, second) || first != null && second != null && first.Id == second.Id &&
         first.TypeId == second.TypeId && first.SchemaVersion == second.SchemaVersion &&

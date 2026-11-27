@@ -1571,63 +1571,132 @@ internal static class EditorModelBuildSmoke
                 async Task VerifyCameraProjection()
                 {
                     var camera = document.Read().Content!.Resolved.Entities.Values.Single(entity =>
-                        entity.Components.Values.Any(component => component.TypeId == MeshRenderingComponents.CameraId));
-                    var component = camera.Components.Values.Single(value => value.TypeId == MeshRenderingComponents.CameraId).Id;
+                        entity.Components.Values.Any(IsCamera));
+                    var component = CameraOccurrence().Id;
                     var inspector = view.Inspector!;
                     var path = Path.Combine(proofDirectory, "editor-camera-projection.json");
-                    var original = new CameraProjectionValues(Math.PI / 3, .1, 100);
-                    var wider = new CameraProjectionValues(80 * (Math.PI / 180d), .25, 30);
+                    var original = new CameraProjectionValues("Perspective", Math.PI / 3, .1, 100, 1L, .08, .12, .16);
+                    var wider = original with { Lens = 80 * (Math.PI / 180d), Near = .25, Far = 30 };
+                    var orthographic = wider with { Projection = "Orthographic", Lens = 5 };
                     await EditorHierarchySmoke.ClickItemAsync(ui, view, camera.Id.Value.ToString("D"), token);
 
                     if (reopenInitialImport)
                     {
                         var savedPath = Path.Combine(report, "import-saved", "editor-camera-projection.json");
                         var saved = JsonSerializer.Deserialize<CameraProjectionProof>(await File.ReadAllBytesAsync(savedPath, token))!;
-                        await Expect("80", "0.25", "30", draft: false);
-                        var restored = await BuildCameraFrame("camera-reopened", wider);
-                        Check(saved.Completed && saved.EditorPid != Environment.ProcessId && saved.Camera == component.Value &&
-                            saved.SceneSha256 == sceneHash && saved.Current.Values == restored.Values &&
+                        await Expect("verticalSize", "5", "0.25", "30", draft: false);
+                        var (restored, artifact) = await BuildCameraFrame("camera-reopened", orthographic);
+                        CheckOrthographicSize(restored.Frame, 960);
+                        Check(saved.Completed && saved.EditorPid != Environment.ProcessId && saved.Entity == camera.Id.Value &&
+                            saved.Camera == component.Value && saved.SceneSha256 == sceneHash && saved.Current.Values == restored.Values &&
                             saved.Current.Frame.Pixels != null && saved.Current.Frame.Pixels == restored.Frame.Pixels,
-                            "Reopening Editor did not restore the camera settings and exact Vulkan pixels.");
-                        await SaveProof(restored);
+                            "Reopening Editor did not restore the orthographic occurrence, settings and exact Vulkan pixels.");
+
+                        await engine.Frames.ResizeAsync(1120, 540, token);
+                        var resized = await CapturePlaying("camera-ortho-resized", artifact, restored.Frame.Tick);
+                        CheckOrthographicSize(resized, 1120);
+                        var prior = restored.Frame;
+                        var priorSurface = prior.CameraSurface!;
+                        var resizedSurface = resized.CameraSurface!;
+                        Check(prior.Pid == resized.Pid && prior.Generation == resized.Generation && prior.BuildId == resized.BuildId &&
+                            prior.ManifestHash == resized.ManifestHash && priorSurface.SceneId == resizedSurface.SceneId &&
+                            priorSurface.SceneRevision == resizedSurface.SceneRevision && resizedSurface.SurfaceGeneration > priorSurface.SurfaceGeneration &&
+                            resized.Tick >= prior.Tick, "Resizing did not retain the live build and scene on a newer surface.");
+                        CheckResize(priorSurface.Red, resizedSurface.Red);
+                        CheckResize(priorSurface.Green, resizedSurface.Green);
+                        await StopAndCheck(resized.Generation, null);
+                        await SaveProof(restored, resized: new(orthographic, resized));
                         return;
                     }
 
-                    await Expect("60", "0.1", "100", draft: false);
-                    var initial = await BuildCameraFrame("camera-initial", original);
+                    await Expect("fov", "60", "0.1", "100", draft: false);
+                    var initial = await CaptureAndStop("camera-initial", original);
                     var unedited = document.Read().Content!;
+                    Check(!HasOrthographicSchema(), "The camera fixture must begin without the orthographic schema.");
                     await Enter("fov", "80");
                     await Enter("near", "40");
                     await Enter("far", "30");
-                    await Expect("80", "40", "30", draft: true);
+                    await Expect("fov", "80", "40", "30", draft: true);
                     await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.Apply.IsEnabled &&
                         inspector.Properties[(component, "far")].Property.HasError, token);
                     Check(ReferenceEquals(document.Read().Content, unedited), "Projection input modified the committed document.");
 
                     await Enter("near", "0.25");
-                    await Expect("80", "0.25", "30", draft: true);
+                    await Expect("fov", "80", "0.25", "30", draft: true);
                     await ClickInspector(() => inspector.Apply);
                     var applied = document.Read().Content!;
                     Check(applied.UndoCount == unedited.UndoCount + 1, "The projection edits must be a single history operation.");
-                    var changed = await BuildCameraFrame("camera-wide", wider);
+                    var changed = await CaptureAndStop("camera-wide", wider);
                     Check(changed.Frame.Mask.RedPixels < initial.Frame.Mask.RedPixels &&
                         changed.Frame.Mask.GreenPixels < initial.Frame.Mask.GreenPixels &&
                         changed.Frame.Pixels!.Sha256 != initial.Frame.Pixels!.Sha256,
                         "The wider camera did not reduce both projected shapes on Vulkan.");
 
                     await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
-                    await Expect("60", "0.1", "100", draft: false);
+                    await Expect("fov", "60", "0.1", "100", draft: false);
                     Check(document.Read().Content!.ContentRevision == unedited.ContentRevision, "Undo did not restore the camera values.");
-                    var undone = await BuildCameraFrame("camera-undone", original);
+                    var undone = await CaptureAndStop("camera-undone", original);
                     Check(initial.Frame.Pixels == undone.Frame.Pixels, "Undo did not restore the exact Vulkan pixels.");
                     await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
-                    await Expect("80", "0.25", "30", draft: false);
-                    Check(document.Read().Content!.ContentRevision == applied.ContentRevision, "Redo did not restore the wider camera.");
+                    await Expect("fov", "80", "0.25", "30", draft: false);
+                    var redone = document.Read().Content!;
+                    Check(redone.ContentRevision == applied.ContentRevision, "Redo did not restore the wider camera.");
+
+                    var perspectiveOccurrence = CameraOccurrence();
+                    var transform = CameraTransform();
+                    await ClickInspector(() => Descendants(inspector).SingleOrDefault(element =>
+                        element.SemanticId == $"editor.inspector.camera.{component.Value:N}.orthographic"));
+                    await Expect("verticalSize", "10", "0.25", "30", draft: true);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.Apply.IsEnabled, token);
+                    await Enter("verticalSize", "0");
+                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.Apply.IsEnabled &&
+                        inspector.Properties[(component, "verticalSize")].Property.HasError, token);
+                    Check(ReferenceEquals(document.Read().Content, redone), "The invalid orthographic draft changed committed content.");
+                    await Enter("verticalSize", "5");
+                    await ClickInspector(() => inspector.Apply);
+                    var switched = document.Read().Content!;
+                    var replacement = CameraOccurrence();
+                    var retainedTransform = CameraTransform();
+                    Check(switched.UndoCount == redone.UndoCount + 1 && replacement.Id != perspectiveOccurrence.Id &&
+                        replacement.TypeId == MeshRenderingComponents.OrthographicCameraId && replacement.Source.EntityId == camera.Id &&
+                        HasOrthographicSchema(), "Projection Apply did not atomically add its schema and replace the inherited occurrence.");
+                    Check(retainedTransform.Id == transform.Id && retainedTransform.Properties.Count == transform.Properties.Count &&
+                        transform.Properties.All(pair => pair.Value.Value.Equals(retainedTransform.Properties[pair.Key].Value)),
+                        "Projection Apply changed the camera Transform.");
+                    foreach (var key in new[] { "near", "far", "layers", "clearR", "clearG", "clearB" })
+                        Check(perspectiveOccurrence.Properties[key].Value.Equals(replacement.Properties[key].Value),
+                            $"Projection Apply changed the exact common camera property '{key}'.");
+                    component = replacement.Id;
+                    await Expect("verticalSize", "5", "0.25", "30", draft: false);
+
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                    component = perspectiveOccurrence.Id;
+                    await Expect("fov", "80", "0.25", "30", draft: false);
+                    Check(document.Read().Content!.ContentRevision == redone.ContentRevision && !HasOrthographicSchema() &&
+                        CameraOccurrence().Id == component && ReadValues() == wider, "Projection Undo did not restore the wider perspective occurrence.");
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
+                    component = replacement.Id;
+                    await Expect("verticalSize", "5", "0.25", "30", draft: false);
+                    Check(document.Read().Content!.ContentRevision == switched.ContentRevision && HasOrthographicSchema() &&
+                        CameraOccurrence().Id == component, "Projection Redo did not restore the same orthographic occurrence.");
+                    var savedFrame = await CaptureAndStop("camera-ortho-saved", orthographic);
                     await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
                     await documents.Pending.WaitAsync(token);
-                    Check(documents.Read().Error == null && !document.Read().IsDirty, "The wider camera scene did not save.");
+                    Check(documents.Read().Error == null && !document.Read().IsDirty, "The orthographic camera scene did not save.");
                     sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
-                    await SaveProof(changed, initial, undone);
+                    await SaveProof(savedFrame, initial, undone, changed);
+
+                    static bool IsCamera(ResolvedComponent value) => value.TypeId == MeshRenderingComponents.CameraId ||
+                        value.TypeId == MeshRenderingComponents.OrthographicCameraId;
+
+                    ResolvedComponent CameraOccurrence() =>
+                        document.Read().Content!.Resolved.Entities[camera.Id].Components.Values.Single(IsCamera);
+
+                    ResolvedComponent CameraTransform() =>
+                        document.Read().Content!.Resolved.Entities[camera.Id].Components.Values.Single(value => value.TypeId == BuiltInComponents.TransformId);
+
+                    bool HasOrthographicSchema() => document.Read().Content!.Document.Schemas.Any(schema =>
+                        schema.TypeId == MeshRenderingComponents.OrthographicCameraId && schema.Version == 1);
 
                     async Task Enter(string key, string value)
                     {
@@ -1639,34 +1708,76 @@ internal static class EditorModelBuildSmoke
                         }).WaitAsync(token);
                     }
 
-                    Task Expect(string angle, string near, string far, bool draft) =>
+                    Task Expect(string lens, string value, string near, string far, bool draft) =>
                         EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext?.HasDraft == draft &&
-                            Shows("fov", angle) && Shows("near", near) && Shows("far", far), token);
+                            Shows(lens, value) && !inspector.Properties.ContainsKey((component, lens == "fov" ? "verticalSize" : "fov")) &&
+                            Shows("near", near) && Shows("far", far), token);
 
                     bool Shows(string key, string text) => inspector.Properties.TryGetValue((component, key), out var editor) &&
                         editor.Input is TextBox input && input.Value == text;
 
-                    async Task<CameraProjectionFrame> BuildCameraFrame(string capture, CameraProjectionValues expected)
+                    CameraProjectionValues ReadValues()
+                    {
+                        var occurrence = CameraOccurrence();
+                        Check(occurrence.Id == component && occurrence.SchemaVersion == 1, "Unexpected camera occurrence or schema version.");
+                        var properties = occurrence.Properties;
+                        double Number(string key) => properties[key].Value.GetNumber();
+                        var isOrthographic = occurrence.TypeId == MeshRenderingComponents.OrthographicCameraId;
+                        return new(isOrthographic ? "Orthographic" : "Perspective", Number(isOrthographic ? "verticalSize" : "fov"),
+                            Number("near"), Number("far"), properties["layers"].Value.GetInteger(), Number("clearR"), Number("clearG"), Number("clearB"));
+                    }
+
+                    async Task<(CameraProjectionFrame Proof, GameBuildArtifact Artifact)> BuildCameraFrame(string capture, CameraProjectionValues expected)
                     {
                         before = document.Read();
                         content = before.Content!;
-                        var cameraState = content.Resolved.Entities[camera.Id].Components[component];
-                        var values = new CameraProjectionValues(cameraState.Properties["fov"].Value.GetNumber(),
-                            cameraState.Properties["near"].Value.GetNumber(), cameraState.Properties["far"].Value.GetNumber());
-                        Check(values == expected, "Scene did not contain the exact vertical angle and both distances.");
+                        var values = ReadValues();
+                        Check(values == expected, $"Unexpected exact camera authoring values for {capture}: {values}.");
                         await StartBuild();
                         await Complete();
                         var artifact = engine.Editor.Status.Candidate!.Build.Artifact;
                         Check(playback.RunSelectedBuild(artifact), "Editor declined playing the camera scene.");
                         await Complete();
                         var frame = await CapturePlaying(capture, artifact, 0);
-                        await StopAndCheck(frame.Generation, null);
-                        return new(values, frame);
+                        return (new(values, frame), artifact);
                     }
 
-                    Task SaveProof(CameraProjectionFrame current, CameraProjectionFrame? first = null, CameraProjectionFrame? undo = null) =>
+                    async Task<CameraProjectionFrame> CaptureAndStop(string capture, CameraProjectionValues expected)
+                    {
+                        var (proof, _) = await BuildCameraFrame(capture, expected);
+                        if (expected.Projection == "Orthographic") CheckOrthographicSize(proof.Frame, 960);
+                        else
+                        {
+                            var surface = proof.Frame.CameraSurface!;
+                            Check(surface is { Width: 960, Height: 540 } &&
+                                surface.Red.Right - surface.Red.Left > surface.Green.Right - surface.Green.Left + 6 &&
+                                surface.Red.Bottom - surface.Red.Top > surface.Green.Bottom - surface.Green.Top + 6,
+                                $"Perspective did not project the nearer red triangle larger in {capture}: {surface}.");
+                        }
+                        await StopAndCheck(proof.Frame.Generation, null);
+                        return proof;
+                    }
+
+                    static void CheckOrthographicSize(FrameProof frame, int width)
+                    {
+                        var surface = frame.CameraSurface!;
+                        const double expectedSpan = 1.15 * 540 / 5;
+                        Check(surface.Width == width && surface.Height == 540 && Fits(surface.Red) && Fits(surface.Green),
+                            $"Orthographic projection did not preserve the expected triangle size in {frame.Name}: {surface}.");
+                        static bool Fits(CameraColorBounds bounds) => Math.Abs(bounds.Right - bounds.Left - expectedSpan) <= 3 &&
+                            Math.Abs(bounds.Bottom - bounds.Top - expectedSpan) <= 3;
+                    }
+
+                    static void CheckResize(CameraColorBounds prior, CameraColorBounds resized) =>
+                        Check(Math.Abs(resized.Left - prior.Left - 80) <= 3 && Math.Abs(resized.Right - prior.Right - 80) <= 3 &&
+                            Math.Abs(resized.Top - prior.Top) <= 3 && Math.Abs(resized.Bottom - prior.Bottom) <= 3 &&
+                            Math.Abs(resized.Count - prior.Count) <= prior.Count * .05,
+                            $"Resizing did not translate the projected triangle without scaling it: {prior} -> {resized}.");
+
+                    Task SaveProof(CameraProjectionFrame current, CameraProjectionFrame? first = null, CameraProjectionFrame? undo = null,
+                        CameraProjectionFrame? wide = null, CameraProjectionFrame? resized = null) =>
                         File.WriteAllTextAsync(path, JsonSerializer.Serialize(new CameraProjectionProof(true, Environment.ProcessId,
-                            component.Value, sceneHash, current, first, undo)), token);
+                            camera.Id.Value, component.Value, sceneHash, current, first, undo, wide, resized)), token);
                 }
 
                 async Task VerifyMaterialTransfer()
@@ -2364,7 +2475,7 @@ internal static class EditorModelBuildSmoke
                 Check(ReferenceEquals(content, after.Content) && before.IsDirty == after.IsDirty &&
                     sceneHash == Hash(File.ReadAllBytes(scenePath)), "Replace changed the open authoring document.");
                 var proof = new FrameProof(name, artifact.BuildId, identity.Generation, status.ProcessId!.Value,
-                    manifest.Digest.ToString(), frame.Tick, frame.Mask) { Pixels = frame.Pixels, Regions = frame.Regions };
+                    manifest.Digest.ToString(), frame.Tick, frame.Mask) { Pixels = frame.Pixels, Regions = frame.Regions, CameraSurface = frame.CameraSurface };
                 captures.Add(proof);
                 return proof;
             }
@@ -2412,10 +2523,11 @@ internal static class EditorModelBuildSmoke
             CancelledGeneration = cancelledCandidate!.Generation, CorruptRejectedBeforeHandoff = true, RollbackSucceeded = true
         }, new JsonSerializerOptions { WriteIndented = true }), token);
 
-        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels, MaterialAuthoringRegion[]? Regions)> Capture(string name, SessionIdentity identity, Guid sceneId,
-            long revision, RenderContentHash digest, uint? textureTopLeft = null)
+        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels, MaterialAuthoringRegion[]? Regions, CameraSurfaceProof? CameraSurface)>
+            Capture(string name, SessionIdentity identity, Guid sceneId, long revision, RenderContentHash digest, uint? textureTopLeft = null)
         {
-            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels, MaterialAuthoringRegion[]? Regions)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels, MaterialAuthoringRegion[]? Regions,
+                CameraSurfaceProof? CameraSurface)>(TaskCreationOptions.RunContinuationsAsynchronously);
             void Presented(UiSession ui)
             {
                 if (result.Task.IsCompleted) return;
@@ -2423,12 +2535,14 @@ internal static class EditorModelBuildSmoke
                 {
                     var view = EditorMainWindow.FromRoot(ui.Root).EditorView;
                     var canvas = view.Canvas;
-                    if (!canvas.CanAcknowledgeDraw || canvas.DrawnFrame is not { } frame ||
+                    if (cameraProjection && ui.NeedsRender || !canvas.CanAcknowledgeDraw || canvas.DrawnFrame is not { } frame ||
                         frame.Presentation.Surface.Identity != identity ||
                         !ReferenceEquals(frame.Presentation, engine.Frames.Presentation)) return;
                     var stamp = frame.Metadata.RenderView ?? throw new InvalidDataException("Missing mesh viewport stamp.");
-                    Check(frame.Presentation.Surface.Transport == ViewportTransportKind.Gpu && stamp.SceneId == sceneId &&
-                        stamp.SourceRevision == revision && RenderContentHash.Parse(stamp.ManifestHash) == digest,
+                    var surface = frame.Presentation.Surface;
+                    Check(surface.Transport == ViewportTransportKind.Gpu && stamp.SceneId == sceneId &&
+                        stamp.SourceRevision == revision && RenderContentHash.Parse(stamp.ManifestHash) == digest &&
+                        (!cameraProjection || stamp.SurfaceGeneration == surface.Generation),
                         "GPU draw was not from the captured scene and selected build.");
                     using var image = ((SkiaOpenGLSurface)ui.Rendering).ReadbackImage();
                     using var png = image.Encode(SKEncodedImageFormat.Png, 100);
@@ -2441,17 +2555,34 @@ internal static class EditorModelBuildSmoke
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
                     var compareSlots = materialSlots || persistSlotOverride || reimportTexture || transferMaterials;
                     var redSlot = persistMultipleOverrides || transferMaterials;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot, meshVisibility || materialAuthoring);
+                    Span<SKRectI> cameraBounds = cameraProjection ? stackalloc SKRectI[2] : default;
+                    cameraBounds.Clear();
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot,
+                        meshVisibility || materialAuthoring, cameraBounds);
                     if (materialAuthoring)
                     {
-                        result.TrySetResult((mask, stamp.Tick, null, MeasureMaterialAuthoringRegions(view, pixels, clip, scale, name)));
+                        result.TrySetResult((mask, stamp.Tick, null, MeasureMaterialAuthoringRegions(view, pixels, clip, scale, name), null));
                         return;
                     }
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
                         compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, redSlot, meshVisibility) : null;
-                    result.TrySetResult((mask, stamp.Tick, exact, null));
+                    CameraSurfaceProof? cameraSurface = null;
+                    if (cameraProjection)
+                    {
+                        var xScale = surface.Width / (bounds.Width * (double)scale);
+                        var yScale = surface.Height / (bounds.Height * (double)scale);
+                        var xOrigin = bounds.X * (double)scale;
+                        var yOrigin = bounds.Y * (double)scale;
+                        cameraSurface = new(stamp.SurfaceGeneration, frame.Metadata.FrameId, surface.Width, surface.Height,
+                            ColorBounds(cameraBounds[0], mask.RedPixels), ColorBounds(cameraBounds[1], mask.GreenPixels), stamp.SceneId, stamp.SourceRevision);
+
+                        CameraColorBounds ColorBounds(SKRectI rect, int count) => new(
+                            (rect.Left - xOrigin) * xScale, (rect.Top - yOrigin) * yScale,
+                            (rect.Right - xOrigin) * xScale, (rect.Bottom - yOrigin) * yScale, count * xScale * yScale);
+                    }
+                    result.TrySetResult((mask, stamp.Tick, exact, null, cameraSurface));
                 }
                 catch (Exception error) { result.TrySetException(error); }
             }
@@ -2583,7 +2714,7 @@ internal static class EditorModelBuildSmoke
     }
 
     private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence,
-        bool materialSlots = false, bool redSlot = false, bool allowHidden = false)
+        bool materialSlots = false, bool redSlot = false, bool allowHidden = false, Span<SKRectI> cameraBounds = default)
     {
         Check(clip.Left >= 0 && clip.Top >= 0 && clip.Right <= pixels.Width && clip.Bottom <= pixels.Height &&
             clip.Width > 0 && clip.Height > 0, "Invalid GPU image bounds.");
@@ -2602,9 +2733,11 @@ internal static class EditorModelBuildSmoke
             {
                 greenMask[y * clip.Width + x] = 1;
                 green++;
+                if (!cameraBounds.IsEmpty) AddPixel(ref cameraBounds[1], clip.Left + x, clip.Top + y);
             }
             if (color.Red <= 200 || color.Green >= 25 || color.Blue >= 25) continue;
             mask[y * clip.Width + x] = 1;
+            if (!cameraBounds.IsEmpty) AddPixel(ref cameraBounds[0], clip.Left + x, clip.Top + y);
             if (y < clip.Height / 2) upper++;
             else lower++;
             left = Math.Min(left, x);
@@ -2614,6 +2747,9 @@ internal static class EditorModelBuildSmoke
             allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100),
             "Expected occurrences in the GPU viewport.");
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
+
+        static void AddPixel(ref SKRectI bounds, int x, int y) => bounds = bounds.Right == 0 ? new(x, y, x + 1, y + 1) :
+            new(Math.Min(bounds.Left, x), Math.Min(bounds.Top, y), Math.Max(bounds.Right, x + 1), Math.Max(bounds.Bottom, y + 1));
     }
 
     private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image,
@@ -2738,7 +2874,12 @@ internal static class EditorModelBuildSmoke
     {
         public ViewportPixelProof? Pixels { get; init; }
         public MaterialAuthoringRegion[]? Regions { get; init; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public CameraSurfaceProof? CameraSurface { get; init; }
     }
+    private sealed record CameraSurfaceProof(ulong SurfaceGeneration, ulong FrameId, int Width, int Height,
+        CameraColorBounds Red, CameraColorBounds Green, Guid SceneId, long SceneRevision);
+    private sealed record CameraColorBounds(double Left, double Top, double Right, double Bottom, double Count);
     private sealed record AssetProof(Guid ProjectId, Guid AssetId, Guid KindId, int SchemaVersion, string Revision)
     {
         internal static AssetProof From(RenderAssetKey key) => new(key.ProjectId, key.AssetId, key.KindId, key.SchemaVersion, key.Revision.ToString());
@@ -2755,12 +2896,14 @@ internal static class EditorModelBuildSmoke
         string SelectionSha256, Guid Entity, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot, ImportGeneration[] Imports, FrameProof Frame);
     private sealed record ImportedSlotProof(Guid Id, AssetProof Material);
     private sealed record MaterialTransferFrame(AssetProof Mesh, AssetProof Binding, ImportedSlotProof[] Slots, FrameProof Frame);
-    private sealed record CameraProjectionValues(double Angle, double Near, double Far);
+    private sealed record CameraProjectionValues(string Projection, double Lens, double Near, double Far,
+        long Layers, double ClearR, double ClearG, double ClearB);
     private sealed record MeshVisibilityProof(bool Completed, int EditorPid, Guid Entity, Guid Renderer, Guid Camera, string SceneSha256,
         FrameProof? Initial = null, FrameProof? Disabled = null, FrameProof? Matching = null, FrameProof? Mismatch = null);
     private sealed record CameraProjectionFrame(CameraProjectionValues Values, FrameProof Frame);
-    private sealed record CameraProjectionProof(bool Completed, int EditorPid, Guid Camera, string SceneSha256,
-        CameraProjectionFrame Current, CameraProjectionFrame? Initial, CameraProjectionFrame? Undone);
+    private sealed record CameraProjectionProof(bool Completed, int EditorPid, Guid Entity, Guid Camera, string SceneSha256,
+        CameraProjectionFrame Current, CameraProjectionFrame? Initial, CameraProjectionFrame? Undone, CameraProjectionFrame? Wider,
+        CameraProjectionFrame? Resized);
     private sealed record InitialImportProof(bool Completed, int EditorPid, Guid OpeningId, Guid SourceId, string SourcePath, Guid Entity,
         long Generation, string SceneSha256, string CatalogSha256, string LedgerSha256, AssetProof Mesh, AssetProof Binding,
         ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry)

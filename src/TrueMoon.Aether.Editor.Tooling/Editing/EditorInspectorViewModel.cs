@@ -139,8 +139,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public bool CanPreview => _canPreview;
     /// <summary>Gets preview stop availability.</summary>
     public bool CanStopPreview => _canStopPreview;
-    /// <summary>Gets whether text differs from the captured baseline.</summary>
-    public bool HasDraft => _active.Any(item => item.HasDraft);
+    /// <summary>Gets whether any property or camera projection differs from the captured baseline.</summary>
+    public bool HasDraft => _replacementLens != null || _active.Any(item => item.HasDraft);
     internal bool CanTranslateViewport => !_disposed && CanEdit && !HasDraft && !_conflict && _numericGesture == null && !_resettingTransformGroup;
     internal bool CommitViewportTranslation(TranslationTarget target, TranslationPosition position)
     {
@@ -182,7 +182,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         if (selectedId != _selection) _inspectorSelectionRevision++;
         _openingId = opening;
         _selection = selectedId;
-        if (changedSelection || !HasDraft && !ReferenceEquals(_baseline, content?.Document)) Load(content);
+        if (changedSelection || !HasDraft && (changedOpening || !ReferenceEquals(_baseline, content?.Document))) Load(content);
         else if (changedOpening || !ReferenceEquals(_baseline, content?.Document)) _conflict = true;
         var assignCopy = _materials.RefreshCatalog(state.Project);
         _textures.Refresh(state.Project);
@@ -234,6 +234,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
 
     private void Load(SceneAuthoringState? content)
     {
+        ClearReplacementLens();
+        _committedCamera = null; _destinationCameraSchema = null;
         _baseline = content?.Document; _component = default; _entity = default; _conflict = false;
         _renderMesh = _renderBinding = null; _renderDraftAssets = null;
         SetProperty(ref _error, "", nameof(ErrorText)); _loading = true;
@@ -252,7 +254,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                     var fields = new List<InspectorProperty>();
                     var cameraProjection = HasCameraProjection(schema);
                     var meshRenderer = schema.TypeId == MeshRenderingComponents.MeshRendererId && schema.Version == 1;
-                    var camera = schema.TypeId == MeshRenderingComponents.CameraId && schema.Version == 1;
+                    var camera = IsGameCamera(schema.TypeId) && schema.Version == 1;
                     var ordered = schema.Properties.Values.OrderBy(p => component.TypeId == BuiltInComponents.TransformId
                         ? Array.FindIndex(Fields.ToArray(), f => f.Key == p.Id)
                         : cameraProjection ? ProjectionOrder(p.Id)
@@ -306,8 +308,13 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                 foreach (var definition in entity.DefinitionChain.Select(key => content.Document.Definitions.Single(d => d.Id == key)))
                     foreach (var data in definition.Changes.AddedComponents) known[data.Id] = data;
                 foreach (var data in instance.Changes.AddedComponents) known[data.Id] = data;
+                var hasCamera = groups.Any(group => IsGameCamera(group.TypeId));
                 foreach (var data in known.Values.Where(c => !entity.Components.ContainsKey(c.Id)).OrderBy(c => c.Id.Value))
-                    hidden.Add(new(data.Id, ComponentName(data.TypeId), instance.Changes.RemovedComponents.Contains(data.Id)));
+                    hidden.Add(new(data.Id, ComponentName(data.TypeId), instance.Changes.RemovedComponents.Contains(data.Id))
+                    {
+                        CanRestore = !IsGameCamera(data.TypeId) || !hasCamera
+                    });
+                LoadCameraChoice(content.Document, entity, groups);
             }
             foreach (var address in _properties.Keys.Where(key => !wanted.Contains(key)).ToArray())
             {
@@ -318,9 +325,9 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
             if (_component == default) foreach (var field in Fields) field.Load(PropertyValue.Null, "", false);
             _components = groups.AsReadOnly(); _active = groups.SelectMany(c => c.Properties).ToArray(); _removed = hidden.AsReadOnly();
             var types = entity?.Components.Values.Select(c => c.TypeId).ToHashSet() ?? [];
-            _addable = content == null || entity == null ? [] : content.Document.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version)
+            _addable = content == null || entity == null ? [] : InspectorSchemas(content.Document).OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version)
                 .Select(schema => new InspectorComponentType(schema, ComponentName(schema.TypeId) + " v" + schema.Version,
-                    (schema.AllowMultiple || !types.Contains(schema.TypeId)) && schema.RequiredTypes.All(types.Contains))).ToArray();
+                    CanAddSchema(schema, content.Document, types))).ToArray();
             foreach (var name in new[] { nameof(Components), nameof(AddableTypes), nameof(RemovedComponents), nameof(HasSelection), nameof(NoSelection), nameof(Selection), nameof(HasDraft) }) OnPropertyChanged(name);
         }
         finally { _loading = false; _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); }
@@ -331,6 +338,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         type == BuiltInComponents.AppearanceId ? "Appearance" : type == BuiltInComponents.InteractionId ? "Interaction" :
         type == MeshRenderingComponents.MeshRendererId ? "MeshRenderer" :
         type == MeshRenderingComponents.CameraId ? "Camera" :
+        type == MeshRenderingComponents.OrthographicCameraId ? "OrthographicCamera" :
         "Component " + type.Value.ToString("D")[..8];
     private static string Source(EntityValueSource source, bool schemaDefault) => schemaDefault ? "По умолчанию из схемы" :
         source.EntityId != null ? "Локальное значение" :
@@ -422,12 +430,13 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
             (field, field.CaptureDraft(), field is TransformField { IsAngle: true } angle ? angle.DisplayValue : null)).ToArray());
         UpdateTransformResetState();
         UpdateAngleUnitState();
+        UpdateCameraProjection();
         return id;
     }
     internal void FinishNumericGesture(NumericGestureResult result, long id)
     {
         var gesture = _numericGesture; if (gesture == null || gesture.Id != id) return; _numericGesture = null;
-        if (!_disposed) { UpdateTransformResetState(); UpdateAngleUnitState(); }
+        if (!_disposed) { UpdateTransformResetState(); UpdateAngleUnitState(); UpdateCameraProjection(); }
         if (_disposed || gesture == null || result != NumericGestureResult.Cancelled || !ReferenceEquals(gesture.Document, _baseline) ||
             gesture.Selection != _selection || !ReferenceEquals(gesture.Document, _commands.Read().Document?.Content?.Document) ||
             gesture.Drafts.Any(item => !_active.Contains(item.Field))) return;
@@ -446,7 +455,12 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     private bool Validate(SceneAuthoringState? content)
     {
         var valid = true;
-        foreach (var field in _active) valid &= field.TryValue(out _);
+        foreach (var component in _components)
+            foreach (var field in component.Properties)
+            {
+                if (field.IsLayerMask && !field.HasDraft && IsGameCamera(component.TypeId)) field.SetError("");
+                else valid &= field.TryValue(out _);
+            }
         valid &= ValidateCameraProjections(content);
         return valid && (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets) &&
             _renderAssets is { Mesh: not null } && _renderReferenceDiagnostic == null);
@@ -467,6 +481,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         foreach (var field in _active) field.Enable(CanEditProperties);
         UpdateTransformResetState();
         UpdateAngleUnitState();
+        UpdateCameraProjection();
         SetProperty(ref _canApply, CanEditProperties && draft && valid && !_conflict, nameof(CanApply));
         SetProperty(ref _canCancel, draft || _conflict, nameof(CanCancel));
         SetProperty(ref _canUndo, _available && !draft && !_conflict && content?.UndoCount > 0, nameof(CanUndo));
@@ -491,14 +506,18 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
 
     private bool ApplyCurrentDraft(ProjectSession? capturedProject = null, Guid? capturedOpening = null)
     {
-        if (_resettingTransformGroup || !CanApply || !Validate(_commands.Read().Document?.Content)) return false;
+        var content = _commands.Read().Document?.Content;
+        if (_resettingTransformGroup || !CanApply || content == null ||
+            !ReferenceEquals(content.Document, _baseline) || !Validate(content)) return false;
         var replaceTransform = ReplaceWholeTransform && Fields.Any(field => field.HasDraft);
-        var edits = _active.Where(field => field.HasDraft || replaceTransform && field is TransformField).Select(field =>
+        var replacingCamera = _replacementLens == null ? (ComponentId?)null : _committedCamera!.Id;
+        var edits = _active.Where(field => field.ComponentId != replacingCamera &&
+            (field.HasDraft || replaceTransform && field is TransformField)).Select(field =>
         {
             field.TryValue(out var value);
             return new PropertyEdit(_entity, field.ComponentId, field.Key, value, field.IsReset);
         }).ToArray();
-        var batch = new ComponentEditBatch(Operation(), edits);
+        var batch = CreateInspectorBatch(content, edits);
         return Mutate(() => HasRenderDraft
             ? _commands.EditRenderComponents(_baseline!, _renderDraftAssets!, batch, capturedOpening ?? _openingId, capturedProject)
             : _commands.EditComponents(_baseline!, batch));
@@ -570,16 +589,25 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public void RemoveComponent(ComponentId component) => ChangeComponent(() => new(_entity, component, ComponentChangeKind.Remove));
     /// <summary>Restores an occurrence hidden by this instance or an ancestor.</summary>
     /// <param name="component">Hidden occurrence identity.</param>
-    public void RestoreComponent(ComponentId component) => ChangeComponent(() => new(_entity, component, ComponentChangeKind.Restore));
+    public void RestoreComponent(ComponentId component) =>
+        ChangeComponent(() => new(_entity, component, ComponentChangeKind.Restore), component);
     /// <summary>Clears an instance removal mask while preserving ancestor masks.</summary>
     /// <param name="component">Locally masked occurrence.</param>
-    public void ResetRemoval(ComponentId component) => ChangeComponent(() => new(_entity, component, ComponentChangeKind.ResetRemoval));
-    private void ChangeComponent(Func<ComponentEdit> change)
+    public void ResetRemoval(ComponentId component) =>
+        ChangeComponent(() => new(_entity, component, ComponentChangeKind.ResetRemoval), component);
+
+    private void ChangeComponent(Func<ComponentEdit> change, ComponentId? restoring = null)
     {
         VerifyOwner(); var expected = _baseline; Refresh(_selection);
         if (!ReferenceEquals(expected, _baseline)) { SetProperty(ref _error, "Сцена изменилась. Повторите действие.", nameof(ErrorText)); return; }
-        if (!CanChangeComponents) return;
-        Mutate(() => _commands.EditComponents(_baseline!, new(Operation(), [], [change()])));
+        if (!CanChangeComponents || restoring != null && _removed.Any(item => item.Id == restoring && !item.CanRestore)) return;
+        Mutate(() =>
+        {
+            var edit = change();
+            var schema = edit.Addition is { SchemaVersion: 1 } addition && IsGameCamera(addition.TypeId) &&
+                FindSchema(_baseline!, addition.TypeId, addition.SchemaVersion) == null ? CanonicalCameraSchema(addition.TypeId) : null;
+            return _commands.EditComponents(_baseline!, new(Operation(), [], [edit], schema));
+        });
     }
     private AuthoringOperation Operation() => new(Guid.NewGuid(), _baseline!.Revision, "editor");
     /// <summary>Discards uncommitted text and reloads the latest selected occurrence.</summary>
@@ -636,6 +664,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public void Dispose()
     {
         if (_disposed) return; _disposed = true; _numericGesture = null;
+        ClearReplacementLens();
+        _committedCamera = null; _destinationCameraSchema = null;
         _materials.Release();
         _textures.Release();
         _meshes.Release();

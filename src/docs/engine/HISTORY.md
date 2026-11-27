@@ -1,3 +1,37 @@
+<a id="ed4i-orthographic-inspector-2026-11-27"></a>
+## 2026-11-27 — ED4i: переключение игровой проекции
+
+`1.2611.27.8-alpha`, Windows x64, SDK 11.0.100. Из `src` выполнены
+адресные `dotnet test -c Release` (VSTest/xUnit, уникальные binlog):
+
+| TRX | Пройденные классы и число случаев | Падений / пропусков |
+| --- | --- | --- |
+| `authoring.trx` | `ComponentEditHistoryTests` 22, `ComponentPresenceEditTests` 31, `SnapshotExtractionTests` 38 | 0 / 0 |
+| `editor.trx` | `CameraProjectionInspectorTests` 21, `InspectorComponentActionsTests` 8, `EditorInspectorViewTests` 15, `InspectorDocumentCommandsTests` 4, `InspectorReorderTests` 3 | 0 / 0 |
+
+Все новые случаи присутствуют в TRX. Смена в одной операции добавляет
+схему и заменяет экземпляр камеры; Undo убирает впервые добавленную схему,
+Redo возвращает тот же новый ID. Проверены сброс к наследуемым значениям,
+изоляция черновика при внешней ревизии и новом открытии, ограничения
+схемы и зависимостей, Add/Restore и файловый round trip.
+
+`ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -CameraProjection`
+с локальным слоем Khronos прошёл в исходном Editor: Debug/Release ×
+Cobalt/Microsoft. На профиль — 6 PNG и 5 отчётов Runtime, из них один
+процесс после открытия. Перспективный кадр после Undo и ортографический
+кадр после открытия совпали с соответствующими исходными RGBA-хешами.
+На том же игровом PID поверхность сменилась с 960×540 на 1120×540
+(поколения 1 → 2). При неизменном масштабе оба маркера сдвинулись вправо
+на 80,10 и 79,71 пикселя поверхности. Vulkan validation: 0 ошибок,
+0 предупреждений; после выхода нет живых слотов или открытых handles.
+Это Vulkan → OpenGL с маршрутизируемым вводом `UiSession`, не физический
+ввод Win32. `-FreshPackages` не запускался.
+
+Артефакты: `src/TestResults/OrthographicInspector-b3939536d3374ecfa18efa356f8a73e9`
+(`authoring.trx`, `editor.trx`, уникальные binlog, `native/verification.json`).
+
+[Контракт инспектора](EDITOR_PLAN.md#ed4i-camera-projection).
+
 <a id="ed5a-mesh-picking-2026-11-27"></a>
 ## 2026-11-27 — выбор меша кликом в Edit Preview
 

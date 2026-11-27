@@ -1,4 +1,5 @@
-﻿using TrueMoon.Aether.Scenes;
+﻿using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Tooling.Scenes.Authoring;
 
@@ -8,6 +9,17 @@ internal static class ComponentEditPreparation
     internal static (SceneAuthoringError Error, string Path, string Message)? Validate(
         SceneDocument document, ResolvedSceneSnapshot scene, ComponentEditBatch batch)
     {
+        var addedSchema = batch.AddedSchema;
+        if (addedSchema != null)
+        {
+            var path = SceneResolver.ScenePath(scene.Id);
+            if (document.Schemas.Any(s => s.TypeId == addedSchema.TypeId && s.Version == addedSchema.Version) ||
+                !batch.Components.Any(edit => edit.Kind == ComponentChangeKind.Add && edit.Addition is { } data &&
+                    data.Id == edit.ComponentId && data.TypeId == addedSchema.TypeId && data.SchemaVersion == addedSchema.Version))
+                return (SceneAuthoringError.InvalidScene, path, "A new schema must accompany an addition of its exact type and version.");
+            if (document.Schemas.Length >= SceneDocumentCodec.MaximumSchemas)
+                return (SceneAuthoringError.BatchLimitExceeded, path, "The schema catalog is full.");
+        }
         var structural = new Dictionary<(EntityId, ComponentId), ComponentEdit>();
         foreach (var edit in batch.Components)
         {
@@ -55,7 +67,8 @@ internal static class ComponentEditPreparation
                 if (effective != null || data != null)
                 {
                     var type = effective?.TypeId ?? data!.TypeId; var version = effective?.SchemaVersion ?? data!.SchemaVersion;
-                    var schema = document.Schemas.FirstOrDefault(s => s.TypeId == type && s.Version == version);
+                    var schema = addedSchema != null && addedSchema.TypeId == type && addedSchema.Version == version
+                        ? addedSchema : document.Schemas.FirstOrDefault(s => s.TypeId == type && s.Version == version);
                     if (schema == null || !schema.Properties.ContainsKey(edit.PropertyId))
                         return (SceneAuthoringError.InvalidScene, path, "The reset property is not declared by the exact schema.");
                 }
@@ -111,7 +124,8 @@ internal static class ComponentEditPreparation
             return new EntityInstance(entity.Id, entity.DefinitionId,
                 new EntityPatch(added.Values, removed, overrides.Values, restored), entity.ParentId, entity.Name, entity.SiblingOrder);
         });
-        return new(source.Id, source.Revision, entities, source.Definitions, source.Schemas);
+        var schemas = batch.AddedSchema is { } schema ? source.Schemas.Add(schema) : source.Schemas;
+        return new(source.Id, source.Revision, entities, source.Definitions, schemas);
     }
 
     private static string Path(SceneId scene, EntityId entity, ComponentId component) =>

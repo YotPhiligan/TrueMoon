@@ -230,7 +230,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
             nameof(IEditorInspectorViewModel.Components) or nameof(IEditorInspectorViewModel.AddableTypes) or
                 nameof(IEditorInspectorViewModel.RemovedComponents) => InspectorUpdate.All,
             nameof(IEditorInspectorViewModel.CanChangeComponents) or nameof(IEditorInspectorViewModel.HasDraft) or
-                nameof(IEditorInspectorViewModel.DiagnosticsText) => InspectorUpdate.EditorState,
+                nameof(IEditorInspectorViewModel.DiagnosticsText) or nameof(IEditorInspectorViewModel.CameraProjection) =>
+                InspectorUpdate.EditorState,
             nameof(IEditorInspectorViewModel.RenderAssets) => InspectorUpdate.RenderAssets,
             nameof(IEditorInspectorViewModel.Materials) => InspectorUpdate.Materials,
             nameof(IEditorInspectorViewModel.Textures) => InspectorUpdate.Textures,
@@ -340,13 +341,20 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     /// <summary>Builds one section and gives its field container a second keyed binding, so rows never overlap.</summary>
     private Element CreateComponentSection(InspectorComponent component)
     {
-        var section = new ComponentSection(component);
+        var section = new ComponentSection(component, DataContext?.CameraProjection(component.Id) != null);
         section.Header.SemanticId($"editor.inspector.component.{component.Id.Value:N}");
         section.Header.OnClick(() => ToggleComponent(section));
         section.Remove.OnClick(() => DataContext?.RemoveComponent(section.Address));
         section.Details.OnClick(() => ToggleDetails(section));
+        if (section.CameraButtons is { } buttons)
+        {
+            buttons.Perspective.OnClick(() =>
+                DataContext?.SelectCameraProjection(section.Address, InspectorCameraProjection.Perspective));
+            buttons.Orthographic.OnClick(() =>
+                DataContext?.SelectCameraProjection(section.Address, InspectorCameraProjection.Orthographic));
+        }
         // A specialized Transform section keeps its fields inside the compact editor instead of the bound body.
-        if (!IsSpecializedTransform(component)) section.Body.BindItems(section.Fields,
+        if (!IsSpecializedTransform(component)) section.FieldContainer.BindItems(section.Fields,
             property => CreatePropertyRow(section, property),
             property => (property.Key, property, _presentationGeneration));
         section.Present(component);
@@ -359,6 +367,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     {
         var id = section.Address;
         section.Remove.IsEnabled = DataContext?.CanChangeComponents ?? false;
+        PresentCameraProjection(section, DataContext);
         section.Header.Expanded = section.Body.IsVisible = !_collapsed.Contains(id);
         var visible = _details.Contains(id);
         section.Metadata.IsVisible = visible;
@@ -372,7 +381,20 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
 
         section.Fields.Clear();
         section.Fields.AddRange(section.Component.Properties);
-        section.Body.RefreshItems();
+        section.FieldContainer.RefreshItems();
+    }
+
+    private static void PresentCameraProjection(ComponentSection section, IEditorInspectorViewModel? model)
+    {
+        if (section.CameraButtons is not { } buttons) return;
+        var state = model?.CameraProjection(section.Address);
+        var perspective = state?.Projection == InspectorCameraProjection.Perspective;
+        var orthographic = state?.Projection == InspectorCameraProjection.Orthographic;
+        var canSwitch = state?.CanSwitch == true;
+        buttons.Perspective.Tone = perspective ? ControlTone.Accent : ControlTone.Neutral;
+        buttons.Perspective.IsEnabled = canSwitch && orthographic;
+        buttons.Orthographic.Tone = orthographic ? ControlTone.Accent : ControlTone.Neutral;
+        buttons.Orthographic.IsEnabled = canSwitch && perspective;
     }
 
     private static bool IsSpecializedTransform(InspectorComponent component) =>
@@ -434,6 +456,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
                 this.AddChoicesPart.IsVisible = false;
             }
         });
+        PresentAddChoice(button, choice);
         return button;
     }
 
@@ -447,23 +470,28 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     {
         var row = new RestoreRow(removed);
         row.Restore.OnClick(() => DataContext?.RestoreComponent(row.Address));
+        PresentRestoreRow(row, removed);
         return row;
     }
 
     private void PresentRestoreRow(Element element, InspectorRemovedComponent removed)
     {
         var model = DataContext;
-        ((RestoreRow)element).Present(removed, model != null && model.CanChangeComponents);
+        ((RestoreRow)element).Present(removed, model != null && model.CanChangeComponents && removed.CanRestore);
     }
 
     private void SynchronizeComponentAvailability(IEditorInspectorViewModel model)
     {
         var canChange = model.CanChangeComponents;
-        foreach (var section in Sections()) section.Remove.IsEnabled = canChange;
+        foreach (var section in Sections())
+        {
+            section.Remove.IsEnabled = canChange;
+            PresentCameraProjection(section, model);
+        }
         foreach (var button in this.AddChoicesPart.Items.OfType<AddChoiceButton>())
             button.IsEnabled = canChange && button.Choice.CanAdd;
         foreach (var row in this.RemovedPart.Items.OfType<RestoreRow>())
-            row.Restore.IsEnabled = canChange;
+            row.Restore.IsEnabled = canChange && row.Removed.CanRestore;
     }
 
     private void SynchronizeRenderAssets(InspectorRenderAssetSelection? assets)
@@ -501,7 +529,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         // Coalesce presentation updates instead of adding two dispatcher entries per field on every model reload.
         foreach (var section in Sections())
         {
-            foreach (var row in section.Body.Items.OfType<FieldRow>())
+            foreach (var row in section.FieldContainer.Items.OfType<FieldRow>())
             {
                 ApplyEditorState(row.Controls);
                 ApplyGenericState(row);
@@ -668,12 +696,12 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         .Concat(Sections().SelectMany(section => section.TransformFields.Select(field => field.Number))).OfType<NumberBox>();
     private IEnumerable<ComponentSection> Sections() =>
         IsDisposed ? [] : this.ComponentListPart.Items.OfType<ComponentSection>();
-    private IEnumerable<FieldRow> PropertyRows() => Sections().SelectMany(section => section.Body.Items.OfType<FieldRow>());
+    private IEnumerable<FieldRow> PropertyRows() => Sections().SelectMany(section => section.FieldContainer.Items.OfType<FieldRow>());
     private IEnumerable<InspectorPropertyControls> AllFields() => PropertyRows().Select(row => row.Controls)
         .Concat(Sections().SelectMany(section => section.TransformFields.Select(field => field.Controls)));
     private IEnumerable<ScrollViewer> RenderLists() => PropertyRows().Select(row => row.Choices).OfType<ScrollViewer>();
     private static IEnumerable<InspectorPropertyControls> FieldsOf(ComponentSection section) =>
-        section.Body.Items.OfType<FieldRow>().Select(row => row.Controls)
+        section.FieldContainer.Items.OfType<FieldRow>().Select(row => row.Controls)
             .Concat(section.TransformFields.Select(field => field.Controls));
 
     private void ToggleDetails(ComponentSection section)
@@ -871,6 +899,13 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         private static string RestoreName(InspectorRemovedComponent removed) => "Восстановить компонент " + removed.Title;
     }
 
+    private sealed class ProjectionButton(string text) : Button(text)
+    {
+        // Stock buttons suppress the tone fill when disabled; keep the selected projection visible in the outline.
+        protected override float ThemeBorderWidth => Math.Max(1, base.ThemeBorderWidth);
+        protected override Color ThemeBorderColor => Tone == ControlTone.Accent ? Theme.Accent : base.ThemeBorderColor;
+    }
+
     /// <summary>
     /// Component section kept by its occurrence id inside one presentation context: a model refresh reuses the section,
     /// its focus and its disclosure state, while a replaced context builds a new one because every draft record and
@@ -878,7 +913,7 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
     /// </summary>
     private sealed class ComponentSection : Border
     {
-        public ComponentSection(InspectorComponent component)
+        public ComponentSection(InspectorComponent component, bool hasCameraProjection)
         {
             Component = component;
             Header = new ComponentHeader().WithRole(HeaderRole);
@@ -886,6 +921,17 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
             Remove = Action(UiSymbol.Delete, RemoveName(component));
             Metadata = new Text().WithRole(MetadataRole);
             Body = new VStack().WithRole(StackRole);
+            FieldContainer = Body;
+            if (hasCameraProjection)
+            {
+                var semanticId = $"editor.inspector.camera.{component.Id.Value:N}";
+                var perspective = new ProjectionButton("Перспектива").WithRole(ActionRole).SemanticId(semanticId + ".perspective");
+                var orthographic = new ProjectionButton("Ортографическая").WithRole(ActionRole).SemanticId(semanticId + ".orthographic");
+                CameraButtons = (perspective, orthographic);
+                Body.Add(new HStack().WithRole(RowRole).WithChildren(perspective, orthographic));
+                FieldContainer = new VStack().WithRole(StackRole);
+                Body.Add(FieldContainer);
+            }
             this.WithRole(SectionRole).Content(new VStack().WithRole(StackRole).WithChildren(
                 new ComponentLine(Header, Details, Remove), Metadata, Body));
             Controls = new InspectorComponentControls(this, Header, Body, Remove, Metadata);
@@ -898,6 +944,8 @@ public sealed partial class EditorInspectorView : View<IEditorInspectorViewModel
         internal Button Remove { get; }
         internal Text Metadata { get; }
         internal VStack Body { get; }
+        internal VStack FieldContainer { get; }
+        internal (Button Perspective, Button Orthographic)? CameraButtons { get; }
         internal InspectorComponentControls Controls { get; }
         /// <summary>Source mirror of the field binding; a specialized Transform section keeps its body unbound.</summary>
         internal readonly List<InspectorProperty> Fields = [];

@@ -419,12 +419,18 @@ pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -CameraPro
   -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
 ```
 
-Select the scene camera and edit its vertical angle and clipping distances.
-An invalid near/far pair blocks Apply. A valid edit changes the angle from
-60° to 80° and both distances in one transaction. The probe checks the smaller
-projected shapes in the Vulkan viewport, exact pixel restoration after Undo,
-and the inspector values and viewport pixels after saving the Redo state and
-restarting Editor. `-FreshPackages` uses the closed feed.
+The probe rejects an invalid clipping pair, applies 60° → 80° and both
+distances together, and compares the original and Undo Vulkan pixels.
+It then switches a legacy scene to orthographic projection, rejects zero
+height, and applies a height of five world units. Undo restores the
+perspective occurrence; Redo and reopening retain the replacement ID,
+the common camera values, and the exact orthographic viewport pixels.
+
+The reopened game stays running while its surface changes from 960×540
+to 1120×540. Both depth-separated triangles retain their scale and move
+80 surface pixels right. Each profile records four saved captures and
+two reopened captures from five runtime children, including cleanup
+and Vulkan validation. `-FreshPackages` repeats the scenario from the closed feed.
 
 ## Edit MeshRenderer visibility and layers
 

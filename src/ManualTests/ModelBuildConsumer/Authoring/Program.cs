@@ -182,14 +182,17 @@ else if (renderSlots || editorInitialImport)
     original["nodes"] = JsonNode.Parse("""[{"name":"two slots","mesh":0}]""");
     var bin = Path.Combine(sourceDirectory, "scene.bin");
     var bytes = File.ReadAllBytes(bin);
-    float[] positions = [-1.55f, -.65f, 0, -.4f, -.65f, 0, -1.55f, .5f, 0, .4f, -.65f, 0, 1.55f, -.65f, 0, .4f, .5f, 0];
+    var leftZ = cameraProjection ? .5f : 0f;
+    var rightZ = cameraProjection ? -.5f : 0f;
+    float[] positions = [-1.55f, -.65f, leftZ, -.4f, -.65f, leftZ, -1.55f, .5f, leftZ,
+        .4f, -.65f, rightZ, 1.55f, -.65f, rightZ, .4f, .5f, rightZ];
     for (var index = 0; index < positions.Length; index++)
         BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(index * sizeof(float)), positions[index]);
     File.WriteAllBytes(bin, bytes);
-    original["accessors"]![0]!["min"] = new JsonArray(-1.55, -.65, 0);
-    original["accessors"]![0]!["max"] = new JsonArray(-.4, .5, 0);
-    original["accessors"]![1]!["min"] = new JsonArray(.4, -.65, 0);
-    original["accessors"]![1]!["max"] = new JsonArray(1.55, .5, 0);
+    original["accessors"]![0]!["min"] = new JsonArray(-1.55, -.65, leftZ);
+    original["accessors"]![0]!["max"] = new JsonArray(-.4, .5, leftZ);
+    original["accessors"]![1]!["min"] = new JsonArray(.4, -.65, rightZ);
+    original["accessors"]![1]!["max"] = new JsonArray(1.55, .5, rightZ);
 }
 else
 {
@@ -244,7 +247,9 @@ var initialScene = new SceneDocument(sceneId, 40, [new(cameraId, cameraDefinitio
             authoringAssets ? new Dictionary<string, PropertyValue> { ["y"] = PropertyValue.From(1d), ["z"] = PropertyValue.From(5d) } :
                 new Dictionary<string, PropertyValue> { ["z"] = PropertyValue.From(5d) }),
         new(new(Guid.Parse("33f571d0-da11-4e0c-b4ba-d1068cd827fc")), MeshRenderingComponents.CameraId, 1,
-            meshVisibility ? [KeyValuePair.Create("layers", PropertyValue.From(2L))] : [])
+            cameraProjection ? [KeyValuePair.Create("layers", PropertyValue.From(1L)),
+                Value("clearR", .08), Value("clearG", .12), Value("clearB", .16)] :
+                meshVisibility ? [KeyValuePair.Create("layers", PropertyValue.From(2L))] : [])
     ]))], [BuiltInComponents.Schemas[0], MeshRenderingComponents.CameraSchema]);
 var placement = renderSlots || playerTexture ? Matrix4x4.Identity : Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25f, 0, 0);
 var scenePath = Path.Combine(evidence, "placed.aetherscene");

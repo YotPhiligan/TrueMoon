@@ -8,6 +8,65 @@ namespace TrueMoon.Aether.Tests.Scenes.Authoring;
 public sealed class ComponentEditHistoryTests
 {
     [Fact]
+    public void Receipt_AddedSchemaParticipatesInAtomicHistoryAndValueEquality()
+    {
+        using var session = Session();
+        var type = new ComponentTypeId(Id(201));
+        var occurrence = new ComponentId(Id(104));
+        var operation = Operation(7);
+        ComponentEditBatch BatchWithSchema(double defaultSize) => new(operation,
+            [new(Second, occurrence, "size", PropertyValue.From(6d))],
+            [new(Second, occurrence, ComponentChangeKind.Add, new(occurrence, type, 1))],
+            new(type, 1, [new("size", PropertyValueKind.Number, PropertyValue.From(defaultSize))],
+                requiredTypes: [BuiltInComponents.TransformId]));
+
+        var before = session.Read();
+        Assert.DoesNotContain(before.Document.Schemas, schema => schema.TypeId == type);
+        var receipt = session.EditComponents(BatchWithSchema(10));
+        Assert.True(receipt.Succeeded);
+        var added = session.Read();
+        Assert.Equal(1, added.UndoCount);
+        AssertAdded(added);
+        Assert.Same(receipt, session.EditComponents(BatchWithSchema(10)));
+        Assert.Equal(SceneAuthoringError.OperationIdConflict, session.EditComponents(BatchWithSchema(7)).Error);
+        Assert.Same(added, session.Read());
+
+        Assert.True(session.Undo(Operation(8)).Succeeded);
+        var undone = session.Read();
+        Assert.DoesNotContain(undone.Document.Schemas, schema => schema.TypeId == type);
+        Assert.False(undone.Resolved.Entities[Second].Components.ContainsKey(occurrence));
+        Assert.True(session.Redo(Operation(9)).Succeeded);
+        AssertAdded(session.Read());
+
+        void AssertAdded(SceneAuthoringState state)
+        {
+            var schema = Assert.Single(state.Document.Schemas, schema => schema.TypeId == type);
+            Assert.Equal(1, schema.Version);
+            Assert.Equal(10d, schema.Properties["size"].DefaultValue.GetNumber());
+            Assert.Equal(6d, state.Resolved.Entities[Second].Components[occurrence].Properties["size"].Value.GetNumber());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddedSchema_WithoutMatchingAddOrWithExistingKeyRejectsWholeBatch(bool existing)
+    {
+        using var session = Session();
+        var before = session.Read();
+        var schema = existing ? before.Document.Schemas.Single(s => s.TypeId == CustomType) :
+            new ComponentSchema(new(Id(201)), 1, []);
+        var result = session.EditComponents(new(Operation(7),
+            [new(First, Transform, "x", PropertyValue.From(9d))],
+            [new(Second, Custom, ComponentChangeKind.Add, new(Custom, CustomType, 1))], schema));
+
+        Assert.Equal(SceneAuthoringError.InvalidScene, result.Error);
+        Assert.Equal($"scenes/{before.Document.Id.Value:D}", result.Path);
+        Assert.Same(before, session.Read());
+        Assert.Equal(0, before.UndoCount);
+    }
+
+    [Fact]
     public void Receipt_ValueEquivalentAdditionReturnsOriginalReceiptAfterLaterEditAndCancellation()
     {
         using var session = Session();

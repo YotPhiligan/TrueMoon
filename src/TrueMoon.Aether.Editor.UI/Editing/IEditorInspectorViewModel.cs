@@ -75,7 +75,7 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <summary>Gets preview stop availability.</summary>
     bool CanStopPreview { get; }
 
-    /// <summary>Gets whether text differs from the captured baseline.</summary>
+    /// <summary>Gets whether there are uncommitted inspector changes.</summary>
     bool HasDraft { get; }
 
     /// <summary>Gets field-independent mutation/conflict diagnostics.</summary>
@@ -95,6 +95,16 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
 
     /// <summary>Gets only effective components of the selected authoring entity.</summary>
     IReadOnlyList<InspectorComponent> Components { get; }
+
+    /// <summary>Gets the current camera projection and switch availability, when the section supports projection editing.</summary>
+    /// <param name="component">Current occurrence identity.</param>
+    /// <returns>The presented projection, or null for sections without the capability.</returns>
+    InspectorCameraProjectionState? CameraProjection(ComponentId component) => null;
+
+    /// <summary>Stages a different camera projection in the inspector draft.</summary>
+    /// <param name="component">Current occurrence identity.</param>
+    /// <param name="projection">Requested projection.</param>
+    void SelectCameraProjection(ComponentId component, InspectorCameraProjection projection) { }
 
     /// <summary>Detached choices for the selected MeshRenderer, when present.</summary>
     InspectorRenderAssetSelection? RenderAssets => null;

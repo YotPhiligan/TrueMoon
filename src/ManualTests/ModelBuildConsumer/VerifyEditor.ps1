@@ -246,22 +246,93 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                 Copy-Item -LiteralPath "$reopenedDir/editor-camera-projection.json" -Destination $reopenedPath
                 $saved = Get-Content -LiteralPath $savedPath -Raw | ConvertFrom-Json
                 $reopened = Get-Content -LiteralPath $reopenedPath -Raw | ConvertFrom-Json
-                $children = @(Get-ChildItem -LiteralPath $savedDir -Filter 'runtime-*.json' -File) +
-                    @(Get-ChildItem -LiteralPath $reopenedDir -Filter 'runtime-*.json' -File)
-                if (!$saved.Completed -or !$reopened.Completed -or $children.Count -ne 4 -or
-                    $saved.EditorPid -eq $reopened.EditorPid -or $saved.Camera -ne $reopened.Camera -or
-                    $saved.SceneSha256 -ne $reopened.SceneSha256 -or
-                    $saved.Initial.Frame.Pixels.Sha256 -ne $saved.Undone.Frame.Pixels.Sha256 -or
-                    $saved.Current.Frame.Pixels.Sha256 -ne $reopened.Current.Frame.Pixels.Sha256 -or
-                    $saved.Current.Frame.Pixels.Sha256 -eq $saved.Initial.Frame.Pixels.Sha256 -or
-                    $saved.Current.Frame.Mask.RedPixels -ge $saved.Initial.Frame.Mask.RedPixels -or
-                    $saved.Current.Frame.Mask.GreenPixels -ge $saved.Initial.Frame.Mask.GreenPixels) {
+                $savedChildren = @(Get-ChildItem -LiteralPath $savedDir -Filter 'runtime-*.json' -File)
+                $reopenedChildren = @(Get-ChildItem -LiteralPath $reopenedDir -Filter 'runtime-*.json' -File)
+                $children = $savedChildren + $reopenedChildren
+                $initial = $saved.Initial.Frame
+                $undo = $saved.Undone.Frame
+                $wide = $saved.Wider.Frame
+                $ortho = $saved.Current.Frame
+                $restored = $reopened.Current.Frame
+                $resized = $reopened.Resized.Frame
+                if (!$saved.Completed -or !$reopened.Completed -or $savedChildren.Count -ne 4 -or $reopenedChildren.Count -ne 1 -or
+                    !$saved.EditorPid -or !$reopened.EditorPid -or $saved.EditorPid -eq $reopened.EditorPid -or
+                    !$saved.Entity -or $saved.Entity -ne $reopened.Entity -or !$saved.Camera -or $saved.Camera -ne $reopened.Camera -or
+                    $saved.SceneSha256 -ne $reopened.SceneSha256 -or $saved.SceneSha256 -ne (Get-FileHash -LiteralPath "$fixture/Scenes/placed.aetherscene").Hash -or
+                    $saved.Resized -or $reopened.Initial -or $reopened.Undone -or $reopened.Wider -or !$resized -or
+                    $initial.Pixels.Sha256 -ne $undo.Pixels.Sha256 -or $ortho.Pixels.Sha256 -ne $restored.Pixels.Sha256 -or
+                    $wide.Pixels.Sha256 -eq $initial.Pixels.Sha256 -or
+                    $wide.Mask.RedPixels -ge $initial.Mask.RedPixels -or $wide.Mask.GreenPixels -ge $initial.Mask.GreenPixels -or
+                    $ortho.Pixels.Sha256 -eq $wide.Pixels.Sha256) {
                     throw "Incomplete projection, Undo or restart evidence for $name-$provider"
+                }
+                $originalLens = [Math]::PI / 3
+                $wideLens = 80 * ([Math]::PI / 180)
+                $cameraChecks = @(
+                    @{ Name = 'camera-initial'; Sample = $saved.Initial; Dir = $savedDir; Projection = 'Perspective'; Lens = $originalLens; Near = .1; Far = 100; Width = 960; Surfaces = 1 }
+                    @{ Name = 'camera-wide'; Sample = $saved.Wider; Dir = $savedDir; Projection = 'Perspective'; Lens = $wideLens; Near = .25; Far = 30; Width = 960; Surfaces = 1 }
+                    @{ Name = 'camera-undone'; Sample = $saved.Undone; Dir = $savedDir; Projection = 'Perspective'; Lens = $originalLens; Near = .1; Far = 100; Width = 960; Surfaces = 1 }
+                    @{ Name = 'camera-ortho-saved'; Sample = $saved.Current; Dir = $savedDir; Projection = 'Orthographic'; Lens = 5; Near = .25; Far = 30; Width = 960; Surfaces = 1 }
+                    @{ Name = 'camera-reopened'; Sample = $reopened.Current; Dir = $reopenedDir; Projection = 'Orthographic'; Lens = 5; Near = .25; Far = 30; Width = 960; Surfaces = 2 }
+                    @{ Name = 'camera-ortho-resized'; Sample = $reopened.Resized; Dir = $reopenedDir; Projection = 'Orthographic'; Lens = 5; Near = .25; Far = 30; Width = 1120; Surfaces = 2 }
+                )
+                $expectedSpan = 1.15 * 540 / 5
+                foreach ($sample in $cameraChecks) {
+                    $values = $sample.Sample.Values
+                    $frame = $sample.Sample.Frame
+                    $surface = $frame.CameraSurface
+                    if ($frame.Name -ne $sample.Name -or !$frame.Pid -or !$frame.Generation -or !$frame.BuildId -or
+                        $frame.ManifestHash -notmatch '^[0-9A-F]{64}$' -or $frame.Pixels.Sha256 -notmatch '^[0-9A-F]{64}$' -or
+                        $surface.Width -ne $sample.Width -or $surface.Height -ne 540 -or !$surface.SurfaceGeneration -or
+                        !$surface.FrameId -or !$surface.SceneId -or $surface.SceneId -ne $initial.CameraSurface.SceneId -or
+                        $frame.Mask.RedPixels -le 100 -or $frame.Mask.GreenPixels -le 100 -or
+                        $values.Projection -cne $sample.Projection -or $values.Lens -ne $sample.Lens -or
+                        $values.Near -ne $sample.Near -or $values.Far -ne $sample.Far -or
+                        $values.Layers -ne 1 -or $values.ClearR -ne .08 -or $values.ClearG -ne .12 -or $values.ClearB -ne .16) {
+                        throw "Invalid camera frame identity, extent or exact authoring values for $($sample.Name) in $name-$provider"
+                    }
+                    $child = Get-Content -LiteralPath "$($sample.Dir)/runtime-$($frame.Generation).json" -Raw | ConvertFrom-Json
+                    if ($child.Pid -ne $frame.Pid -or $child.BuildId -ne $frame.BuildId -or $child.Role -ne 'Game' -or
+                        $child.Validation.SurfacesCreated -ne $sample.Surfaces -or $child.Validation.SurfacesReleased -ne $sample.Surfaces) {
+                        throw "Incorrect camera Runtime or surface lifetime for $($sample.Name) in $name-$provider"
+                    }
+                    $red = $surface.Red
+                    $green = $surface.Green
+                    if ($sample.Projection -eq 'Perspective') {
+                        if (($red.Right - $red.Left) -le ($green.Right - $green.Left + 6) -or
+                            ($red.Bottom - $red.Top) -le ($green.Bottom - $green.Top + 6)) {
+                            throw "Perspective did not enlarge the nearer red triangle for $($sample.Name) in $name-$provider"
+                        }
+                    } else {
+                        foreach ($color in @($red, $green)) {
+                            if ($color.Count -le 0 -or [Math]::Abs($color.Right - $color.Left - $expectedSpan) -gt 3 -or
+                                [Math]::Abs($color.Bottom - $color.Top - $expectedSpan) -gt 3) {
+                                throw "Incorrect orthographic marker size for $($sample.Name) in $name-$provider"
+                            }
+                        }
+                    }
+                }
+                $priorSurface = $restored.CameraSurface
+                $resizedSurface = $resized.CameraSurface
+                if (@(@($initial, $undo, $wide, $ortho).Generation | Sort-Object -Unique).Count -ne 4 -or
+                    $restored.Pid -ne $resized.Pid -or $restored.Generation -ne $resized.Generation -or
+                    $restored.BuildId -ne $resized.BuildId -or $restored.ManifestHash -ne $resized.ManifestHash -or
+                    $priorSurface.SceneRevision -ne $resizedSurface.SceneRevision -or
+                    $resizedSurface.SurfaceGeneration -le $priorSurface.SurfaceGeneration -or $resized.Tick -lt $restored.Tick) {
+                    throw "Camera resize did not use a newer surface on the same playing Runtime in $name-$provider"
+                }
+                foreach ($colorName in @('Red', 'Green')) {
+                    $prior = $priorSurface.$colorName
+                    $after = $resizedSurface.$colorName
+                    if ([Math]::Abs($after.Left - $prior.Left - 80) -gt 3 -or [Math]::Abs($after.Right - $prior.Right - 80) -gt 3 -or
+                        [Math]::Abs($after.Top - $prior.Top) -gt 3 -or [Math]::Abs($after.Bottom - $prior.Bottom) -gt 3 -or
+                        [Math]::Abs($after.Count - $prior.Count) -gt $prior.Count * .05) {
+                        throw "Camera resize did not translate the $colorName triangle without scaling in $name-$provider"
+                    }
                 }
                 $run.Saved = @{ Path = $savedPath; Sha256 = (Get-FileHash -LiteralPath $savedPath).Hash }
                 $run.Reopened = @{ Path = $reopenedPath; Sha256 = (Get-FileHash -LiteralPath $reopenedPath).Hash }
-                $images = @("$savedDir/camera-initial.png", "$savedDir/camera-wide.png",
-                    "$savedDir/camera-undone.png", "$reopenedDir/camera-reopened.png")
+                $images = @($cameraChecks | ForEach-Object { "$($_.Dir)/$($_.Name).png" })
             } elseif ($RenderMaterialTransfer) {
                 $directoryWithFrames = "$fixture/import-saved"
                 $path = "$output/editor-material-transfer.json"
