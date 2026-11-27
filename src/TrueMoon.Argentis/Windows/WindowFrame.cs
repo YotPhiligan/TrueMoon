@@ -59,7 +59,7 @@ public sealed class WindowFrame : Element, IUiFrameParticipant
         _overlayChildren = Array.AsReadOnly(grip == null ? new[] { content, titleBar } : [content, titleBar, grip]);
         try
         {
-            using var change = new TreeChange([this, titleBar, content, grip], grip == null ? 3 : 4);
+            using var change = TreeChange.Acquire([this, titleBar, content, grip], grip == null ? 3 : 4);
             Adopt(titleBar, change); Adopt(content, change); if (grip != null) Adopt(grip, change); change.Complete();
             AttachmentChanged += FrameAttachment;
         }

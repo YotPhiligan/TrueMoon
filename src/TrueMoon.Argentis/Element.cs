@@ -474,7 +474,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         PrepareAttachmentSubtree(controlFactories);
         if (PresentationRootForAttach is { } presentationRoot)
             Window.ValidatePresentationTree(this, presentationRoot);
-        using var change = new TreeChange(this);
+        using var change = TreeChange.Acquire(this);
         AttachCore(verifyAccess, post, detaching, controlFactories, change);
         DependencyOwnership?.Release(this);
         change.Complete();
@@ -532,7 +532,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         VerifyTreeAccess();
         if (Parent != null) throw new InvalidOperationException("Remove an owned child before detaching it.");
         if (!IsAttached) return;
-        using var change = new TreeChange(this);
+        using var change = TreeChange.Acquire(this);
         DetachCore(change);
         change.Complete();
     }
@@ -581,7 +581,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     {
         VerifyAccess();
         ArgumentNullException.ThrowIfNull(theme);
-        using var change = new TreeChange(this);
+        using var change = TreeChange.Acquire(this);
         ApplyThemeCore(theme, change);
         change.Complete();
     }
@@ -705,7 +705,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         VerifyAccess();
         if (Parent != null && !Parent._disposing) throw new InvalidOperationException("Remove an owned child before disposing it.");
         // Parent disposal already holds the tree lock, while retaining virtual child disposal.
-        using var change = Parent?._disposing == true ? new TreeChange() : new TreeChange(this);
+        using var change = Parent?._disposing == true ? TreeChange.Acquire() : TreeChange.Acquire(this);
         _disposing = true;
         try
         {
@@ -718,7 +718,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
                 foreach (var subscription in subscriptions) change.Run(subscription.Dispose);
             }
             var children = Children;
-            for (var index = 0; index < children.Count; index++) change.Run(children[index].Dispose);
+            for (var index = 0; index < children.Count; index++) change.RunDispose(children[index]);
         }
         finally
         {

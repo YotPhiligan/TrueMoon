@@ -69,7 +69,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
         }
 
         owner.ValidateChildChange(children, children.Length, null, 0);
-        using var change = new TreeChange(owner, children);
+        using var change = TreeChange.Acquire(owner, children);
         foreach (var child in children)
         {
             base.InsertItem(Count, child);
@@ -104,7 +104,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
         var removedCount = plan.RemovedCount;
         owner.ValidateChildChange(added, addedCount, removed, removedCount);
         List<Exception>? errors = null;
-        using (var change = new TreeChange(plan.Locked(owner, addedCount, removedCount), plan.LockedCount))
+        using (var change = TreeChange.Acquire(plan.Locked(owner, addedCount, removedCount), plan.LockedCount))
         {
             Apply(plan, start, change);
             var delta = desiredCount - length;
@@ -206,8 +206,8 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
     {
         if (item != null) owner.ValidateChildChange(item, previous);
         using var change = previous == null || item == null
-            ? new TreeChange(owner, previous ?? item)
-            : new TreeChange(owner, previous, item);
+            ? TreeChange.Acquire(owner, previous ?? item)
+            : TreeChange.Acquire(owner, previous, item);
         if (previous == null) base.InsertItem(index, item!);
         else if (item == null) base.RemoveItem(index);
         else base.SetItem(index, item);
@@ -223,7 +223,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
     {
         VerifyMutation();
         var previous = this.ToArray();
-        using var change = new TreeChange(owner, previous);
+        using var change = TreeChange.Acquire(owner, previous);
         base.ClearItems();
         foreach (var item in previous) owner.Orphan(item, change);
         change.Complete();
@@ -236,7 +236,7 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
         if ((uint)newIndex >= Count) throw new ArgumentOutOfRangeException(nameof(newIndex));
         var item = this[oldIndex];
         if (oldIndex == newIndex) return;
-        using var change = new TreeChange(owner);
+        using var change = TreeChange.Acquire(owner);
         base.RemoveItem(oldIndex);
         base.InsertItem(newIndex, item);
         change.ScheduleInvalidation(owner, Invalidation.Layout);

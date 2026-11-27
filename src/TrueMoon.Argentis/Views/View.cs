@@ -66,7 +66,7 @@ public abstract class View : ContentControl, IView
         if (_deferredContent is not { } factory) return;
         if (factories == null) throw new InvalidOperationException("Attaching a declared view requires a UI control factory registry.");
         // Preparing a detached candidate must not allow callbacks to modify the tree receiving it.
-        using var guard = attachedParent == null ? null : new TreeChange(attachedParent);
+        using var guard = attachedParent == null ? null : TreeChange.Acquire(attachedParent);
         VerifyAccess();
         if (_contentPreparationStarted) throw new InvalidOperationException("View content preparation has already started.");
 
@@ -76,7 +76,7 @@ public abstract class View : ContentControl, IView
         {
             if (Child == null)
             {
-                using (new TreeChange(this)) draft = factory(factories);
+                using (TreeChange.Acquire(this)) draft = factory(factories);
                 SetContent(draft);
                 OnContentPrepared();
             }

@@ -7,9 +7,10 @@ namespace TrueMoon.Argentis;
 // the common one- and two-element change needs no set, no copy and no notification buffer.
 internal sealed class TreeChange : IDisposable
 {
-    private readonly Element? _first, _firstRoot, _second, _secondRoot, _third, _thirdRoot;
-    private readonly Element?[]? _batch;
-    private readonly int _batchCount, _invalidationCapacity;
+    private Element? _first, _firstRoot, _second, _secondRoot, _third, _thirdRoot;
+    private Element?[]? _batch;
+    private int _batchCount, _invalidationCapacity;
+    private bool _rented;
     private List<Exception>? _errors;
     private Queue<Action>? _notifications;
     private List<(Element Node, Invalidation Reason)>? _invalidations;
@@ -18,22 +19,33 @@ internal sealed class TreeChange : IDisposable
     // a fresh queue and its default backing array.
     [ThreadStatic] private static Queue<Action>? _pooledNotifications;
     [ThreadStatic] private static List<(Element Node, Invalidation Reason)>? _pooledInvalidations;
+    // The change object is rented the same way: a live change exists only for the current nesting depth, so disposing
+    // a subtree keeps a shallow stack of them instead of allocating one per node.
+    [ThreadStatic] private static TreeChange[]? _pooledChanges;
+    [ThreadStatic] private static int _pooledChangeCount;
     private const int PooledCapacityLimit = 4096;
+    private const int PooledChangeLimit = 16;
 
-    internal TreeChange(Element? first = null, Element? second = null, Element? third = null)
+    private TreeChange() { }
+
+    /// <summary>Locks up to three elements and their current roots on a change rented from this thread.</summary>
+    internal static TreeChange Acquire(Element? first = null, Element? second = null, Element? third = null)
     {
+        var change = Rent();
         Verify(first); Verify(second); Verify(third);
-        (_first, _firstRoot) = Lock(first);
-        (_second, _secondRoot) = Lock(second);
-        (_third, _thirdRoot) = Lock(third);
-        _invalidationCapacity = 4;
+        (change._first, change._firstRoot) = Lock(first);
+        (change._second, change._secondRoot) = Lock(second);
+        (change._third, change._thirdRoot) = Lock(third);
+        change._invalidationCapacity = 4;
+        return change;
     }
 
     /// <summary>Locks a prepared batch of elements and their current roots; the buffer is read, never copied.</summary>
-    internal TreeChange(Element?[] elements, int count)
+    internal static TreeChange Acquire(Element?[] elements, int count)
     {
         ArgumentNullException.ThrowIfNull(elements);
         ArgumentOutOfRangeException.ThrowIfNegative(count);
+        var change = Rent();
         for (var index = 0; index < count; index++) Verify(elements[index]);
         var batch = new Element?[count * 2];
         for (var index = 0; index < count; index++)
@@ -43,17 +55,19 @@ internal sealed class TreeChange : IDisposable
             batch[index * 2 + 1] = root;
         }
 
-        _batch = batch;
-        _batchCount = count * 2;
-        _invalidationCapacity = count * 2;
+        change._batch = batch;
+        change._batchCount = count * 2;
+        change._invalidationCapacity = count * 2;
+        return change;
     }
 
     /// <summary>Locks a container plus the children one batch adopts: the caller's array is read, never copied or re-spread.</summary>
-    internal TreeChange(Element owner, Element[] children)
+    internal static TreeChange Acquire(Element owner, Element[] children)
     {
+        var change = Rent();
         Verify(owner);
         for (var index = 0; index < children.Length; index++) Verify(children[index]);
-        (_first, _firstRoot) = Lock(owner);
+        (change._first, change._firstRoot) = Lock(owner);
         var batch = new Element?[children.Length * 2];
         for (var index = 0; index < children.Length; index++)
         {
@@ -62,10 +76,32 @@ internal sealed class TreeChange : IDisposable
             batch[index * 2 + 1] = root;
         }
 
-        _batch = batch;
-        _batchCount = children.Length * 2;
+        change._batch = batch;
+        change._batchCount = children.Length * 2;
         // Adopt and theme application queue one invalidation per node, plus one for the container.
-        _invalidationCapacity = (children.Length + 1) * 2;
+        change._invalidationCapacity = (children.Length + 1) * 2;
+        return change;
+    }
+
+    // A rented change starts empty: locked slots, buffers and captured errors belong to whoever used it before.
+    private static TreeChange Rent()
+    {
+        TreeChange change;
+        if (_pooledChangeCount > 0)
+        {
+            var pool = _pooledChanges!;
+            change = pool[--_pooledChangeCount];
+            pool[_pooledChangeCount] = null!;
+        }
+        else change = new TreeChange();
+        change._rented = true;
+        change._first = change._firstRoot = change._second = change._secondRoot = change._third = change._thirdRoot = null;
+        change._batch = null;
+        change._batchCount = 0;
+        change._errors = null;
+        change._notifications = null;
+        change._invalidations = null;
+        return change;
     }
 
     // Reentrancy is judged before this change locks anything: a container and the child it adopts are locked by the same
@@ -86,6 +122,13 @@ internal sealed class TreeChange : IDisposable
     internal void Run(Action action)
     {
         try { action(); }
+        catch (Exception error) { (_errors ??= []).Add(error); }
+    }
+
+    /// <summary>Disposes a child without allocating a method-group delegate: subtree disposal does this for every node.</summary>
+    internal void RunDispose(Element element)
+    {
+        try { element.Dispose(); }
         catch (Exception error) { (_errors ??= []).Add(error); }
     }
 
@@ -145,6 +188,8 @@ internal sealed class TreeChange : IDisposable
 
     public void Dispose()
     {
+        if (!_rented) return;
+        _rented = false;
         Unlock(_first); Unlock(_firstRoot);
         Unlock(_second); Unlock(_secondRoot);
         Unlock(_third); Unlock(_thirdRoot);
@@ -156,6 +201,16 @@ internal sealed class TreeChange : IDisposable
             _pooledNotifications = notifications;
         if (_invalidations is { Count: 0 } invalidations && invalidations.Capacity <= PooledCapacityLimit)
             _pooledInvalidations = invalidations;
+        // The change returns only unlocked and empty, so a pooled entry can never hand a stale lock or a queued
+        // notification to the next change. The pool is capped by nesting depth, not by subtree size.
+        _first = _firstRoot = _second = _secondRoot = _third = _thirdRoot = null;
+        _batch = null;
+        _batchCount = 0;
+        _errors = null;
+        _notifications = null;
+        _invalidations = null;
+        _pooledChanges ??= new TreeChange[PooledChangeLimit];
+        if (_pooledChangeCount < PooledChangeLimit) _pooledChanges[_pooledChangeCount++] = this;
     }
 
     private static void Unlock(Element? element)

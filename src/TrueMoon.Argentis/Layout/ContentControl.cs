@@ -19,7 +19,7 @@ public class ContentControl : Element
         var previous = Child;
         if (ReferenceEquals(content, previous)) return;
         if (content != null) ValidateChildChange(content, previous);
-        using var change = new TreeChange(this, previous, content);
+        using var change = TreeChange.Acquire(this, previous, content);
         _children = content == null ? [] : [content];
         if (previous != null) Orphan(previous, change);
         if (content != null) Adopt(content, change);
