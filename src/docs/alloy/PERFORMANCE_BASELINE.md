@@ -806,8 +806,11 @@ UIA4.3); переиспользование строки пула требует
 числе `UnchangedState_KeepsBranchAndSkipsFactory`, `ClearingState_RemovesBranchAndDisposesIt`,
 `ReattachWithEqualState_PreservesOldChildAndRestoresOneModelSubscription` и
 `AcceptedReplacement_DisposesOldSubtreeSubscriptionsAndInputExactlyOnce`), `TrueMoon.Aether.Editor.Tests` —
-1612 без падений (246 по фильтру `Inspector`); сборка `TrueMoon.Aether.Editor.UI` Release — 0 ошибок;
-стенд `--verify` — `VIEW_BASELINE_VERIFIED` вместе с новой проверкой слота.
+1612 без падений, плюс отдельный зелёный прогон фильтра `Inspector` — 246 без падений на том же собранном
+дереве. До правки последнего утверждения в тесте проводки тот фильтр давал 245/246; зелёный прогон фильтра
+снят уже после правки, полного прогона на старом утверждении не было. Сборка
+`TrueMoon.Aether.Editor.UI` Release — 0 ошибок; стенд `--verify` — `VIEW_BASELINE_VERIFIED` вместе с новой
+проверкой слота.
 Проводка поповера на экране: `TrueMoon.Aether.Editor.Tests/Inspector/InspectorRenderChoicesWiringTests.cs` —
 открытие по списку ассетов, закрытие тем же полем со снятием и освобождением строк, пересборка после
 settled-закрытия, закрытие на новом снимке ассетов и выключенная строка выбора, которая остаётся в списке,
