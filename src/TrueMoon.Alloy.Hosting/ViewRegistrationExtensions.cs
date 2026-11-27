@@ -21,6 +21,21 @@ public static class ViewRegistrationExtensions
         return Register(services, ViewActivation<TView>.Required());
     }
 
+    /// <summary>Registers a factory that creates a fresh view from one named activation contribution.</summary>
+    /// <typeparam name="TView">The concrete view to create.</typeparam>
+    /// <param name="services">The application service registrations.</param>
+    /// <param name="contribution">The contribution published by the assembly that owns this View.</param>
+    /// <returns>The same registration context.</returns>
+    /// <remarks>Use it when more than one assembly contributed an activation for the same closed view; an
+    /// unnamed registration then fails with the list of contributions instead of choosing one of them.</remarks>
+    public static IServicesRegistrationContext View<TView>(this IServicesRegistrationContext services,
+        string contribution) where TView : View
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contribution);
+        return Register(services, ViewActivation<TView>.Required(contribution));
+    }
+
     /// <summary>Registers a view factory and its default application-owned style.</summary>
     /// <typeparam name="TView">The concrete view to create.</typeparam>
     /// <typeparam name="TViewStyle">The concrete style, constructed through DI.</typeparam>
@@ -32,6 +47,26 @@ public static class ViewRegistrationExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         var create = ViewActivation<TView>.Required();
+        if (!services.Exist<IViewStyle<TView>>())
+            services.Singleton<IViewStyle<TView>>(ViewActivation<TViewStyle>.Required());
+        return Register(services, create);
+    }
+
+    /// <summary>Registers a named view activation contribution together with its default application-owned style.</summary>
+    /// <typeparam name="TView">The concrete view to create.</typeparam>
+    /// <typeparam name="TViewStyle">The concrete style, constructed through DI.</typeparam>
+    /// <param name="services">The application service registrations.</param>
+    /// <param name="contribution">The contribution published by the assembly that owns this View.</param>
+    /// <returns>The same registration context.</returns>
+    /// <remarks>Only the View contribution is selected here; the style stays a single activation contribution,
+    /// so a project that owns its style registers it before this call and uses the style-free overload.
+    /// An existing <see cref="IViewStyle{TView}"/> registration takes precedence.</remarks>
+    public static IServicesRegistrationContext View<TView, TViewStyle>(this IServicesRegistrationContext services,
+        string contribution) where TView : View where TViewStyle : class, IViewStyle<TView>
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contribution);
+        var create = ViewActivation<TView>.Required(contribution);
         if (!services.Exist<IViewStyle<TView>>())
             services.Singleton<IViewStyle<TView>>(ViewActivation<TViewStyle>.Required());
         return Register(services, create);
@@ -50,6 +85,27 @@ public static class ViewRegistrationExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         var create = ViewActivation<TView, TArguments>.Required();
+        return services.Singleton<IFactory<TView, TArguments>>(resolver => new Factory<TView, TArguments>(argument =>
+        {
+            var style = resolver.TryResolve<IViewStyle<TView>>();
+            return ViewCreation.Prepare(create(resolver, argument), style);
+        }));
+    }
+
+    /// <summary>Registers a named view activation contribution for a factory that takes a runtime argument.</summary>
+    /// <typeparam name="TView">The concrete view to create.</typeparam>
+    /// <typeparam name="TArguments">The type of exactly one constructor parameter.</typeparam>
+    /// <param name="services">The application service registrations.</param>
+    /// <param name="contribution">The contribution published by the assembly that owns this View.</param>
+    /// <returns>The same registration context.</returns>
+    /// <remarks>Use it when more than one assembly contributed an activation for the same view and argument pair;
+    /// an unnamed registration then fails with the list of contributions.</remarks>
+    public static IServicesRegistrationContext ViewWithArgs<TView, TArguments>(this IServicesRegistrationContext services,
+        string contribution) where TView : View
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contribution);
+        var create = ViewActivation<TView, TArguments>.Required(contribution);
         return services.Singleton<IFactory<TView, TArguments>>(resolver => new Factory<TView, TArguments>(argument =>
         {
             var style = resolver.TryResolve<IViewStyle<TView>>();

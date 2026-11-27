@@ -3,6 +3,50 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+<a id="uia49-view-activation-registry"></a>
+28.11.2026 — UIA4.9 (делегаты активации View в реестре вкладов): `ViewActivation<T>` больше не держит
+единственное изменяемое статическое поле с first-writer-wins (`Alloy.Hosting/Generation/ViewActivation.cs:11-20`
+до правки). Делегаты лежат в `Alloy.Hosting/Generation/ViewActivations.cs`: ключ — закрытый тип View и тип
+аргумента (`ViewActivation<T>` пишет `arguments = null`, `ViewActivation<TView, TArguments>` — `typeof(TArguments)`,
+иначе `View<T>()` и `ViewWithArgs<T, A>()` спорили бы об одном вкладе), внутри ключа — имя вклада
+(`StringComparer.Ordinal`). Вклад по умолчанию вносит сборка, в которой вызван `Register`
+(`Assembly.GetCallingAssembly()`, пустое имя — `"<anonymous>"`), поэтому генерируемая эмиссия
+`ViewActivation<Имя>.Register(фабрика)` не менялась. `Register(create, contribution)` публикует вклад под явным
+именем; повторная запись той же пары (тип, вклад) заменяет делегат этого вкладчика, а не молча отбрасывается.
+Регистрация контейнера называет вклад: `View<TView>(string)`, `View<TView, TViewStyle>(string)`,
+`ViewWithArgs<TView, TArguments>(string)` (`ViewRegistrationExtensions.cs:31-37`, `:64-73`, `:103-114`).
+Без имени вклада требуется ровно один вклад; при нескольких — `InvalidOperationException` со списком вкладов,
+при неизвестном имени — «No view activation for … with contribution '…'» и список известных. Текст
+«No generated view activation for …» (вкладов нет вообще) сохранён дословно: на него опирается подсказка
+диагностики ARG020. Вклад стиля остаётся единственным — `View<TView, TViewStyle>` с именем выбирает только
+вклад View.
+
+Фикстура — `TrueMoon.Alloy.Hosting.Tests/ViewActivationContributionTests.cs`. Один закрытый тип
+`ContributionView` внесён тремя вкладами: сгенерированным вкладом сборки `TrueMoon.Alloy.Hosting.Tests`
+(фабрика даёт `Contribution == "generated"`) и явными вкладами `"A"` (фабрика с `Contribution == "A"`) и `"B"`
+(фабрика с `Contribution == "B"`). Контейнер App A зарегистрирован `.View<ContributionView>("A")` — в нём
+проверены оба создания: `Create()` дважды, у обоих экземпляров `Contribution == "A"`; контейнер App B
+зарегистрирован `.View<ContributionView>("B")` — у созданного в нём экземпляра `Contribution == "B"`, и это
+не тот же объект, что в App A. Вариант с аргументом: `ArgRowView` + `RowArgument`, вклады `"A"` и `"B"`,
+экземпляр App A даёт `Contribution == "A"` и `Argument.Value == 1`, экземпляр App B — `"B"` и `2`. Регистрация
+`View<AmbiguousView>()` без имени вклада (вклады `"A"`, `"B"` плюс сгенерированный вклад тестовой сборки)
+бросает `InvalidOperationException`, в сообщении перечислены все три; регистрация с неизвестным именем `"C"`
+бросает с тем же списком. Тот же ключ `"свой"`, записанный дважды, оставляет второй делегат
+(`Contribution == "второй"`). Единственный вклад (`SoloView`) по-прежнему активируется вызовом
+`.View<SoloView>()` без ключа и даёт `Contribution == "generated"` — сработал именно сгенерированный делегат.
+
+Прогоны (28.11.2026, Release/net11.0): `TrueMoon.Alloy.Hosting.Tests` с фильтром
+`FullyQualifiedName~ViewActivationContribution` — 8 пройдено, 0 не пройдено; полный прогон того же проекта —
+224 пройдено, 0 не пройдено (до правок — 216 пройдено, 0 не пройдено, регресса в `ViewRegistrationTests`,
+`NestedViewRegistrationTests`, `ViewWithArgsRegistrationTests` нет); `TrueMoon.Alloy.Tests` — 1323 пройдено,
+0 не пройдено, то же число, что до правок. Сборки потребителей генерируемой регистрации: `TrueMoon.Aether.Player` —
+0 ошибок, эмитированный `ViewRegistrations.g.cs` содержит две прежние строки `ViewActivation<…>.Register(static …)`
+без ключа (`PlayerView`, `PlayerViewStyle`); `ManualTests/AlloyTest` — 0 ошибок.
+`ManualTests/AlloyPackageConsumer` в этом checkout не проверяется: restore падает на NU1101 (пакеты
+`1.2611.25.20-alpha` ищутся на nuget.org, локальный feed настраивает `RunPackageSmoke.ps1`) — состояние до
+правки, к генерации отношения не имеет; контур генерируемой эмиссии вместо него покрыт `Aether.Player` и
+`AlloyTest`. Утверждений о стоимости срез не делает, случай в `TrueMoon.Argentis.Benchmarks` не добавлялся.
+
 <a id="uia46-binding-converter"></a>
 28.11.2026 — UIA4.6 (типизированное преобразование значения привязки): `PropertyBinding` разделяет тип
 значения источника и тип UI-свойства — `PropertyBinding<TSource, TSourceValue, TValue>`
