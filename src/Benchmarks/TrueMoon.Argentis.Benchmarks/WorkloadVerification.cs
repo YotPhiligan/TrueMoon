@@ -213,6 +213,28 @@ internal static class WorkloadVerification
         slot.State = null;
         session.Update();
         Check(!slot.HasBranch && slot.Child == null, "null state releases the branch");
+
+        // The Editor inspector hands over a freshly built token of keys and values on every model notification.
+        var keys = new[] { "x", "y", "z" };
+        string[] values = ["1", "2", "3"];
+        var block = new ConditionalContent<PropertyBlockToken>(new PropertyBlockToken([.. keys], [.. values]), state =>
+        {
+            var lines = new VStack();
+            for (var index = 0; index < state.Keys.Length; index++) lines.Add(new Text($"{state.Keys[index]}={state.Values[index]}"));
+            return lines;
+        });
+        using var blockSession = Scene.Session(block);
+        blockSession.Update();
+        var firstBlock = block.Child;
+        Check(firstBlock is VStack { Items.Count: 3 } && block.HasBranch, "property token branch");
+        block.State = new PropertyBlockToken([.. keys], [.. values]);
+        blockSession.Update();
+        Check(ReferenceEquals(block.Child, firstBlock), "fresh equal token keeps the block");
+        values[1] = "9";
+        block.State = new PropertyBlockToken([.. keys], [.. values]);
+        blockSession.Update();
+        Check(block.Child is VStack changedBlock && !ReferenceEquals(changedBlock, firstBlock), "changed token rebuilds the block");
+        Check(firstBlock!.IsDisposed, "replaced property block is released");
         session.Dispose();
         Check(host.IsDisposed && slot.IsDisposed, "conditional slot dispose");
     }

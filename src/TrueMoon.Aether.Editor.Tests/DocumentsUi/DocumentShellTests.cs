@@ -76,9 +76,11 @@ public sealed class DocumentShellTests
         Assert.Same(path, view.Documents!.PathInput); Assert.Same(canvas, view.Canvas); Assert.True(canvas.Bounds.Height > 0);
         model.Select(DocumentData.Child.Value.ToString("D")); ui.Update(); var entityButton = view.Entities[model.SelectedId!];
         Assert.Equal(ControlTone.Accent, entityButton.Tone);
-        var inspector = Assert.IsType<ContentControl>(view.PropertiesPanel).Child;
+        var panel = Assert.IsType<ContentControl>(view.PropertiesPanel);
+        var slot = Assert.IsType<ConditionalContent<EditorView.PropertySetToken?>>(panel.Child);
+        var inspector = slot.Child;
         owner.Run(DocumentCommand.Save); model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); ui.Update();
-        Assert.Same(entityButton, view.Entities[model.SelectedId!]); Assert.Same(inspector, view.PropertiesPanel!.Child); Assert.Same(nested, view.Documents);
+        Assert.Same(entityButton, view.Entities[model.SelectedId!]); Assert.Same(inspector, slot.Child); Assert.Same(nested, view.Documents);
         Assert.True(owner.Document.Apply(DocumentData.Edit(7, 81)).Succeeded);
         model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); ui.Update();
         Assert.Equal(DocumentData.Child.Value.ToString("D"), model.SelectedId); Assert.Same(entityButton, view.Entities[model.SelectedId!]);

@@ -3,6 +3,22 @@
 <a id="current-ui-baseline"></a>
 ## Текущее состояние
 
+28.11.2026 — UIA4.5 (остаток: legacy-блок свойств Editor на условном слоте): вместо ручной замены панель
+держит `ConditionalContent<PropertySetToken?>` (`TrueMoon.Aether.Editor.UI/EditorView.cs:185-186`,
+`:281-321`), модель отдаёт токен из двух массивов ключей и значений — равный по содержимому токен сохраняет
+установленные строки, изменённый пересобирает блок и освобождает прежний. `ImmutableArray<T>` сравнивается
+по ссылке, поэтому равенство содержимого реализовано в самом токене (`Equals`/`GetHashCode`, `:296-310`), и
+это ловит новая проверка стенда `fresh equal token keeps the block`. Замер (группа `conditional-slot`,
+шесть свежих процессов): уведомление с тем же набором из 2496 строк — 40 016 байт и 3,1–4,3 µs вместо
+1 865 456 байт и 2193–2240 µs ручной замены
+([замер](PERFORMANCE_BASELINE.md#uia45-property-token-slot-2026-11-28)). Стенд `--verify` —
+`VIEW_BASELINE_VERIFIED`; `TrueMoon.Alloy.Tests` 1311 и `TrueMoon.Alloy.Hosting.Tests` 216 без падений; в
+`TrueMoon.Aether.Editor.Tests` — 1618 тестов, 1616 пройдено: падают оба варианта
+`AetherEditorCompositionTests.ScenePlayback_DefaultCompositionEnablesRunForUnsavedDocumentWithoutCandidate`
+(провайдеры DI). Тот же фильтр изолированно проходит, так что падение зависит от полного прогона; причина не
+установлена — сравнение с чистым HEAD не выполнено, сборка checkout на другом томе падает на копировании
+native-библиотек (MSB3021/MSB3027).
+
 28.11.2026 — UIA4.4 (третья часть: объект структурного изменения и освобождение subtree): `TreeChange`
 больше не создаётся под каждую правку дерева — три перегрузки `Acquire` берут объект из
 `[ThreadStatic]`-стека, пустые слоты готовит `Rent`, в пул объёмом 16 записи `Dispose` возвращает только

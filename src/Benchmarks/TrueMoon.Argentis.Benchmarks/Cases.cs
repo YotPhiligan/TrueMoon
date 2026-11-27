@@ -3,6 +3,7 @@ using TrueMoon.Argentis.Editors;
 using TrueMoon.Argentis.Layout;
 using TrueMoon.Alloy.Runtime;
 using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 
 namespace TrueMoon.Argentis.Benchmarks;
 
@@ -117,6 +118,7 @@ internal static class Cases
         yield return new("conditional-slot", "SlotNewState", size => new SlotNewState(size));
         yield return new("conditional-slot", "SlotSameState", size => new SlotSameState(size));
         yield return new("conditional-slot", "SlotCloseAndReopen", size => new SlotCloseAndReopen(size));
+        yield return new("conditional-slot", "SlotFreshEqualToken", size => new SlotFreshEqualToken(size));
     }
 }
 
@@ -211,6 +213,63 @@ internal sealed class SlotCloseAndReopen(int rows) : ConditionalSlotCase(rows)
         Slot.State = new ConditionalState(++Token);
         Session.Update();
     }
+}
+
+/// <summary>A property block token as the Editor inspector builds it: parallel key and value arrays that are rebuilt
+/// on every model notification and stay equal when the presented block did not change. <c>ImmutableArray</c> itself
+/// compares by reference, so the token compares its own contents.</summary>
+internal sealed record PropertyBlockToken(ImmutableArray<string> Keys, ImmutableArray<string> Values)
+{
+    public bool Equals(PropertyBlockToken? other) => other != null &&
+        Keys.AsSpan().SequenceEqual(other.Keys.AsSpan()) && Values.AsSpan().SequenceEqual(other.Values.AsSpan());
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var key in Keys) hash.Add(key);
+        foreach (var value in Values) hash.Add(value);
+        return hash.ToHashCode();
+    }
+}
+
+internal sealed class SlotFreshEqualToken(int rows) : IUiCase
+{
+    private string[] _keys = [], _values = [];
+    private UiSession _session = null!;
+    private ConditionalContent<PropertyBlockToken> _slot = null!;
+
+    public void Setup()
+    {
+        _keys = new string[rows];
+        _values = new string[rows];
+        for (var index = 0; index < rows; index++)
+        {
+            _keys[index] = $"property-{index}";
+            _values[index] = index.ToString("D");
+        }
+
+        _slot = new ConditionalContent<PropertyBlockToken>(Token(), state =>
+        {
+            var block = new VStack();
+            for (var index = 0; index < state.Keys.Length; index++)
+                block.Add(new Text($"{state.Keys[index]}={state.Values[index]}"));
+            return block;
+        });
+        _session = Scene.Session(_slot);
+        _session.Update();
+        if (!_slot.HasBranch) throw new InvalidOperationException("The initial property block is missing.");
+    }
+
+    public void Run()
+    {
+        // A notification whose block did not change: only the token is allocated, the installed rows stay.
+        _slot.State = Token();
+        _session.Update();
+    }
+
+    public void Cleanup() => _session.Dispose();
+
+    private PropertyBlockToken Token() => new([.. _keys], [.. _values]);
 }
 
 internal sealed class NullCase : IUiCase

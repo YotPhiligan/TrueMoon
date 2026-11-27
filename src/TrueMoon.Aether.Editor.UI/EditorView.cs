@@ -183,6 +183,7 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
                 var hint = ui.Text(Transform == null ? "Свойства сцены · только просмотр" : "Transform · Ctrl+Enter — применить")
                     .NamedOptional("InspectorHint").WithRole(EditorViewRoles.LegacyInspectorHint);
                 var properties = ui.Create<ContentControl>().NamedOptional("PropertiesPanel");
+                properties.Element.SetContent(_propertySlot = CreatePropertySlot());
                 inspectorSurface = Transform is { } form
                     ? Pane(ui, "ИНСПЕКТОР", ui.ScrollViewer(ui.VStack(selection, hint, form, properties, error).WithRole(PaneItemsRole)))
                     : Pane(ui, "ИНСПЕКТОР", selection, hint, properties, error);
@@ -280,12 +281,56 @@ public sealed class EditorView : View<IEditorViewModel>, IUiInputObserver
     private void UpdateProperties()
     {
         VerifyAccess();
-        if (this.PropertiesPanel is not { } panel) return;
+        if (_propertySlot is not { } slot) return;
+        // The model publishes a fresh property list on every refresh: the token compares keys and values by content,
+        // so a notification that changes nothing keeps the installed rows, their drafts and focus.
+        slot.State = Token(_model.Properties);
+    }
+
+    private ConditionalContent<PropertySetToken?>? _propertySlot;
+
+    /// <summary>The identity of a presented property block: equal keys and equal values keep the installed rows.</summary>
+    /// <param name="Keys">Property names in display order.</param>
+    /// <param name="Values">Property values in the same order.</param>
+    /// <remarks><c>ImmutableArray</c> itself compares by reference, so the token compares its own contents.</remarks>
+    public sealed record PropertySetToken(ImmutableArray<string> Keys, ImmutableArray<string> Values)
+    {
+        /// <inheritdoc />
+        public bool Equals(PropertySetToken? other) => other != null &&
+            Keys.AsSpan().SequenceEqual(other.Keys.AsSpan()) && Values.AsSpan().SequenceEqual(other.Values.AsSpan());
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            foreach (var key in Keys) hash.Add(key);
+            foreach (var value in Values) hash.Add(value);
+            return hash.ToHashCode();
+        }
+    }
+
+    private ConditionalContent<PropertySetToken?> CreatePropertySlot() => new(null, CreatePropertyRows);
+
+    private static VStack? CreatePropertyRows(PropertySetToken? token)
+    {
+        if (token == null) return null;
         var rows = new VStack().WithRole(PropertyRowsRole);
-        foreach (var row in _model.Properties) rows.Add(new PropertyRow(row.Key, row.Value).WithRole(PropertyRowRole));
-        var old = panel.Child;
-        panel.SetContent(rows);
-        old?.Dispose();
+        for (var index = 0; index < token.Keys.Length; index++)
+            rows.Add(new PropertyRow(token.Keys[index], token.Values[index]).WithRole(PropertyRowRole));
+        return rows;
+    }
+
+    private static PropertySetToken Token(IReadOnlyList<KeyValuePair<string, string>> properties)
+    {
+        var keys = ImmutableArray.CreateBuilder<string>(properties.Count);
+        var values = ImmutableArray.CreateBuilder<string>(properties.Count);
+        foreach (var property in properties)
+        {
+            keys.Add(property.Key);
+            values.Add(property.Value);
+        }
+
+        return new PropertySetToken(keys.ToImmutable(), values.ToImmutable());
     }
 
     private void ToggleTheme()
