@@ -57,6 +57,46 @@ LastGoodBuild и не меняет document/history. Новый opening не в�
 как свой last-good. Borrowed host.Builds — low-level compiler: direct BuildAsync
 не выбирает host last-good и не привязывает source baseline автоматически.
 
+<a id="captured-graph-standalone-player"></a>
+
+### Захваченный граф и автономный Player
+
+`ProjectReference` обрабатывается на шаге Build, не при запуске Player.
+`ToolingHost.BuildAsync` включает захват графа и без Editor. При прямом вызове
+`ToolingHost.Builds.BuildAsync(GameBuildRequest)` включите `TrackInputs`,
+`CaptureCompilation`, `CapturePreparation` и `CaptureProjectReferences`.
+Задайте `Dependencies` явными именами всех приватных DLL графа (для открытого
+проекта — `dependencies` в `.aetherproj`). Входная сборка в этот список не входит.
+
+Профиль принимает до четырёх декларативных C#-библиотек `net11.0`, включая
+входную, в непересекающихся каталогах. Ссылки — литеральные `ProjectReference`
+без условий и metadata. Циклы, повторяющиеся имена DLL и неподдержанные
+элементы MSBuild отклоняются. EXE-хост и CLI публикации не являются входной
+сборкой игры. Обычный NuGet restore не входит в захваченный Build: общие
+контракты фреймворка берутся из поставки хоста, а приватные пакеты допускаются
+только в [ограниченном профиле `PackageDirectory`](EDITOR_PLAN.md).
+
+Начиная с `1.2611.27.1-alpha` captured compiler сохраняет обычные файловые
+`EmbeddedResource`: литеральный `Include` или локальный glob, необязательное
+`LogicalName`, `WithCulture="false"` при необходимости. Подготовка сверяет
+полные пути и кратность файлов с SDK и параметрами C#; имена и байты сохраняются
+в DLL. `.resx`, локализация, `DependentUpon`, `Link`, генерируемые и внешние
+linked-ресурсы не поддерживаются. Профиль не запускает `ResGen` или satellites.
+
+При `RuntimeAccess = true` frozen preparation исключает из копии проекта только
+точный `PackageReference Include="TrueMoon.Aether.Runtime"` с условием
+`'$(AetherRuntimePath)' == ''`, без metadata и условий предков. Для захвата
+объявите непакетные `Reference` с `HintPath` из хоста и `Private=false`.
+Обычная сборка получает Runtime из NuGet; правила locked packages не меняются.
+
+Оконный и headless Player читают готовый Build и сцену без Tooling, SDK и
+чтения `ProjectReference`. Приватные сборки загружаются из манифеста Build, а
+не из проекта или вывода хоста. Оба режима одного EXE используют одну
+идентичность хоста. Если Editor RuntimeChild и автономный Player имеют разные
+`HostContractId`, публикуйте отдельные манифесты для этих идентичностей:
+совпадение DLL-графа само по себе не разрешает открыть один каталог Build
+обоими хостами.
+
 Normal Close/Switch требует Save/Discard/Cancel. Terminal Stop/Dispose закрывает
 Build admission, отменяет/дожидается compiler job, затем явно discards несохранённую
 память и закрывает project products; файлы не сохраняются. Cleanup failure удерживает

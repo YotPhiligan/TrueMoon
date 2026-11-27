@@ -12,6 +12,20 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 <a id="текущая-очередь--актуализация-2026-11-21"></a>
 ## Текущая очередь — актуализация 2026-11-26
 
+Автономный Player, [в том числе headless](SCENARIO_TESTING.md#headless-player-scenario),
+запускает готовый Build. [Захват графа библиотек](TOOLING.md#captured-graph-standalone-player)
+остаётся в Tooling. Смена сцены или Build на ходу остаётся отдельной задачей ENG7b.4.
+
+Захваченный компилятор сохраняет файловые `EmbeddedResource`, а хосты
+запускают Player JSON v1 через общий `PlayerScenarioRunner`. В `1.2611.27.2-alpha`
+Tales прошла Debug Editor Play → Replace → Stop на том же графе Gameplay → Sim:
+TMCK3 переносит состояние игры, а новый RuntimeChild продолжает с точного тика.
+[Результаты](HISTORY.md#tales-checkpoint-replace-2026-11-27).
+
+В `1.2611.27.3-alpha` автономный Player восстанавливает точный тик до
+первого кадра и продолжает тот же сценарий. [Контракт](SCENARIO_TESTING.md#player-scenario-resume) ·
+[приёмка Tales М6](HISTORY.md#player-scenario-disk-resume-2026-11-27).
+
 Чистая сборка проверена на дереве [NOM6.1](../nom/PLAN.md#nom6-1-clean-checkout),
 которое поставлено в `main` коммитом `27129fe`.
 [Видимость и слои ED4i](EDITOR_PLAN.md#ed4i-mesh-visibility) проверены
@@ -1280,13 +1294,13 @@ Mithril, выделить задачу в его плане; готовност�
 ### Identity и состояние сессии
 
 Identity v1: SessionId(Guid), SessionGeneration(UInt64), HostContractId(строка
-SHA256 стабильных host/contracts binaries), GameBuildId(строка SHA256 manifest),
-ControlVersion=3 (ENG5c.1 primitive payload,2026-10-22), FrameVersion=1,
-SnapshotVersion=2 (ENG5c.2 per-object switches,2026-10-22).
-Control v1/v2 не принимаются: matching Editor/Runtime/Aether/game DLLs требуют
-совместного rebuild; автоматического wire fallback нет. SnapshotVersion — TMCK,
-не версия authoring aggregate. TMCK2 переносит camera/tick/interaction и stable-ID
-object switch set; TMCK1/future schemas отклоняются без implicit migration.
+SHA256 стабильных host/contracts binaries), GameBuildId(строка SHA256 manifest).
+Текущие версии: ControlVersion=4, FrameVersion=2, SnapshotVersion=3.
+Editor и Runtime используют matching binaries; автоматического wire fallback нет.
+SnapshotVersion — версия TMCK, не authoring aggregate и не схема сохранения игры.
+TMCK3 переносит tick/camera/interaction, stable-ID object switches и необязательные
+данные игры (до 24 КиБ strict UTF-8). Игра версионирует и проверяет свои данные.
+TMCK1/2 и будущие версии отклоняются без implicit migration.
 SessionId принадлежит открытой Editor session; generation увеличивается при каждом
 запуске/rollback child и не используется повторно. PID — только ownership/diagnostics.
 SurfaceGeneration(UInt64) отдельно увеличивается при новой frame allocation/resize.
@@ -1318,7 +1332,7 @@ Game.Logic меняется независимо, общий RPC contract при
 | SetMode / Step | Paused/Playing, fixed tick60Hz; Step разрешён только Paused и выполняет ровно1tick |
 | InputBatch | Sequence, viewport/surface identity, нормализованные coordinates и pressed/released events; reply содержит applied sequence/tick |
 | ConfigureSurface | Новый SurfaceGeneration, mapping descriptor/размеры/format; acknowledgement до публикации нового surface |
-| CaptureCheckpoint / RestoreCheckpoint | SnapshotVersion/HostContractId/SceneId/revision/tick, camera transform и единственный interaction flag; restore подтверждает новый tick/state |
+| CaptureCheckpoint / RestoreCheckpoint | SnapshotVersion/HostContractId/SceneId/revision/tick, camera/interaction/object switches и необязательные данные игры; restore подтверждает точный повторный capture |
 | GetStatus / Stop | Текущая phase/last applied sequence/tick/frame; stop acknowledgement не заменяет process exit/reap |
 
 CommandSequence монотонен в generation; commands выполняются последовательно,

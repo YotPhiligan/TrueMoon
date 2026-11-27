@@ -1,3 +1,117 @@
+<a id="player-scenario-disk-resume-2026-11-27"></a>
+## 2026-11-27 — Player: продолжение сценария с точного тика
+
+Локальная поставка `1.2611.27.3-alpha` из `6985d077a1da0a20ab044e351343215e022f3d20`:
+19 архивов проверены по версиям nuspec и SHA-256. Player восстанавливает
+типизированный TMCK3 до готовности сессии, повторно сверяет состояние и
+начинает с N+1. Сценарный runner не повторяет однотиковые импульсы и
+уже завершённые контрольные точки. Политику хранения задаёт потребитель.
+
+Прошли 155 тестов Runtime и 8 Player, в том числе
+`Resume_SkipsCompletedCheckpointsAndRetainsHeldInputWithoutRepeatingPulses`.
+Tales `1.2611.27.4-alpha`: Ctrl+C после записи тика 700, окно и headless
+продолжили тот же Build с 701. Совпали 15 игровых событий и байты
+конечного headless-слота на 6000; окно сохранило тик 936 и дало 4 PNG.
+[Пакеты](../../../../TrueMoon.Tales.Game/src/.local/m6-resume-261127/package-verification.json) ·
+[нативная приёмка](../../../../TrueMoon.Tales.Game/src/.local/m6-resume-261127/verification.json).
+
+<a id="tales-checkpoint-replace-2026-11-27"></a>
+## 2026-11-27 — Tales checkpoint и нативный Replace
+
+Поставка `1.2611.27.2-alpha` (`aa281cd9edc81c4c0b30df7852dec17999520930`):
+19 пакетов, проверены версии и SHA-256. TMCK3 добавляет до 24 КиБ игровых
+данных в существующий конверт; старые протоколы не договариваются с новым.
+Runtime подтверждает restore повторным capture до готовности нового кадра.
+
+- Прошли 167 адресных тестов Aether checkpoint, ECS load/restore и Room;
+  два теста безоконного сценарного драйвера Player. Более широкий фильтр
+  остановлен по таймауту; отдельный `GameReplacementTests` прерван
+  VSTest за 20 секунд неактивности. Нативный прогон и адресные тесты
+  приводятся отдельно, не как результат всего набора Replace.
+- В Debug Editor живой мир Tales перешёл с поколения 1 (PID 41812)
+  на 2 (PID 14532) на тике 1772: тик на паузе совпал, затем
+  `HuntersArrived` пришёл на 2462 без повтора прежних событий.
+  Build обоих поколений содержит `TrueMoon.Tales.Gameplay.dll` и
+  `TrueMoon.Tales.Sim.dll`. После явного Stop на тике 2475 живых дочерних
+  процессов нет; оба процесса и Editor завершились с кодом 0.
+- Игровой checkpoint переносит позу и сглаживание, камеру, точные часы
+  рейса, ожидающие события, дельты террейна и журнал до автосохранения.
+  Слоты на диске не участвуют в Replace. Прошли 138 адресных тестов игры
+  в Debug и столько же в Release, включая прежний детерминированный отпечаток.
+- Пакетный Release EXE игры подтвердил окно/headless на заставе и террейне
+  (7 оконных PNG побайтно совпали с предыдущей поставкой). PlayerProbe
+  использовал те же 17 архивов по SHA-256. Ортографический маршрут
+  1200×810 → 1560×810: четыре ориентира, Vulkan 0 ошибок и 0
+  предупреждений, живых слотов и дескрипторов нет.
+- В точной поставке повторён реальный Ctrl+C после `CaravanArrived`:
+  код 4, `Stopped`, ошибок cleanup нет. Тот же Build в новом процессе
+  завершил headless-сценарий с кодом 0 и тиками 600/936/1180.
+  Ошибки аргументов дали 5, дедлайн — 3.
+  [Отчёт](../../../../TrueMoon.Tales.Game/src/.local/replace-261127-2/cancellation-acceptance/verification.json).
+
+[Пакеты](../../../../TrueMoon.Tales.Game/src/.local/replace-261127-2/package-verification.json) ·
+[журнал Play/Replace/Stop](../../../../TrueMoon.Tales.Game/src/.local/replace-261127-2/editor-lifecycle.json) ·
+[кадр после Replace](../../../../TrueMoon.Tales.Game/src/.local/replace-261127-2/editor-final-after-replace.png) ·
+[Vulkan resize](../../../../TrueMoon.Tales.Game/src/.local/replace-261127-2/orthographic-proof/frames/verification.json).
+
+<a id="player-file-scenarios-captured-resources"></a>
+## 2026-11-27 — файловый сценарий хоста и ресурсы захваченного Build
+
+Windows x64, SDK `11.0.100`. Из изолированного исходного среза
+`8d483db65668f8564057fb857a9756aa818f7d5c` собраны 19 пакетов
+`1.2611.27.1-alpha`; внутренние версии nuspec и SHA-256 проверены.
+`PlayerScenarioRunner` использует идентичность текущего managed entry и
+публикует JSON v1 после cleanup. Player не компилирует проекты.
+
+- В Release — 52/52 адресных теста captured compilation, графа и Runtime
+  guard (`SdkCapturedBuild_PreservesEmbeddedNamesAndBytes`,
+  `SdkCapturedBuild_RejectsUnsupportedResourceWithoutPublishing`,
+  `OpaqueCompilerInputs_FailClosed`, `ProjectGraph_ResourceOnlyChangeInvalidatesCapturedBuild`,
+  `FrozenRuntimePackage_UsesSharedContractOnlyWithExactGuard`), дополнительно
+  12/12 тестов input witness. Прошли оба варианта
+  `HeadlessProfiles_AdvanceThroughTheScenarioDriverWithoutAWindowOrSurface`
+  и сборка Release PlayerProbe.
+- Изолированный пакетный EXE игры на том же Build для каждого сценария
+  подтвердил паритет 600/936/1180 на заставе и 217/227/228/238 на террейне.
+  Ошибки входа дали 5, дедлайн — 3, Ctrl+C после первого события — 4 со
+  `Stopped` и без поверхности; повтор того же сценария — 0.
+- Debug Editor открыл и представил заставу с двумя DLL графа; Stop освободил
+  RuntimeChild, окно закрыто штатно. Replace собрал кандидата, но не создал
+  нового RuntimeChild: игровая сессия не реализует `ICheckpointGameSession`,
+  поэтому Capture вернул `CheckpointOutcome.Unsupported`. Это блокер
+  игрового перехода, не потеря ресурса или отказ захвата графа.
+- Пакетный PlayerProbe подтвердил оба пути приватных DLL, отсутствие
+  Tooling/Editor, четыре ориентира при resize 1200×810 → 1560×810 и 0/0
+  Vulkan validation. Проверка использовала свой feed: SHA-256 всех 17
+  общих пакетов отличаются от игрового выпуска с тем же номером. Поставки
+  не смешивались; бинарный паритет между ними не заявлен.
+
+[Компиляция](TOOLING.md#captured-graph-standalone-player) ·
+[Сценарный API](SCENARIO_TESTING.md#использование-из-c).
+
+<a id="player-captured-graph-handoff"></a>
+## 2026-11-27 — пакетный Player и готовый Build с графом библиотек
+
+Windows x64, SDK `11.0.100`, пакетная поставка `1.2611.24.4-alpha`.
+Отдельный Release PlayerProbe восстановился без `ProjectReference`; из Aether
+в его графе только Player, Runtime и Abstractions. Tooling работал в отдельном
+процессе. Захваченный ромб `Game → Left, Right → Leaf` дал три отдельных шага
+сборки зависимостей и четыре DLL в Build.
+
+После выноса исходников тот же Build запустился в окне и headless. В обоих
+прогонах ввод принят, наблюдения красного канала `1` и `0,5` на тиках 2 и 6
+совпали; второе значение вычисляется через обе ветви и общий Leaf. Оба
+профиля завершились в `Stopped`. Окно и поверхность освобождены, SHA-256
+двух PNG проверены; в headless нет поверхности и PNG.
+[Сверка](../../TestResults/HeadlessGraphHandoff/graph-comparison.json).
+
+Контроль `EmbeddedResource`: обычная сборка содержит `Game.content.json`,
+успешный captured build той же библиотеки не содержит ресурсов (проверено
+`Assembly.GetManifestResourceNames`). Это ограничение выпуска `1.2611.24.4-alpha`,
+не результат нового прогона текущих исходников. Editor Replace и общая
+release-матрица не запускались.
+[Контракт](TOOLING.md#captured-graph-standalone-player).
+
 <a id="model-ledger-atomic-replace-2026-11-26"></a>
 ## 2026-11-26 — атомарная замена head модельного ledger
 
