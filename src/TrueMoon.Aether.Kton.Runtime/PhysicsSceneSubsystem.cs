@@ -27,6 +27,7 @@ public sealed partial class PhysicsSceneSubsystem : ISceneSubsystem
     public static TimeSpan FixedStep { get; } = TimeSpan.FromSeconds(1d / 60);
     private readonly SceneWorld _scene;
     private readonly World _world;
+    private readonly PhysicsBridgeOptions _options;
     private readonly int _maximumEvents;
     private IPhysicsWorld? _physics;
     private readonly Dictionary<EntityHandle, Entry> _entries = [];
@@ -43,6 +44,7 @@ public sealed partial class PhysicsSceneSubsystem : ISceneSubsystem
     internal PhysicsSceneSubsystem(SceneSubsystemArguments arguments, PhysicsBridgeOptions options)
     {
         _scene = arguments.Scene; _world = _scene.World; _maximumEvents = options.MaximumContactEvents;
+        _options = options;
         _raw = new PhysicsContactEvent[_maximumEvents];
     }
     /// <summary>Gets the native world's incarnation, retained as diagnostic identity after disposal.</summary>
@@ -127,12 +129,35 @@ public sealed partial class PhysicsSceneSubsystem : ISceneSubsystem
                     throw new InvalidDataException("Teleport sequence must increase; replays require identical payload.");
                 PhysicsValidation.Validate(command.Pose).ThrowIfFailure();
             }
-            var shape = previous?.Descriptor == descriptor ? previous.ShapeDefinition : descriptor.CaptureShape();
-            // Live provider lookup is performed by CreateBody. This pure preflight uses a structurally valid shape identity.
-            var id = previous?.Shape ?? new PhysicsShapeId(physics.Id, 0, 1);
-            var checkedVelocity = previous != null && previous.Descriptor == descriptor && previous.LastVelocity == velocity ? default : velocity;
-            var description = previous?.Descriptor == descriptor ? previous.BodyDescription : Description(id, descriptor, transform, velocity);
-            PhysicsValidation.ValidateBody(physics.Options, description, shape, new(transform.Position, transform.Rotation), checkedVelocity.Linear, checkedVelocity.Angular).ThrowIfFailure();
+            PhysicsShapeDefinition shape;
+            var isMesh = descriptor.Shape == PhysicsColliderShape.StaticMesh;
+            if (!initial && (isMesh || previous?.Descriptor.Shape == PhysicsColliderShape.StaticMesh))
+            {
+                if (previous is null || previous.Descriptor != descriptor)
+                    throw new InvalidDataException("Static mesh colliders can only be attached during authored scene preparation and cannot change descriptor at runtime.");
+                if (velocity != default)
+                    throw new PhysicsException(new(PhysicsErrorCode.InvalidArgument, "Body.StaticVelocity"));
+                // The unchanged attachment already passed full geometry and live-limit validation.
+                shape = previous.ShapeDefinition;
+            }
+            else
+            {
+                var unchanged = previous?.Descriptor == descriptor;
+                if (isMesh)
+                {
+                    if (!_options.TryGetStaticMesh(descriptor.MeshAssetId, out var mesh))
+                        throw new InvalidDataException($"Kton static mesh asset '{descriptor.MeshAssetId:D}' is not registered.");
+                    shape = mesh;
+                }
+                else
+                    shape = unchanged ? previous!.ShapeDefinition : descriptor.CaptureShape();
+
+                // Live provider lookup is performed by CreateBody. This preflight uses a structurally valid shape identity.
+                var id = previous?.Shape ?? new PhysicsShapeId(physics.Id, 0, 1);
+                var checkedVelocity = unchanged && previous!.LastVelocity == velocity ? default : velocity;
+                var description = unchanged ? previous!.BodyDescription : Description(id, descriptor, transform, velocity);
+                PhysicsValidation.ValidateBody(physics.Options, description, shape, new(transform.Position, transform.Rotation), checkedVelocity.Linear, checkedVelocity.Angular).ThrowIfFailure();
+            }
             var index = _candidates.Count;
             if (index == _candidatePool.Count) _candidatePool.Add(new());
             var candidate = _candidatePool[index];

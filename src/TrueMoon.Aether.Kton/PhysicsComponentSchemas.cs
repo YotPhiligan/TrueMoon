@@ -24,6 +24,10 @@ public static class PhysicsComponentSchemas
         Number("friction", .8), Integer("layer", 0), Integer("mask", uint.MaxValue),
         new("sensor", PropertyValueKind.Boolean, PropertyValue.From(false))
     ], requiredTypes: [BuiltInComponents.TransformId]);
+    /// <summary>Body v2; adds a collision asset ID for authored static triangle meshes.</summary>
+    public static ComponentSchema BodyV2 { get; } = new(BodyId, 2,
+        [.. Body.Properties.Values, new("meshAsset", PropertyValueKind.String, PropertyValue.Null, isNullable: true)],
+        requiredTypes: [BuiltInComponents.TransformId]);
     /// <summary>Optional initial velocities v1; absent means zero.</summary>
     public static ComponentSchema Velocity { get; } = new(VelocityId, 1,
         [Number("x",0), Number("y",0), Number("z",0), Number("ax",0), Number("ay",0), Number("az",0)], requiredTypes: [BodyId]);

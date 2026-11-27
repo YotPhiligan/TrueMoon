@@ -1,4 +1,4 @@
-# PHYS5/PHYS6 independent Aether/Kton consumer
+# Independent Aether/Kton consumer: PHYS5, PHYS6 and T3
 
 ```powershell
 pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory <fresh-directory>
@@ -30,6 +30,22 @@ without replay, and teleport support invalidation. On `Baseline60` and
 with upper support in the same tick, and opt-in v2 blocks at 0.30 m. Each of
 the four build/publish outputs runs 104 checks across both DI providers,
 including cleanup of all six App owners.
+
+The same fresh Release publish output also runs a separate `--t3` process:
+
+```powershell
+dotnet <published>/KtonEcsProbe.dll --t3 <absolute-T3Fixture.json> <absolute-new-report.json>
+```
+
+[T3Fixture.json](T3Fixture.json) captures only the archived route inputs, including
+the two-triangle ramp and its source archive SHA256. The probe has no Tales project
+or DLL reference. It imports the ramp through Body v2 and supplies the geometry
+through `PhysicsBridgeOptions.AddStaticMesh`. Each of 88 rows (two DI adapters,
+two profiles, 11 cases, auto-step off/on) compares each ECS sample exactly with a
+fresh ECS repeat and a direct-provider control from the same loaded DLLs. The
+verifier checks those DLLs against the closed feed independently of the legacy
+process. `t3-fresh-Release.json` records the traces, route landmarks and cleanup;
+an existing report is never overwritten.
 
 This is headless ECS physics plus CPU snapshot acceptance. Aether's session
 protocol (Pause/Step/Replace), native Player, actual GPU/window pixels,

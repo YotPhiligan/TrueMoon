@@ -1,0 +1,34 @@
+{
+  "LayoutVersion": 1,
+  "ClockHz": 60,
+  "WarmupTicks": 60,
+  "ArchiveSha256": "CB03D329829DC33FDCA344E1B2ED1607CC1CDCD8816DB66DC49FC6B402240AA1",
+  "Body": {"Radius":0.3,"CylinderLength":0.6,"CenterOffset":{"X":0,"Y":0.6,"Z":0},"Mass":1},
+  "Door": {"DoorPostLeft":{"X":-0.615,"Y":-2.28},"DoorPostRight":{"X":0.615,"Y":-2.28},"DoorPostWidth":0.23,"DoorUnderside":2.6},
+  "RouteColliders": [
+    {"Name":"Street","Box":{"Min":{"X":-3.5,"Y":-1,"Z":1},"Max":{"X":3.5,"Y":0,"Z":4.5}},"Mesh":null},
+    {"Name":"Step1","Box":{"Min":{"X":-1,"Y":-1,"Z":0.5},"Max":{"X":1,"Y":0.25,"Z":1}},"Mesh":null},
+    {"Name":"Step2","Box":{"Min":{"X":-1,"Y":-1,"Z":0},"Max":{"X":1,"Y":0.5,"Z":0.5}},"Mesh":null},
+    {"Name":"Step3","Box":{"Min":{"X":-1,"Y":-1,"Z":-0.5},"Max":{"X":1,"Y":0.75,"Z":0}},"Mesh":null},
+    {"Name":"Step4","Box":{"Min":{"X":-1,"Y":-1,"Z":-1},"Max":{"X":1,"Y":1,"Z":-0.5}},"Mesh":null},
+    {"Name":"Ramp","Box":null,"Mesh":{"Vertices":[{"X":1,"Y":1,"Z":-1},{"X":2.5,"Y":1,"Z":-1},{"X":1,"Y":0,"Z":1},{"X":2.5,"Y":0,"Z":1}],"Indices":[0,1,2,1,3,2]}},
+    {"Name":"Porch","Box":{"Min":{"X":-1.5,"Y":-1,"Z":-2.25},"Max":{"X":2.5,"Y":1,"Z":-1}},"Mesh":null},
+    {"Name":"Room","Box":{"Min":{"X":-1.5,"Y":-1,"Z":-5.25},"Max":{"X":1.5,"Y":1,"Z":-2.25}},"Mesh":null},
+    {"Name":"DoorPostLeft","Box":{"Min":{"X":-0.73,"Y":1,"Z":-2.395},"Max":{"X":-0.5,"Y":2.6,"Z":-2.165}},"Mesh":null},
+    {"Name":"DoorPostRight","Box":{"Min":{"X":0.5,"Y":1,"Z":-2.395},"Max":{"X":0.73,"Y":2.6,"Z":-2.165}},"Mesh":null},
+    {"Name":"DoorLintel","Box":{"Min":{"X":-0.73,"Y":2.6,"Z":-2.395},"Max":{"X":0.73,"Y":2.8999999,"Z":-2.165}},"Mesh":null}
+  ],
+  "Scenarios": [
+    {"Id":"Flat","RequestedStart":{"X":0,"Y":0,"Z":3.2},"Input":[{"Direction":"N","Ticks":30}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"StairsUp","RequestedStart":{"X":0,"Y":0,"Z":3.2},"Input":[{"Direction":"N","Ticks":160}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"StairsDown","RequestedStart":{"X":0,"Y":1,"Z":-1.6},"Input":[{"Direction":"S","Ticks":104}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"RampUp","RequestedStart":{"X":1.75,"Y":0,"Z":2},"Input":[{"Direction":"N","Ticks":95}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"RampDown","RequestedStart":{"X":1.75,"Y":1,"Z":-1.7},"Input":[{"Direction":"S","Ticks":104}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"RampToRoom","RequestedStart":{"X":0,"Y":0,"Z":3.2},"Input":[{"Direction":"E","Ticks":44},{"Direction":"N","Ticks":120},{"Direction":"W","Ticks":44},{"Direction":"N","Ticks":40}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"DoorCenter","RequestedStart":{"X":0,"Y":1,"Z":-1.2},"Input":[{"Direction":"N","Ticks":55}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"DoorPost","RequestedStart":{"X":0.615,"Y":1,"Z":-1.6},"Input":[{"Direction":"N","Ticks":40}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"BackEdge","RequestedStart":{"X":0,"Y":1,"Z":-4},"Input":[{"Direction":"N","Ticks":100}],"LedgeRise":null,"LedgeColliders":null},
+    {"Id":"Ledge25","RequestedStart":{"X":30,"Y":0,"Z":30},"Input":[{"Direction":"N","Ticks":50}],"LedgeRise":0.25,"LedgeColliders":[{"Name":"LedgeSouth","Box":{"Min":{"X":28,"Y":-1,"Z":29},"Max":{"X":32,"Y":0,"Z":33}},"Mesh":null},{"Name":"LedgeNorth","Box":{"Min":{"X":28,"Y":-1,"Z":27},"Max":{"X":32,"Y":0.25,"Z":29}},"Mesh":null}]},
+    {"Id":"Ledge30","RequestedStart":{"X":30,"Y":0,"Z":30},"Input":[{"Direction":"N","Ticks":50}],"LedgeRise":0.3,"LedgeColliders":[{"Name":"LedgeSouth","Box":{"Min":{"X":28,"Y":-1,"Z":29},"Max":{"X":32,"Y":0,"Z":33}},"Mesh":null},{"Name":"LedgeNorth","Box":{"Min":{"X":28,"Y":-1,"Z":27},"Max":{"X":32,"Y":0.3,"Z":29}},"Mesh":null}]}
+  ]
+}

@@ -14,9 +14,11 @@ $family=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','Tru
  'TrueMoon.Kton','TrueMoon.Kton.Bepu','TrueMoon.Aether.Kton','TrueMoon.Aether.Kton.Runtime')
 $feed=[IO.Path]::GetFullPath("$run/feed");$config="$run/NuGet.Config"
 [IO.File]::WriteAllText($config,'<configuration><packageSources><clear/><add key="closed" value="'+[Security.SecurityElement]::Escape($feed)+'"/></packageSources><fallbackPackageFolders><clear/></fallbackPackageFolders></configuration>')
-$report=[ordered]@{Completed=$false;Stage='PHYS6';Version=$null;BuildProfile=$null;RunDirectory=$run;Feed=$feed;Commands=@();Reports=@();Packages=@();ExternalPackages=@();CharacterLicenseFiles=@();Graph=$null;Sources=@();Failure=$null;Scope='PHYS5 regression and PHYS6 capsule/auto-step through ECS; headless CPU only. No native Player or session protocol acceptance.'}
+$report=[ordered]@{Completed=$false;Stage='PHYS6';Version=$null;BuildProfile=$null;RunDirectory=$run;Feed=$feed;Commands=@();Reports=@();T3Report=$null;Packages=@();ExternalPackages=@();CharacterLicenseFiles=@();Graph=$null;Sources=@();Failure=$null;Scope='PHYS5 regression, PHYS6 capsule/auto-step, and T3 static mesh through ECS; headless CPU only. No native Player or session protocol acceptance.'}
 $providers=@('Cobalt','Microsoft')
 $qualities=@('Baseline60','FastLinear60')
+$t3Cases=@('Flat','StairsUp','StairsDown','RampUp','RampDown','RampToRoom','DoorCenter','DoorPost','BackEdge','Ledge25','Ledge30')
+$t3ArchiveSha='CB03D329829DC33FDCA344E1B2ED1607CC1CDCD8816DB66DC49FC6B402240AA1'
 $autoStepNames=foreach($quality in $qualities){
  foreach($case in @('legacy-v1','default-v2','enabled-v2','tall-v2')){
   foreach($check in @('settings','settled','outcome')){"auto-step-$quality-$case-$check"}
@@ -117,11 +119,132 @@ function Get-ZipEntryHash($archive,[string]$path){
  $stream=$entries[0].Open()
  try{return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()}
 }
+function Read-RuntimeWitnesses([string]$label,$loadedAssemblies,[string]$output){
+ if(@($loadedAssemblies|Where-Object Name -match 'Tooling|Editor|Alloy|Argentis|Skia').Count){throw "${label}: unexpected workflow/UI dependency"}
+ foreach($name in $witnesses){
+  $assemblies=@($loadedAssemblies|Where-Object Name -IEQ $name)
+  if($assemblies.Count -ne 1){throw "${label}: expected one loaded $name"}
+  $assembly=$assemblies[0]
+  $outputDll=[IO.Path]::GetFullPath("$output/$name.dll")
+  if([IO.Path]::GetFullPath($assembly.Location) -ine $outputDll -or (Get-FileHash -LiteralPath $outputDll).Hash -ne $assembly.Sha256){
+   throw "${label}: wrong output path or SHA for $name ($($assembly.Location))"
+  }
+  $isTrueMoon=$name.StartsWith('TrueMoon.',[StringComparison]::Ordinal)
+  $expectedVersion=if($isTrueMoon){$version}else{$bepuVersion}
+  $key=Get-ExactLibrary $graph $name $expectedVersion
+  $targetKeys=@($target.Keys|Where-Object{$_ -ieq $key})
+  if($targetKeys.Count -ne 1 -or !$target[$targetKeys[0]].Contains('runtime')){throw "${label}: missing runtime target for $key"}
+  $entries=@($target[$targetKeys[0]].runtime.Keys|Where-Object{[IO.Path]::GetFileName($_) -ieq "$name.dll"})
+  if($entries.Count -ne 1 -or ($isTrueMoon -and $entries[0] -cne "lib/$framework/$name.dll")){
+   throw "${label}: unexpected runtime asset for ${key}: $($entries -join ', ')"
+  }
+  $asset=$entries[0]
+  $packageDll=Join-Path $cache "$($graph.libraries[$key].path)/$asset"
+  if((Get-FileHash -LiteralPath $packageDll).Hash -ne $assembly.Sha256){throw "${label}: cache runtime SHA mismatch: $key/$asset"}
+  $archive=[IO.Compression.ZipFile]::OpenRead($feedArchives[$key])
+  try{$archiveHash=Get-ZipEntryHash $archive $asset}finally{$archive.Dispose()}
+  if($archiveHash -ne $assembly.Sha256){throw "${label}: feed runtime SHA mismatch: $key/$asset"}
+  @{Name=$name;PackageId=($key -split '/',2)[0];Version=$expectedVersion;Asset=$asset;Location=$assembly.Location;Sha256=$assembly.Sha256}
+ }
+ foreach($assembly in $loadedAssemblies|Where-Object Name -NotIn $witnesses){
+  $installed=@(Get-ChildItem -LiteralPath $cache -Recurse -Filter ($assembly.Name+'.dll')|Where-Object{(Get-FileHash -LiteralPath $_.FullName).Hash -eq $assembly.Sha256})
+  if(!$installed.Count){throw "${label}: output DLL not from closed cache: $($assembly.Name)"}
+ }
+}
+function Assert-T3Report($proof,[string]$fixtureSha,$fixtureData){
+ if($proof.Stage -cne 'KTON-ECS-T3' -or $proof.Completed -isnot [bool] -or !$proof.Completed -or
+    $proof.NativeRendering -isnot [bool] -or $proof.NativeRendering -or $null -ne $proof.Failure){
+  throw 'T3: invalid stage/completion/rendering or non-null failure'
+ }
+ if($proof.FixtureSha256 -cne $fixtureSha -or $proof.ArchiveSha256 -cne $t3ArchiveSha -or
+    $proof.ArchiveRead -isnot [bool] -or !$proof.ArchiveRead){
+  throw 'T3: fixture SHA or verified archive provenance mismatch'
+ }
+ $sampleCounts=@{}
+ foreach($scenario in $fixtureData.Scenarios){
+  $count=1
+  foreach($segment in $scenario.Input){$count+=$segment.Ticks}
+  $sampleCounts[$scenario.Id]=$count
+ }
+ $rows=[Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ordinal)
+ foreach($row in $proof.Rows){
+  $key="$($row.Provider)/$($row.Profile)/$($row.Case)/$($row.AutoStep)"
+  if($row.Provider -cnotin $providers -or $row.Profile -cnotin $qualities -or $row.Case -cnotin $t3Cases -or
+     $row.AutoStep -isnot [bool] -or !$rows.TryAdd($key,$row)){
+   throw "T3: unexpected or duplicate row $key"
+  }
+  if($row.Passed -isnot [bool] -or !$row.Passed -or $row.RepeatExact -isnot [bool] -or !$row.RepeatExact -or
+     $row.ProviderExact -isnot [bool] -or !$row.ProviderExact -or $row.Trace -isnot [array] -or
+     $null -eq $row.Landmarks){
+   throw "T3: failed, inexact, or incomplete row $key"
+  }
+  $expected=$sampleCounts[$row.Case]
+  if($row.Trace.Length -ne $expected){throw "T3: expected $expected trace samples for $key; got $($row.Trace.Length)"}
+  for($tick=0;$tick -lt $expected;$tick++){
+   $sampleTick=$row.Trace[$tick].Tick
+   if(($sampleTick -isnot [int] -and $sampleTick -isnot [long]) -or $sampleTick -ne $tick){
+    throw "T3: expected sample tick $tick for $key; got $sampleTick"
+   }
+  }
+ }
+ if($rows.Count -ne 88){throw "T3: expected 88 unique rows, got $($rows.Count)"}
+ $offOnExact=0
+ foreach($provider in $providers){
+  foreach($quality in $qualities){
+   foreach($case in $t3Cases){
+    $key="$provider/$quality/$case"
+    $off=ConvertTo-Json -InputObject ($rows["$key/False"].Trace) -Compress -Depth 14
+    $on=ConvertTo-Json -InputObject ($rows["$key/True"].Trace) -Compress -Depth 14
+    $exact=$off -ceq $on
+    if($exact){$offOnExact++}
+    if($exact -ne ($case -cnotin @('StairsUp','Ledge25'))){throw "T3: unexpected off/on equality ($exact) for $key"}
+   }
+  }
+ }
+ if($offOnExact -ne 36 -or $offOnExact -cne $proof.OffOnExactCount){throw 'T3: expected 36 exact off/on pairs'}
+ $owners=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+ foreach($owner in $proof.Owners){
+  $key="$($owner.Provider)/$($owner.Profile)"
+  if($owner.Provider -cnotin $providers -or $owner.Profile -cnotin $qualities -or !$owners.Add($key)){
+   throw "T3: unexpected or duplicate cleanup row $key"
+  }
+  $resources=$owner.Resources
+  if($resources.PublishedWorlds -ne 0 -or $resources.ActiveResourceOwners -ne 0 -or
+     $resources.MaximumPoolBytesAfterCleanup -ne 0 -or
+     $resources.PendingFailedCreationCleanup -isnot [bool] -or $resources.PendingFailedCreationCleanup){
+   throw "T3: cleanup incomplete for $key"
+  }
+ }
+ if($owners.Count -ne 4){throw "T3: expected 4 unique cleanup rows, got $($owners.Count)"}
+}
+function Probe-T3([string]$output,[string]$fixture,[string]$fixtureSha,$fixtureData){
+ $name='t3-fresh-Release';$path="$evidence/$name.json"
+ $entry=[ordered]@{Stage=$null;Path=$path;Sha256=$null;FixturePath=$fixture;FixtureSha256=$fixtureSha;FixtureSha256After=$null;
+   ArchiveSha256=$t3ArchiveSha;Rows=0;OffOnExactCount=$null;RuntimeWitnesses=@()}
+ $report.T3Report=$entry
+ try{
+  Invoke-Checked $name @("$output/KtonEcsProbe.dll",'--t3',$fixture,$path) $cache
+ }finally{
+  if(Test-Path -LiteralPath $path -PathType Leaf){$entry.Sha256=(Get-FileHash -LiteralPath $path).Hash}
+  if(Test-Path -LiteralPath $fixture -PathType Leaf){$entry.FixtureSha256After=(Get-FileHash -LiteralPath $fixture).Hash}
+ }
+ if($entry.FixtureSha256After -cne $fixtureSha){throw 'T3: fixture drift during verification'}
+ $proof=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json
+ $entry.Stage=$proof.Stage
+ Assert-T3Report $proof $fixtureSha $fixtureData
+ $entry.Rows=$proof.Rows.Count;$entry.OffOnExactCount=$proof.OffOnExactCount
+ $entry.RuntimeWitnesses=@(Read-RuntimeWitnesses $name $proof.Assemblies $output)
+}
 try{
  $profile=Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
  $version=$profile.Version
  $report.BuildProfile=$profile;$report.Version=$version
  Write-TrueMoonConsumerBuildProfile -Profile $profile -Directory "$run/working"
+ $t3Fixture=Join-Path $PSScriptRoot 'T3Fixture.json'
+ $t3FixtureSha=(Get-FileHash -LiteralPath $t3Fixture).Hash
+ $fixture=Get-Content -LiteralPath $t3Fixture -Raw|ConvertFrom-Json
+ if($fixture.ArchiveSha256 -cne $t3ArchiveSha){throw 'T3 fixture does not identify the verified source archive'}
+ $report.Sources+=@{Path=$t3Fixture;Sha256=$t3FixtureSha}
  foreach($directory in @('TrueMoon.Kton','TrueMoon.Kton.Bepu','TrueMoon.Aether.Kton','TrueMoon.Aether.Kton.Runtime','ManualTests/KtonEcs')){
   foreach($file in Get-ChildItem -LiteralPath "$workspace/$directory" -File -Recurse|Where-Object{ $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in @('.cs','.csproj','.ps1','.md','.txt','.tt')}){
    $report.Sources+=@{Path=$file.FullName;Sha256=(Get-FileHash -LiteralPath $file.FullName).Hash}
@@ -130,7 +253,8 @@ try{
  $report.Sources+=@{Path="$workspace/Directory.Build.props";Sha256=(Get-FileHash -LiteralPath "$workspace/Directory.Build.props").Hash}
  $source=Consumer 'source' $false
  $seedCache="$run/seed-cache";$seedArtifacts="$run/seed-artifacts";$sourceArtifacts="$run/source-artifacts"
- Invoke-Checked 'seed-restore' @('restore',$source,'--configfile',"$workspace/NuGet.Config",'--artifacts-path',$seedArtifacts,"-p:Version=$version") $seedCache
+ # Producer projects inherit the workspace Version; the generated probe is not a package.
+ Invoke-Checked 'seed-restore' @('restore',$source,'--configfile',"$workspace/NuGet.Config",'--artifacts-path',$seedArtifacts) $seedCache
  $seedProjects=@($family+'TrueMoon.Cobalt.Generator'|ForEach-Object{[IO.Path]::GetFullPath("$workspace/$_/$_.csproj")})
  $seedProjects+=[IO.Path]::GetFullPath($source)
  $graphs=@{}
@@ -169,13 +293,13 @@ try{
    }
   }
  }
- Invoke-Checked 'source-restore' @('restore',$source,'--configfile',$config,'--artifacts-path',$sourceArtifacts,"-p:Version=$version")
- Invoke-Checked 'source-build' @('build',$source,'--no-restore','-c','Debug','--artifacts-path',$sourceArtifacts,'-o',"$run/source-debug","-p:Version=$version",'--verbosity','quiet')
+ Invoke-Checked 'source-restore' @('restore',$source,'--configfile',$config,'--artifacts-path',$sourceArtifacts)
+ Invoke-Checked 'source-build' @('build',$source,'--no-restore','-c','Debug','--artifacts-path',$sourceArtifacts,'-o',"$run/source-debug",'--verbosity','quiet')
  $null=Probe 'source-debug' "$run/source-debug"
- Invoke-Checked 'source-publish' @('publish',$source,'--no-restore','-c','Release','--artifacts-path',$sourceArtifacts,'-o',"$run/source-release","-p:Version=$version",'--self-contained','false','--verbosity','quiet')
+ Invoke-Checked 'source-publish' @('publish',$source,'--no-restore','-c','Release','--artifacts-path',$sourceArtifacts,'-o',"$run/source-release",'--self-contained','false','--verbosity','quiet')
  $null=Probe 'source-published' "$run/source-release"
  foreach($id in $family){
-  Invoke-Checked "pack-$id" @('pack',"$workspace/$id/$id.csproj",'-c','Release','--no-restore','--artifacts-path',$sourceArtifacts,'-o',$feed,"-p:Version=$version",'--verbosity','quiet')
+  Invoke-Checked "pack-$id" @('pack',"$workspace/$id/$id.csproj",'-c','Release','--no-restore','--artifacts-path',$sourceArtifacts,'-o',$feed,'--verbosity','quiet')
   $archive="$feed/$id.$version.nupkg";$report.Packages+=@{Id=$id;Version=$version;Path=$archive;Sha256=(Get-FileHash -LiteralPath $archive).Hash}
   $feedArchives["$id/$version"]=$archive
  }
@@ -227,38 +351,10 @@ try{
   $output="$run/fresh-$configuration";$operation=if($configuration -eq 'Release'){'publish'}else{'build'}
   Invoke-Checked "fresh-$configuration-build" @($operation,$fresh,'--no-restore','-c',$configuration,'--artifacts-path',$freshArtifacts,'-o',$output,'--verbosity','quiet') $cache
   $proof=Probe "fresh-$configuration" $output $cache
-  $runtimeWitnesses=foreach($name in $witnesses){
-   $assemblies=@($proof.Assemblies|Where-Object Name -IEQ $name)
-   if($assemblies.Count -ne 1){throw "${configuration}: expected one loaded $name"}
-   $assembly=$assemblies[0]
-   $outputDll=[IO.Path]::GetFullPath("$output/$name.dll")
-   if([IO.Path]::GetFullPath($assembly.Location) -ine $outputDll -or (Get-FileHash -LiteralPath $outputDll).Hash -ne $assembly.Sha256){
-    throw "${configuration}: wrong output path or SHA for $name ($($assembly.Location))"
-   }
-   $isTrueMoon=$name.StartsWith('TrueMoon.',[StringComparison]::Ordinal)
-   $expectedVersion=if($isTrueMoon){$version}else{$bepuVersion}
-   $key=Get-ExactLibrary $graph $name $expectedVersion
-   $targetKeys=@($target.Keys|Where-Object{$_ -ieq $key})
-   if($targetKeys.Count -ne 1 -or !$target[$targetKeys[0]].Contains('runtime')){throw "${configuration}: missing runtime target for $key"}
-   $entries=@($target[$targetKeys[0]].runtime.Keys|Where-Object{[IO.Path]::GetFileName($_) -ieq "$name.dll"})
-   if($entries.Count -ne 1 -or ($isTrueMoon -and $entries[0] -cne "lib/$framework/$name.dll")){
-    throw "${configuration}: unexpected runtime asset for ${key}: $($entries -join ', ')"
-   }
-   $asset=$entries[0]
-   $packageDll=Join-Path $cache "$($graph.libraries[$key].path)/$asset"
-   if((Get-FileHash -LiteralPath $packageDll).Hash -ne $assembly.Sha256){throw "${configuration}: cache runtime SHA mismatch: $key/$asset"}
-   $archive=[IO.Compression.ZipFile]::OpenRead($feedArchives[$key])
-   try{$archiveHash=Get-ZipEntryHash $archive $asset}finally{$archive.Dispose()}
-   if($archiveHash -ne $assembly.Sha256){throw "${configuration}: feed runtime SHA mismatch: $key/$asset"}
-   @{Name=$name;PackageId=($key -split '/',2)[0];Version=$expectedVersion;Asset=$asset;Location=$assembly.Location;Sha256=$assembly.Sha256}
-  }
-  foreach($assembly in $proof.Assemblies|Where-Object Name -NotIn $witnesses){
-   $installed=@(Get-ChildItem -LiteralPath $cache -Recurse -Filter ($assembly.Name+'.dll')|Where-Object{(Get-FileHash -LiteralPath $_.FullName).Hash -eq $assembly.Sha256})
-   if(!$installed.Count){throw "Output DLL not from closed cache: $($assembly.Name)"}
-  }
-  $report.Reports[-1].RuntimeWitnesses=@($runtimeWitnesses)
+  $report.Reports[-1].RuntimeWitnesses=@(Read-RuntimeWitnesses "fresh-$configuration" $proof.Assemblies $output)
   Save-Report
  }
+ Probe-T3 "$run/fresh-Release" $t3Fixture $t3FixtureSha $fixture
  foreach($source in $report.Sources){if((Get-FileHash -LiteralPath $source.Path).Hash -ne $source.Sha256){throw "Source drift: $($source.Path)"}}
  foreach($profileSource in $profile.Sources){if((Get-FileHash -LiteralPath $profileSource.Path).Hash -ne $profileSource.Sha256){throw 'Shared profile drift'}}
  $report.Completed=$true

@@ -28,7 +28,8 @@ Kul ARCH1h.2a завершён в nonspatial scope; [PHYS6 завершён](#ph
 [PHYS6: opt-in шаг](#phys6-auto-step), [headless-корпус](#phys6-headless-corpus)
 и [сессия Aether](#phys6-aether-auto-step) проверены на исходниках.
 [Пакетная приёмка автошага](STATUS.md#phys6-aether-package-auto-step-2026-11-27)
-прошла отдельно; интеграция в игру остаётся открытой.
+прошла отдельно; точный T3 через ECS выделен в [отдельный пакетный gate](#phys6-t3-ecs).
+Переход штатного движения игры остаётся отдельной задачей.
 
 Подробные задачи физики, включая ECS bridge, ведутся **только здесь**.
 [ARCH1i](../engine/PLAN.md#arch1i-physics) — ссылка из engine-направления.
@@ -434,6 +435,20 @@ opt-in и отказ на 0,30 м. На `Baseline60`, на обоих DI, in-pro
 Пакетная CPU/headless поставка `1.2611.27.11-alpha` принята
 [независимым consumer](HISTORY.md#phys6-aether-package-auto-step-2026-11-27).
 Native Player и переход кинематики Tales не проверялись.
+
+<a id="phys6-t3-ecs"></a>
+#### PHYS6 — точный T3 через ECS, 27.11.2026
+
+`BodyV2` добавляет authored static mesh из снимка CPU-геометрии App.
+Фикстура сохраняет исходный двухтреугольный скос; полный допуск геометрии
+проходит до native attachment, без обработки треугольников на тике.
+[Контракт](ECS_BRIDGE.md) · [независимый gate](../../ManualTests/KtonEcs/README.md).
+
+Критерий: в fresh Release из закрытого feed 88 headless ECS трасс совпадают
+точно с независимым ECS повтором и direct provider. Проверяются реальные
+опоры на скосе, поза/опора в тике автошага, отказ на 0,30 м, спуск и падение
+с открытого края. Player, GPU и переход движения Tales — вне этого gate.
+[Результат пакетной проверки](HISTORY.md#phys6-t3-ecs-2026-11-27).
 
 <a id="phys7"></a>
 ### PHYS7 — необязательный простой ragdoll

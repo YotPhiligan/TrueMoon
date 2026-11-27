@@ -73,13 +73,35 @@ mass, координаты/metres/quaternion convention общие с Kton. Pare
 nonunit scale и произвольная запись LocalTransform на attached body отклоняются.
 Для pose discontinuity используется PhysicsTeleport; обычное изменение данных
 authoring или native body handle не является командой телепортации.
-Meshes/asset cooking, compound shapes, joints ECS, controller и ragdoll не входят
-в этот профиль. Native provider по-прежнему может использоваться отдельно.
+Compound shapes, joints ECS и ragdoll не входят в этот профиль.
+Управление капсулой описано в [PHYS6](CHARACTERS.md).
 
-Body и optional Velocity имеют отдельные stable TypeId/schema version1; Body требует
-canonical Transform, Velocity требует Body. Runtime imports не меняют исходные
+Body и optional Velocity имеют отдельные stable TypeId. Body v1 и v2 требуют
+canonical Transform, Velocity v1 требует Body. Runtime imports не меняют исходные
 schemas, persistent IDs и scene revision. Contact/teleport/runtime handles не
 сериализуются как authoring data. Unknown schema versions не получают fallback.
+
+### Статический треугольный коллайдер
+
+`PhysicsComponentSchemas.BodyV2` сохраняет TypeId и поля Body v1; примитивы
+работают с отсутствующим или `null` `meshAsset`. Для `shape=4` нужны `motion=0`,
+`x=y=z=mass=0` и непустой GUID формата D в `meshAsset`. Это ID коллизионного
+снимка, не путь, render asset и не `ComponentReferenceKind.Asset`.
+Composition root передаёт CPU-геометрию до загрузки сцены:
+
+```csharp
+context.UseAetherKton(options => options.AddStaticMesh(assetId, vertices, indices));
+```
+
+Тот же configure callback поддерживает `UseConfiguredAetherKton`. Регистрация
+валидирует и копирует вершины/индексы; исходные буферы можно менять после
+возврата. App фиксирует отдельный словарь, не копируя буферы снова. Во время
+private preparation bridge разрешает ID и проверяет геометрию по лимитам мира
+до создания любого native тела. Мост не разрешает ID и не сканирует треугольники
+на тике. Статическая скорость обязана оставаться нулевой; sequenced
+`PhysicsTeleport` сохраняет body/shape ID. Полное удаление тела/сущности
+освобождает native shape. Runtime attach и правка mesh descriptor не допускаются:
+для новой геометрии загрузите новый authored world.
 
 ## Подготовка и fixed tick
 
@@ -93,7 +115,7 @@ schemas, persistent IDs и scene revision. Contact/teleport/runtime handles не
    Primitive profile затем инициализирует derived Transform roles и tick0 frame.
 2. Один `kton.physics` system выполняется в Movement **до** `builtin.movement`.
    Он собирает полный candidate list, проверяет inputs/cancellation до mutation,
-   удаляет stale attachments, пересоздаёт changed descriptors и добавляет новые.
+   удаляет stale attachments, пересоздаёт changed primitive descriptors и добавляет новые примитивы.
 3. Применяются velocity/teleport commands, выполняется ровно один Step с target tick,
    дожидается native join и только затем обновляются LocalTransform/PhysicsVelocity.
    Следующие Transform/Extraction видят same-tick poses.

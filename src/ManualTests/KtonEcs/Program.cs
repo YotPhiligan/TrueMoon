@@ -26,14 +26,19 @@ using A = TrueMoon.Aether.Ecs;
 
 namespace TrueMoon.ManualTests.KtonEcs;
 
-internal static class Program
+internal static partial class Program
 {
     private static readonly List<object> Checks = [], Owners = [];
     private static string _provider = "";
     private static void Check(string name, bool value) { if (!value) throw new InvalidOperationException(_provider + ": " + name); Checks.Add(new { Provider = _provider, Name = name }); }
     private static async Task<int> Main(string[] args)
     {
-        if (args.Length != 1) throw new ArgumentException("KtonEcsProbe <report.json>");
+        if (args is ["--t3", var fixture, var report]) return await RunT3(fixture, report);
+        if (args.Length != 1 || args[0].StartsWith("--", StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine("Usage: KtonEcsProbe <report.json> | --t3 <absolute-fixture.json> <absolute-new-report.json>");
+            return 1;
+        }
         foreach (var microsoft in new[] { false, true })
         {
             await Run(microsoft);
@@ -45,36 +50,48 @@ internal static class Program
         Check("neutral-sdk-no-runtime-provider", !neutral.Any(name => name != null && (name.StartsWith("TrueMoon.Aether.Runtime", StringComparison.Ordinal) || name.Contains("Bepu") || name.Contains("Tooling") || name.Contains("Alloy"))));
         var runtime = typeof(PhysicsSceneSubsystem).Assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray();
         Check("runtime-bridge-provider-neutral", !runtime.Any(name => name != null && (name.Contains("Bepu") || name.Contains("Tooling") || name.Contains("Alloy"))));
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic && assembly.GetName().Name is { } name &&
-            (name.StartsWith("TrueMoon", StringComparison.Ordinal) || name is "BepuPhysics" or "BepuUtilities")).Select(assembly => new
-            { Name = assembly.GetName().Name, assembly.Location, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))), References = assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray() }).ToArray();
+        var assemblies = ReadLoadedAssemblies();
         var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(Path.GetDirectoryName(output)!);
         await File.WriteAllTextAsync(output, JsonSerializer.Serialize(new { Completed = true, Stage = "PHYS6", CheckCount = Checks.Count, Checks, Owners, Assemblies = assemblies, NativeRendering = false }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
+
+    private static LoadedAssembly[] ReadLoadedAssemblies() =>
+        AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic && assembly.GetName().Name is { } name &&
+            (name.StartsWith("TrueMoon", StringComparison.Ordinal) || name is "BepuPhysics" or "BepuUtilities"))
+        .Select(assembly => new LoadedAssembly(assembly.GetName().Name!, assembly.Location,
+            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))),
+            assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray())).ToArray();
+
+    private sealed record LoadedAssembly(string Name, string Location, string Sha256, string?[] References);
+
     private const float StepCapsuleHalfHeight = .60f;
 
-    private static IApp BuildApp(bool microsoft, PhysicsQualityProfile quality, List<Observer> witnesses) =>
+    private static IApp BuildApp(bool microsoft, PhysicsQualityProfile quality, List<Observer>? witnesses,
+        Action<PhysicsBridgeOptions>? configure = null) =>
         App.Builder(context => { if (microsoft) context.UseDI(); }).Setup(context =>
         {
-            context.UseBepuPhysics(options => options.DefaultWorld = new()
-            {
-                Quality = quality,
-                Limits = new() { MaxBodies = 16, MaxShapes = 32, MaxContactEvents = 128 }
-            });
-            context.UseAetherEcs().UseAetherPrimitiveEcs().UseAetherKton(options => options.MaximumContactEvents = 64);
+            context.UseBepuPhysics(options => options.DefaultWorld = witnesses is null
+                ? new PhysicsWorldOptions { Quality = quality }
+                : new PhysicsWorldOptions { Quality = quality, Limits = new() { MaxBodies = 16, MaxShapes = 32, MaxContactEvents = 128 } });
+            context.UseAetherEcs().UseAetherPrimitiveEcs().UseAetherKton(configure);
             context.UseAetherSceneLoading(_ => PhysicsComponentRegistry.Register(PrimitiveEcsComponents.Register(new())).Build());
             context.Services(services =>
             {
-                services.Singleton<IFactory<Observer, SceneSubsystemArguments>>(_ => new Factory<Observer, SceneSubsystemArguments>(arguments =>
-                { var observer = new Observer(arguments.Scene.World); witnesses.Add(observer); return observer; }));
+                if (witnesses is not null)
+                    services.Singleton<IFactory<Observer, SceneSubsystemArguments>>(_ => new Factory<Observer, SceneSubsystemArguments>(arguments =>
+                    { var observer = new Observer(arguments.Scene.World); witnesses.Add(observer); return observer; }));
                 services.Singleton<IFactory<PrimitiveGameSession>>(resolver =>
                 {
                     var loader = resolver.Resolve<SceneWorldLoader>()!; var simulations = resolver.Resolve<IFactory<PrimitiveSimulation, PrimitiveSimulationRequest>>()!;
                     return new Factory<PrimitiveGameSession>(() => new(loader, simulations));
                 });
             });
-            context.UseAetherSceneSubsystems(subsystems => subsystems.AddKtonPhysics().Add<Observer>("proof.gameplay"));
+            context.UseAetherSceneSubsystems(subsystems =>
+            {
+                subsystems.AddKtonPhysics();
+                if (witnesses is not null) subsystems.Add<Observer>("proof.gameplay");
+            });
         }).Build();
 
     private static async Task Run(bool microsoft)

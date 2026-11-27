@@ -2,6 +2,58 @@
 
 [План](PLAN.md), [текущий статус](STATUS.md).
 
+<a id="phys6-t3-ecs-2026-11-27"></a>
+## PHYS6 — статический mesh и точный T3 через ECS, 2026-11-27
+
+`1.2611.27.13-alpha`, Windows x64, SDK `11.0.100`, `net11.0`, BEPU
+`2.5.0-beta.33`; изолированный checkout от `7c9f5b9e1261e9186064a54ab899907d2a1905f2`.
+Закрытый feed новый; pins и исходники Tales не менялись. SHA шести входных
+файлов Tales совпали до/после. Probe не ссылается на Tales.
+
+Из `src` в новом `$R` под `%TEMP%`: `dotnet test` проекта
+`TrueMoon.Aether.Kton.Tests` в Release/net11.0, с отдельным `--artifacts-path`,
+TRX и `-bl`; затем `pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1
+-EvidenceDirectory "$R/delivery-02"`. Фильтр охватил классы StaticMeshScene,
+Contracts, Registration, Reconciliation, Lifecycle, SceneSubsystem, CharacterScene,
+Allocation, ContactAllocation и Contact. TRX: 156 passed, 0 failed, 0 skipped;
+сверены 25 случаев mesh, в том числе configured Microsoft DI и варианты runtime
+attach/replace/velocity. В source gate два непустых binlog.
+
+- Source Debug/published Release и fresh Debug/published Release — четыре
+  регрессионных отчёта по 104/104. 14 собственных и 10 внешних архивов с SHA256,
+  три записи provenance/license/template; 20 библиотек в package-only graph.
+  Все 21 MSBuild-шаг и вычисление профиля оставили непустые binlog.
+- Fresh Release T3: Cobalt/MS DI × Baseline60/FastLinear60 × 11 cases × off/on.
+  88/88 точных ECS повторов, 88/88 точных direct controls, 36/44 равных off/on
+  пар (изменились только StairsUp/Ledge25). Четыре cleanup rows с нулём живых
+  миров, владельцев и байтов пула после Stop. Семь загруженных DLL именно
+  T3 процесса совпали с runtime assets в publish output, cache и `.nupkg`.
+- На обоих DI/профилях первые подъёмы Step1–4 с опорой в том же тике —
+  49/55/61/67, Room — 111, уступ 0,25 м — 19. Уступ 0,30 м не пересечён и не
+  взят. На скосе опубликована собственная наклонная normal. На спуске первая
+  потеря опоры на тике 35, всего 18 тиков в Baseline60 и 21 в FastLinear60.
+  Задний край пересечён на 32-м тике, опора потеряна на 39-м. Эти наблюдения
+  совпали с архивным provider-прогоном `.11-alpha`; оракул Tales не запускался.
+- Ошибочное число аргументов, отсутствующая/невалидная fixture и существующий
+  report: exit 1; вход в T3 с невалидной fixture сохранил partial failure JSON.
+- Верификатор отдельно проверяет длину трассы по сумме тиков входа плюс sample 0
+  и последовательность целочисленных тиков. Адресная проверка без переупаковки
+  приняла все 88 строк и отклонила парное усечение, пропуск тика и строковый тик
+  (`t3-verifier-trace-audit.json`).
+
+Артефакты: `%TEMP%/kton-ecs-mesh-t3-GXKFut18`, `source.trx`,
+`delivery-02/{verification.json,t3-fresh-Release.json,delivery-audit.json}`:
+
+| Вход или отчёт | SHA256 |
+| --- | --- |
+| Архив `comparison.json` | `CB03D329829DC33FDCA344E1B2ED1607CC1CDCD8816DB66DC49FC6B402240AA1` |
+| `T3Fixture.json` | `37F5C2EFDE00BD7FBFDC2540D40569DC0F57663308B5A2169FB7FD87DF3A5020` |
+| `verification.json` | `3FC8690F4F1E898F333AA49E906530170F046F4E93223E0A2DBB2FB70CA92310` |
+| `t3-fresh-Release.json` | `0D8FD3812CC88272E0A51D625168C1B5F56B1AC2DA472C024BED2D3FAAA6DD1F` |
+
+Приёмка только headless ECS, без native Player, GPU, подключения collision assets
+к Editor/Build и переключения движения Tales.
+
 <a id="phys6-aether-package-auto-step-2026-11-27"></a>
 ## PHYS6 — пакетный автошаг Aether, 2026-11-27
 

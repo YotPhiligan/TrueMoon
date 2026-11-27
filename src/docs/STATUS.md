@@ -1,9 +1,10 @@
 # TrueMoon: общий статус
 
-**Kton / Aether, 27.11.2026.** Opt-in автошаг `1.2611.27.11-alpha` проверен
-через ECS на исходниках и в независимом потребителе через закрытый NuGet feed.
-Pause/Step/Replace проверен отдельно на исходниках; схема v1 не изменилась.
-[Результаты и границы](physics/STATUS.md#phys6-aether-package-auto-step-2026-11-27).
+**Kton / Aether, 27.11.2026.** Статический mesh и точный T3 приняты на
+`1.2611.27.13-alpha` через headless ECS из закрытого NuGet feed. 88 трасс
+совпали с ECS повтором и direct provider. Native Player, GPU и переход
+движения Tales не входили в gate.
+[Результаты и границы](physics/STATUS.md#phys6-t3-ecs-2026-11-27).
 
 **Aether, 27.11.2026.** Локальная поставка `1.2611.27.3-alpha` продолжает
 Player-сценарий с точного тика. Tales закрыла М6: после Ctrl+C итоговый слот

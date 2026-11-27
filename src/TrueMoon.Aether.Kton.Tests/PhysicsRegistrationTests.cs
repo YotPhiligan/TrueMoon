@@ -25,10 +25,10 @@ public sealed class PhysicsRegistrationTests
         var source = PhysicsFixture.Document(new PhysicsFixture.BodySpec(PhysicsFixture.Body(), Vector3.Zero));
         var definition = source.Definitions.Single();
         var additions = definition.Changes.AddedComponents.Select(component => component.TypeId == PhysicsComponentSchemas.BodyId
-            ? new ComponentData(component.Id, component.TypeId, 2, component.Properties) : component);
+            ? new ComponentData(component.Id, component.TypeId, 3, component.Properties) : component);
         var changed = new SceneDocument(source.Id, source.Revision, source.Entities, [new(definition.Id, new(additions))],
             source.Schemas.Select(schema => schema.TypeId == PhysicsComponentSchemas.BodyId
-                ? new ComponentSchema(schema.TypeId, 2, schema.Properties.Values, requiredTypes: schema.RequiredTypes) : schema));
+                ? new ComponentSchema(schema.TypeId, 3, schema.Properties.Values, requiredTypes: schema.RequiredTypes) : schema));
         var failure = Assert.Throws<SceneWorldLoadException>(() => PhysicsFixture.Loader(app).Load(changed));
         Assert.Equal(SceneWorldLoadError.UnsupportedSchemaVersion, failure.Error); Assert.Equal(0, PhysicsFixture.Host(app).Resources.ActiveResourceOwners);
     }

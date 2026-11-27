@@ -34,9 +34,25 @@ public sealed class PhysicsContractsTests
     [InlineData(0, 0, 0)] [InlineData(99, 0, 0)]
     [InlineData((int)PhysicsColliderShape.Sphere, 1, 0)] [InlineData((int)PhysicsColliderShape.Sphere, 0, 1)]
     [InlineData((int)PhysicsColliderShape.Capsule, 1, 1)]
+    [InlineData((int)PhysicsColliderShape.StaticMesh, 0, 0)]
     public void CaptureShape_RejectsUnknownKindAndUnusedNonzeroDimensions(int shape, float y, float z)
     {
         var body = new PhysicsBody(PhysicsBodyMotion.Dynamic, (PhysicsColliderShape)shape, new(1, y, z), 1);
+        Assert.Throws<InvalidDataException>(() => body.CaptureShape());
+    }
+
+    [Fact]
+    public void CaptureShape_RejectsAValidPrimitiveWithAMeshAsset()
+    {
+        var body = PhysicsFixture.Body() with { MeshAssetId = Guid.NewGuid() };
+        Assert.Throws<InvalidDataException>(() => body.CaptureShape());
+    }
+
+    [Fact]
+    public void CaptureShape_RejectsAnAuthoredMeshWithoutResolvingTheAsset()
+    {
+        var body = new PhysicsBody(PhysicsBodyMotion.Static, PhysicsColliderShape.StaticMesh, Vector3.Zero, 0)
+        { MeshAssetId = Guid.NewGuid() };
         Assert.Throws<InvalidDataException>(() => body.CaptureShape());
     }
 
@@ -48,6 +64,18 @@ public sealed class PhysicsContractsTests
         var body = PhysicsComponentSchemas.Body; var velocity = PhysicsComponentSchemas.Velocity;
         Assert.Equal((PhysicsComponentSchemas.BodyId, 1, false), (body.TypeId, body.Version, body.AllowMultiple));
         Assert.Equal(new[] { BuiltInComponents.TransformId }, body.RequiredTypes);
+        var bodyV2 = PhysicsComponentSchemas.BodyV2;
+        Assert.Same(bodyV2, PhysicsComponentSchemas.BodyV2);
+        Assert.Equal((PhysicsComponentSchemas.BodyId, 2, false), (bodyV2.TypeId, bodyV2.Version, bodyV2.AllowMultiple));
+        Assert.Equal(new[] { BuiltInComponents.TransformId }, bodyV2.RequiredTypes);
+        Assert.Equal(body.Properties.Count + 1, bodyV2.Properties.Count);
+        foreach (var (key, original) in body.Properties)
+        {
+            var field = bodyV2.Properties[key];
+            Assert.Equal((original.Kind, original.IsNullable, original.DefaultValue), (field.Kind, field.IsNullable, field.DefaultValue));
+        }
+        var meshAsset = bodyV2.Properties["meshAsset"];
+        Assert.Equal((PropertyValueKind.String, true, PropertyValue.Null), (meshAsset.Kind, meshAsset.IsNullable, meshAsset.DefaultValue));
         Assert.Equal(new[] { PhysicsComponentSchemas.BodyId }, velocity.RequiredTypes);
         Assert.Equal(10, body.Properties.Count); Assert.Equal(6, velocity.Properties.Count);
         Assert.Equal(PropertyValueKind.Integer, body.Properties["shape"].Kind);
